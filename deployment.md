@@ -2,13 +2,14 @@
 
 ## Current deployment model
 
-The current application can be deployed as a Next.js application without environment variables or external services. Repository Markdown is built into the deployment, while mutable reading and administration state remains in each visitor's browser.
+The application deploys as Next.js with a private Vercel Blob store. Repository Markdown supplies the seed catalog; document and category administration state is shared through `/api/library`. Bookmarks, history, completion, and last-read position remain browser-local.
 
 ## Prerequisites
 
 - Node.js 20.9 or newer
 - npm
 - A Git repository containing the full project
+- A private Vercel Blob store connected to the project
 
 ## Pre-deployment validation
 
@@ -39,8 +40,8 @@ Open [http://localhost:3000/library](http://localhost:3000/library).
 4. Keep the detected framework as **Next.js**.
 5. Use the repository root as the root directory.
 6. Use `npm run build` as the build command.
-7. No environment variables are required for this milestone.
-8. Deploy and verify `/library` plus at least one `/library/[slug]` page.
+7. Connect a private Vercel Blob store to production, preview, and development. Vercel injects the Blob credentials automatically.
+8. Deploy and verify `/library`, `/api/library`, and at least one `/library/[slug]` page.
 
 ## Files that must be committed
 
@@ -59,6 +60,7 @@ Do not commit generated or local-only folders such as:
 - `coverage/`
 - `.vercel/`
 - local `.env*` files
+- `.data/`
 
 The existing `.gitignore` already excludes these paths.
 
@@ -68,18 +70,16 @@ The existing `.gitignore` already excludes these paths.
 2. Confirm the Category and Search controls render.
 3. Open a document and use its topic navigation.
 4. Bookmark and complete the document, then refresh.
-5. Enter local admin mode and verify the category manager opens.
-6. Add a temporary document element and save it.
-7. Check the browser console for hydration or runtime errors.
-8. Confirm mobile layout at approximately 390px width.
+5. Enter admin mode, create a temporary document, and save it.
+6. Open a private browser window and confirm that temporary document is visible.
+7. Add and reorder temporary document elements, then confirm the saved order in the private window.
+8. Check the browser console for hydration or runtime errors.
+9. Confirm mobile layout at approximately 390px width.
 
-## Important persistence warning
+## Temporary access warning
 
-Vercel deployment does not make the local admin state shared. Each browser receives its own document/category edits, bookmarks, history, completion state, and video links. Clearing site data removes those local changes.
-
-Before a shared production launch, add authenticated server persistence, authorization, migrations, backups, and audit logging.
+The shared admin API intentionally has no authentication during this MVP phase. Anyone with the application link can currently create, edit, hide, delete, recover, and reorder library content. Add server-side authentication, role authorization, audit logging, and stronger concurrency controls before sharing beyond the intended team.
 
 ## Rollback
 
 Use Vercel's deployment history to promote the last known-good deployment, or redeploy a previously verified Git commit. Browser-local data schemas should remain backward compatible across rollbacks whenever possible.
-

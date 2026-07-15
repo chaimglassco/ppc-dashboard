@@ -8,6 +8,7 @@ import { extractTopics, slugifyHeading } from "../domain/headings";
 import { filterDocuments } from "../domain/search";
 import { moveDocument, readAdminDocuments, writeAdminDocuments, type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories, moveCategory, readAdminCategories, writeAdminCategories, type ManagedCategory } from "../state/category-storage";
+import { cacheSharedLibraryState, hydrateSharedLibraryState, saveSharedLibraryState } from "../state/shared-library-client";
 import { CategoryManager } from "./category-manager";
 import { DeletedDocuments } from "./deleted-documents";
 import { DocumentCard } from "./document-card";
@@ -29,11 +30,18 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    let cancelled = false;
+    void hydrateSharedLibraryState(documents, window.localStorage).then(state => {
+      if (cancelled) return;
+      setManaged(state.documents);
+      setCategories(state.categories);
+    }).catch(() => {
+      if (cancelled) return;
       setManaged(readAdminDocuments(documents, window.localStorage));
       setCategories(readAdminCategories(window.localStorage));
-    }, 0);
-    return () => window.clearTimeout(timer);
+      setNotice("Shared library is unavailable. Showing this browser's cached copy.");
+    });
+    return () => { cancelled = true; };
   }, [documents]);
 
   useEffect(() => {
@@ -51,17 +59,28 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
   };
 
-  const persist = (change: (current: ManagedLibraryDocument[]) => ManagedLibraryDocument[], message: string) => setManaged(current => {
-    const next = change(current);
-    const saved = writeAdminDocuments(next, window.localStorage);
-    setNotice(saved ? message : `${message} This browser blocked persistent storage.`);
-    return next;
-  });
+  const commitSharedState = async (nextDocuments: ManagedLibraryDocument[], nextCategories: ManagedCategory[], message: string) => {
+    setManaged(nextDocuments);
+    setCategories(nextCategories);
+    writeAdminDocuments(nextDocuments, window.localStorage);
+    writeAdminCategories(nextCategories, window.localStorage);
+    try {
+      const saved = await saveSharedLibraryState({ version: 1, documents: nextDocuments, categories: nextCategories });
+      cacheSharedLibraryState(saved, window.localStorage);
+      setManaged(saved.documents);
+      setCategories(saved.categories);
+      setNotice(message);
+    } catch {
+      setNotice("Unable to save to the shared library. Your change is only cached in this browser.");
+    }
+  };
+
+  const persist = (change: (current: ManagedLibraryDocument[]) => ManagedLibraryDocument[], message: string) => {
+    void commitSharedState(change(managed), categories, message);
+  };
 
   const commitCategories = (next: ManagedCategory[], message: string) => {
-    setCategories(next);
-    const saved = writeAdminCategories(next, window.localStorage);
-    setNotice(saved ? message : `${message} This browser blocked persistent storage.`);
+    void commitSharedState(managed, next, message);
   };
 
   const categoryNameExists = (name: string, ignoredId = "") => categories.some(item => item.id !== ignoredId && item.name.toLocaleLowerCase() === name.toLocaleLowerCase());
@@ -75,10 +94,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     if (!current) return;
     const nextCategories = categories.map(item => item.id === id ? { ...item, name } : item);
     const nextDocuments = managed.map(document => document.category === current.name ? { ...document, category: name, updatedAt: new Date().toISOString() } : document);
-    setCategories(nextCategories);
-    setManaged(nextDocuments);
-    const saved = writeAdminCategories(nextCategories, window.localStorage) && writeAdminDocuments(nextDocuments, window.localStorage);
-    setNotice(saved ? "Category renamed and assigned documents updated." : "Category renamed, but this browser blocked persistent storage.");
+    void commitSharedState(nextDocuments, nextCategories, "Category renamed and assigned documents updated.");
     if (category === current.name) update("category", name);
   };
   const deleteCategory = (id: string) => {

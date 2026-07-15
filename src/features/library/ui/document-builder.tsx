@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { ExternalLink, Eye, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, Eye, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
 import type { LibraryContentElement, LibraryContentElementType, LibraryDocument, Topic } from "../domain/types";
@@ -40,6 +40,8 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
   const [notice, setNotice] = useState("");
   const [previewImage, setPreviewImage] = useState("");
   const [useStructuredPreview, setUseStructuredPreview] = useState(Boolean(doc.contentElements));
+  const [isReorderOpen, setIsReorderOpen] = useState(false);
+  const [reorderIds, setReorderIds] = useState<string[]>([]);
 
   const structuredTopics = getTopicsFromContentElements(elements);
   const topics = useStructuredPreview || isEditMode ? structuredTopics : doc.topics;
@@ -58,6 +60,45 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
   const deleteElement = (id: string) => {
     setElements(current => current.filter(element => element.id !== id));
     if (activeTopicId === id) onTopicChange(structuredTopics.find(topic => topic.id !== id)?.id ?? "");
+  };
+
+  const openReorder = () => {
+    setIsAddMenuOpen(false);
+    setReorderIds(elements.map(element => element.id));
+    setIsReorderOpen(true);
+  };
+
+  const moveReorderItem = (fromIndex: number, toIndex: number) => {
+    setReorderIds(current => {
+      if (toIndex < 0 || toIndex >= current.length) return current;
+      const next = [...current];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  };
+
+  const saveReorder = async () => {
+    const byId = new Map(elements.map(element => [element.id, element]));
+    let partNumber = 0;
+    const next = reorderIds
+      .map(id => byId.get(id))
+      .filter((element): element is LibraryContentElement => Boolean(element))
+      .map(element => element.type === "topic" ? { ...element, eyebrow: `Part ${++partNumber}` } : element);
+
+    setIsSaving(true);
+    try {
+      await onSave(next);
+      setElements(next);
+      setUseStructuredPreview(true);
+      setIsReorderOpen(false);
+      setNotice("Element order saved.");
+      window.setTimeout(() => setNotice(""), 2400);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to save the element order.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const toggleEditMode = async () => {
@@ -96,6 +137,7 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
       </aside>
       <article className={`prose ${styles.document}`}>
         <DocumentHeader doc={doc} isEditMode={isEditMode} onSaveVideoUrl={onSaveVideoUrl} />
+        {isEditMode ? <div className={styles.reorderBar}><button className={styles.reorderButton} type="button" onClick={openReorder} disabled={elements.length < 2}><ListIcon aria-hidden="true" />REORDER</button></div> : null}
         {isEditMode || useStructuredPreview ? <div className={styles.blocks}>{elements.map(element => isEditMode
           ? <ElementEditor key={element.id} element={element} onUpdate={updates => updateElement(element.id, updates)} onDelete={() => deleteElement(element.id)} onPreviewImage={setPreviewImage} />
           : <ElementPreview key={element.id} element={element} onPreviewImage={setPreviewImage} />)}</div>
@@ -106,7 +148,42 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
     {previewImage ? <div className={styles.imageModal} role="dialog" aria-modal="true" aria-label="Image preview">
       <div><button type="button" onClick={() => setPreviewImage("")} aria-label="Close image preview"><X /></button><img src={previewImage} alt="Document feature preview" /></div>
     </div> : null}
+    {isReorderOpen ? <ReorderDialog elements={elements} order={reorderIds} isSaving={isSaving} onMove={moveReorderItem} onCancel={() => setIsReorderOpen(false)} onSave={() => void saveReorder()} /> : null}
   </>;
+}
+
+function getElementSummary(element: LibraryContentElement, index: number) {
+  const typeLabel = ELEMENT_OPTIONS.find(option => option.type === element.type)?.label ?? element.type;
+  if (element.type === "topic") return { typeLabel, title: previewText(element.title || element.label, `Topic ${index + 1}`) };
+  if (element.type === "statement" || element.type === "quote" || element.type === "code") return { typeLabel, title: previewText(element.text, `Untitled ${typeLabel}`) };
+  if (element.type === "bullets" || element.type === "checklist" || element.type === "numbered") return { typeLabel, title: previewText(element.items.find(Boolean) ?? "", `Untitled ${typeLabel}`) };
+  if (element.type === "table") return { typeLabel, title: previewText(element.columns.filter(Boolean).join(" / "), "Untitled table") };
+  if (element.type === "accordion") return { typeLabel, title: previewText(element.dropdowns?.[0]?.title || element.title, "Untitled dropdown") };
+  if (element.type === "timeline") return { typeLabel, title: previewText(element.title, "Untitled roadmap") };
+  if (element.type === "flowchart") return { typeLabel, title: previewText(element.nodes[0]?.title ?? "", "Untitled diagnostic flow") };
+  return { typeLabel, title: previewText(element.title, `Untitled ${typeLabel}`) };
+}
+
+function ReorderDialog({ elements, order, isSaving, onMove, onCancel, onSave }: { elements: LibraryContentElement[]; order: string[]; isSaving: boolean; onMove: (fromIndex: number, toIndex: number) => void; onCancel: () => void; onSave: () => void }) {
+  const byId = new Map(elements.map(element => [element.id, element]));
+  const ordered = order.map(id => byId.get(id)).filter((element): element is LibraryContentElement => Boolean(element));
+  return <div className={styles.reorderBackdrop} role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !isSaving) onCancel(); }}>
+    <section className={styles.reorderDialog} role="dialog" aria-modal="true" aria-labelledby="reorder-title">
+      <header><div><span>DOCUMENT ELEMENTS</span><h2 id="reorder-title">Reorder elements</h2><p>Move items up or down. Topic part numbers update automatically.</p></div><button type="button" onClick={onCancel} disabled={isSaving} aria-label="Close reorder elements"><X /></button></header>
+      <ol className={styles.reorderList}>{ordered.map((element, index) => {
+        const summary = getElementSummary(element, index);
+        return <li key={element.id}>
+          <span className={styles.reorderIndex}>{index + 1}</span>
+          <div className={styles.reorderCopy}><span>{summary.typeLabel}</span><strong title={summary.title}>{summary.title}</strong></div>
+          <div className={styles.reorderActions}>
+            <button type="button" onClick={() => onMove(index, index - 1)} disabled={isSaving || index === 0} aria-label={`Move ${summary.title} up`}><ArrowUp /></button>
+            <button type="button" onClick={() => onMove(index, index + 1)} disabled={isSaving || index === ordered.length - 1} aria-label={`Move ${summary.title} down`}><ArrowDown /></button>
+          </div>
+        </li>;
+      })}</ol>
+      <footer><button className={styles.reorderCancel} type="button" onClick={onCancel} disabled={isSaving}>Cancel</button><button className={styles.reorderSave} type="button" onClick={onSave} disabled={isSaving}>{isSaving ? "Saving..." : "Save order"}</button></footer>
+    </section>
+  </div>;
 }
 
 function setTopicTooltip(button: HTMLButtonElement, value: string) {

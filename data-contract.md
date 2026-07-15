@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines the repository content and browser-storage contracts used by the current Glassco Back Office Library MVP.
+This document defines the repository content, shared server storage, and browser-only reading-state contracts used by the current Glassco Back Office Library MVP.
 
 ## Library document
 
@@ -94,6 +94,31 @@ hidden: false
 
 Repository validation rejects duplicate IDs/slugs and invalid starter taxonomy values.
 
+## Shared library storage
+
+Document administration and category administration are stored together in one versioned shared snapshot served by `/api/library`.
+
+Production storage: private Vercel Blob object `glassco/library-state-v1.json`.
+
+Local development storage: `.data/library-state-v1.json`.
+
+```ts
+{
+  version: 1;
+  documents: Array<LibraryDocument & { deletedAt?: string }>;
+  categories: Array<{
+    id: string;
+    name: string;
+    hidden: boolean;
+    deletedAt?: string;
+  }>;
+}
+```
+
+The API is intentionally open for this pre-authentication MVP. All visitors can currently use the admin controls. Add server-side authorization before introducing user roles or sharing the app outside the intended team.
+
+The previous browser-local admin snapshots are retained as a cache and one-time migration source. Documents that exist only in an existing browser are uploaded to shared storage when that browser next opens the updated app.
+
 ## Browser-storage contracts
 
 ### Reading state
@@ -112,7 +137,7 @@ Schema version: `1`
 }
 ```
 
-### Document administration
+### Document administration cache and migration source
 
 Key: `glassco-library-admin-state`
 
@@ -125,7 +150,7 @@ Schema version: `1`
 }
 ```
 
-### Category administration
+### Category administration cache and migration source
 
 Key: `glassco-library-category-state`
 
@@ -153,7 +178,6 @@ Schema version: `1`
 - Reading state stores references and timestamps, never document bodies.
 - The server snapshot must remain deterministic; browser state is applied after hydration.
 
-## Future server migration
+## Future database migration
 
-A future database should preserve document IDs, slugs, topic IDs, element IDs, and category IDs. Add a schema version and migration path before changing any existing storage shape. Server-side validation and authorization must replace the current browser-only trust model.
-
+A future database should preserve document IDs, slugs, topic IDs, element IDs, and category IDs. Add a schema version and migration path before changing any existing storage shape. Server-side authorization must be added when role access is introduced. The current Blob snapshot uses last-write-wins semantics and is intended for the low-concurrency MVP only.
