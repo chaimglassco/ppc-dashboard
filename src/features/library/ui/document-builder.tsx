@@ -275,9 +275,9 @@ function ElementPreview({ element, onPreviewImage }: { element: LibraryContentEl
   </section>;
   if (element.type === "statement") return <section className={styles.statement}>{previewText(element.text)}</section>;
   if (element.type === "quote") return <section className={styles.quote}>{previewText(element.text)}</section>;
-  if (element.type === "bullets") return <ul className={styles.list}>{element.items.filter(Boolean).map((item, index) => <li key={index}>{item}</li>)}</ul>;
+  if (element.type === "bullets") return <ul className={`${styles.list} ${styles.bulletList}`}>{element.items.filter(Boolean).map((item, index) => <li key={index}>{item}</li>)}</ul>;
   if (element.type === "checklist") return <ul className={styles.checklist}>{element.items.filter(Boolean).map((item, index) => <li key={index}><input type="checkbox" disabled aria-label={item} /><span>{item}</span></li>)}</ul>;
-  if (element.type === "numbered") return <ol className={styles.list}>{element.items.filter(Boolean).map((item, index) => <li key={index}>{item}</li>)}</ol>;
+  if (element.type === "numbered") return <ol className={`${styles.list} ${styles.numberedList}`}>{element.items.filter(Boolean).map((item, index) => <li key={index}>{item}</li>)}</ol>;
   if (element.type === "insight") return <section className={styles.insight}><strong>{previewText(element.title, "Key Insight")}</strong><p>{previewText(element.text)}</p></section>;
   if (element.type === "table") return <ElementTable element={element} />;
   if (element.type === "accordion") return <section className={styles.accordionList}>{getDropdowns(element).map((dropdown, index) => <details className={styles.accordion} open={index === 0} key={index}><summary>{previewText(dropdown.title, "Dropdown title")}</summary><p>{previewText(dropdown.text)}</p></details>)}</section>;

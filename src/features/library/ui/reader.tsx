@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getTopicsFromContentElements } from "../domain/document-elements";
 import type { LibraryContentElement, LibraryDocument } from "../domain/types";
 import { useReadingState } from "../state/reading-state";
@@ -13,11 +13,61 @@ export function Reader({ doc, onSaveContentElements, onSaveVideoUrl }: { doc: Li
   const readerTopics = useMemo(() => doc.contentElements?.length ? getTopicsFromContentElements(doc.contentElements) : doc.topics, [doc.contentElements, doc.topics]);
   const [active, setActive] = useState(readerTopics.find(topic => topic.level === 2)?.id ?? "");
   const resolvedActive = readerTopics.some(topic => topic.id === active) ? active : (readerTopics.find(topic => topic.level === 2)?.id ?? "");
+  const activeTopicRef = useRef(resolvedActive);
+  const ignoreScrollUntilRef = useRef(0);
 
   useEffect(() => { recordView(doc.id); }, [doc.id, recordView]);
+  useEffect(() => { activeTopicRef.current = resolvedActive; }, [resolvedActive]);
+
+  useEffect(() => {
+    const targets = readerTopics
+      .filter(topic => topic.level === 2)
+      .map(topic => ({ id: topic.id, element: document.getElementById(topic.id) }))
+      .filter((target): target is { id: string; element: HTMLElement } => Boolean(target.element));
+
+    if (!targets.length) return;
+
+    let frame = 0;
+    const updateActiveTopic = () => {
+      if (window.performance.now() < ignoreScrollUntilRef.current) return;
+
+      const atPageBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+      const readingLine = Math.min(window.innerHeight * 0.32, 240);
+      let next = targets[0];
+
+      if (atPageBottom) {
+        next = targets[targets.length - 1];
+      } else {
+        for (const target of targets) {
+          if (target.element.getBoundingClientRect().top > readingLine) break;
+          next = target;
+        }
+      }
+
+      if (next.id === activeTopicRef.current) return;
+      activeTopicRef.current = next.id;
+      setActive(next.id);
+      setTopic(doc.id, next.id);
+    };
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(updateActiveTopic);
+    };
+
+    updateActiveTopic();
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+    };
+  }, [doc.id, readerTopics, setTopic]);
 
   const complete = ready && state.completion[doc.id];
   const go = (id: string) => {
+    ignoreScrollUntilRef.current = window.performance.now() + 800;
+    activeTopicRef.current = id;
     setActive(id);
     setTopic(doc.id, id);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });

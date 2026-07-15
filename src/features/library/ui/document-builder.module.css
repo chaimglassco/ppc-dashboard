@@ -64,6 +64,8 @@
 .statement{padding:30px 18px;border-top:1px solid #dce3ef;border-bottom:1px solid #dce3ef;color:#020817;font-size:23px;font-weight:800;line-height:1.5;text-align:center}
 .quote{padding:18px 22px;border-left:4px solid #2563eb;background:#f5f8ff;color:#24324a;font-size:16px;line-height:1.75}
 .list{display:grid;gap:12px;margin:0;padding-left:24px;font-size:16px;line-height:1.7}
+.bulletList{list-style-type:disc}
+.numberedList{list-style-type:decimal}
 .checklist{display:grid;gap:7px;margin:0;padding:0;list-style:none;font-size:15px;line-height:1.45}
 .checklist li{display:grid;grid-template-columns:14px minmax(0,1fr);align-items:start;gap:3px;color:#24324a}
 .checklist input,.checklistEditor>label>input:first-child{width:13px;height:13px;margin:3px 0 0;accent-color:#2563eb}
