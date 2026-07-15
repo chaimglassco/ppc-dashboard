@@ -53,6 +53,29 @@ describe("DocumentBuilder element reordering", () => {
   });
 });
 
+describe("DocumentBuilder element insertion", () => {
+  it("adds a selected element directly after the chosen element", async () => {
+    const document = getPublishedDocuments()[0];
+    const initialElements = getInitialContentElements(document);
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    const view = render(<DocumentBuilder doc={document} activeTopicId={document.topics[0]?.id ?? ""} onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+
+    expect(view.container.querySelectorAll('button[aria-label^="Add element after "]')).toHaveLength(initialElements.length);
+    fireEvent.click(controls.getByRole("button", { name: `Add element after ${initialElements[0].title}` }));
+    fireEvent.click(controls.getByRole("button", { name: "Centered Statement" }));
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const savedElements = onSave.mock.calls[0][0];
+    expect(savedElements[0].id).toBe(initialElements[0].id);
+    expect(savedElements[1].type).toBe("statement");
+    expect(savedElements[2].id).toBe(initialElements[1].id);
+  });
+});
+
 describe("DocumentBuilder dropdown elements", () => {
   it("renders every dropdown collapsed by default", () => {
     const baseDocument = getPublishedDocuments()[0];

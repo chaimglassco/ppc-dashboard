@@ -42,6 +42,7 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
   const [useStructuredPreview, setUseStructuredPreview] = useState(Boolean(doc.contentElements));
   const [isReorderOpen, setIsReorderOpen] = useState(false);
   const [reorderIds, setReorderIds] = useState<string[]>([]);
+  const [insertMenuIndex, setInsertMenuIndex] = useState<number | null>(null);
 
   const structuredTopics = getTopicsFromContentElements(elements);
   const topics = useStructuredPreview || isEditMode ? structuredTopics : doc.topics;
@@ -50,10 +51,15 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
     setElements(current => current.map(element => element.id === id ? { ...element, ...updates } : element));
   };
 
-  const addElement = (type: LibraryContentElementType) => {
+  const addElement = (type: LibraryContentElementType, insertionIndex = elements.length) => {
     const next = createBlankContentElement(type, structuredTopics.length + 1);
-    setElements(current => [...current, next]);
+    setElements(current => {
+      const safeIndex = Math.max(0, Math.min(insertionIndex, current.length));
+      let topicNumber = 0;
+      return [...current.slice(0, safeIndex), next, ...current.slice(safeIndex)].map(element => element.type === "topic" ? { ...element, eyebrow: `Part ${++topicNumber}` } : element);
+    });
     setIsAddMenuOpen(false);
+    setInsertMenuIndex(null);
     if (type === "topic") window.requestAnimationFrame(() => onTopicChange(next.id));
   };
 
@@ -64,6 +70,7 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
 
   const openReorder = () => {
     setIsAddMenuOpen(false);
+    setInsertMenuIndex(null);
     setReorderIds(elements.map(element => element.id));
     setIsReorderOpen(true);
   };
@@ -113,6 +120,7 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
       setUseStructuredPreview(true);
       setIsEditMode(false);
       setIsAddMenuOpen(false);
+      setInsertMenuIndex(null);
       setNotice("Changes saved. Preview updated.");
       window.setTimeout(() => setNotice(""), 2400);
     } catch (error) {
@@ -133,7 +141,7 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
           <strong>ON THIS PAGE</strong>
           <TopicLinks topics={topics} active={activeTopicId} onSelect={onTopicChange} onDelete={isEditMode ? deleteElement : undefined} />
         </div>
-        <BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => setIsAddMenuOpen(value => !value)} onAdd={addElement} />
+        <BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} />
       </aside>
       <article className={`prose ${styles.document}`}>
         <DocumentHeader doc={doc} isEditMode={isEditMode} onSaveVideoUrl={onSaveVideoUrl} />
@@ -151,13 +159,22 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
             </button>
           </div>
         ) : null}
-        {isEditMode || useStructuredPreview ? <div className={styles.blocks}>{elements.map(element => isEditMode
-          ? <ElementEditor key={element.id} element={element} onUpdate={updates => updateElement(element.id, updates)} onDelete={() => deleteElement(element.id)} onPreviewImage={setPreviewImage} />
+        {isEditMode || useStructuredPreview ? <div className={`${styles.blocks} ${isEditMode ? styles.editBlocks : ""}`}>{elements.map((element, index) => isEditMode
+          ? <div className={styles.editElementGroup} key={element.id}>
+            <ElementEditor element={element} onUpdate={updates => updateElement(element.id, updates)} onDelete={() => deleteElement(element.id)} onPreviewImage={setPreviewImage} />
+            <ElementAddMenu
+              inline
+              isOpen={insertMenuIndex === index + 1}
+              ariaLabel={`Add element after ${getElementSummary(element, index).title}`}
+              onToggle={() => { setIsAddMenuOpen(false); setInsertMenuIndex(current => current === index + 1 ? null : index + 1); }}
+              onAdd={type => addElement(type, index + 1)}
+            />
+          </div>
           : <ElementPreview key={element.id} element={element} onPreviewImage={setPreviewImage} />)}</div>
           : <Markdown body={doc.body} topics={doc.topics} onTopic={onTopicChange} />}
       </article>
     </div>
-    <div className={styles.mobileControls}><BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => setIsAddMenuOpen(value => !value)} onAdd={addElement} /></div>
+    <div className={styles.mobileControls}><BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} /></div>
     {previewImage ? <div className={styles.imageModal} role="dialog" aria-modal="true" aria-label="Image preview">
       <div><button type="button" onClick={() => setPreviewImage("")} aria-label="Close image preview"><X /></button><img src={previewImage} alt="Document feature preview" /></div>
     </div> : null}
@@ -250,7 +267,7 @@ function TopicLinks({ topics, active, onSelect, onDelete }: { topics: Topic[]; a
   })}</nav>;
 }
 
-function BuilderControls({ isEditMode, isSaving, isOpen, notice, onToggle, onToggleMenu, onAdd }: { isEditMode: boolean; isSaving: boolean; isOpen: boolean; notice: string; onToggle: () => void; onToggleMenu: () => void; onAdd: (type: LibraryContentElementType) => void }) {
+function ElementAddMenu({ isOpen, onToggle, onAdd, ariaLabel, inline = false }: { isOpen: boolean; onToggle: () => void; onAdd: (type: LibraryContentElementType) => void; ariaLabel: string; inline?: boolean }) {
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const [menuPlacement, setMenuPlacement] = useState<"up" | "down">("up");
   const [menuMaxHeight, setMenuMaxHeight] = useState(420);
@@ -267,19 +284,23 @@ function BuilderControls({ isEditMode, isSaving, isOpen, notice, onToggle, onTog
       setMenuPlacement(placement);
       setMenuMaxHeight(Math.max(140, Math.min(desiredHeight, availableSpace - 8)));
     }
-    onToggleMenu();
+    onToggle();
   };
 
+  return <div className={`${styles.addWrap} ${inline ? styles.inlineAddWrap : ""}`}>
+    <button ref={addButtonRef} className={inline ? styles.inlineAddButton : styles.addButton} type="button" onClick={toggleAddMenu} aria-expanded={isOpen} aria-label={ariaLabel}><Plus /></button>
+    {isOpen ? <div className={`${styles.addMenu} ${menuPlacement === "down" ? styles.addMenuDown : styles.addMenuUp}`} style={{ maxHeight: menuMaxHeight }}>{ELEMENT_OPTIONS.map(option => <button key={option.type} type="button" onClick={() => onAdd(option.type)}><Plus />{option.label}</button>)}</div> : null}
+  </div>;
+}
+
+function BuilderControls({ isEditMode, isSaving, isOpen, notice, onToggle, onToggleMenu, onAdd }: { isEditMode: boolean; isSaving: boolean; isOpen: boolean; notice: string; onToggle: () => void; onToggleMenu: () => void; onAdd: (type: LibraryContentElementType) => void }) {
   return <div className={styles.controls}>
     {notice ? <p role="status">{notice}</p> : null}
     <div>
       <button className={`${styles.modeButton} ${isEditMode ? styles.editing : ""}`} type="button" onClick={onToggle} disabled={isSaving} aria-pressed={isEditMode} aria-label={isEditMode ? "Save changes and switch to view mode" : "Switch to edit mode"}>
         {isSaving ? <LoaderCircle className={styles.spinner} /> : isEditMode ? <Pencil /> : <Eye />}
       </button>
-      {isEditMode ? <div className={styles.addWrap}>
-        <button ref={addButtonRef} className={styles.addButton} type="button" onClick={toggleAddMenu} aria-expanded={isOpen} aria-label="Add document element"><Plus /></button>
-        {isOpen ? <div className={`${styles.addMenu} ${menuPlacement === "down" ? styles.addMenuDown : styles.addMenuUp}`} style={{ maxHeight: menuMaxHeight }}>{ELEMENT_OPTIONS.map(option => <button key={option.type} type="button" onClick={() => onAdd(option.type)}><Plus />{option.label}</button>)}</div> : null}
-      </div> : null}
+      {isEditMode ? <ElementAddMenu isOpen={isOpen} onToggle={onToggleMenu} onAdd={onAdd} ariaLabel="Add document element" /> : null}
     </div>
   </div>;
 }
