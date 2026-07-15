@@ -1,7 +1,9 @@
 import type { LibraryDocument } from "../domain/types";
 import { ADMIN_LIBRARY_KEY, readAdminDocuments, writeAdminDocuments } from "./admin-storage";
 import { ADMIN_CATEGORIES_KEY, readAdminCategories, writeAdminCategories } from "./category-storage";
-import { mergeLocalOnlyIntoShared, parseSharedLibraryState, type SharedLibraryResponse, type SharedLibraryState } from "./shared-library-state";
+import { mergeLocalIntoShared, mergeLocalOnlyIntoShared, parseSharedLibraryState, type SharedLibraryResponse, type SharedLibraryState } from "./shared-library-state";
+
+const SHARED_MIGRATION_KEY = "glassco-library-shared-migration-v1";
 
 async function readJson(response: Response) {
   const value: unknown = await response.json();
@@ -43,13 +45,17 @@ export async function hydrateSharedLibraryState(seed: LibraryDocument[], storage
   const localCategories = readAdminCategories(storage);
   const response = await fetchSharedLibraryState();
   const hasLocalAdminState = Boolean(storage.getItem(ADMIN_LIBRARY_KEY) || storage.getItem(ADMIN_CATEGORIES_KEY));
+  const needsLegacyMigration = hasLocalAdminState && storage.getItem(SHARED_MIGRATION_KEY) !== "complete";
   let state = response.state;
 
   if (hasLocalAdminState) {
     const migrated: SharedLibraryState = response.initialized
-      ? mergeLocalOnlyIntoShared(response.state, localDocuments, localCategories)
+      ? needsLegacyMigration
+        ? mergeLocalIntoShared(response.state, localDocuments, localCategories)
+        : mergeLocalOnlyIntoShared(response.state, localDocuments, localCategories)
       : { version: 1, documents: localDocuments, categories: localCategories };
     if (JSON.stringify(migrated) !== JSON.stringify(response.state)) state = await saveSharedLibraryState(migrated);
+    if (needsLegacyMigration) storage.setItem(SHARED_MIGRATION_KEY, "complete");
   }
 
   cacheSharedLibraryState(state, storage);

@@ -47,3 +47,15 @@ export function mergeLocalOnlyIntoShared(shared: SharedLibraryState, localDocume
     categories: [...shared.categories, ...localCategories.filter(category => !categoryIds.has(category.id))],
   };
 }
+
+export function mergeLocalIntoShared(shared: SharedLibraryState, localDocuments: ManagedLibraryDocument[], localCategories: ManagedCategory[]): SharedLibraryState {
+  const localDocumentById = new Map(localDocuments.map(document => [document.id, document]));
+  const localCategoryById = new Map(localCategories.map(category => [category.id, category]));
+  const sharedDocumentIds = new Set(shared.documents.map(document => document.id));
+  const sharedCategoryIds = new Set(shared.categories.map(category => category.id));
+  return {
+    version: 1,
+    documents: [...shared.documents.map(document => localDocumentById.get(document.id) ?? document), ...localDocuments.filter(document => !sharedDocumentIds.has(document.id))],
+    categories: [...shared.categories.map(category => localCategoryById.get(category.id) ?? category), ...localCategories.filter(category => !sharedCategoryIds.has(category.id))],
+  };
+}
