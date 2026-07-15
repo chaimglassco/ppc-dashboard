@@ -137,7 +137,20 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
       </aside>
       <article className={`prose ${styles.document}`}>
         <DocumentHeader doc={doc} isEditMode={isEditMode} onSaveVideoUrl={onSaveVideoUrl} />
-        {isEditMode ? <div className={styles.reorderBar}><button className={styles.reorderButton} type="button" onClick={openReorder} disabled={elements.length < 2}><ListIcon aria-hidden="true" />REORDER</button></div> : null}
+        {isEditMode ? (
+          <div className={styles.reorderBar} aria-label="Document element controls">
+            <button
+              className={styles.reorderButton}
+              type="button"
+              onClick={openReorder}
+              disabled={elements.length < 2}
+              title={elements.length < 2 ? "Add at least two elements to reorder them" : "Reorder document elements"}
+            >
+              <ListIcon aria-hidden="true" />
+              REORDER
+            </button>
+          </div>
+        ) : null}
         {isEditMode || useStructuredPreview ? <div className={styles.blocks}>{elements.map(element => isEditMode
           ? <ElementEditor key={element.id} element={element} onUpdate={updates => updateElement(element.id, updates)} onDelete={() => deleteElement(element.id)} onPreviewImage={setPreviewImage} />
           : <ElementPreview key={element.id} element={element} onPreviewImage={setPreviewImage} />)}</div>
