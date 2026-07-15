@@ -1,0 +1,92 @@
+# Glassco Back Office Library — Architecture
+
+## Current mode
+
+The application is a modular Next.js monolith with repository content and browser-local mutable state. There is no authentication, database, middleware authorization, remote CMS, or external API dependency.
+
+## Runtime stack
+
+- Next.js 16.2.10 App Router
+- React 19.2.4
+- Strict TypeScript
+- npm
+- Tailwind CSS 4 toolchain and project CSS
+- Vitest and Testing Library
+
+## Module boundaries
+
+- `src/app` owns route composition, metadata, shared layout, boundaries, and global CSS.
+- `src/components` owns the application shell.
+- `src/features/library/domain` owns contracts, headings, search, and builder defaults.
+- `src/features/library/data` owns repository Markdown loading and validation.
+- `src/features/library/state` owns browser-storage schemas and adapters.
+- `src/features/library/ui` owns catalog, reader, administration, and builder interfaces.
+- `content/library` is the seeded Markdown content source.
+
+## Rendering model
+
+Pages and seeded documents are statically generated where practical. Server Components load repository content. Focused Client Components manage search parameters, reading state, local administration, category administration, and structured editing.
+
+The reading-state hook uses a server-safe hydration snapshot so server HTML and the first browser render remain deterministic even when bookmarks already exist locally.
+
+## Content repository
+
+The repository parses front matter and Markdown, validates starter taxonomy, rejects duplicate IDs/slugs, derives reading time, and extracts stable topics. Reader-facing repository queries expose only published, non-hidden seed content.
+
+Markdown does not allow arbitrary raw HTML. GFM tables are constrained for responsive horizontal scrolling.
+
+## Structured document builder
+
+Legacy Markdown documents are converted into editable topic elements on entry to edit mode. Once saved, structured elements become the local document representation. Optional fields provide backward compatibility for newer repeatable dropdowns and table column widths.
+
+The builder owns:
+
+- Element creation and deletion
+- Topic derivation and numbering
+- View/edit rendering
+- Viewport-aware element menu placement
+- Repeatable dropdown editing
+- Table row/column sizing
+- Video link validation and thumbnail derivation
+
+## Browser-local persistence
+
+Three independent versioned stores are used:
+
+- Reading state: bookmarks, recent history, last topic, completion
+- Document administration: local documents, order, visibility, recovery, structured content, video URLs
+- Category administration: category names, order, visibility, recovery
+
+Every read validates untrusted JSON. Missing or malformed state falls back to defaults. Failed writes do not crash the UI.
+
+This is an interface prototype, not a security boundary.
+
+## Styling
+
+`src/app/globals.css` contains the base application design system. `src/app/library-admin.css` contains catalog/admin overrides and category-manager styling. The structured builder uses a colocated CSS module.
+
+## Future replacement boundaries
+
+The repository adapter can be replaced by a database or CMS while preserving `LibraryDocument`. Browser-state adapters can be replaced by authenticated server adapters while preserving UI actions.
+
+A shared deployment must add:
+
+- Authentication
+- Server-side authorization
+- Database migrations
+- Workspace/role ownership
+- Audit logging
+- Backups and restore
+- Secure media/content policies
+
+## Quality gates
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+Current verified result: all gates pass, including 30 tests and 15 generated routes/pages.
+

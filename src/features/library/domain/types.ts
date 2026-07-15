@@ -1,0 +1,25 @@
+export const CATEGORIES=["Amazon PPC Foundations","Campaign Structure","Keyword Research","Search Term Optimization","Bid and Budget Management","Product Targeting","Amazon SEO and Organic Ranking","Reporting and Client Communication","Account Auditing","Troubleshooting"] as const;
+export const DOCUMENT_TYPES=["Guide","SOP","Checklist","Template","Playbook"] as const;
+export type Category=string; export type DocumentType=typeof DOCUMENT_TYPES[number];
+export type Topic={id:string;title:string;level:number};
+export type LibraryContentElementType="topic"|"statement"|"quote"|"bullets"|"checklist"|"numbered"|"insight"|"table"|"accordion"|"feature"|"code"|"timeline"|"flowchart";
+export type LibraryContentElement={
+  id:string;
+  type:LibraryContentElementType;
+  eyebrow:string;
+  label:string;
+  title:string;
+  text:string;
+  body:string[];
+  callout?:string;
+  items:string[];
+  columns:string[];
+  rows:string[][];
+  columnWidths?:number[];
+  buttonText:string;
+  imageUrl:string;
+  steps:Array<{title:string;text:string}>;
+  nodes:Array<{title:string;text:string}>;
+  dropdowns?:Array<{title:string;text:string}>;
+};
+export type LibraryDocument={id:string;slug:string;title:string;description:string;category:Category;type:DocumentType;tags:string[];updatedAt:string;status:"published"|"draft";hidden:boolean;readingMinutes:number;body:string;topics:Topic[];contentElements?:LibraryContentElement[];videoUrl?:string};
