@@ -151,7 +151,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   return <section className="catalog-panel" aria-label="Library documents">
     <div className="catalog-toolbar">
       <div className="filters">
-        <div className="category-filter-control"><label><span className="sr-only">Category</span><select value={category} onChange={event => update("category", event.target.value)}><option value="">Amazon PPC</option>{filterCategories.map(item => <option key={item.id} value={item.name}>{item.name}{item.hidden ? " (Hidden)" : ""}</option>)}</select></label>{manageMode ? <button className="manage-categories-button" type="button" onClick={() => setShowCategoryManager(true)} aria-label="Manage categories"><Settings2 /></button> : null}</div>
+        <div className="category-filter-control"><label><span className="sr-only">Category</span><select value={category} onChange={event => update("category", event.target.value)}><option value="">All categories</option>{filterCategories.map(item => <option key={item.id} value={item.name}>{item.name}{item.hidden ? " (Hidden)" : ""}</option>)}</select></label>{manageMode ? <button className="manage-categories-button" type="button" onClick={() => setShowCategoryManager(true)} aria-label="Manage categories"><Settings2 /></button> : null}</div>
         <label className="search-input"><span className="sr-only">Search documents</span><input value={q} onChange={event => setQ(event.target.value)} placeholder="Search documentation..."/><Search aria-hidden="true" /></label>
         {filtered && <button className="clear-button" type="button" onClick={clear} aria-label="Clear all filters"><X /></button>}
       </div>
