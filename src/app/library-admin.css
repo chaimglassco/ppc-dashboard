@@ -5,6 +5,7 @@
 .manage-categories-button{display:grid;width:40px;height:40px;flex:none;place-items:center;padding:0;border:1px solid #cadcff;border-radius:50%;background:#eef4ff;color:#0759d4;cursor:pointer}
 .manage-categories-button:hover{background:#dce9ff}
 .manage-categories-button svg{width:17px;height:17px}
+.catalog-panel>.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center}
 .category-manager{width:min(780px,100%)}
 .category-manager-body{display:grid;gap:20px;padding:22px 24px}
 .category-manager .category-create{display:grid;gap:8px;padding:0}
