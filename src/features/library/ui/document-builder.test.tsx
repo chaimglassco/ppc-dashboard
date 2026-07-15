@@ -72,3 +72,24 @@ describe("DocumentBuilder dropdown elements", () => {
     dropdowns.forEach(dropdown => expect(dropdown).not.toHaveAttribute("open"));
   });
 });
+
+describe("DocumentBuilder feature cards", () => {
+  it("renders each saved line on its own row", () => {
+    const baseDocument = getPublishedDocuments()[0];
+    const feature = {
+      ...createBlankContentElement("feature", 1),
+      label: "Feature label",
+      title: "Feature title",
+      text: "First row\nSecond row\nThird row",
+    };
+    const document = { ...baseDocument, contentElements: [feature] };
+
+    const view = render(<DocumentBuilder doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
+    const firstRow = view.getByText("First row");
+    const rows = firstRow.parentElement?.querySelectorAll("p");
+
+    expect(firstRow.tagName).toBe("P");
+    expect(rows).toHaveLength(3);
+    expect(Array.from(rows ?? []).map(row => row.textContent)).toEqual(["First row", "Second row", "Third row"]);
+  });
+});
