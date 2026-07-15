@@ -1,7 +1,7 @@
 import { fireEvent, render, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
-import { getInitialContentElements } from "../domain/document-elements";
+import { createBlankContentElement, getInitialContentElements } from "../domain/document-elements";
 import { DocumentBuilder } from "./document-builder";
 
 describe("DocumentBuilder element reordering", () => {
@@ -50,5 +50,25 @@ describe("DocumentBuilder element reordering", () => {
     expect(savedElements.slice(0, 2).map((element: { id: string }) => element.id)).toEqual([initialElements[1].id, initialElements[0].id]);
     expect(savedElements.filter((element: { type: string }) => element.type === "topic").map((element: { eyebrow: string }) => element.eyebrow)).toEqual(initialElements.filter(element => element.type === "topic").map((_, index) => `Part ${index + 1}`));
     expect(controls.queryByRole("dialog", { name: "Reorder elements" })).not.toBeInTheDocument();
+  });
+});
+
+describe("DocumentBuilder dropdown elements", () => {
+  it("renders every dropdown collapsed by default", () => {
+    const baseDocument = getPublishedDocuments()[0];
+    const accordion = {
+      ...createBlankContentElement("accordion", 1),
+      dropdowns: [
+        { title: "First dropdown", text: "First dropdown content" },
+        { title: "Second dropdown", text: "Second dropdown content" },
+      ],
+    };
+    const document = { ...baseDocument, contentElements: [accordion] };
+
+    const view = render(<DocumentBuilder doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
+    const dropdowns = view.container.querySelectorAll("article details");
+
+    expect(dropdowns).toHaveLength(2);
+    dropdowns.forEach(dropdown => expect(dropdown).not.toHaveAttribute("open"));
   });
 });
