@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Pencil, Plus, Search, Settings2, X } from "lucide-react";
+import { ArrowUpDown, Eye, Pencil, Plus, Search, Settings2, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDeferredValue, useEffect, useState } from "react";
 import type { LibraryDocument } from "../domain/types";
@@ -13,6 +13,7 @@ import { CategoryManager } from "./category-manager";
 import { DeletedDocuments } from "./deleted-documents";
 import { DocumentCard } from "./document-card";
 import { DocumentEditor, type DocumentDraft } from "./document-editor";
+import { DocumentReorderDialog } from "./document-reorder-dialog";
 
 export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const router = useRouter();
@@ -26,6 +27,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [categories, setCategories] = useState<ManagedCategory[]>(createDefaultCategories);
   const [manageMode, setManageMode] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [showDocumentReorder, setShowDocumentReorder] = useState(false);
   const [editor, setEditor] = useState<ManagedLibraryDocument | "new" | null>(null);
   const [notice, setNotice] = useState("");
 
@@ -137,6 +139,14 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const filtered = Boolean(q || category);
   const deleted = managed.filter(document => document.deletedAt);
   const documentCounts = managed.reduce<Record<string, number>>((counts, document) => { counts[document.category] = (counts[document.category] ?? 0) + 1; return counts; }, {});
+  const saveDocumentOrder = async (order: string[]) => {
+    const activeById = new Map(activeDocuments.map(document => [document.id, document]));
+    const orderedActive = order.map(id => activeById.get(id)).filter((document): document is ManagedLibraryDocument => Boolean(document));
+    let activeIndex = 0;
+    const nextDocuments = managed.map(document => document.deletedAt ? document : orderedActive[activeIndex++] ?? document);
+    await commitSharedState(nextDocuments, categories, "Library document order updated.");
+    setShowDocumentReorder(false);
+  };
 
   return <section className="catalog-panel" aria-label="Library documents">
     <div className="catalog-toolbar">
@@ -145,7 +155,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         <label className="search-input"><span className="sr-only">Search documents</span><input value={q} onChange={event => setQ(event.target.value)} placeholder="Search documentation..."/><Search aria-hidden="true" /></label>
         {filtered && <button className="clear-button" type="button" onClick={clear} aria-label="Clear all filters"><X /></button>}
       </div>
-      <div className="admin-toolbar"><button className={manageMode ? "active" : ""} type="button" onClick={() => { if (manageMode && category && !activeCategories.some(item => item.name === category && !item.hidden)) update("category", ""); setManageMode(value => !value); setNotice(""); }} aria-label={manageMode ? "Return to library view" : "Manage library"} aria-pressed={manageMode}>{manageMode ? <Pencil /> : <Eye />}</button>{manageMode ? <button className="add-topic-button" type="button" onClick={() => setEditor("new")} aria-label="Add new topic"><Plus /></button> : null}</div>
+      <div className="admin-toolbar"><button className="catalog-reorder-button" type="button" onClick={() => setShowDocumentReorder(true)} disabled={activeDocuments.length < 2}><ArrowUpDown /><span>REORDER</span></button><button className={manageMode ? "active" : ""} type="button" onClick={() => { if (manageMode && category && !activeCategories.some(item => item.name === category && !item.hidden)) update("category", ""); setManageMode(value => !value); setNotice(""); }} aria-label={manageMode ? "Return to library view" : "Manage library"} aria-pressed={manageMode}>{manageMode ? <Pencil /> : <Eye />}</button>{manageMode ? <button className="add-topic-button" type="button" onClick={() => setEditor("new")} aria-label="Add new topic"><Plus /></button> : null}</div>
     </div>
     {manageMode && <div className="admin-mode-banner"><span>Admin mode</span><p>Edit documents and manage category dropdown options, visibility, order, deletion, and recovery.</p></div>}
     {notice && <p className="admin-notice" role="status">{notice}</p>}
@@ -156,6 +166,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     })}</div> : <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div>}
     {manageMode && <DeletedDocuments documents={deleted} onRecover={id => persist(current => current.map(document => document.id === id ? { ...document, deletedAt: undefined } : document), "Topic recovered.")} />}
     {editor && <DocumentEditor key={editor === "new" ? "new" : editor.id} document={editor === "new" ? undefined : editor} categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft}/>} 
+    {showDocumentReorder ? <DocumentReorderDialog documents={activeDocuments} onCancel={() => setShowDocumentReorder(false)} onSave={saveDocumentOrder} /> : null}
     {showCategoryManager ? <CategoryManager categories={categories} documentCounts={documentCounts} onClose={() => setShowCategoryManager(false)} onCreate={createCategory} onRename={renameCategory} onToggleHidden={toggleCategoryHidden} onDelete={deleteCategory} onRecover={id => commitCategories(categories.map(item => item.id === id ? { ...item, hidden: false, deletedAt: undefined } : item), "Category recovered.")} onMove={(id, direction) => commitCategories(moveCategory(categories, id, direction), "Category order updated.")} /> : null}
   </section>;
 }
