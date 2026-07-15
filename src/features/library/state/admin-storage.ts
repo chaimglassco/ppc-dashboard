@@ -9,16 +9,21 @@ type WriteStore = Pick<Storage, "setItem">;
 function isStringArray(value: unknown): value is string[] { return Array.isArray(value) && value.every(item => typeof item === "string"); }
 function isNumberArray(value: unknown) { return Array.isArray(value) && value.every(item => typeof item === "number" && Number.isFinite(item) && item > 0); }
 function isTextPairArray(value: unknown) { return Array.isArray(value) && value.every(item => Boolean(item) && typeof item === "object" && typeof (item as Record<string, unknown>).title === "string" && typeof (item as Record<string, unknown>).text === "string"); }
+function isRoadmapStepArray(value: unknown) { return Array.isArray(value) && value.every(item => Boolean(item) && typeof item === "object" && typeof (item as Record<string, unknown>).title === "string" && typeof (item as Record<string, unknown>).text === "string" && ((item as Record<string, unknown>).imageUrl === undefined || typeof (item as Record<string, unknown>).imageUrl === "string")); }
+function isGalleryImageArray(value: unknown) { return Array.isArray(value) && value.every(item => Boolean(item) && typeof item === "object" && typeof (item as Record<string, unknown>).url === "string" && typeof (item as Record<string, unknown>).alt === "string"); }
 function isContentElement(value: unknown): value is LibraryContentElement {
   if (!value || typeof value !== "object") return false;
   const element = value as Record<string, unknown>;
-  const types = ["topic", "statement", "quote", "bullets", "checklist", "numbered", "insight", "table", "accordion", "feature", "code", "timeline", "flowchart"];
+  const types = ["topic", "statement", "quote", "bullets", "checklist", "numbered", "insight", "table", "accordion", "feature", "code", "timeline", "flowchart", "gallery"];
   const textFields = ["id", "eyebrow", "label", "title", "text", "buttonText", "imageUrl"];
   return types.includes(String(element.type)) && textFields.every(field => typeof element[field] === "string") &&
     isStringArray(element.body) && isStringArray(element.items) && isStringArray(element.columns) &&
     Array.isArray(element.rows) && element.rows.every(isStringArray) &&
     (element.columnWidths === undefined || isNumberArray(element.columnWidths)) &&
-    isTextPairArray(element.steps) && isTextPairArray(element.nodes) &&
+    isRoadmapStepArray(element.steps) && isTextPairArray(element.nodes) &&
+    (element.alignment === undefined || ["left", "center", "right"].includes(String(element.alignment))) &&
+    (element.galleryColumns === undefined || [1, 2, 3, 4].includes(Number(element.galleryColumns))) &&
+    (element.images === undefined || isGalleryImageArray(element.images)) &&
     (element.dropdowns === undefined || isTextPairArray(element.dropdowns));
 }
 

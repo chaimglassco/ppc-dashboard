@@ -54,6 +54,7 @@ feature
 code
 timeline
 flowchart
+gallery
 ```
 
 Important structured fields:
@@ -68,11 +69,14 @@ Important structured fields:
 | `rows` | `string[][]` | Table cell data |
 | `columnWidths` | `number[]?` | Saved table widths in pixels |
 | `buttonText`, `imageUrl` | `string` | Feature card |
-| `steps` | `{title,text}[]` | Roadmap |
+| `steps` | `{title,text,imageUrl?}[]` | Roadmap steps with optional images |
+| `alignment` | `"left" \| "center" \| "right"` | Optional Roadmap placement; defaults to `left` |
 | `nodes` | `{title,text}[]` | Diagnostic flow |
 | `dropdowns` | `{title,text}[]?` | Repeatable dropdown entries |
+| `galleryColumns` | `1 \| 2 \| 3 \| 4` | Image Gallery column layout |
+| `images` | `{url,alt}[]?` | Repeatable Image Gallery entries |
 
-Optional `columnWidths` and `dropdowns` preserve compatibility with content saved before those features existed.
+Optional `columnWidths`, `dropdowns`, Roadmap `alignment`, step `imageUrl`, `galleryColumns`, and `images` values preserve compatibility with content saved before those features existed.
 
 ## Repository Markdown front matter
 

@@ -4,7 +4,7 @@
 import { ArrowDown, ArrowUp, ExternalLink, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
 import { useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
-import type { LibraryContentElement, LibraryContentElementType, LibraryDocument, Topic } from "../domain/types";
+import type { LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, Topic } from "../domain/types";
 import { Markdown } from "./markdown";
 import styles from "./document-builder.module.css";
 
@@ -19,6 +19,7 @@ const ELEMENT_OPTIONS: Array<{ type: LibraryContentElementType; label: string }>
   { type: "table", label: "Editable Table" },
   { type: "accordion", label: "Dropdown" },
   { type: "feature", label: "Feature Card" },
+  { type: "gallery", label: "Image Gallery" },
   { type: "code", label: "Blue Text Block" },
   { type: "timeline", label: "Roadmap" },
   { type: "flowchart", label: "Diagnostic Flow" },
@@ -189,6 +190,7 @@ function getElementSummary(element: LibraryContentElement, index: number) {
   if (element.type === "bullets" || element.type === "checklist" || element.type === "numbered") return { typeLabel, title: previewText(element.items.find(Boolean) ?? "", `Untitled ${typeLabel}`) };
   if (element.type === "table") return { typeLabel, title: previewText(element.columns.filter(Boolean).join(" / "), "Untitled table") };
   if (element.type === "accordion") return { typeLabel, title: previewText(element.dropdowns?.[0]?.title || element.title, "Untitled dropdown") };
+  if (element.type === "gallery") return { typeLabel, title: previewText(element.images?.find(image => image.alt)?.alt ?? "", "Untitled image gallery") };
   if (element.type === "timeline") return { typeLabel, title: previewText(element.title, "Untitled roadmap") };
   if (element.type === "flowchart") return { typeLabel, title: previewText(element.nodes[0]?.title ?? "", "Untitled diagnostic flow") };
   return { typeLabel, title: previewText(element.title, `Untitled ${typeLabel}`) };
@@ -419,9 +421,35 @@ function ElementPreview({ element, onPreviewImage }: { element: LibraryContentEl
   if (element.type === "table") return <ElementTable element={element} />;
   if (element.type === "accordion") return <section className={styles.accordionList}>{getDropdowns(element).map((dropdown, index) => <details className={styles.accordion} key={index}><summary>{previewText(dropdown.title, "Dropdown title")}</summary><p>{previewText(dropdown.text)}</p></details>)}</section>;
   if (element.type === "feature") return <section className={styles.feature}><div><span>{element.label}</span><h3>{previewText(element.title, "Feature title")}</h3><div className={styles.featureText}>{previewText(element.text).split(/\r?\n/).filter(line => line.trim()).map((line, index) => <p key={index}>{line}</p>)}</div>{element.buttonText ? <button type="button">{element.buttonText}</button> : null}</div><button className={styles.imageButton} type="button" onClick={() => element.imageUrl && onPreviewImage(element.imageUrl)}>{element.imageUrl ? <img src={element.imageUrl} alt="" /> : "Image preview"}</button></section>;
+  if (element.type === "gallery") return <ImageGalleryPreview element={element} onPreviewImage={onPreviewImage} />;
   if (element.type === "code") return <section className={styles.code}><span>{element.label}</span><pre>{previewText(element.text)}</pre></section>;
-  if (element.type === "timeline") return <section className={styles.timeline}><h3>{previewText(element.title, "Roadmap title")}</h3>{element.steps.map((step, index) => <div key={index}><span>{index + 1}</span><div><strong>{previewText(step.title, "Step title")}</strong><p>{previewText(step.text)}</p></div></div>)}</section>;
+  if (element.type === "timeline") return <RoadmapPreview element={element} onPreviewImage={onPreviewImage} />;
   return <section className={styles.flow}>{element.nodes.map((node, index) => <div key={index}><strong>{previewText(node.title, "Flow box title")}</strong>{node.text ? <span>{node.text}</span> : null}</div>)}</section>;
+}
+
+function ImageGalleryPreview({ element, onPreviewImage }: { element: LibraryContentElement; onPreviewImage: (url: string) => void }) {
+  const columns = element.galleryColumns ?? 1;
+  const images = (element.images ?? []).filter(image => image.url.trim());
+  return <section className={styles.gallery} data-gallery-columns={columns} aria-label="Image gallery">
+    {images.map((image, index) => <button className={styles.galleryImage} type="button" key={index} onClick={() => onPreviewImage(image.url)} aria-label={`Preview ${previewText(image.alt, `gallery image ${index + 1}`)}`}>
+      <img src={image.url} alt={previewText(image.alt, `Gallery image ${index + 1}`)} />
+    </button>)}
+  </section>;
+}
+
+function RoadmapPreview({ element, onPreviewImage }: { element: LibraryContentElement; onPreviewImage: (url: string) => void }) {
+  const alignment = element.alignment ?? "left";
+  return <section className={styles.timeline} data-alignment={alignment}>
+    <h3>{previewText(element.title, "Roadmap title")}</h3>
+    {element.steps.map((step, index) => <div key={index}>
+      <span>{index + 1}</span>
+      <div>
+        <strong>{previewText(step.title, "Step title")}</strong>
+        <p>{previewText(step.text)}</p>
+        {step.imageUrl ? <button className={styles.roadmapImage} type="button" onClick={() => onPreviewImage(step.imageUrl ?? "")} aria-label={`Preview ${previewText(step.title, `step ${index + 1}`)} image`}><img src={step.imageUrl} alt={`${previewText(step.title, `Step ${index + 1}`)} roadmap image`} /></button> : null}
+      </div>
+    </div>)}
+  </section>;
 }
 
 function ElementTable({ element }: { element: LibraryContentElement }) {
@@ -431,7 +459,7 @@ function ElementTable({ element }: { element: LibraryContentElement }) {
 
 function ElementEditor({ element, onUpdate, onDelete, onPreviewImage }: { element: LibraryContentElement; onUpdate: (updates: Partial<LibraryContentElement>) => void; onDelete: () => void; onPreviewImage: (url: string) => void }) {
   const updateItem = (index: number, value: string) => onUpdate({ items: element.items.map((item, itemIndex) => itemIndex === index ? value : item) });
-  const updatePair = (field: "steps" | "nodes", index: number, key: "title" | "text", value: string) => onUpdate({ [field]: element[field].map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item) });
+  const updateNode = (index: number, key: "title" | "text", value: string) => onUpdate({ nodes: element.nodes.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item) });
   const editor = (() => {
     if (element.type === "topic") return <section id={element.id} className={styles.topicBlock}><p className={styles.eyebrow}>{element.eyebrow}</p><input className={styles.topicTitleInput} value={element.title} onChange={event => onUpdate({ title: event.target.value, label: event.target.value || element.label })} placeholder="Header topic title" /><span className={styles.rule} /><textarea className={styles.topicTextarea} value={element.body.join("\n\n")} onChange={event => onUpdate({ body: event.target.value.split(/\n\s*\n/) })} placeholder="Topic content..." /><input className={styles.input} value={element.callout ?? ""} onChange={event => onUpdate({ callout: event.target.value })} placeholder="Optional topic callout" /></section>;
     if (element.type === "statement") return <textarea className={`${styles.area} ${styles.statementEditor}`} value={element.text} onChange={event => onUpdate({ text: event.target.value })} placeholder="Centered statement text..." />;
@@ -445,11 +473,58 @@ function ElementEditor({ element, onUpdate, onDelete, onPreviewImage }: { elemen
     if (element.type === "table") return <TableEditor element={element} onUpdate={onUpdate} />;
     if (element.type === "accordion") return <AccordionEditor element={element} onUpdate={onUpdate} />;
     if (element.type === "feature") return <section className={styles.featureEditor}><div><input className={styles.input} value={element.label} onChange={event => onUpdate({ label: event.target.value })} placeholder="Feature label" /><input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Feature title" /><textarea className={styles.area} value={element.text} onChange={event => onUpdate({ text: event.target.value })} placeholder="Feature text..." /><input className={styles.input} value={element.buttonText} onChange={event => onUpdate({ buttonText: event.target.value })} placeholder="Button text" /></div><div><input className={styles.input} value={element.imageUrl} onChange={event => onUpdate({ imageUrl: event.target.value })} placeholder="Image URL" /><button className={styles.imageButton} type="button" onClick={() => element.imageUrl && onPreviewImage(element.imageUrl)}>{element.imageUrl ? <img src={element.imageUrl} alt="" /> : "Clickable image preview"}</button></div></section>;
+    if (element.type === "gallery") return <ImageGalleryEditor element={element} onUpdate={onUpdate} onPreviewImage={onPreviewImage} />;
     if (element.type === "code") return <section className={styles.code}><input value={element.label} onChange={event => onUpdate({ label: event.target.value })} placeholder="Block label" /><textarea value={element.text} onChange={event => onUpdate({ text: event.target.value })} placeholder="Blue text block content..." /></section>;
-    if (element.type === "timeline") return <section className={styles.timelineEditor}><input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Roadmap title" />{element.steps.map((step, index) => <div key={index}><span>{index + 1}</span><div><input className={styles.input} value={step.title} onChange={event => updatePair("steps", index, "title", event.target.value)} placeholder="Step title" /><input className={styles.input} value={step.text} onChange={event => updatePair("steps", index, "text", event.target.value)} placeholder="Step description" /></div></div>)}<button type="button" onClick={() => onUpdate({ steps: [...element.steps, { title: "", text: "" }] })}>Add step</button></section>;
-    return <section className={styles.flowEditor}>{element.nodes.map((node, index) => <div key={index}><input value={node.title} onChange={event => updatePair("nodes", index, "title", event.target.value)} placeholder="Flow box title" /><input value={node.text} onChange={event => updatePair("nodes", index, "text", event.target.value)} placeholder="Connector text" /></div>)}<button type="button" onClick={() => onUpdate({ nodes: [...element.nodes, { title: "", text: "" }] })}>Add flow step</button></section>;
+    if (element.type === "timeline") return <RoadmapEditor element={element} onUpdate={onUpdate} onPreviewImage={onPreviewImage} />;
+    return <section className={styles.flowEditor}>{element.nodes.map((node, index) => <div key={index}><input value={node.title} onChange={event => updateNode(index, "title", event.target.value)} placeholder="Flow box title" /><input value={node.text} onChange={event => updateNode(index, "text", event.target.value)} placeholder="Connector text" /></div>)}<button type="button" onClick={() => onUpdate({ nodes: [...element.nodes, { title: "", text: "" }] })}>Add flow step</button></section>;
   })();
   return <div className={styles.editorShell}><button className={styles.deleteBlock} type="button" onClick={onDelete} aria-label={`Delete ${element.type} block`}><Trash2 /></button>{editor}</div>;
+}
+
+function ImageGalleryEditor({ element, onUpdate, onPreviewImage }: { element: LibraryContentElement; onUpdate: (updates: Partial<LibraryContentElement>) => void; onPreviewImage: (url: string) => void }) {
+  const columns = element.galleryColumns ?? 1;
+  const images = element.images?.length ? element.images : [{ url: "", alt: "" }];
+  const layouts: Array<{ columns: 1 | 2 | 3 | 4; label: string }> = [{ columns: 1, label: "1 Whole image" }, { columns: 2, label: "2 Grid" }, { columns: 3, label: "3 Grid" }, { columns: 4, label: "4 Grid" }];
+  const saveImages = (next: Array<{ url: string; alt: string }>) => onUpdate({ images: next });
+  const updateImage = (index: number, field: "url" | "alt", value: string) => saveImages(images.map((image, imageIndex) => imageIndex === index ? { ...image, [field]: value } : image));
+
+  return <section className={styles.galleryEditor}>
+    <fieldset className={styles.galleryLayout}>
+      <legend>Gallery layout</legend>
+      <div>{layouts.map(layout => <button key={layout.columns} type="button" aria-pressed={columns === layout.columns} onClick={() => onUpdate({ galleryColumns: layout.columns })}>{layout.label}</button>)}</div>
+    </fieldset>
+    <div className={styles.galleryEditorList}>{images.map((image, index) => <div className={styles.galleryEditorItem} key={index}>
+      <input className={styles.input} type="url" value={image.url} onChange={event => updateImage(index, "url", event.target.value)} placeholder="Image URL" aria-label={`Gallery image ${index + 1} URL`} />
+      <input className={styles.input} value={image.alt} onChange={event => updateImage(index, "alt", event.target.value)} placeholder="Image description" aria-label={`Gallery image ${index + 1} description`} />
+      {image.url ? <button className={styles.galleryEditorPreview} type="button" onClick={() => onPreviewImage(image.url)} aria-label={`Preview gallery image ${index + 1}`}><img src={image.url} alt="" /></button> : null}
+      {images.length > 1 ? <button className={styles.removeGalleryImage} type="button" onClick={() => saveImages(images.filter((_, imageIndex) => imageIndex !== index))} aria-label={`Remove gallery image ${index + 1}`}><Trash2 /></button> : null}
+    </div>)}</div>
+    <button className={styles.addGalleryImage} type="button" onClick={() => saveImages([...images, { url: "", alt: "" }])}><Plus />Add image</button>
+  </section>;
+}
+
+function RoadmapEditor({ element, onUpdate, onPreviewImage }: { element: LibraryContentElement; onUpdate: (updates: Partial<LibraryContentElement>) => void; onPreviewImage: (url: string) => void }) {
+  const alignment = element.alignment ?? "left";
+  const updateStep = (index: number, key: "title" | "text" | "imageUrl", value: string) => onUpdate({ steps: element.steps.map((step, stepIndex) => stepIndex === index ? { ...step, [key]: value } : step) });
+  const alignments: Array<{ value: RoadmapAlignment; label: string }> = [{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }];
+
+  return <section className={styles.timelineEditor} data-alignment={alignment}>
+    <input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Roadmap title" />
+    <fieldset className={styles.roadmapAlignment}>
+      <legend>Roadmap alignment</legend>
+      <div>{alignments.map(option => <button key={option.value} type="button" aria-pressed={alignment === option.value} onClick={() => onUpdate({ alignment: option.value })}>{option.label}</button>)}</div>
+    </fieldset>
+    {element.steps.map((step, index) => <div key={index}>
+      <span>{index + 1}</span>
+      <div>
+        <input className={styles.input} value={step.title} onChange={event => updateStep(index, "title", event.target.value)} placeholder="Step title" />
+        <input className={styles.input} value={step.text} onChange={event => updateStep(index, "text", event.target.value)} placeholder="Step description" />
+        <input className={styles.input} type="url" value={step.imageUrl ?? ""} onChange={event => updateStep(index, "imageUrl", event.target.value)} placeholder="Step image URL (optional)" aria-label={`Step ${index + 1} image URL`} />
+        {step.imageUrl ? <button className={styles.roadmapImage} type="button" onClick={() => onPreviewImage(step.imageUrl ?? "")} aria-label={`Preview step ${index + 1} image`}><img src={step.imageUrl} alt="" /></button> : null}
+      </div>
+    </div>)}
+    <button type="button" onClick={() => onUpdate({ steps: [...element.steps, { title: "", text: "", imageUrl: "" }] })}>Add step</button>
+  </section>;
 }
 
 function getDropdowns(element: LibraryContentElement) {

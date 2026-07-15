@@ -15,9 +15,12 @@ const emptyElement = (type: LibraryContentElementType, id: string): LibraryConte
   rows: [["", ""]],
   buttonText: "",
   imageUrl: "",
-  steps: [{ title: "", text: "" }],
+  steps: [{ title: "", text: "", imageUrl: "" }],
+  alignment: type === "timeline" ? "left" : undefined,
   nodes: [{ title: "", text: "" }],
   dropdowns: type === "accordion" ? [{ title: "", text: "" }] : undefined,
+  galleryColumns: type === "gallery" ? 1 : undefined,
+  images: type === "gallery" ? [{ url: "", alt: "" }] : undefined,
 });
 
 export function createBlankContentElement(type: LibraryContentElementType, partNumber: number) {
@@ -25,7 +28,8 @@ export function createBlankContentElement(type: LibraryContentElementType, partN
   if (type === "topic") return { ...element, eyebrow: `Part ${partNumber}`, label: `Topic ${partNumber}` };
   if (type === "table") return { ...element, columns: ["", ""], rows: [["", ""]] };
   if (type === "accordion") return { ...element, dropdowns: [{ title: "", text: "" }] };
-  if (type === "timeline") return { ...element, steps: [{ title: "", text: "" }, { title: "", text: "" }] };
+  if (type === "timeline") return { ...element, alignment: "left" as const, steps: [{ title: "", text: "", imageUrl: "" }, { title: "", text: "", imageUrl: "" }] };
+  if (type === "gallery") return { ...element, galleryColumns: 1 as const, images: [{ url: "", alt: "" }] };
   if (type === "flowchart") return { ...element, nodes: [{ title: "", text: "" }, { title: "", text: "" }] };
   return element;
 }
@@ -62,6 +66,7 @@ export function getInitialContentElements(document: LibraryDocument): LibraryCon
     steps: element.steps.map(step => ({ ...step })),
     nodes: element.nodes.map(node => ({ ...node })),
     dropdowns: element.dropdowns?.map(dropdown => ({ ...dropdown })),
+    images: element.images?.map(image => ({ ...image })),
   }));
 
   const headings = [...document.body.matchAll(/^##\s+(.+)$/gm)];

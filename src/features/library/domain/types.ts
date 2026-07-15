@@ -2,7 +2,9 @@ export const CATEGORIES=["Amazon PPC Foundations","Campaign Structure","Keyword 
 export const DOCUMENT_TYPES=["Guide","SOP","Checklist","Template","Playbook"] as const;
 export type Category=string; export type DocumentType=typeof DOCUMENT_TYPES[number];
 export type Topic={id:string;title:string;level:number};
-export type LibraryContentElementType="topic"|"statement"|"quote"|"bullets"|"checklist"|"numbered"|"insight"|"table"|"accordion"|"feature"|"code"|"timeline"|"flowchart";
+export type LibraryContentElementType="topic"|"statement"|"quote"|"bullets"|"checklist"|"numbered"|"insight"|"table"|"accordion"|"feature"|"code"|"timeline"|"flowchart"|"gallery";
+export type RoadmapAlignment="left"|"center"|"right";
+export type RoadmapStep={title:string;text:string;imageUrl?:string};
 export type LibraryContentElement={
   id:string;
   type:LibraryContentElementType;
@@ -18,8 +20,11 @@ export type LibraryContentElement={
   columnWidths?:number[];
   buttonText:string;
   imageUrl:string;
-  steps:Array<{title:string;text:string}>;
+  steps:RoadmapStep[];
+  alignment?:RoadmapAlignment;
   nodes:Array<{title:string;text:string}>;
   dropdowns?:Array<{title:string;text:string}>;
+  galleryColumns?:1|2|3|4;
+  images?:Array<{url:string;alt:string}>;
 };
 export type LibraryDocument={id:string;slug:string;title:string;description:string;category:Category;type:DocumentType;tags:string[];updatedAt:string;status:"published"|"draft";hidden:boolean;readingMinutes:number;body:string;topics:Topic[];contentElements?:LibraryContentElement[];videoUrl?:string};
