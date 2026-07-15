@@ -1,8 +1,8 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { ArrowDown, ArrowUp, ExternalLink, Eye, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { ArrowDown, ArrowUp, ExternalLink, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
+import { useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
 import type { LibraryContentElement, LibraryContentElementType, LibraryDocument, Topic } from "../domain/types";
 import { Markdown } from "./markdown";
@@ -178,14 +178,40 @@ function getElementSummary(element: LibraryContentElement, index: number) {
 }
 
 function ReorderDialog({ elements, order, isSaving, onMove, onCancel, onSave }: { elements: LibraryContentElement[]; order: string[]; isSaving: boolean; onMove: (fromIndex: number, toIndex: number) => void; onCancel: () => void; onSave: () => void }) {
+  const [draggedId, setDraggedId] = useState("");
+  const [dropTargetId, setDropTargetId] = useState("");
   const byId = new Map(elements.map(element => [element.id, element]));
   const ordered = order.map(id => byId.get(id)).filter((element): element is LibraryContentElement => Boolean(element));
+  const startDrag = (event: ReactDragEvent<HTMLLIElement>, id: string) => {
+    setDraggedId(id);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", id);
+  };
+  const drop = (event: ReactDragEvent<HTMLLIElement>, targetId: string) => {
+    event.preventDefault();
+    const sourceId = draggedId || event.dataTransfer.getData("text/plain");
+    const sourceIndex = order.indexOf(sourceId);
+    const targetIndex = order.indexOf(targetId);
+    if (sourceIndex >= 0 && targetIndex >= 0 && sourceIndex !== targetIndex) onMove(sourceIndex, targetIndex);
+    setDraggedId("");
+    setDropTargetId("");
+  };
   return <div className={styles.reorderBackdrop} role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !isSaving) onCancel(); }}>
     <section className={styles.reorderDialog} role="dialog" aria-modal="true" aria-labelledby="reorder-title">
-      <header><div><span>DOCUMENT ELEMENTS</span><h2 id="reorder-title">Reorder elements</h2><p>Move items up or down. Topic part numbers update automatically.</p></div><button type="button" onClick={onCancel} disabled={isSaving} aria-label="Close reorder elements"><X /></button></header>
+      <header><div><span>DOCUMENT ELEMENTS</span><h2 id="reorder-title">Reorder elements</h2><p>Drag items into position, or use the arrows. Topic part numbers update automatically.</p></div><button type="button" onClick={onCancel} disabled={isSaving} aria-label="Close reorder elements"><X /></button></header>
       <ol className={styles.reorderList}>{ordered.map((element, index) => {
         const summary = getElementSummary(element, index);
-        return <li key={element.id}>
+        return <li
+          className={`${draggedId === element.id ? styles.dragging : ""} ${dropTargetId === element.id && draggedId !== element.id ? styles.dropTarget : ""}`}
+          key={element.id}
+          draggable={!isSaving}
+          onDragStart={event => startDrag(event, element.id)}
+          onDragEnter={() => setDropTargetId(element.id)}
+          onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }}
+          onDrop={event => drop(event, element.id)}
+          onDragEnd={() => { setDraggedId(""); setDropTargetId(""); }}
+        >
+          <span className={styles.reorderHandle} title={`Drag ${summary.title}`}><GripVertical aria-hidden="true" /></span>
           <span className={styles.reorderIndex}>{index + 1}</span>
           <div className={styles.reorderCopy}><span>{summary.typeLabel}</span><strong title={summary.title}>{summary.title}</strong></div>
           <div className={styles.reorderActions}>
