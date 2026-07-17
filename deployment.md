@@ -76,10 +76,12 @@ The existing `.gitignore` already excludes these paths.
 8. Open the new-document form and confirm it does not show Document Type, Tags, or Content Markdown.
 9. Use the Category Plus control to create and select a temporary category.
 10. Use the Category Pencil control to open the category manager; verify rename, reorder, and recoverable deletion controls.
-11. Open a private browser window and confirm that temporary document is visible.
-12. Add and reorder temporary document elements, then confirm the saved order in the private window.
-13. Check the browser console for hydration or runtime errors.
-14. Confirm mobile layout at approximately 390px width.
+11. Confirm deleted categories are absent from the main list, then use the recovery icon to open the recovery dialog and recover one.
+12. Add a Roadmap, select Center number, and confirm its number, title, and subtext are centered and its image uses the full step width after saving.
+13. Open a private browser window and confirm that temporary document is visible.
+14. Add and reorder temporary document elements, then confirm the saved order in the private window.
+15. Check the browser console for hydration or runtime errors.
+16. Confirm mobile layout at approximately 390px width.
 
 ## Temporary access warning
 

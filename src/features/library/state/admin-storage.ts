@@ -22,6 +22,7 @@ function isContentElement(value: unknown): value is LibraryContentElement {
     (element.columnWidths === undefined || isNumberArray(element.columnWidths)) &&
     isRoadmapStepArray(element.steps) && isTextPairArray(element.nodes) &&
     (element.alignment === undefined || ["left", "center", "right"].includes(String(element.alignment))) &&
+    (element.numberPosition === undefined || ["left", "center", "right"].includes(String(element.numberPosition))) &&
     (element.galleryColumns === undefined || [1, 2, 3, 4].includes(Number(element.galleryColumns))) &&
     (element.images === undefined || isGalleryImageArray(element.images)) &&
     (element.dropdowns === undefined || isTextPairArray(element.dropdowns));

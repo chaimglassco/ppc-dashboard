@@ -6,7 +6,7 @@ Use this checklist before merging or deploying changes.
 
 - [x] `npm run lint`
 - [x] `npm run typecheck`
-- [x] `npm test` — 47 tests passing
+- [x] `npm test` — 48 tests passing
 - [x] `npm run build`
 
 ## Catalog and navigation
@@ -44,6 +44,7 @@ Use this checklist before merging or deploying changes.
 - [x] Hide/show a category option.
 - [x] Reorder category options.
 - [x] Delete a category into recovery.
+- [x] Deleted categories remain hidden until the recovery icon opens the recovery dialog.
 - [x] Recover a deleted category.
 - [x] Duplicate category names are rejected.
 
@@ -64,6 +65,8 @@ Use this checklist before merging or deploying changes.
 - [x] Resize table rows and columns.
 - [x] Saved table widths render in view mode.
 - [x] Add checklist bullets.
+- [x] Roadmap step-number position saves as Left number, Center number, or Right number.
+- [x] Center number layout centers the number, title, and subtext and uses the full available width for the image.
 - [x] Save changes and return to view mode.
 
 ## Video tutorial

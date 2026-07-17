@@ -75,12 +75,13 @@ Important structured fields:
 | `buttonText`, `imageUrl` | `string` | Feature card |
 | `steps` | `{title,text,imageUrl?}[]` | Roadmap steps with optional images |
 | `alignment` | `"left" \| "center" \| "right"` | Optional Roadmap placement; defaults to `left` |
+| `numberPosition` | `"left" \| "center" \| "right"` | Optional Roadmap step-number position; defaults to `left` |
 | `nodes` | `{title,text}[]` | Diagnostic flow |
 | `dropdowns` | `{title,text}[]?` | Repeatable dropdown entries |
 | `galleryColumns` | `1 \| 2 \| 3 \| 4` | Image Gallery column layout |
 | `images` | `{url,alt}[]?` | Repeatable Image Gallery entries |
 
-Optional `columnWidths`, `dropdowns`, Roadmap `alignment`, step `imageUrl`, `galleryColumns`, and `images` values preserve compatibility with content saved before those features existed.
+Optional `columnWidths`, `dropdowns`, Roadmap `alignment`, Roadmap `numberPosition`, step `imageUrl`, `galleryColumns`, and `images` values preserve compatibility with content saved before those features existed.
 
 ## Repository Markdown front matter
 

@@ -47,6 +47,7 @@ The builder owns:
 - Viewport-aware element menu placement
 - Repeatable dropdown editing
 - Table row/column sizing
+- Roadmap placement, step-number position, and full-width centered image rendering
 - Video link validation and thumbnail derivation
 
 ## Document metadata editor
@@ -55,7 +56,7 @@ The catalog modal is now a creation-only boundary. It accepts title, description
 
 Existing-document metadata editing lives in the structured builder. Entering edit mode replaces the blue header copy with controlled title, description, and category fields. Saving edit mode sends those metadata values and the current structured elements through one shared document update, while retaining the stable document ID and slug and preserving type, tags, and legacy Markdown.
 
-The creation modal retains Category Plus and Pencil controls for quick creation and full category management. The library category manager remains the boundary for rename, reorder, visibility, recoverable deletion, and recovery. Reader edit mode consumes that validated category list for reassignment.
+The creation modal retains Category Plus and Pencil controls for quick creation and full category management. The library category manager remains the boundary for rename, reorder, visibility, recoverable deletion, and recovery. Deleted categories are not rendered in the main manager list; a recovery icon opens a focused dialog containing only recoverable categories. Reader edit mode consumes the validated active category list for reassignment.
 
 ## Browser-local persistence
 
@@ -96,4 +97,4 @@ npm test
 npm run build
 ```
 
-Current verified result: all gates pass, including 47 tests and 15 generated routes/pages.
+Current verified result: all gates pass, including 48 tests and 15 generated routes/pages.

@@ -153,13 +153,16 @@ describe("DocumentBuilder roadmaps", () => {
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
     fireEvent.change(controls.getByRole("textbox", { name: "Step 1 image URL" }), { target: { value: "https://images.example.com/step-one.jpg" } });
     fireEvent.click(controls.getByRole("button", { name: "Right" }));
+    fireEvent.click(controls.getByRole("button", { name: "Center number" }));
     fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const savedRoadmap = onSave.mock.calls[0][0][0];
     expect(savedRoadmap.alignment).toBe("right");
+    expect(savedRoadmap.numberPosition).toBe("center");
     expect(savedRoadmap.steps[0].imageUrl).toBe("https://images.example.com/step-one.jpg");
     expect(view.container.querySelector('section[data-alignment="right"]')).toBeInTheDocument();
+    expect(view.container.querySelector('section[data-number-position="center"]')).toBeInTheDocument();
     expect(controls.getByRole("img", { name: "Step one roadmap image" })).toBeInTheDocument();
   });
 });

@@ -4,7 +4,7 @@
 import { ArrowDown, ArrowUp, ExternalLink, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
 import { useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
-import type { Category, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, Topic } from "../domain/types";
+import type { Category, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, Topic } from "../domain/types";
 import { Markdown } from "./markdown";
 import styles from "./document-builder.module.css";
 
@@ -457,7 +457,8 @@ function ImageGalleryPreview({ element, onPreviewImage }: { element: LibraryCont
 
 function RoadmapPreview({ element, onPreviewImage }: { element: LibraryContentElement; onPreviewImage: (url: string) => void }) {
   const alignment = element.alignment ?? "left";
-  return <section className={styles.timeline} data-alignment={alignment}>
+  const numberPosition = element.numberPosition ?? "left";
+  return <section className={styles.timeline} data-alignment={alignment} data-number-position={numberPosition}>
     <h3>{previewText(element.title, "Roadmap title")}</h3>
     {element.steps.map((step, index) => <div key={index}>
       <span>{index + 1}</span>
@@ -523,15 +524,23 @@ function ImageGalleryEditor({ element, onUpdate, onPreviewImage }: { element: Li
 
 function RoadmapEditor({ element, onUpdate, onPreviewImage }: { element: LibraryContentElement; onUpdate: (updates: Partial<LibraryContentElement>) => void; onPreviewImage: (url: string) => void }) {
   const alignment = element.alignment ?? "left";
+  const numberPosition = element.numberPosition ?? "left";
   const updateStep = (index: number, key: "title" | "text" | "imageUrl", value: string) => onUpdate({ steps: element.steps.map((step, stepIndex) => stepIndex === index ? { ...step, [key]: value } : step) });
   const alignments: Array<{ value: RoadmapAlignment; label: string }> = [{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }];
+  const numberPositions: Array<{ value: RoadmapNumberPosition; label: string }> = [{ value: "left", label: "Left number" }, { value: "center", label: "Center number" }, { value: "right", label: "Right number" }];
 
-  return <section className={styles.timelineEditor} data-alignment={alignment}>
+  return <section className={styles.timelineEditor} data-alignment={alignment} data-number-position={numberPosition}>
     <input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Roadmap title" />
-    <fieldset className={styles.roadmapAlignment}>
-      <legend>Roadmap alignment</legend>
-      <div>{alignments.map(option => <button key={option.value} type="button" aria-pressed={alignment === option.value} onClick={() => onUpdate({ alignment: option.value })}>{option.label}</button>)}</div>
-    </fieldset>
+    <section className={styles.roadmapSettings}>
+      <fieldset className={styles.roadmapAlignment}>
+        <legend>Roadmap alignment</legend>
+        <div>{alignments.map(option => <button key={option.value} type="button" aria-pressed={alignment === option.value} onClick={() => onUpdate({ alignment: option.value })}>{option.label}</button>)}</div>
+      </fieldset>
+      <fieldset className={styles.roadmapAlignment}>
+        <legend>Step number position</legend>
+        <div>{numberPositions.map(option => <button key={option.value} type="button" aria-pressed={numberPosition === option.value} onClick={() => onUpdate({ numberPosition: option.value })}>{option.label}</button>)}</div>
+      </fieldset>
+    </section>
     {element.steps.map((step, index) => <div key={index}>
       <span>{index + 1}</span>
       <div>

@@ -20,6 +20,7 @@ export function CategoryManager({ categories, documentCounts, onClose, onCreate,
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState("");
   const [editingName, setEditingName] = useState("");
+  const [showRecovery, setShowRecovery] = useState(false);
   const active = categories.filter(category => !category.deletedAt);
   const deleted = categories.filter(category => category.deletedAt);
 
@@ -36,13 +37,13 @@ export function CategoryManager({ categories, documentCounts, onClose, onCreate,
     setEditingName("");
   };
 
-  return <div className="admin-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+  return <><div className="admin-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="admin-modal category-manager" role="dialog" aria-modal="true" aria-labelledby="category-manager-title">
       <header><div><span className="eyebrow">LIBRARY ADMIN</span><h2 id="category-manager-title">Manage categories</h2></div><button type="button" onClick={onClose} aria-label="Close category manager"><X /></button></header>
       <div className="category-manager-body">
         <form className="category-create" onSubmit={event => { event.preventDefault(); const name = newName.trim(); if (!name) return; onCreate(name); setNewName(""); }}>
           <label htmlFor="new-category-name">Create category</label>
-          <div><input id="new-category-name" value={newName} onChange={event => setNewName(event.target.value)} placeholder="New category name" /><button className="primary-button" type="submit"><Plus /> Create</button></div>
+          <div><input id="new-category-name" value={newName} onChange={event => setNewName(event.target.value)} placeholder="New category name" /><button className="category-recovery-trigger" type="button" onClick={() => setShowRecovery(true)} disabled={!deleted.length} aria-label={`Open category recovery${deleted.length ? ` (${deleted.length})` : ""}`} title={deleted.length ? `${deleted.length} deleted ${deleted.length === 1 ? "category" : "categories"}` : "No deleted categories"}><RotateCcw /></button><button className="primary-button" type="submit"><Plus /> Create</button></div>
         </form>
 
         <section className="category-list" aria-labelledby="active-categories-heading">
@@ -54,8 +55,13 @@ export function CategoryManager({ categories, documentCounts, onClose, onCreate,
           </article>)}
         </section>
 
-        {deleted.length ? <section className="category-list category-recovery" aria-labelledby="deleted-categories-heading"><header><div><span className="eyebrow">RECOVERY</span><h3 id="deleted-categories-heading">Deleted categories</h3></div><span>{deleted.length}</span></header>{deleted.map(category => <article className="category-row" key={category.id}><div className="category-copy"><strong>{category.name}</strong><small>{documentCounts[category.name] ?? 0} {(documentCounts[category.name] ?? 0) === 1 ? "document" : "documents"}</small></div><button className="secondary-button" type="button" onClick={() => onRecover(category.id)}><RotateCcw /> Recover</button></article>)}</section> : null}
       </div>
     </section>
-  </div>;
+  </div>
+  {showRecovery ? <div className="admin-modal-backdrop category-recovery-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setShowRecovery(false); }}>
+    <section className="admin-modal category-recovery-modal" role="dialog" aria-modal="true" aria-labelledby="deleted-categories-heading">
+      <header><div><span className="eyebrow">RECOVERY</span><h2 id="deleted-categories-heading">Deleted categories</h2></div><button type="button" onClick={() => setShowRecovery(false)} aria-label="Close category recovery"><X /></button></header>
+      <div className="category-recovery-body"><section className="category-list category-recovery-list">{deleted.map(category => <article className="category-row" key={category.id}><div className="category-copy"><strong>{category.name}</strong><small>{documentCounts[category.name] ?? 0} {(documentCounts[category.name] ?? 0) === 1 ? "document" : "documents"}</small></div><button className="secondary-button" type="button" onClick={() => { onRecover(category.id); if (deleted.length === 1) setShowRecovery(false); }}><RotateCcw /> Recover</button></article>)}</section></div>
+    </section>
+  </div> : null}</>;
 }

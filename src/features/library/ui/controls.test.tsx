@@ -5,6 +5,7 @@ import { BookmarkButton } from "./bookmark-button";
 import { getPublishedDocuments } from "../data/repository";
 import { Catalog } from "./catalog";
 import { DocumentEditor } from "./document-editor";
+import { CategoryManager } from "./category-manager";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), usePathname: () => "/library", useSearchParams: () => new URLSearchParams() }));
 describe("accessible controls", () => {
@@ -39,5 +40,16 @@ describe("accessible controls", () => {
     expect(controls.getByRole("combobox", { name: "Category" })).toHaveValue("Wholesale");
     fireEvent.click(controls.getByRole("button", { name: "Edit categories" }));
     expect(onManageCategories).toHaveBeenCalledTimes(1);
+  });
+  it("keeps deleted categories behind the recovery icon", () => {
+    const onRecover = vi.fn();
+    const view = render(<CategoryManager categories={[{ id: "active", name: "Active category", hidden: false }, { id: "deleted", name: "Deleted category", hidden: true, deletedAt: "2026-07-17" }]} documentCounts={{ "Deleted category": 2 }} onClose={vi.fn()} onCreate={vi.fn()} onRename={vi.fn()} onToggleHidden={vi.fn()} onDelete={vi.fn()} onRecover={onRecover} onMove={vi.fn()} />);
+    const controls = within(view.container);
+    expect(controls.queryByRole("heading", { name: "Deleted categories" })).not.toBeInTheDocument();
+    fireEvent.click(controls.getByRole("button", { name: "Open category recovery (1)" }));
+    const recovery = controls.getByRole("dialog", { name: "Deleted categories" });
+    expect(recovery).toBeVisible();
+    fireEvent.click(within(recovery).getByRole("button", { name: "Recover" }));
+    expect(onRecover).toHaveBeenCalledWith("deleted");
   });
 });

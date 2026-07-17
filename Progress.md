@@ -32,6 +32,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Create and edit documents.
 - Rename, hide/show, reorder, delete, and recover documents.
 - Create, rename, hide/show, reorder, delete, and recover category options.
+- Category recovery moved behind a compact recovery icon and dedicated deleted-category dialog.
 - Creation-only document form with document type, tags, and legacy Markdown removed from the visible form while their saved defaults remain preserved.
 - Category Plus and Pencil controls beside the document Category field for quick creation and full category management.
 - Removed the catalog-card Edit / Rename action; existing document title, description, and category now edit directly in the blue document header during builder edit mode.
@@ -46,6 +47,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Editable tables with add-row, add-column, row-height, and column-width controls.
 - Checklist bullet element.
 - Centered statements, callouts, lists, insights, feature cards, text blocks, roadmaps, and diagnostic flows.
+- Roadmap step-number position controls for Left, Center, and Right layouts; Center stacks the step copy and displays images at full available width.
 - Video tutorial links, YouTube thumbnails, and watch actions.
 - Video Add/Pencil controls restricted to document edit mode.
 
@@ -53,7 +55,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Nine Vitest files and 47 tests pass.
+- Nine Vitest files and 48 tests pass.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.

@@ -17,6 +17,7 @@ const emptyElement = (type: LibraryContentElementType, id: string): LibraryConte
   imageUrl: "",
   steps: [{ title: "", text: "", imageUrl: "" }],
   alignment: type === "timeline" ? "left" : undefined,
+  numberPosition: type === "timeline" ? "left" : undefined,
   nodes: [{ title: "", text: "" }],
   dropdowns: type === "accordion" ? [{ title: "", text: "" }] : undefined,
   galleryColumns: type === "gallery" ? 1 : undefined,
@@ -28,7 +29,7 @@ export function createBlankContentElement(type: LibraryContentElementType, partN
   if (type === "topic") return { ...element, eyebrow: `Part ${partNumber}`, label: `Topic ${partNumber}` };
   if (type === "table") return { ...element, columns: ["", ""], rows: [["", ""]] };
   if (type === "accordion") return { ...element, dropdowns: [{ title: "", text: "" }] };
-  if (type === "timeline") return { ...element, alignment: "left" as const, steps: [{ title: "", text: "", imageUrl: "" }, { title: "", text: "", imageUrl: "" }] };
+  if (type === "timeline") return { ...element, alignment: "left" as const, numberPosition: "left" as const, steps: [{ title: "", text: "", imageUrl: "" }, { title: "", text: "", imageUrl: "" }] };
   if (type === "gallery") return { ...element, galleryColumns: 1 as const, images: [{ url: "", alt: "" }] };
   if (type === "flowchart") return { ...element, nodes: [{ title: "", text: "" }, { title: "", text: "" }] };
   return element;

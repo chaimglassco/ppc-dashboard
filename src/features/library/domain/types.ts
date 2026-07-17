@@ -4,6 +4,7 @@ export type Category=string; export type DocumentType=typeof DOCUMENT_TYPES[numb
 export type Topic={id:string;title:string;level:number};
 export type LibraryContentElementType="topic"|"statement"|"quote"|"bullets"|"checklist"|"numbered"|"insight"|"table"|"accordion"|"feature"|"code"|"timeline"|"flowchart"|"gallery";
 export type RoadmapAlignment="left"|"center"|"right";
+export type RoadmapNumberPosition="left"|"center"|"right";
 export type RoadmapStep={title:string;text:string;imageUrl?:string};
 export type LibraryContentElement={
   id:string;
@@ -22,6 +23,7 @@ export type LibraryContentElement={
   imageUrl:string;
   steps:RoadmapStep[];
   alignment?:RoadmapAlignment;
+  numberPosition?:RoadmapNumberPosition;
   nodes:Array<{title:string;text:string}>;
   dropdowns?:Array<{title:string;text:string}>;
   galleryColumns?:1|2|3|4;
