@@ -183,6 +183,7 @@ Schema version: `1`
 - Invalid or missing state falls back to seeded/default state.
 - Storage write failures must not crash the UI.
 - Deleted records use recoverable timestamps instead of destructive removal.
+- Recovery dialogs are presentation-only views over records carrying `deletedAt`; moving recovery lists behind toolbar icons does not change the storage schema.
 - Renaming a category updates locally managed documents assigned to the old name.
 - Quick category creation uses the existing category schema, generates a stable category ID, and selects the new name in the open document draft without changing the storage version.
 - Reading state stores references and timestamps, never document bodies.

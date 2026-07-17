@@ -28,11 +28,12 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 
 ### Local library administration
 
-- Eye control in view mode and Pencil/Plus controls in admin mode.
+- Eye control in view mode, Pencil control in admin mode, and an always-visible Plus control for creating documents.
 - Create and edit documents.
 - Rename, hide/show, reorder, delete, and recover documents.
 - Create, rename, hide/show, reorder, delete, and recover category options.
 - Category recovery moved behind a compact recovery icon and dedicated deleted-category dialog.
+- Document recovery moved out of the catalog footer and behind an admin-toolbar recovery icon with a dedicated deleted-document dialog.
 - Creation-only document form with document type, tags, and legacy Markdown removed from the visible form while their saved defaults remain preserved.
 - Category Plus and Pencil controls beside the document Category field for quick creation and full category management.
 - Removed the catalog-card Edit / Rename action; existing document title, description, and category now edit directly in the blue document header during builder edit mode.
@@ -55,7 +56,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Nine Vitest files and 48 tests pass.
+- Nine Vitest files and 49 tests pass.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.

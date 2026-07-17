@@ -58,6 +58,8 @@ Existing-document metadata editing lives in the structured builder. Entering edi
 
 The creation modal retains Category Plus and Pencil controls for quick creation and full category management. The library category manager remains the boundary for rename, reorder, visibility, recoverable deletion, and recovery. Deleted categories are not rendered in the main manager list; a recovery icon opens a focused dialog containing only recoverable categories. Reader edit mode consumes the validated active category list for reassignment.
 
+The catalog toolbar keeps document creation available in both view and admin modes. Document recovery remains an admin action: deleted documents are excluded from the catalog layout, and an admin-only recovery icon opens a focused dialog containing the recoverable document list.
+
 ## Browser-local persistence
 
 Three independent versioned stores are used:

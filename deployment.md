@@ -71,17 +71,19 @@ The existing `.gitignore` already excludes these paths.
 3. Open a document and use its topic navigation.
 4. Bookmark and complete the document, then refresh.
 5. Enter admin mode, create a temporary document, and save it.
-6. Confirm catalog admin cards do not show an Edit / Rename action.
-7. Open a document, enter edit mode, and change its title, description, and category in the blue header; save and refresh to confirm persistence.
-8. Open the new-document form and confirm it does not show Document Type, Tags, or Content Markdown.
-9. Use the Category Plus control to create and select a temporary category.
-10. Use the Category Pencil control to open the category manager; verify rename, reorder, and recoverable deletion controls.
-11. Confirm deleted categories are absent from the main list, then use the recovery icon to open the recovery dialog and recover one.
-12. Add a Roadmap, select Center number, and confirm its number, title, and subtext are centered and its image uses the full step width after saving.
-13. Open a private browser window and confirm that temporary document is visible.
-14. Add and reorder temporary document elements, then confirm the saved order in the private window.
-15. Check the browser console for hydration or runtime errors.
-16. Confirm mobile layout at approximately 390px width.
+6. Return to view mode and confirm the Plus control remains visible and can open new-document creation.
+7. Delete a temporary document in admin mode; confirm no recovery list appears below the catalog, then use the toolbar recovery icon to open the dialog and recover it.
+8. Confirm catalog admin cards do not show an Edit / Rename action.
+9. Open a document, enter edit mode, and change its title, description, and category in the blue header; save and refresh to confirm persistence.
+10. Open the new-document form and confirm it does not show Document Type, Tags, or Content Markdown.
+11. Use the Category Plus control to create and select a temporary category.
+12. Use the Category Pencil control to open the category manager; verify rename, reorder, and recoverable deletion controls.
+13. Confirm deleted categories are absent from the main list, then use the recovery icon to open the recovery dialog and recover one.
+14. Add a Roadmap, select Center number, and confirm its number, title, and subtext are centered and its image uses the full step width after saving.
+15. Open a private browser window and confirm that temporary document is visible.
+16. Add and reorder temporary document elements, then confirm the saved order in the private window.
+17. Check the browser console for hydration or runtime errors.
+18. Confirm mobile layout at approximately 390px width.
 
 ## Temporary access warning
 

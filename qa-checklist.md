@@ -6,7 +6,7 @@ Use this checklist before merging or deploying changes.
 
 - [x] `npm run lint`
 - [x] `npm run typecheck`
-- [x] `npm test` — 48 tests passing
+- [x] `npm test` — 49 tests passing
 - [x] `npm run build`
 
 ## Catalog and navigation
@@ -20,6 +20,7 @@ Use this checklist before merging or deploying changes.
 - [x] Category arrow is inset from the right border.
 - [x] View mode displays the Eye control.
 - [x] Admin mode displays Pencil and Plus controls.
+- [x] Plus remains visible in view mode and opens new-document creation.
 
 ## Document administration
 
@@ -31,6 +32,8 @@ Use this checklist before merging or deploying changes.
 - [x] Hide and show a document.
 - [x] Move documents up and down.
 - [x] Delete a document into recovery.
+- [x] Deleted documents do not render as a recovery section below the catalog.
+- [x] Admin toolbar recovery icon opens the deleted-document recovery dialog.
 - [x] Recover a deleted document.
 - [x] Hidden/deleted documents are unavailable in normal reader mode.
 

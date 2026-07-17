@@ -6,12 +6,13 @@ import { getPublishedDocuments } from "../data/repository";
 import { Catalog } from "./catalog";
 import { DocumentEditor } from "./document-editor";
 import { CategoryManager } from "./category-manager";
+import { DeletedDocuments } from "./deleted-documents";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), usePathname: () => "/library", useSearchParams: () => new URLSearchParams() }));
 describe("accessible controls", () => {
   it("labels bookmark state", () => { render(<ReadingStateProvider><BookmarkButton id="a" compact /></ReadingStateProvider>); expect(screen.getByRole("button", { name: "Add bookmark" })).toHaveAttribute("aria-pressed", "false"); });
   it("labels catalog search and category filter", () => { render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>); expect(screen.getByRole("textbox", { name: "Search documents" })).toBeVisible(); expect(screen.getByRole("combobox", { name: "Category" })).toBeVisible(); expect(screen.getByRole("option", { name: "All categories" })).toBeVisible(); expect(screen.queryByRole("option", { name: /^Amazon PPC$/ })).not.toBeInTheDocument(); expect(screen.queryByRole("combobox", { name: "Document type" })).not.toBeInTheDocument(); });
-  it("shows the eye in view mode and pencil controls in admin mode", () => { const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>); const controls = within(view.container); expect(controls.getByRole("button", { name: "Manage library" }).querySelector(".lucide-eye")).toBeTruthy(); fireEvent.click(controls.getByRole("button", { name: "Manage library" })); expect(controls.getByRole("button", { name: "Return to library view" }).querySelector(".lucide-pencil")).toBeTruthy(); expect(controls.getByRole("button", { name: "Manage categories" })).toBeVisible(); expect(controls.getByRole("button", { name: "Add new topic" })).toBeVisible(); expect(controls.queryByRole("button", { name: "Edit / Rename" })).not.toBeInTheDocument(); });
+  it("keeps add document visible and shows recovery in admin mode", () => { const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>); const controls = within(view.container); expect(controls.getByRole("button", { name: "Manage library" }).querySelector(".lucide-eye")).toBeTruthy(); expect(controls.getByRole("button", { name: "Add new topic" })).toBeVisible(); expect(controls.queryByRole("button", { name: /Open document recovery/ })).not.toBeInTheDocument(); fireEvent.click(controls.getByRole("button", { name: "Manage library" })); expect(controls.getByRole("button", { name: "Return to library view" }).querySelector(".lucide-pencil")).toBeTruthy(); expect(controls.getByRole("button", { name: "Manage categories" })).toBeVisible(); expect(controls.getByRole("button", { name: "Add new topic" })).toBeVisible(); expect(controls.getByRole("button", { name: "Open document recovery" })).toBeDisabled(); expect(controls.queryByRole("button", { name: "Edit / Rename" })).not.toBeInTheDocument(); });
   it("opens document reordering from the catalog toolbar", () => { const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>); const controls = within(view.container); expect(controls.getByRole("button", { name: "REORDER" })).toBeVisible(); fireEvent.click(controls.getByRole("button", { name: "REORDER" })); expect(controls.getByRole("dialog", { name: "Reorder library documents" })).toBeVisible(); });
   it("omits tags when adding a new topic", () => { const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>); const controls = within(view.container); fireEvent.click(controls.getByRole("button", { name: "Manage library" })); fireEvent.click(controls.getByRole("button", { name: "Add new topic" })); expect(controls.getByRole("dialog", { name: "Add new topic" })).toBeVisible(); expect(controls.queryByRole("textbox", { name: "Tags" })).not.toBeInTheDocument(); });
   it("keeps document metadata out of the editor form", () => {
@@ -51,5 +52,17 @@ describe("accessible controls", () => {
     expect(recovery).toBeVisible();
     fireEvent.click(within(recovery).getByRole("button", { name: "Recover" }));
     expect(onRecover).toHaveBeenCalledWith("deleted");
+  });
+  it("shows deleted documents only inside the recovery dialog", () => {
+    const onRecover = vi.fn();
+    const onClose = vi.fn();
+    const document = { ...getPublishedDocuments()[0], deletedAt: "2026-07-17T04:00:00.000Z" };
+    const view = render(<DeletedDocuments documents={[document]} onClose={onClose} onRecover={onRecover} />);
+    const dialog = within(view.container).getByRole("dialog", { name: "Deleted documents" });
+    expect(dialog).toBeVisible();
+    expect(within(dialog).getByText(document.title)).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Recover" }));
+    expect(onRecover).toHaveBeenCalledWith(document.id);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

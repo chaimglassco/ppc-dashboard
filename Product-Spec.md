@@ -33,7 +33,7 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 
 ### Local administration
 
-- **LIB-ADMIN-001** — View mode displays Eye; admin mode displays Pencil and Plus.
+- **LIB-ADMIN-001** — View mode displays Eye, admin mode displays Pencil, and the Plus control for creating a document remains visible in both modes.
 - **LIB-ADMIN-002** — An operator can create and edit documents.
 - **LIB-ADMIN-003** — Documents can be renamed, hidden, reordered, deleted, and recovered.
 - **LIB-ADMIN-004** — Categories can be created, renamed, hidden, reordered, deleted, and recovered.
@@ -44,6 +44,7 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 - **LIB-ADMIN-009** — Existing documents are not renamed from catalog cards; their title, description, and assigned category are edited directly in the document header while builder edit mode is active.
 - **LIB-ADMIN-010** — Category controls beside the document Category field support quick creation and open the full rename, reorder, delete, and recovery manager.
 - **LIB-ADMIN-011** — Deleted categories stay hidden from the category manager until the recovery icon opens a dedicated recovery dialog.
+- **LIB-ADMIN-012** — Deleted documents stay out of the catalog layout until the admin toolbar recovery icon opens a dedicated recovery dialog.
 
 ### Structured builder
 
