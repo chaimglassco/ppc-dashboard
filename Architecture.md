@@ -49,6 +49,12 @@ The builder owns:
 - Table row/column sizing
 - Video link validation and thumbnail derivation
 
+## Document metadata editor
+
+The catalog document modal edits only title, description, and category. Existing document type, tags, and legacy Markdown remain in `DocumentDraft` so saving metadata does not discard backward-compatible fields. Content authoring stays in the structured document builder.
+
+The Category field has a quick-create control and a separate manager control. Quick creation selects the new category immediately. The manager reuses the validated category administration boundary for rename, reorder, visibility, recoverable deletion, and recovery.
+
 ## Browser-local persistence
 
 Three independent versioned stores are used:
@@ -88,5 +94,4 @@ npm test
 npm run build
 ```
 
-Current verified result: all gates pass, including 30 tests and 15 generated routes/pages.
-
+Current verified result: all gates pass, including 46 tests and 15 generated routes/pages.

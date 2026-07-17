@@ -71,10 +71,13 @@ The existing `.gitignore` already excludes these paths.
 3. Open a document and use its topic navigation.
 4. Bookmark and complete the document, then refresh.
 5. Enter admin mode, create a temporary document, and save it.
-6. Open a private browser window and confirm that temporary document is visible.
-7. Add and reorder temporary document elements, then confirm the saved order in the private window.
-8. Check the browser console for hydration or runtime errors.
-9. Confirm mobile layout at approximately 390px width.
+6. Confirm the document form does not show Document Type, Tags, or Content Markdown.
+7. Use the Category Plus control to create and select a temporary category.
+8. Use the Category Pencil control to open the category manager; verify rename, reorder, and recoverable deletion controls.
+9. Open a private browser window and confirm that temporary document is visible.
+10. Add and reorder temporary document elements, then confirm the saved order in the private window.
+11. Check the browser console for hydration or runtime errors.
+12. Confirm mobile layout at approximately 390px width.
 
 ## Temporary access warning
 

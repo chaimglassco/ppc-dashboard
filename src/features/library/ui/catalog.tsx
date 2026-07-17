@@ -87,8 +87,11 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
 
   const categoryNameExists = (name: string, ignoredId = "") => categories.some(item => item.id !== ignoredId && item.name.toLocaleLowerCase() === name.toLocaleLowerCase());
   const createCategory = (name: string) => {
-    if (categoryNameExists(name)) { setNotice("That category name already exists."); return; }
-    commitCategories([...categories, { id: `category-${crypto.randomUUID()}`, name, hidden: false }], "Category created.");
+    const normalizedName = name.trim();
+    if (!normalizedName) return false;
+    if (categoryNameExists(normalizedName)) { setNotice("That category name already exists."); return false; }
+    commitCategories([...categories, { id: `category-${crypto.randomUUID()}`, name: normalizedName, hidden: false }], "Category created.");
+    return true;
   };
   const renameCategory = (id: string, name: string) => {
     if (categoryNameExists(name, id)) { setNotice("That category name already exists."); return; }
@@ -165,7 +168,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       return <DocumentCard key={doc.id} doc={doc} admin={manageMode ? { onEdit: () => setEditor(doc), onToggleHidden: () => persist(current => current.map(document => document.id === doc.id ? { ...document, hidden: !document.hidden, updatedAt: new Date().toISOString() } : document), doc.hidden ? "Topic is visible." : "Topic hidden."), onDelete: () => persist(current => current.map(document => document.id === doc.id ? { ...document, deletedAt: new Date().toISOString() } : document), "Topic moved to recovery."), onMoveUp: () => persist(current => moveDocument(current, doc.id, -1), "Topic moved up."), onMoveDown: () => persist(current => moveDocument(current, doc.id, 1), "Topic moved down."), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1 } : undefined}/>;
     })}</div> : <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div>}
     {manageMode && <DeletedDocuments documents={deleted} onRecover={id => persist(current => current.map(document => document.id === id ? { ...document, deletedAt: undefined } : document), "Topic recovered.")} />}
-    {editor && <DocumentEditor key={editor === "new" ? "new" : editor.id} document={editor === "new" ? undefined : editor} categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft}/>} 
+    {editor && <DocumentEditor key={editor === "new" ? "new" : editor.id} document={editor === "new" ? undefined : editor} categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft} onCreateCategory={createCategory} onManageCategories={() => setShowCategoryManager(true)}/>}
     {showDocumentReorder ? <DocumentReorderDialog documents={activeDocuments} onCancel={() => setShowDocumentReorder(false)} onSave={saveDocumentOrder} /> : null}
     {showCategoryManager ? <CategoryManager categories={categories} documentCounts={documentCounts} onClose={() => setShowCategoryManager(false)} onCreate={createCategory} onRename={renameCategory} onToggleHidden={toggleCategoryHidden} onDelete={deleteCategory} onRecover={id => commitCategories(categories.map(item => item.id === id ? { ...item, hidden: false, deletedAt: undefined } : item), "Category recovered.")} onMove={(id, direction) => commitCategories(moveCategory(categories, id, direction), "Category order updated.")} /> : null}
   </section>;

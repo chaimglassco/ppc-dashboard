@@ -40,6 +40,8 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 - **LIB-ADMIN-005** — Category renames update locally assigned documents.
 - **LIB-ADMIN-006** — Normal reader access excludes hidden and deleted documents.
 - **LIB-ADMIN-007** — Administration state is versioned and device-local.
+- **LIB-ADMIN-008** — The document metadata form exposes only title, description, and category; document type, tags, and legacy Markdown remain preserved but are not edited there.
+- **LIB-ADMIN-009** — Category controls beside the document Category field support quick creation and open the full rename, reorder, delete, and recovery manager.
 
 ### Structured builder
 
@@ -53,7 +55,7 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 
 ## Current acceptance criteria
 
-An operator can open the Library, search and filter content, read documents, navigate topics, bookmark and complete documents, manage documents/categories, build structured content, add a video tutorial, refresh the browser, and retain local state without hydration errors.
+An operator can open the Library, search and filter content, read documents, navigate topics, bookmark and complete documents, use the simplified document form, create or manage categories beside its selector, build structured content, add a video tutorial, refresh the browser, and retain local state without hydration errors.
 
 ## Deferred requirements
 
@@ -66,4 +68,3 @@ An operator can open the Library, search and filter content, read documents, nav
 - Public sharing and billing.
 
 These require a separately approved milestone and must replace—not expose—the local browser-storage administration model.
-

@@ -1,6 +1,6 @@
 # Project Progress
 
-Last updated: July 15, 2026
+Last updated: July 17, 2026
 
 ## Overall status
 
@@ -32,6 +32,8 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Create and edit documents.
 - Rename, hide/show, reorder, delete, and recover documents.
 - Create, rename, hide/show, reorder, delete, and recover category options.
+- Simplified document metadata form with document type, tags, and legacy Markdown removed from the visible form while their saved values remain preserved.
+- Category Plus and Pencil controls beside the document Category field for quick creation and full category management.
 - Device-local persistence and recovery.
 
 ### Structured document builder
@@ -50,7 +52,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Six Vitest files and 30 tests pass.
+- Nine Vitest files and 46 tests pass.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.
@@ -72,4 +74,3 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 3. Add server-side authorization for every admin mutation.
 4. Add Playwright coverage for catalog, builder, recovery, and persistence flows.
 5. Add staging and production deployment environments.
-

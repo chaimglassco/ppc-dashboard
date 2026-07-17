@@ -6,7 +6,7 @@ Use this checklist before merging or deploying changes.
 
 - [x] `npm run lint`
 - [x] `npm run typecheck`
-- [x] `npm test` — 30 tests passing
+- [x] `npm test` — 46 tests passing
 - [x] `npm run build`
 
 ## Catalog and navigation
@@ -25,6 +25,8 @@ Use this checklist before merging or deploying changes.
 
 - [x] Create a new document.
 - [x] Edit and rename a document.
+- [x] Document editor shows title, description, and category without document type, tags, or Content Markdown fields.
+- [x] Saving document metadata preserves the hidden type, tags, and legacy Markdown values.
 - [x] Hide and show a document.
 - [x] Move documents up and down.
 - [x] Delete a document into recovery.
@@ -34,6 +36,8 @@ Use this checklist before merging or deploying changes.
 ## Category administration
 
 - [x] Open Manage Categories from admin mode.
+- [x] Category Plus beside the document selector creates and selects a category.
+- [x] Category Pencil beside the document selector opens category management.
 - [x] Create a category.
 - [x] Rename a category and update assigned documents.
 - [x] Hide/show a category option.
@@ -96,4 +100,3 @@ Use this checklist before merging or deploying changes.
 - [ ] Audit logging implemented.
 
 These security items are intentionally incomplete in the local MVP.
-

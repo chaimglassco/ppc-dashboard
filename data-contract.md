@@ -26,6 +26,8 @@ This document defines the repository content, shared server storage, and browser
 | `contentElements` | `LibraryContentElement[]?` | Structured builder representation. |
 | `videoUrl` | `string?` | Normalized HTTP(S) tutorial link. |
 
+The catalog document editor intentionally exposes only `title`, `description`, and `category`. The `type`, `tags`, and legacy `body` fields remain required in the document contract and are preserved unchanged during metadata-only edits. New documents receive the existing defaults and are authored further in the structured builder.
+
 ## Topic
 
 | Field | Type | Notes |
@@ -179,6 +181,7 @@ Schema version: `1`
 - Storage write failures must not crash the UI.
 - Deleted records use recoverable timestamps instead of destructive removal.
 - Renaming a category updates locally managed documents assigned to the old name.
+- Quick category creation uses the existing category schema, generates a stable category ID, and selects the new name in the open document draft without changing the storage version.
 - Reading state stores references and timestamps, never document bodies.
 - The server snapshot must remain deterministic; browser state is applied after hydration.
 
