@@ -1,16 +1,34 @@
-# Glassco Back Office Library
+# Glassco PPC Dashboard
 
-Glassco Back Office Library is a responsive knowledge base and document builder for Amazon PPC operating procedures. The current release is an unauthenticated, browser-local MVP intended for one operator on one device.
+Glassco PPC Dashboard currently provides the Glassco Back Office Library: a responsive Amazon PPC knowledge base, shared document-administration interface, and structured document builder.
 
-## Current capabilities
+It is deployed as the PPC application inside the unified Glassco website:
 
-- Browse eight starter SOPs, guides, checklists, templates, and playbooks.
-- Search documents and filter them by a configurable category taxonomy.
-- Read responsive documents with numbered topic navigation.
+- Canonical website: <https://glasscopipeline.vercel.app>
+- PPC Library: <https://glasscopipeline.vercel.app/ppc/library>
+- Legacy PPC domain: <https://glasscoppc.vercel.app> redirects to the canonical PPC route.
+
+## Unified Glassco behavior
+
+- Product Pipeline is the default application at `/`.
+- PPC Dashboard is mounted at `/ppc` while remaining independently deployable.
+- A Product Pipeline/PPC Dashboard selector switches the complete application shell.
+- The last valid route for each application is remembered in browser storage.
+- PPC verifies the existing Pipeline session through Pipeline’s `/api/auth/session` endpoint.
+- ADMIN users can administer PPC content.
+- USER and VIEWER users receive read-only PPC access with bookmark and completion controls.
+
+## Library capabilities
+
+- Browse repository starter documents and shared administrator-created documents.
+- Search documents and filter by configurable categories.
+- Read responsive documents with numbered, scroll-synchronized topic navigation.
 - Bookmark documents, track recent views, and mark documents complete.
-- Create, rename, hide, reorder, delete, and recover library documents.
-- Create, rename, hide, reorder, delete, and recover category options.
-- Build documents from reusable content elements:
+- Create, rename, hide, reorder, delete, recover, and categorize documents as an ADMIN.
+- Create, rename, hide, reorder, delete, and recover category options as an ADMIN.
+- Attach video tutorial links with YouTube preview thumbnails.
+- Reorder content elements by dragging or insert new elements between existing blocks.
+- Build documents from reusable elements:
   - Topics
   - Centered statements
   - Blue callouts
@@ -18,22 +36,34 @@ Glassco Back Office Library is a responsive knowledge base and document builder 
   - Checklist bullets
   - Key insights
   - Editable tables with resizable columns
-  - Repeatable dropdowns
+  - Repeatable multiline dropdowns
   - Feature cards
   - Blue text blocks
-  - Roadmaps
+  - Roadmaps with images and layout controls
   - Diagnostic flows
-- Attach a video tutorial link with a preview thumbnail and watch action.
-- Persist reading and administration changes in versioned browser storage.
+  - Image galleries with one-, two-, three-, or four-column layouts
+
+## Architecture and persistence
+
+- Next.js uses `basePath: "/ppc"` for pages, assets, and API routes.
+- Pipeline proxies `/ppc/:path*` to the independently deployed PPC Vercel project.
+- Repository Markdown under `content/library` supplies starter documents.
+- Shared documents and categories are stored in private Vercel Blob object `glassco/library-state-v1.json`.
+- Local development falls back to `.data/library-state-v1.json`.
+- Bookmarks, recent history, completion, last-read position, and remembered application routes remain browser-local.
+- `/ppc/api/library` verifies Pipeline sessions for reads and requires ADMIN permission for writes.
+
+The current browser-stored Pipeline bearer token is not the final page-security boundary. A future authentication milestone should move the session to secure same-origin cookies so authenticated access can be enforced before page HTML is returned.
 
 ## Technology
 
 - Next.js 16.2.10 App Router
 - React 19.2.4
 - TypeScript 5
-- Tailwind CSS 4 toolchain plus project CSS
+- Tailwind CSS 4 toolchain and project CSS
+- Vercel Blob
 - Vitest and Testing Library
-- Repository-controlled Markdown parsed with `gray-matter` and `react-markdown`
+- `gray-matter`, `react-markdown`, and `remark-gfm`
 
 ## Requirements
 
@@ -47,7 +77,9 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000/library](http://localhost:3000/library).
+Open <http://localhost:3000/ppc/library>.
+
+Because PPC verifies the Pipeline production session, a browser without a valid Pipeline session redirects to <https://glasscopipeline.vercel.app>.
 
 ## Quality commands
 
@@ -58,28 +90,38 @@ npm test
 npm run build
 ```
 
-The last verified state passes all four commands with 30 tests.
+The last verified state passes all four commands with 12 test files and 62 tests.
 
 ## Project structure
 
 ```text
-content/library/                 Starter Markdown documents
-src/app/                         Next.js routes, layout, and global styling
-src/components/                  Shared application shell
-src/features/library/data/       Markdown repository adapter
-src/features/library/domain/     Types, search, headings, and builder rules
-src/features/library/state/      Versioned browser-storage adapters
-src/features/library/ui/         Catalog, reader, admin, and builder UI
+content/library/                    Starter Markdown documents
+src/app/                            Next.js routes, APIs, layout, and global styling
+src/app/api/library/                Authenticated shared-library API
+src/app/api/pipeline-session/       Pipeline session verification endpoint
+src/components/                     Application shell and session provider
+src/features/library/data/          Markdown and Vercel Blob repository adapters
+src/features/library/domain/        Types, validation, search, and builder rules
+src/features/library/state/         Shared-library client and browser reading state
+src/features/library/ui/            Catalog, reader, administration, and builder UI
+src/lib/                            Unified routing and Pipeline authorization helpers
+src/proxy.ts                        Legacy PPC-domain canonical redirect
 ```
 
-## Persistence and security
+## Environment and deployment
 
-This version has no authentication, database, server-side authorization, or synchronization. Bookmarks, history, completion, document edits, category edits, video links, visibility, and recovery state are stored in the current browser only.
+Production requires the existing private Vercel Blob connection. These optional overrides are supported:
 
-Do not treat the local admin interface as a security boundary. Authenticated server storage and authorization are required before using this as a shared multi-user back office.
+- `PIPELINE_AUTH_ORIGIN` — server-side Pipeline authentication origin; defaults to `https://glasscopipeline.vercel.app`.
+- `NEXT_PUBLIC_PIPELINE_ORIGIN` — browser navigation origin; defaults to `https://glasscopipeline.vercel.app`.
+
+Deploy PPC before Pipeline whenever base-path or gateway behavior changes. Pipeline’s rewrite currently targets the public PPC production alias so it is not blocked by Vercel deployment protection.
+
+See [deployment.md](deployment.md) for the full rollout, verification, and rollback procedure.
 
 ## Documentation
 
+- [New-chat handoff](HANDOFF.md)
 - [Product specification](Product-Spec.md)
 - [Architecture](Architecture.md)
 - [Progress](Progress.md)
@@ -87,13 +129,3 @@ Do not treat the local admin interface as a security boundary. Authenticated ser
 - [Deployment](deployment.md)
 - [Data contract](data-contract.md)
 - [Agent guidance](AGENTS.md)
-
-## Deployment
-
-The project can be deployed to Vercel without environment variables for the current milestone. See [deployment.md](deployment.md) for the complete checklist and local-storage limitations.
-# Unified Glassco access
-
-The Library is built with the `/ppc` base path and is mounted at `https://glasscopipeline.vercel.app/ppc/library`. Use the Product Pipeline/PPC Dashboard selector to switch the complete application shell. The old `glasscoppc.vercel.app` visitor URL redirects to the canonical Pipeline domain.
-
-PPC reads the existing `launchflow.authSession.v1` Pipeline session. ADMIN users can edit library content; USER and VIEWER users receive the reader interface.
-
