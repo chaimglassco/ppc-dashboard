@@ -109,3 +109,13 @@ Use this checklist before merging or deploying changes.
 - [ ] Audit logging implemented.
 
 These security items are intentionally incomplete in the local MVP.
+# Unified application checks
+
+- [ ] `/ppc/library`, nested documents, recent, and bookmarks load directly and after refresh.
+- [ ] Missing, malformed, and expired Pipeline sessions redirect to Pipeline.
+- [ ] ADMIN sees catalog and document-builder controls and can save shared changes.
+- [ ] USER and VIEWER do not see admin controls; direct `PUT /ppc/api/library` returns 403.
+- [ ] The selector returns to the remembered Pipeline route and records the current PPC route.
+- [ ] The selector is usable in desktop sidebar and mobile navigation.
+- [ ] `glasscoppc.vercel.app` redirects to the equivalent canonical `/ppc` route without a loop.
+- [ ] No hydration or browser-console errors appear.

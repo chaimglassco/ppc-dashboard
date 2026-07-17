@@ -192,3 +192,14 @@ Schema version: `1`
 ## Future database migration
 
 A future database should preserve document IDs, slugs, topic IDs, element IDs, and category IDs. Add a schema version and migration path before changing any existing storage shape. Server-side authorization must be added when role access is introduced. The current Blob snapshot uses last-write-wins semantics and is intended for the low-concurrency MVP only.
+# Unified session and route contracts
+
+The PPC application reads the existing Pipeline session from local or session storage key `launchflow.authSession.v1`. Required fields are `token` and `email`; `name` and `role` are normalized after server verification. Roles normalize to `ADMIN`, `USER`, or `VIEWER`.
+
+Remembered application routes use `glassco.appRoutes.v1`:
+
+```json
+{ "pipeline": "/", "ppc": "/ppc/library" }
+```
+
+This integration does not change library document, category, topic, content-element, bookmark, history, or completion schemas.

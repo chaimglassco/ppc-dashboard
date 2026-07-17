@@ -2,6 +2,8 @@ import type { LibraryDocument } from "../domain/types";
 import { ADMIN_LIBRARY_KEY, readAdminDocuments, writeAdminDocuments } from "./admin-storage";
 import { ADMIN_CATEGORIES_KEY, readAdminCategories, writeAdminCategories } from "./category-storage";
 import { mergeLocalIntoShared, mergeLocalOnlyIntoShared, parseSharedLibraryState, type SharedLibraryResponse, type SharedLibraryState } from "./shared-library-state";
+import { withPpcBasePath } from "@/lib/glassco-apps";
+import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 
 const SHARED_MIGRATION_KEY = "glassco-library-shared-migration-v1";
 
@@ -15,7 +17,7 @@ async function readJson(response: Response) {
 }
 
 export async function fetchSharedLibraryState(): Promise<SharedLibraryResponse> {
-  const value = await readJson(await fetch("/api/library", { cache: "no-store" }));
+  const value = await readJson(await fetch(withPpcBasePath("/api/library"), { cache: "no-store", headers: getPipelineAuthorizationHeader() }));
   if (!value || typeof value !== "object") throw new Error("Shared library returned an invalid response.");
   const response = value as Record<string, unknown>;
   const state = parseSharedLibraryState(response.state);
@@ -24,9 +26,9 @@ export async function fetchSharedLibraryState(): Promise<SharedLibraryResponse> 
 }
 
 export async function saveSharedLibraryState(state: SharedLibraryState): Promise<SharedLibraryState> {
-  const value = await readJson(await fetch("/api/library", {
+  const value = await readJson(await fetch(withPpcBasePath("/api/library"), {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
     body: JSON.stringify({ state }),
   }));
   if (!value || typeof value !== "object") throw new Error("Shared library returned an invalid response.");

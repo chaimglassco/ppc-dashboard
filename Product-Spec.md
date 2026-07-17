@@ -73,3 +73,10 @@ An operator can open the Library, search and filter content, read documents, nav
 - Public sharing and billing.
 
 These require a separately approved milestone and must replace—not expose—the local browser-storage administration model.
+# Unified Glassco application behavior
+
+- The PPC Dashboard is presented under the Pipeline domain at `/ppc`.
+- A responsive application selector switches between Product Pipeline and PPC Dashboard.
+- PPC resumes its last valid route and otherwise opens `/ppc/library`.
+- A verified Pipeline session is required before the PPC interface renders.
+- ADMIN can create, edit, reorder, hide, delete, and recover content. USER and VIEWER are read-only apart from personal reading controls.

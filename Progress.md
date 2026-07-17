@@ -78,3 +78,10 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 3. Add server-side authorization for every admin mutation.
 4. Add Playwright coverage for catalog, builder, recovery, and persistence flows.
 5. Add staging and production deployment environments.
+# Unified Glassco integration
+
+- Added `/ppc` base-path support for pages, assets, and APIs.
+- Added responsive Product Pipeline/PPC Dashboard switching with remembered routes.
+- Added Pipeline session verification and role-aware PPC administration.
+- Protected shared-library reads with a verified session and writes with an ADMIN session.
+- Added legacy `glasscoppc.vercel.app` canonical redirect handling.

@@ -7,8 +7,10 @@ import type { Category, LibraryContentElement, LibraryDocument } from "../domain
 import { useReadingState } from "../state/reading-state";
 import { BookmarkButton } from "./bookmark-button";
 import { DocumentBuilder, type DocumentMetadataDraft } from "./document-builder";
+import { useGlasscoSession } from "@/components/glassco-session";
 
 export function Reader({ doc, categories, onSaveContentElements, onSaveVideoUrl }: { doc: LibraryDocument; categories: Category[]; onSaveContentElements: (elements: LibraryContentElement[], metadata: DocumentMetadataDraft) => Promise<void> | void; onSaveVideoUrl: (url: string) => Promise<void> | void }) {
+  const { canAdmin } = useGlasscoSession();
   const { state, ready, recordView, setTopic, toggleComplete } = useReadingState();
   const readerTopics = useMemo(() => doc.contentElements?.length ? getTopicsFromContentElements(doc.contentElements) : doc.topics, [doc.contentElements, doc.topics]);
   const [active, setActive] = useState(readerTopics.find(topic => topic.level === 2)?.id ?? "");
@@ -87,6 +89,7 @@ export function Reader({ doc, categories, onSaveContentElements, onSaveVideoUrl 
       onTopicChange={go}
       onSave={onSaveContentElements}
       onSaveVideoUrl={onSaveVideoUrl}
+      canEdit={canAdmin}
     />
   </>;
 }

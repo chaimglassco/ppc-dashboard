@@ -92,3 +92,13 @@ The shared admin API intentionally has no authentication during this MVP phase. 
 ## Rollback
 
 Use Vercel's deployment history to promote the last known-good deployment, or redeploy a previously verified Git commit. Browser-local data schemas should remain backward compatible across rollbacks whenever possible.
+# Unified deployment
+
+Deploy PPC before enabling the Pipeline gateway. The production build must serve the `/ppc` base path. Verify `/ppc/library`, `/ppc/_next/*`, `/ppc/api/pipeline-session`, and `/ppc/api/library` through the public PPC production alias before deploying the Pipeline rewrite. The PPC proxy must allow requests forwarded by `glasscopipeline.vercel.app` while redirecting direct visitors from the legacy PPC host.
+
+Optional environment variables:
+
+- `PIPELINE_AUTH_ORIGIN` — server-to-server Pipeline authentication origin.
+- `NEXT_PUBLIC_PIPELINE_ORIGIN` — browser destination when leaving PPC or when authentication fails.
+
+Both default to `https://glasscopipeline.vercel.app`. Roll back PPC and Pipeline independently by promoting their previous production deployments.

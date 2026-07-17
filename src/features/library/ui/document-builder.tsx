@@ -32,11 +32,12 @@ type DocumentBuilderProps = {
   onTopicChange: (id: string) => void;
   onSave: (elements: LibraryContentElement[], metadata: DocumentMetadataDraft) => Promise<void> | void;
   onSaveVideoUrl: (url: string) => Promise<void> | void;
+  canEdit?: boolean;
 };
 
 export type DocumentMetadataDraft = Pick<LibraryDocument, "title" | "description" | "category">;
 
-export function DocumentBuilder({ doc, categories = [doc.category], activeTopicId, onTopicChange, onSave, onSaveVideoUrl }: DocumentBuilderProps) {
+export function DocumentBuilder({ doc, categories = [doc.category], activeTopicId, onTopicChange, onSave, onSaveVideoUrl, canEdit = false }: DocumentBuilderProps) {
   const [elements, setElements] = useState(() => getInitialContentElements(doc));
   const [metadata, setMetadata] = useState<DocumentMetadataDraft>(() => ({ title: doc.title, description: doc.description, category: doc.category }));
   const [isEditMode, setIsEditMode] = useState(false);
@@ -154,7 +155,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
           <strong>ON THIS PAGE</strong>
           <TopicLinks topics={topics} active={activeTopicId} onSelect={onTopicChange} onDelete={isEditMode ? deleteElement : undefined} />
         </div>
-        <BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} />
+        {canEdit ? <BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} /> : null}
       </aside>
       <article className={`prose ${styles.document}`}>
         <DocumentHeader doc={doc} metadata={metadata} categories={categoryOptions} isEditMode={isEditMode} onMetadataChange={updates => setMetadata(current => ({ ...current, ...updates }))} onSaveVideoUrl={onSaveVideoUrl} />
@@ -187,7 +188,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
           : <Markdown body={doc.body} topics={doc.topics} onTopic={onTopicChange} />}
       </article>
     </div>
-    <div className={styles.mobileControls}><BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} /></div>
+    {canEdit ? <div className={styles.mobileControls}><BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} /></div> : null}
     {previewImage ? <div className={styles.imageModal} role="dialog" aria-modal="true" aria-label="Image preview">
       <div><button type="button" onClick={() => setPreviewImage("")} aria-label="Close image preview"><X /></button><img src={previewImage} alt="Document feature preview" /></div>
     </div> : null}

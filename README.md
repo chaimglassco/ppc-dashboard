@@ -91,4 +91,9 @@ Do not treat the local admin interface as a security boundary. Authenticated ser
 ## Deployment
 
 The project can be deployed to Vercel without environment variables for the current milestone. See [deployment.md](deployment.md) for the complete checklist and local-storage limitations.
+# Unified Glassco access
+
+The Library is built with the `/ppc` base path and is mounted at `https://glasscopipeline.vercel.app/ppc/library`. Use the Product Pipeline/PPC Dashboard selector to switch the complete application shell. The old `glasscoppc.vercel.app` visitor URL redirects to the canonical Pipeline domain.
+
+PPC reads the existing `launchflow.authSession.v1` Pipeline session. ADMIN users can edit library content; USER and VIEWER users receive the reader interface.
 

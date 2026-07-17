@@ -9,7 +9,7 @@ describe("DocumentBuilder metadata editing", () => {
     const document = getPublishedDocuments()[0];
     const onSave = vi.fn().mockResolvedValue(undefined);
     const categories = [document.category, "Online Arbitrage"];
-    const view = render(<DocumentBuilder doc={document} categories={categories} activeTopicId={document.topics[0]?.id ?? ""} onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const view = render(<DocumentBuilder canEdit doc={document} categories={categories} activeTopicId={document.topics[0]?.id ?? ""} onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
     const controls = within(view.container);
 
     expect(controls.queryByRole("textbox", { name: "Document title" })).not.toBeInTheDocument();
@@ -30,7 +30,7 @@ describe("DocumentBuilder element reordering", () => {
     const initialElements = getInitialContentElements(document);
     const onSave = vi.fn().mockResolvedValue(undefined);
 
-    const view = render(<DocumentBuilder doc={document} activeTopicId={document.topics[0]?.id ?? ""} onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const view = render(<DocumentBuilder canEdit doc={document} activeTopicId={document.topics[0]?.id ?? ""} onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
     const controls = within(view.container);
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
     fireEvent.click(controls.getByRole("button", { name: "REORDER" }));
@@ -53,7 +53,7 @@ describe("DocumentBuilder element reordering", () => {
     const initialElements = getInitialContentElements(document);
     const onSave = vi.fn().mockResolvedValue(undefined);
 
-    const view = render(<DocumentBuilder doc={document} activeTopicId={document.topics[0]?.id ?? ""} onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const view = render(<DocumentBuilder canEdit doc={document} activeTopicId={document.topics[0]?.id ?? ""} onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
     const controls = within(view.container);
 
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
@@ -79,7 +79,7 @@ describe("DocumentBuilder element insertion", () => {
     const initialElements = getInitialContentElements(document);
     const onSave = vi.fn().mockResolvedValue(undefined);
 
-    const view = render(<DocumentBuilder doc={document} activeTopicId={document.topics[0]?.id ?? ""} onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const view = render(<DocumentBuilder canEdit doc={document} activeTopicId={document.topics[0]?.id ?? ""} onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
     const controls = within(view.container);
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
 
@@ -108,7 +108,7 @@ describe("DocumentBuilder dropdown elements", () => {
     };
     const document = { ...baseDocument, contentElements: [accordion] };
 
-    const view = render(<DocumentBuilder doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
+    const view = render(<DocumentBuilder canEdit doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
     const dropdowns = view.container.querySelectorAll("article details");
 
     expect(dropdowns).toHaveLength(2);
@@ -127,7 +127,7 @@ describe("DocumentBuilder feature cards", () => {
     };
     const document = { ...baseDocument, contentElements: [feature] };
 
-    const view = render(<DocumentBuilder doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
+    const view = render(<DocumentBuilder canEdit doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
     const firstRow = view.getByText("First row");
     const rows = firstRow.parentElement?.querySelectorAll("p");
 
@@ -148,7 +148,7 @@ describe("DocumentBuilder roadmaps", () => {
     const document = { ...baseDocument, contentElements: [roadmap] };
     const onSave = vi.fn().mockResolvedValue(undefined);
 
-    const view = render(<DocumentBuilder doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const view = render(<DocumentBuilder canEdit doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
     const controls = within(view.container);
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
     fireEvent.change(controls.getByRole("textbox", { name: "Step 1 image URL" }), { target: { value: "https://images.example.com/step-one.jpg" } });
@@ -174,7 +174,7 @@ describe("DocumentBuilder image galleries", () => {
     const document = { ...baseDocument, contentElements: [gallery] };
     const onSave = vi.fn().mockResolvedValue(undefined);
 
-    const view = render(<DocumentBuilder doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const view = render(<DocumentBuilder canEdit doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
     const controls = within(view.container);
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
     fireEvent.change(controls.getByRole("textbox", { name: "Gallery image 1 URL" }), { target: { value: "https://images.example.com/first.jpg" } });

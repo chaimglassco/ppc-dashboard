@@ -100,3 +100,10 @@ npm run build
 ```
 
 Current verified result: all gates pass, including 48 tests and 15 generated routes/pages.
+# Pipeline-domain integration
+
+Next.js is compiled with `basePath: "/ppc"`. Pipeline proxies `/ppc/:path*` to the stable PPC deployment alias, producing one browser origin without combining repositories or persistence systems.
+
+`GlasscoSessionProvider` reads the existing Pipeline bearer session and verifies it through the PPC `/api/pipeline-session` server route. That route delegates verification to Pipeline `/api/auth/session`. The Library route handler repeats verification for reads and requires `ADMIN` for writes. The client gate improves navigation but is not treated as the authorization boundary; mutation authorization is server-enforced.
+
+`PIPELINE_AUTH_ORIGIN` may override the server verification origin, and `NEXT_PUBLIC_PIPELINE_ORIGIN` may override the browser return destination. Both default to `https://glasscopipeline.vercel.app`.
