@@ -71,13 +71,15 @@ The existing `.gitignore` already excludes these paths.
 3. Open a document and use its topic navigation.
 4. Bookmark and complete the document, then refresh.
 5. Enter admin mode, create a temporary document, and save it.
-6. Confirm the document form does not show Document Type, Tags, or Content Markdown.
-7. Use the Category Plus control to create and select a temporary category.
-8. Use the Category Pencil control to open the category manager; verify rename, reorder, and recoverable deletion controls.
-9. Open a private browser window and confirm that temporary document is visible.
-10. Add and reorder temporary document elements, then confirm the saved order in the private window.
-11. Check the browser console for hydration or runtime errors.
-12. Confirm mobile layout at approximately 390px width.
+6. Confirm catalog admin cards do not show an Edit / Rename action.
+7. Open a document, enter edit mode, and change its title, description, and category in the blue header; save and refresh to confirm persistence.
+8. Open the new-document form and confirm it does not show Document Type, Tags, or Content Markdown.
+9. Use the Category Plus control to create and select a temporary category.
+10. Use the Category Pencil control to open the category manager; verify rename, reorder, and recoverable deletion controls.
+11. Open a private browser window and confirm that temporary document is visible.
+12. Add and reorder temporary document elements, then confirm the saved order in the private window.
+13. Check the browser console for hydration or runtime errors.
+14. Confirm mobile layout at approximately 390px width.
 
 ## Temporary access warning
 

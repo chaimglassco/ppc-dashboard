@@ -4,7 +4,7 @@
 import { ArrowDown, ArrowUp, ExternalLink, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
 import { useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
-import type { LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, Topic } from "../domain/types";
+import type { Category, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, Topic } from "../domain/types";
 import { Markdown } from "./markdown";
 import styles from "./document-builder.module.css";
 
@@ -27,14 +27,18 @@ const ELEMENT_OPTIONS: Array<{ type: LibraryContentElementType; label: string }>
 
 type DocumentBuilderProps = {
   doc: LibraryDocument;
+  categories?: Category[];
   activeTopicId: string;
   onTopicChange: (id: string) => void;
-  onSave: (elements: LibraryContentElement[]) => Promise<void> | void;
+  onSave: (elements: LibraryContentElement[], metadata: DocumentMetadataDraft) => Promise<void> | void;
   onSaveVideoUrl: (url: string) => Promise<void> | void;
 };
 
-export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onSaveVideoUrl }: DocumentBuilderProps) {
+export type DocumentMetadataDraft = Pick<LibraryDocument, "title" | "description" | "category">;
+
+export function DocumentBuilder({ doc, categories = [doc.category], activeTopicId, onTopicChange, onSave, onSaveVideoUrl }: DocumentBuilderProps) {
   const [elements, setElements] = useState(() => getInitialContentElements(doc));
+  const [metadata, setMetadata] = useState<DocumentMetadataDraft>(() => ({ title: doc.title, description: doc.description, category: doc.category }));
   const [isEditMode, setIsEditMode] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -47,6 +51,9 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
 
   const structuredTopics = getTopicsFromContentElements(elements);
   const topics = useStructuredPreview || isEditMode ? structuredTopics : doc.topics;
+  const categoryOptions = categories.includes(metadata.category) ? categories : [metadata.category, ...categories];
+
+  const normalizedMetadata = () => ({ title: metadata.title.trim(), description: metadata.description.trim(), category: metadata.category.trim() });
 
   const updateElement = (id: string, updates: Partial<LibraryContentElement>) => {
     setElements(current => current.map(element => element.id === id ? { ...element, ...updates } : element));
@@ -96,7 +103,9 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
 
     setIsSaving(true);
     try {
-      await onSave(next);
+      const nextMetadata = normalizedMetadata();
+      if (!nextMetadata.title || !nextMetadata.category) throw new Error("Document title and category are required.");
+      await onSave(next, nextMetadata);
       setElements(next);
       setUseStructuredPreview(true);
       setIsReorderOpen(false);
@@ -117,7 +126,10 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
     }
     setIsSaving(true);
     try {
-      await onSave(elements);
+      const nextMetadata = normalizedMetadata();
+      if (!nextMetadata.title || !nextMetadata.category) throw new Error("Document title and category are required.");
+      await onSave(elements, nextMetadata);
+      setMetadata(nextMetadata);
       setUseStructuredPreview(true);
       setIsEditMode(false);
       setIsAddMenuOpen(false);
@@ -145,7 +157,7 @@ export function DocumentBuilder({ doc, activeTopicId, onTopicChange, onSave, onS
         <BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} />
       </aside>
       <article className={`prose ${styles.document}`}>
-        <DocumentHeader doc={doc} isEditMode={isEditMode} onSaveVideoUrl={onSaveVideoUrl} />
+        <DocumentHeader doc={doc} metadata={metadata} categories={categoryOptions} isEditMode={isEditMode} onMetadataChange={updates => setMetadata(current => ({ ...current, ...updates }))} onSaveVideoUrl={onSaveVideoUrl} />
         {isEditMode ? (
           <div className={styles.reorderBar} aria-label="Document element controls">
             <button
@@ -307,7 +319,7 @@ function BuilderControls({ isEditMode, isSaving, isOpen, notice, onToggle, onTog
   </div>;
 }
 
-function DocumentHeader({ doc, isEditMode, onSaveVideoUrl }: { doc: LibraryDocument; isEditMode: boolean; onSaveVideoUrl: (url: string) => Promise<void> | void }) {
+function DocumentHeader({ doc, metadata, categories, isEditMode, onMetadataChange, onSaveVideoUrl }: { doc: LibraryDocument; metadata: DocumentMetadataDraft; categories: Category[]; isEditMode: boolean; onMetadataChange: (updates: Partial<DocumentMetadataDraft>) => void; onSaveVideoUrl: (url: string) => Promise<void> | void }) {
   const videoUrl = normalizeVideoUrl(doc.videoUrl ?? "");
   const videoThumbnailUrl = getYouTubeThumbnailUrl(videoUrl);
   const [isEditing, setIsEditing] = useState(false);
@@ -348,11 +360,17 @@ function DocumentHeader({ doc, isEditMode, onSaveVideoUrl }: { doc: LibraryDocum
     }
   };
 
-  return <header className={`reader-header ${styles.documentHeader}`}>
+  return <header className={`reader-header ${styles.documentHeader} ${isEditMode ? styles.editingHeader : ""}`}>
     <div className={styles.headerCopy}>
-      <div className="eyebrow">{doc.category} · {doc.type}</div>
-      <h1>{doc.title}</h1>
-      <p>{doc.description}</p>
+      {isEditMode ? <div className={styles.metadataEditor}>
+        <label><span>Category</span><select aria-label="Document category" value={metadata.category} onChange={event => onMetadataChange({ category: event.target.value })}>{categories.map(category => <option key={category} value={category}>{category}</option>)}</select></label>
+        <label><span>Document title</span><textarea className={styles.metadataTitle} aria-label="Document title" value={metadata.title} onChange={event => onMetadataChange({ title: event.target.value })} rows={2} required /></label>
+        <label><span>Description</span><textarea aria-label="Document description" value={metadata.description} onChange={event => onMetadataChange({ description: event.target.value })} rows={3} /></label>
+      </div> : <>
+        <div className="eyebrow">{metadata.category} · {doc.type}</div>
+        <h1>{metadata.title}</h1>
+        <p>{metadata.description}</p>
+      </>}
       <div className="reader-meta"><span>Updated {new Date(doc.updatedAt).toLocaleDateString("en", { month: "long", day: "numeric", year: "numeric" })}</span><span>{doc.readingMinutes} min read</span></div>
     </div>
     <div className={styles.videoControl}>

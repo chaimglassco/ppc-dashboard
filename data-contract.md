@@ -26,7 +26,9 @@ This document defines the repository content, shared server storage, and browser
 | `contentElements` | `LibraryContentElement[]?` | Structured builder representation. |
 | `videoUrl` | `string?` | Normalized HTTP(S) tutorial link. |
 
-The catalog document editor intentionally exposes only `title`, `description`, and `category`. The `type`, `tags`, and legacy `body` fields remain required in the document contract and are preserved unchanged during metadata-only edits. New documents receive the existing defaults and are authored further in the structured builder.
+The catalog document editor is creation-only and exposes `title`, `description`, and `category`. New documents receive the existing defaults for `type`, `tags`, and legacy `body`, then are authored further in the structured builder.
+
+For existing documents, builder edit mode accepts a metadata draft containing only `title`, `description`, and `category`. It merges that draft with the existing document and current `contentElements`; stable `id` and `slug` values plus `type`, `tags`, and legacy `body` remain unchanged. Metadata and element changes are persisted in the same shared document update.
 
 ## Topic
 

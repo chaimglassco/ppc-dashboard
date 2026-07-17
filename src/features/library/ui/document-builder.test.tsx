@@ -4,6 +4,26 @@ import { getPublishedDocuments } from "../data/repository";
 import { createBlankContentElement, getInitialContentElements } from "../domain/document-elements";
 import { DocumentBuilder } from "./document-builder";
 
+describe("DocumentBuilder metadata editing", () => {
+  it("edits and saves the title, description, and category inside document edit mode", async () => {
+    const document = getPublishedDocuments()[0];
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const categories = [document.category, "Online Arbitrage"];
+    const view = render(<DocumentBuilder doc={document} categories={categories} activeTopicId={document.topics[0]?.id ?? ""} onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+
+    expect(controls.queryByRole("textbox", { name: "Document title" })).not.toBeInTheDocument();
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    fireEvent.change(controls.getByRole("textbox", { name: "Document title" }), { target: { value: "Updated document title" } });
+    fireEvent.change(controls.getByRole("textbox", { name: "Document description" }), { target: { value: "Updated document description" } });
+    fireEvent.change(controls.getByRole("combobox", { name: "Document category" }), { target: { value: "Online Arbitrage" } });
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][1]).toEqual({ title: "Updated document title", description: "Updated document description", category: "Online Arbitrage" });
+  });
+});
+
 describe("DocumentBuilder element reordering", () => {
   it("supports dragging elements into a new saved position", async () => {
     const document = getPublishedDocuments()[0];

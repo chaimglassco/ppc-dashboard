@@ -51,9 +51,11 @@ The builder owns:
 
 ## Document metadata editor
 
-The catalog document modal edits only title, description, and category. Existing document type, tags, and legacy Markdown remain in `DocumentDraft` so saving metadata does not discard backward-compatible fields. Content authoring stays in the structured document builder.
+The catalog modal is now a creation-only boundary. It accepts title, description, and category while assigning the existing defaults for document type, tags, and legacy Markdown. Existing catalog cards no longer expose an Edit / Rename action.
 
-The Category field has a quick-create control and a separate manager control. Quick creation selects the new category immediately. The manager reuses the validated category administration boundary for rename, reorder, visibility, recoverable deletion, and recovery.
+Existing-document metadata editing lives in the structured builder. Entering edit mode replaces the blue header copy with controlled title, description, and category fields. Saving edit mode sends those metadata values and the current structured elements through one shared document update, while retaining the stable document ID and slug and preserving type, tags, and legacy Markdown.
+
+The creation modal retains Category Plus and Pencil controls for quick creation and full category management. The library category manager remains the boundary for rename, reorder, visibility, recoverable deletion, and recovery. Reader edit mode consumes that validated category list for reassignment.
 
 ## Browser-local persistence
 
@@ -94,4 +96,4 @@ npm test
 npm run build
 ```
 
-Current verified result: all gates pass, including 46 tests and 15 generated routes/pages.
+Current verified result: all gates pass, including 47 tests and 15 generated routes/pages.

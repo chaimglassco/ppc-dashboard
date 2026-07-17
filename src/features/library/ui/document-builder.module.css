@@ -33,8 +33,19 @@
 .inlineAddWrap .addMenuDown{top:42px}
 .document{position:relative;z-index:1;min-height:460px}
 .documentHeader{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,260px);gap:30px;align-items:center;margin:0 0 42px!important;padding:32px!important}
+.editingHeader{grid-template-columns:minmax(0,1fr)}
+.editingHeader .videoControl{min-height:auto;justify-content:flex-start;padding:20px 0 0;border-top:1px solid rgba(255,255,255,.2);border-left:0}
 .documentHeader h1{margin:10px 0;color:#fff;font-size:34px;line-height:1.16}
 .headerCopy>p{margin:0;color:#fff!important}
+.metadataEditor{display:grid;gap:11px}
+.metadataEditor label{display:grid;gap:5px}
+.metadataEditor label>span{color:rgba(255,255,255,.82);font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.metadataEditor select,.metadataEditor textarea{width:100%;border:1px solid rgba(255,255,255,.48);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font:inherit;outline:none}
+.metadataEditor select{max-width:270px;height:38px;padding:0 36px 0 11px;cursor:pointer}
+.metadataEditor select option{color:#0b1c30}
+.metadataEditor textarea{min-height:74px;padding:10px 13px;font-size:13px;line-height:1.5;resize:vertical}
+.metadataEditor .metadataTitle{min-height:78px;font-size:25px;line-height:1.15;resize:none}
+.metadataEditor select:focus,.metadataEditor textarea:focus{border-color:#fff;background:rgba(255,255,255,.18);box-shadow:0 0 0 3px rgba(255,255,255,.16)}
 .videoControl{display:flex;min-height:220px;align-items:center;justify-content:center;padding-left:28px;border-left:1px solid rgba(255,255,255,.2)}
 .addVideoButton{display:flex;min-height:48px;align-items:center;justify-content:center;gap:9px;padding:0 18px;border:1px dashed rgba(255,255,255,.65);border-radius:24px;background:rgba(255,255,255,.1);color:#fff;font-size:11px;font-weight:800;letter-spacing:.05em;cursor:pointer}
 .addVideoButton:hover{background:rgba(255,255,255,.18)}

@@ -40,7 +40,8 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 - **LIB-ADMIN-005** — Category renames update locally assigned documents.
 - **LIB-ADMIN-006** — Normal reader access excludes hidden and deleted documents.
 - **LIB-ADMIN-007** — Administration state is versioned and device-local.
-- **LIB-ADMIN-008** — The document metadata form exposes only title, description, and category; document type, tags, and legacy Markdown remain preserved but are not edited there.
+- **LIB-ADMIN-008** — The new-document form exposes only title, description, and category; document type, tags, and legacy Markdown use preserved defaults and are not edited there.
+- **LIB-ADMIN-009** — Existing documents are not renamed from catalog cards; their title, description, and assigned category are edited directly in the document header while builder edit mode is active.
 - **LIB-ADMIN-009** — Category controls beside the document Category field support quick creation and open the full rename, reorder, delete, and recovery manager.
 
 ### Structured builder
@@ -52,6 +53,7 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 - **LIB-BUILDER-005** — Dropdown blocks support multiple entries and preserved line breaks.
 - **LIB-BUILDER-006** — Video links support thumbnails and a new-tab watch action.
 - **LIB-BUILDER-007** — Video Add/Pencil controls are visible only in document edit mode.
+- **LIB-BUILDER-008** — Builder edit mode replaces the blue header metadata with editable title, description, and category controls and saves those values with the structured elements.
 
 ## Current acceptance criteria
 

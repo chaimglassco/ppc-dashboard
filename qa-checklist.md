@@ -6,7 +6,7 @@ Use this checklist before merging or deploying changes.
 
 - [x] `npm run lint`
 - [x] `npm run typecheck`
-- [x] `npm test` — 46 tests passing
+- [x] `npm test` — 47 tests passing
 - [x] `npm run build`
 
 ## Catalog and navigation
@@ -25,8 +25,9 @@ Use this checklist before merging or deploying changes.
 
 - [x] Create a new document.
 - [x] Edit and rename a document.
-- [x] Document editor shows title, description, and category without document type, tags, or Content Markdown fields.
-- [x] Saving document metadata preserves the hidden type, tags, and legacy Markdown values.
+- [x] New-document editor shows title, description, and category without document type, tags, or Content Markdown fields.
+- [x] New-document creation supplies the hidden type, tags, and legacy Markdown defaults.
+- [x] Catalog admin cards do not show the removed Edit / Rename action.
 - [x] Hide and show a document.
 - [x] Move documents up and down.
 - [x] Delete a document into recovery.
@@ -53,6 +54,8 @@ Use this checklist before merging or deploying changes.
 - [x] Topic numbers follow the main topic order.
 - [x] Full-title tooltip appears only for truncated sidebar titles.
 - [x] Enter edit mode and open the element menu.
+- [x] Enter edit mode and edit the document title, description, and category directly in the blue header.
+- [x] Save header metadata together with structured elements while preserving document ID, slug, type, tags, and legacy Markdown.
 - [x] Element menu remains inside the viewport and scrolls when needed.
 - [x] Add, edit, and delete each supported element type.
 - [x] Add multiple dropdown entries in one dropdown block.

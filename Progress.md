@@ -32,8 +32,9 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Create and edit documents.
 - Rename, hide/show, reorder, delete, and recover documents.
 - Create, rename, hide/show, reorder, delete, and recover category options.
-- Simplified document metadata form with document type, tags, and legacy Markdown removed from the visible form while their saved values remain preserved.
+- Creation-only document form with document type, tags, and legacy Markdown removed from the visible form while their saved defaults remain preserved.
 - Category Plus and Pencil controls beside the document Category field for quick creation and full category management.
+- Removed the catalog-card Edit / Rename action; existing document title, description, and category now edit directly in the blue document header during builder edit mode.
 - Device-local persistence and recovery.
 
 ### Structured document builder
@@ -52,7 +53,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Nine Vitest files and 46 tests pass.
+- Nine Vitest files and 47 tests pass.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.
