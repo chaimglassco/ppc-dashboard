@@ -72,6 +72,7 @@ Use this checklist before merging or deploying changes.
 - [x] Roadmap image uploads save to shared Blob storage, preview through the authenticated media route, reject unsupported images and files over 2 MB, and can be removed.
 - [x] Roadmap subtext edits inline as Plain, Bullets, Checklist, or Numbered rows; Enter, multiline paste, and empty-row Backspace preserve newline storage.
 - [x] Feature Card and Gallery images use authenticated shared uploads with progress, validation, preview, replacement, removal, and legacy URL compatibility.
+- [x] Private shared-image previews send the Pipeline bearer token, resolve to browser object URLs, render actual images in edit/view/modal surfaces, and revoke temporary URLs during cleanup.
 - [x] Gallery layout changes create minimum upload slots and immediately display the selected responsive editor grid without deleting extras.
 - [x] Standalone Buttons validate internal and HTTP(S) links, persist width/alignment, open safely in a new tab, and become full-width on mobile.
 - [x] Center number layout centers the number, title, and subtext and uses the full available width for the image.

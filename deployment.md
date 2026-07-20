@@ -82,6 +82,7 @@ The existing `.gitignore` already excludes these paths.
 14. Add a Roadmap, select Center number, and confirm its number, title, and subtext are centered and its image uses the full step width after saving.
 15. Upload a Roadmap step image, confirm its shared upload completes, and verify each subtext format edits directly inside the composer and persists in a second browser session.
 16. Upload Feature Card and Gallery images, switch every Gallery layout, and confirm minimum slots, responsive grids, shared previews, replacement, and removal.
+   Confirm the preview request includes authenticated media access and displays the actual image rather than a broken image icon.
 17. Add Buttons for internal and HTTPS links; verify every width/alignment option, invalid-link feedback, secure new-tab attributes, and mobile full-width behavior.
 18. Open a private browser window and confirm that temporary document is visible.
 19. Add and reorder temporary document elements, then confirm the saved order in the private window.

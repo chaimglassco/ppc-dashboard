@@ -89,6 +89,8 @@ Important structured fields:
 
 Optional `columnWidths`, `dropdowns`, Roadmap layout fields, step image/format fields, Gallery fields, and Button fields preserve compatibility with older content. Newly uploaded Roadmap, Feature Card, and Gallery images are stored in the shared private Blob store and referenced through the authenticated library-image route; existing data URLs and HTTP(S) values remain valid. Roadmap formatted rows remain newline-delimited in `steps[].text`.
 
+Private library-image route values remain persisted as relative URLs. Client image surfaces retrieve those URLs with the Pipeline bearer token and render the returned bytes through temporary object URLs; the temporary URL is presentation-only and is never persisted.
+
 ## Repository Markdown front matter
 
 Files under `content/library/*.md` require:

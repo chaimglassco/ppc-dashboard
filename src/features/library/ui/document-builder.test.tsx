@@ -4,6 +4,17 @@ import { getPublishedDocuments } from "../data/repository";
 import { createBlankContentElement, getInitialContentElements } from "../domain/document-elements";
 import { DocumentBuilder } from "./document-builder";
 
+function installSharedImageFetch(url: string) {
+  Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:shared-image") });
+  Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
+  window.localStorage.setItem("launchflow.authSession.v1", JSON.stringify({ token: "test-token", email: "admin@example.com", name: "Admin", role: "ADMIN" }));
+  const fetchMock = vi.fn().mockImplementation((_input: RequestInfo | URL, init?: RequestInit) => Promise.resolve(init?.method === "POST"
+    ? new Response(JSON.stringify({ url }), { status: 200, headers: { "Content-Type": "application/json" } })
+    : new Response(new Blob(["image"], { type: "image/png" }), { status: 200, headers: { "Content-Type": "image/png" } })));
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
 describe("DocumentBuilder metadata editing", () => {
   it("edits and saves the title, description, and category inside document edit mode", async () => {
     const document = getPublishedDocuments()[0];
@@ -139,7 +150,7 @@ describe("DocumentBuilder feature cards", () => {
 
 describe("DocumentBuilder roadmaps", () => {
   it("uploads step images, saves formatted subtext and alignment, then renders them in view mode", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: "/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Fshared.png" }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    installSharedImageFetch("/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Fshared.png");
     const baseDocument = getPublishedDocuments()[0];
     const roadmap = {
       ...createBlankContentElement("timeline", 1),
@@ -172,7 +183,7 @@ describe("DocumentBuilder roadmaps", () => {
     expect(view.container.querySelector('section[data-alignment="right"]')).toBeInTheDocument();
     expect(view.container.querySelector('section[data-number-position="center"]')).toBeInTheDocument();
     expect(controls.getByText("First action").closest("ul")).toBeInTheDocument();
-    expect(controls.getByRole("img", { name: "Step one roadmap image" })).toBeInTheDocument();
+    await waitFor(() => expect(controls.getByRole("img", { name: "Step one roadmap image" })).toHaveAttribute("src", "blob:shared-image"));
     vi.unstubAllGlobals();
   });
 
@@ -196,7 +207,7 @@ describe("DocumentBuilder roadmaps", () => {
 
 describe("DocumentBuilder image galleries", () => {
   it("saves the selected grid layout and repeatable images, then renders the gallery", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: "/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Fgallery.png" }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    installSharedImageFetch("/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Fgallery.png");
     const baseDocument = getPublishedDocuments()[0];
     const gallery = createBlankContentElement("gallery", 1);
     const document = { ...baseDocument, contentElements: [gallery] };
@@ -221,14 +232,14 @@ describe("DocumentBuilder image galleries", () => {
     expect(savedGallery.images).toHaveLength(3);
     expect(savedGallery.images[0]).toEqual({ url: expect.stringContaining("/ppc/api/library/images"), alt: "First gallery image" });
     expect(view.container.querySelector('section[data-gallery-columns="3"]')).toBeInTheDocument();
-    expect(controls.getByRole("img", { name: "First gallery image" })).toBeInTheDocument();
+    await waitFor(() => expect(controls.getByRole("img", { name: "First gallery image" })).toHaveAttribute("src", "blob:shared-image"));
     vi.unstubAllGlobals();
   });
 });
 
 describe("DocumentBuilder shared feature images and buttons", () => {
   it("uploads a Feature Card image to shared storage and saves the returned URL", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: "/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Ffeature.png" }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    const fetchMock = installSharedImageFetch("/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Ffeature.png");
     const baseDocument = getPublishedDocuments()[0];
     const onSave = vi.fn();
     const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [createBlankContentElement("feature", 1)] }} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
@@ -236,6 +247,8 @@ describe("DocumentBuilder shared feature images and buttons", () => {
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
     fireEvent.change(controls.getByLabelText("Upload feature card image"), { target: { files: [new File(["feature"], "feature.png", { type: "image/png" })] } });
     await waitFor(() => expect(controls.getByRole("button", { name: "Preview feature card image" })).toBeInTheDocument());
+    await waitFor(() => expect(controls.getByRole("img", { name: "feature card image preview" })).toHaveAttribute("src", "blob:shared-image"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/library/images?"), expect.objectContaining({ headers: { Authorization: "Bearer test-token" } }));
     fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(onSave.mock.calls[0][0][0].imageUrl).toContain("/ppc/api/library/images");

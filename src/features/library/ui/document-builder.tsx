@@ -193,7 +193,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
     </div>
     {canEdit ? <div className={styles.mobileControls}><BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} /></div> : null}
     {previewImage ? <div className={styles.imageModal} role="dialog" aria-modal="true" aria-label="Image preview">
-      <div><button type="button" onClick={() => setPreviewImage("")} aria-label="Close image preview"><X /></button><img src={previewImage} alt="Document feature preview" /></div>
+      <div><button type="button" onClick={() => setPreviewImage("")} aria-label="Close image preview"><X /></button><AuthenticatedImage url={previewImage} alt="Document feature preview" /></div>
     </div> : null}
     {isReorderOpen ? <ReorderDialog elements={elements} order={reorderIds} isSaving={isSaving} onMove={moveReorderItem} onCancel={() => setIsReorderOpen(false)} onSave={() => void saveReorder()} /> : null}
   </>;
@@ -442,7 +442,7 @@ function ElementPreview({ element, onPreviewImage }: { element: LibraryContentEl
   if (element.type === "insight") return <section className={styles.insight}><strong>{previewText(element.title, "Key Insight")}</strong><p>{previewText(element.text)}</p></section>;
   if (element.type === "table") return <ElementTable element={element} />;
   if (element.type === "accordion") return <section className={styles.accordionList}>{getDropdowns(element).map((dropdown, index) => <details className={styles.accordion} key={index}><summary>{previewText(dropdown.title, "Dropdown title")}</summary><p>{previewText(dropdown.text)}</p></details>)}</section>;
-  if (element.type === "feature") return <section className={styles.feature}><div><span>{element.label}</span><h3>{previewText(element.title, "Feature title")}</h3><div className={styles.featureText}>{previewText(element.text).split(/\r?\n/).filter(line => line.trim()).map((line, index) => <p key={index}>{line}</p>)}</div>{element.buttonText ? <button type="button">{element.buttonText}</button> : null}</div><button className={styles.imageButton} type="button" onClick={() => element.imageUrl && onPreviewImage(element.imageUrl)}>{element.imageUrl ? <img src={element.imageUrl} alt="" /> : "Image preview"}</button></section>;
+  if (element.type === "feature") return <section className={styles.feature}><div><span>{element.label}</span><h3>{previewText(element.title, "Feature title")}</h3><div className={styles.featureText}>{previewText(element.text).split(/\r?\n/).filter(line => line.trim()).map((line, index) => <p key={index}>{line}</p>)}</div>{element.buttonText ? <button type="button">{element.buttonText}</button> : null}</div><button className={styles.imageButton} type="button" onClick={() => element.imageUrl && onPreviewImage(element.imageUrl)}>{element.imageUrl ? <AuthenticatedImage url={element.imageUrl} alt={`${previewText(element.title, "Feature")} image`} /> : "Image preview"}</button></section>;
   if (element.type === "gallery") return <ImageGalleryPreview element={element} onPreviewImage={onPreviewImage} />;
   if (element.type === "button") {
     const width = element.buttonWidth ?? "medium";
@@ -471,7 +471,7 @@ function ImageGalleryPreview({ element, onPreviewImage }: { element: LibraryCont
   const images = (element.images ?? []).filter(image => image.url.trim());
   return <section className={styles.gallery} data-gallery-columns={columns} aria-label="Image gallery">
     {images.map((image, index) => <button className={styles.galleryImage} type="button" key={index} onClick={() => onPreviewImage(image.url)} aria-label={`Preview ${previewText(image.alt, `gallery image ${index + 1}`)}`}>
-      <img src={image.url} alt={previewText(image.alt, `Gallery image ${index + 1}`)} />
+      <AuthenticatedImage url={image.url} alt={previewText(image.alt, `Gallery image ${index + 1}`)} />
     </button>)}
   </section>;
 }
@@ -486,7 +486,7 @@ function RoadmapPreview({ element, onPreviewImage }: { element: LibraryContentEl
       <div>
         <strong>{previewText(step.title, "Step title")}</strong>
         <RoadmapStepText step={step} />
-        {step.imageUrl ? <button className={styles.roadmapImage} type="button" onClick={() => onPreviewImage(step.imageUrl ?? "")} aria-label={`Preview ${previewText(step.title, `step ${index + 1}`)} image`}><img src={step.imageUrl} alt={`${previewText(step.title, `Step ${index + 1}`)} roadmap image`} /></button> : null}
+        {step.imageUrl ? <button className={styles.roadmapImage} type="button" onClick={() => onPreviewImage(step.imageUrl ?? "")} aria-label={`Preview ${previewText(step.title, `step ${index + 1}`)} image`}><AuthenticatedImage url={step.imageUrl} alt={`${previewText(step.title, `Step ${index + 1}`)} roadmap image`} /></button> : null}
       </div>
     </div>)}
   </section>;
@@ -504,6 +504,36 @@ function RoadmapStepText({ step }: { step: RoadmapStep }) {
 function ElementTable({ element }: { element: LibraryContentElement }) {
   const columnWidths = element.columnWidths?.length === element.columns.length ? element.columnWidths : undefined;
   return <div className={styles.tableWrap}><table className={columnWidths ? styles.sizedTable : undefined} style={columnWidths ? { minWidth: columnWidths.reduce((total, width) => total + width, 0) } : undefined}>{columnWidths ? <colgroup>{columnWidths.map((width, index) => <col key={index} style={{ width }} />)}</colgroup> : null}<thead><tr>{element.columns.map((column, index) => <th key={index}>{previewText(column, `Column ${index + 1}`)}</th>)}</tr></thead><tbody>{element.rows.map((row, rowIndex) => <tr key={rowIndex}>{element.columns.map((_, columnIndex) => <td key={columnIndex}>{row[columnIndex] ?? ""}</td>)}</tr>)}</tbody></table></div>;
+}
+
+function isSharedLibraryImage(url: string) {
+  return url.includes("/api/library/images?");
+}
+
+function AuthenticatedImage({ url, alt }: { url: string; alt: string }) {
+  if (!isSharedLibraryImage(url)) return <img src={url} alt={alt} />;
+  return <PrivateLibraryImage key={url} url={url} alt={alt} />;
+}
+
+function PrivateLibraryImage({ url, alt }: { url: string; alt: string }) {
+  const [resolvedUrl, setResolvedUrl] = useState("");
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    let objectUrl = "";
+    void fetch(url, { headers: getPipelineAuthorizationHeader(), cache: "no-store", signal: controller.signal })
+      .then(response => { if (!response.ok) throw new Error("Image request failed."); return response.blob(); })
+      .then(blob => {
+        if (controller.signal.aborted) return;
+        objectUrl = URL.createObjectURL(blob);
+        setResolvedUrl(objectUrl);
+      })
+      .catch(fetchError => { if (!controller.signal.aborted && fetchError instanceof Error && fetchError.name !== "AbortError") setError(true); });
+    return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [url]);
+  if (error) return <span className={styles.imageLoadState} role="status">Image preview unavailable</span>;
+  if (!resolvedUrl) return <span className={styles.imageLoadState} role="status">Loading image…</span>;
+  return <img src={resolvedUrl} alt={alt} />;
 }
 
 function SharedImageUpload({ value, label, onChange, onPreview, previewClassName }: { value: string; label: string; onChange: (url: string) => void; onPreview: (url: string) => void; previewClassName?: string }) {
@@ -536,7 +566,7 @@ function SharedImageUpload({ value, label, onChange, onPreview, previewClassName
       {value ? <button type="button" onClick={() => onChange("")}>Remove image</button> : null}
     </div>
     {error ? <p role="alert">{error}</p> : null}
-    {value ? <button className={previewClassName ?? styles.sharedImagePreview} type="button" onClick={() => onPreview(value)} aria-label={`Preview ${label.replace(/^Upload /, "")}`}><img src={value} alt="" /></button> : <div className={styles.sharedImagePlaceholder}>No image uploaded</div>}
+    {value ? <button className={previewClassName ?? styles.sharedImagePreview} type="button" onClick={() => onPreview(value)} aria-label={`Preview ${label.replace(/^Upload /, "")}`}><AuthenticatedImage url={value} alt={`${label.replace(/^Upload /, "")} preview`} /></button> : <div className={styles.sharedImagePlaceholder}>No image uploaded</div>}
   </div>;
 }
 

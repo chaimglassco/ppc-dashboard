@@ -47,6 +47,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 ## Architecture and persistence
 
 - Next.js uses `basePath: "/ppc"` for pages, assets, and API routes.
+- Private shared images are fetched by client previews with the Pipeline bearer token and rendered through temporary browser object URLs; raw private API URLs are never assigned directly to image elements.
 - Pipeline proxies `/ppc/:path*` to the independently deployed PPC Vercel project.
 - Repository Markdown under `content/library` supplies starter documents.
 - Shared documents and categories are stored in private Vercel Blob object `glassco/library-state-v1.json`.
