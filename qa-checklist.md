@@ -69,8 +69,8 @@ Use this checklist before merging or deploying changes.
 - [x] Saved table widths render in view mode.
 - [x] Add checklist bullets.
 - [x] Roadmap step-number position saves as Left number, Center number, or Right number.
-- [x] Roadmap image uploads save and preview, reject non-images and files over 2 MB, and can be removed.
-- [x] Roadmap subtext saves and renders as Plain, Bullets, Checklist, or Numbered content, and step titles use the larger display style.
+- [x] Roadmap image uploads save to shared Blob storage, preview through the authenticated media route, reject unsupported images and files over 2 MB, and can be removed.
+- [x] Roadmap subtext previews and saves as Plain, Bullets, Checklist, or Numbered content, and step titles use the larger display style.
 - [x] Center number layout centers the number, title, and subtext and uses the full available width for the image.
 - [x] Save changes and return to view mode.
 

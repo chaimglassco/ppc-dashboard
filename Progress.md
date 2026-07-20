@@ -49,7 +49,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Checklist bullet element.
 - Centered statements, callouts, lists, insights, feature cards, text blocks, roadmaps, and diagnostic flows.
 - Roadmap step-number position controls for Left, Center, and Right layouts; Center stacks the step copy and displays images at full available width.
-- Roadmap steps now accept image-file uploads, Plain/Bullets/Checklist/Numbered subtext modes, and larger step titles while remaining compatible with previously saved image URLs.
+- Roadmap steps now upload images to shared Blob storage, show live Plain/Bullets/Checklist/Numbered formatting previews, and use larger step titles while remaining compatible with previously saved image URLs.
 - Video tutorial links, YouTube thumbnails, and watch actions.
 - Video Add/Pencil controls restricted to document edit mode.
 

@@ -83,7 +83,7 @@ Important structured fields:
 | `galleryColumns` | `1 \| 2 \| 3 \| 4` | Image Gallery column layout |
 | `images` | `{url,alt}[]?` | Repeatable Image Gallery entries |
 
-Optional `columnWidths`, `dropdowns`, Roadmap `alignment`, Roadmap `numberPosition`, step `imageUrl`, step `textStyle`, `galleryColumns`, and `images` values preserve compatibility with content saved before those features existed. Newly uploaded Roadmap images are stored as data URLs in the existing `imageUrl` field; existing HTTP(S) values remain valid.
+Optional `columnWidths`, `dropdowns`, Roadmap `alignment`, Roadmap `numberPosition`, step `imageUrl`, step `textStyle`, `galleryColumns`, and `images` values preserve compatibility with content saved before those features existed. Newly uploaded Roadmap images are stored in the shared private Blob store and referenced through the authenticated library-image route; existing data URLs and HTTP(S) values remain valid.
 
 ## Repository Markdown front matter
 

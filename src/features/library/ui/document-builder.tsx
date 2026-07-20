@@ -3,6 +3,8 @@
 /* eslint-disable @next/next/no-img-element */
 import { ArrowDown, ArrowUp, ExternalLink, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
 import { useEffect, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { withPpcBasePath } from "@/lib/glassco-apps";
+import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
 import type { Category, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, RoadmapTextStyle, Topic } from "../domain/types";
 import { Markdown } from "./markdown";
@@ -536,6 +538,7 @@ function RoadmapEditor({ element, onUpdate, onPreviewImage }: { element: Library
   const alignment = element.alignment ?? "left";
   const numberPosition = element.numberPosition ?? "left";
   const [uploadErrors, setUploadErrors] = useState<Record<number, string>>({});
+  const [uploadingStep, setUploadingStep] = useState<number | null>(null);
   const stepsRef = useRef(element.steps);
   useEffect(() => { stepsRef.current = element.steps; }, [element.steps]);
   const updateStep = (index: number, updates: Partial<RoadmapStep>) => {
@@ -543,7 +546,7 @@ function RoadmapEditor({ element, onUpdate, onPreviewImage }: { element: Library
     stepsRef.current = steps;
     onUpdate({ steps });
   };
-  const uploadStepImage = (index: number, file: File | undefined) => {
+  const uploadStepImage = async (index: number, file: File | undefined) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setUploadErrors(errors => ({ ...errors, [index]: "Choose an image file." }));
@@ -553,14 +556,23 @@ function RoadmapEditor({ element, onUpdate, onPreviewImage }: { element: Library
       setUploadErrors(errors => ({ ...errors, [index]: "Image must be 2 MB or smaller." }));
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== "string") return;
-      updateStep(index, { imageUrl: reader.result });
+    setUploadingStep(index);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch(withPpcBasePath("/api/library/images"), { method: "POST", headers: getPipelineAuthorizationHeader(), body });
+      const result: unknown = await response.json();
+      if (!response.ok || !result || typeof result !== "object" || typeof (result as Record<string, unknown>).url !== "string") {
+        const message = result && typeof result === "object" && typeof (result as Record<string, unknown>).error === "string" ? String((result as Record<string, unknown>).error) : "Image upload failed.";
+        throw new Error(message);
+      }
+      updateStep(index, { imageUrl: String((result as Record<string, unknown>).url) });
       setUploadErrors(errors => ({ ...errors, [index]: "" }));
-    };
-    reader.onerror = () => setUploadErrors(errors => ({ ...errors, [index]: "Image upload could not be read." }));
-    reader.readAsDataURL(file);
+    } catch (error) {
+      setUploadErrors(errors => ({ ...errors, [index]: error instanceof Error ? error.message : "Image upload failed." }));
+    } finally {
+      setUploadingStep(null);
+    }
   };
   const alignments: Array<{ value: RoadmapAlignment; label: string }> = [{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }];
   const numberPositions: Array<{ value: RoadmapNumberPosition; label: string }> = [{ value: "left", label: "Left number" }, { value: "center", label: "Center number" }, { value: "right", label: "Right number" }];
@@ -587,8 +599,9 @@ function RoadmapEditor({ element, onUpdate, onPreviewImage }: { element: Library
           <div>{textStyles.map(option => <button key={option.value} type="button" aria-pressed={(step.textStyle ?? "plain") === option.value} onClick={() => updateStep(index, { textStyle: option.value })}>{option.label}</button>)}</div>
         </fieldset>
         <textarea className={styles.area} value={step.text} onChange={event => updateStep(index, { text: event.target.value })} placeholder={(step.textStyle ?? "plain") === "plain" ? "Step subtext" : "Add one item per line"} aria-label={`Step ${index + 1} subtext`} />
+        {(step.textStyle ?? "plain") !== "plain" && step.text.trim() ? <div className={styles.roadmapFormattedPreview} aria-label={`Step ${index + 1} formatted subtext preview`}><span>Formatted preview</span><RoadmapStepText step={step} /></div> : null}
         <div className={styles.roadmapUploadRow}>
-          <label className={styles.roadmapUploadButton}>Upload image<input type="file" accept="image/*" onChange={event => uploadStepImage(index, event.target.files?.[0])} aria-label={`Upload step ${index + 1} image`} /></label>
+          <label className={styles.roadmapUploadButton} aria-disabled={uploadingStep === index}>{uploadingStep === index ? "Uploading…" : "Upload image"}<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" disabled={uploadingStep === index} onChange={event => void uploadStepImage(index, event.target.files?.[0])} aria-label={`Upload step ${index + 1} image`} /></label>
           {step.imageUrl ? <button className={styles.roadmapRemoveImage} type="button" onClick={() => updateStep(index, { imageUrl: "" })}>Remove image</button> : null}
         </div>
         {uploadErrors[index] ? <p className={styles.roadmapUploadError} role="alert">{uploadErrors[index]}</p> : null}

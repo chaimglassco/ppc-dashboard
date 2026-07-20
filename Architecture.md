@@ -47,7 +47,7 @@ The builder owns:
 - Viewport-aware element menu placement
 - Repeatable dropdown editing
 - Table row/column sizing
-- Roadmap placement, step-number position, per-step image uploads, formatted subtext, and full-width centered image rendering
+- Roadmap placement, step-number position, shared Blob-backed image uploads, live formatted-subtext previews, and full-width centered image rendering
 - Video link validation and thumbnail derivation
 
 ## Document metadata editor

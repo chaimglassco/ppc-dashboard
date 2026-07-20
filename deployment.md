@@ -80,7 +80,7 @@ The existing `.gitignore` already excludes these paths.
 12. Use the Category Pencil control to open the category manager; verify rename, reorder, and recoverable deletion controls.
 13. Confirm deleted categories are absent from the main list, then use the recovery icon to open the recovery dialog and recover one.
 14. Add a Roadmap, select Center number, and confirm its number, title, and subtext are centered and its image uses the full step width after saving.
-15. Upload a Roadmap step image, select each subtext format, save, and confirm the larger title, formatted lines, image preview, and remove-image action persist.
+15. Upload a Roadmap step image, confirm its shared upload completes, select each subtext format, and verify the live formatted preview, larger saved title, authenticated image preview, and remove-image action persist in a second browser session.
 16. Open a private browser window and confirm that temporary document is visible.
 17. Add and reorder temporary document elements, then confirm the saved order in the private window.
 18. Check the browser console for hydration or runtime errors.

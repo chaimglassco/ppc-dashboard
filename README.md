@@ -39,7 +39,7 @@ It is deployed as the PPC application inside the unified Glassco website:
   - Repeatable multiline dropdowns
   - Feature cards
   - Blue text blocks
-  - Roadmaps with per-step image uploads, plain/bulleted/checklist/numbered subtext, and layout controls
+  - Roadmaps with shared per-step image uploads, live plain/bulleted/checklist/numbered subtext previews, and layout controls
   - Diagnostic flows
   - Image galleries with one-, two-, three-, or four-column layouts
 

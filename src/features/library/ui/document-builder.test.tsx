@@ -139,6 +139,7 @@ describe("DocumentBuilder feature cards", () => {
 
 describe("DocumentBuilder roadmaps", () => {
   it("uploads step images, saves formatted subtext and alignment, then renders them in view mode", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: "/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Fshared.png" }), { status: 200, headers: { "Content-Type": "application/json" } })));
     const baseDocument = getPublishedDocuments()[0];
     const roadmap = {
       ...createBlankContentElement("timeline", 1),
@@ -156,6 +157,7 @@ describe("DocumentBuilder roadmaps", () => {
     fireEvent.change(controls.getByRole("textbox", { name: "Step 1 subtext" }), { target: { value: "First action\nSecond action" } });
     fireEvent.click(controls.getByRole("button", { name: "Right" }));
     fireEvent.click(controls.getByRole("button", { name: "Center number" }));
+    expect(controls.getByLabelText("Step 1 formatted subtext preview").querySelectorAll("li")).toHaveLength(2);
     await waitFor(() => expect(controls.getByRole("button", { name: "Preview step 1 image" })).toBeInTheDocument());
     fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
 
@@ -163,12 +165,25 @@ describe("DocumentBuilder roadmaps", () => {
     const savedRoadmap = onSave.mock.calls[0][0][0];
     expect(savedRoadmap.alignment).toBe("right");
     expect(savedRoadmap.numberPosition).toBe("center");
-    expect(savedRoadmap.steps[0].imageUrl).toMatch(/^data:image\/png;base64,/);
+    expect(savedRoadmap.steps[0].imageUrl).toContain("/ppc/api/library/images?pathname=");
     expect(savedRoadmap.steps[0].textStyle).toBe("bullets");
     expect(view.container.querySelector('section[data-alignment="right"]')).toBeInTheDocument();
     expect(view.container.querySelector('section[data-number-position="center"]')).toBeInTheDocument();
     expect(controls.getByText("First action").closest("ul")).toBeInTheDocument();
     expect(controls.getByRole("img", { name: "Step one roadmap image" })).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("previews checklist and numbered subtext formatting while editing", () => {
+    const baseDocument = getPublishedDocuments()[0];
+    const roadmap = { ...createBlankContentElement("timeline", 1), steps: [{ title: "Step", text: "First\nSecond", imageUrl: "" }] };
+    const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [roadmap] }} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    fireEvent.click(controls.getByRole("button", { name: "Checklist" }));
+    expect(controls.getByLabelText("Step 1 formatted subtext preview").querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
+    fireEvent.click(controls.getByRole("button", { name: "Numbered" }));
+    expect(controls.getByLabelText("Step 1 formatted subtext preview").querySelector("ol")).toBeInTheDocument();
   });
 });
 
