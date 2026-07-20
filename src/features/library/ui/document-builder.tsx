@@ -2,11 +2,11 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { ArrowDown, ArrowUp, ExternalLink, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
-import { useEffect, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
-import type { Category, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, RoadmapTextStyle, Topic } from "../domain/types";
+import type { ButtonAlignment, ButtonWidth, Category, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, RoadmapTextStyle, Topic } from "../domain/types";
 import { Markdown } from "./markdown";
 import styles from "./document-builder.module.css";
 
@@ -22,6 +22,7 @@ const ELEMENT_OPTIONS: Array<{ type: LibraryContentElementType; label: string }>
   { type: "accordion", label: "Dropdown" },
   { type: "feature", label: "Feature Card" },
   { type: "gallery", label: "Image Gallery" },
+  { type: "button", label: "Button" },
   { type: "code", label: "Blue Text Block" },
   { type: "timeline", label: "Roadmap" },
   { type: "flowchart", label: "Diagnostic Flow" },
@@ -443,9 +444,26 @@ function ElementPreview({ element, onPreviewImage }: { element: LibraryContentEl
   if (element.type === "accordion") return <section className={styles.accordionList}>{getDropdowns(element).map((dropdown, index) => <details className={styles.accordion} key={index}><summary>{previewText(dropdown.title, "Dropdown title")}</summary><p>{previewText(dropdown.text)}</p></details>)}</section>;
   if (element.type === "feature") return <section className={styles.feature}><div><span>{element.label}</span><h3>{previewText(element.title, "Feature title")}</h3><div className={styles.featureText}>{previewText(element.text).split(/\r?\n/).filter(line => line.trim()).map((line, index) => <p key={index}>{line}</p>)}</div>{element.buttonText ? <button type="button">{element.buttonText}</button> : null}</div><button className={styles.imageButton} type="button" onClick={() => element.imageUrl && onPreviewImage(element.imageUrl)}>{element.imageUrl ? <img src={element.imageUrl} alt="" /> : "Image preview"}</button></section>;
   if (element.type === "gallery") return <ImageGalleryPreview element={element} onPreviewImage={onPreviewImage} />;
+  if (element.type === "button") {
+    const width = element.buttonWidth ?? "medium";
+    const alignment = element.buttonAlignment ?? "center";
+    const validLink = isValidButtonUrl(element.buttonUrl ?? "");
+    return <section className={styles.buttonBlock} data-button-width={width} data-button-alignment={alignment}>{validLink ? <a href={element.buttonUrl} target="_blank" rel="noopener noreferrer">{previewText(element.buttonText, "Button")}</a> : <span aria-disabled="true">{previewText(element.buttonText, "Button")}</span>}</section>;
+  }
   if (element.type === "code") return <section className={styles.code}><span>{element.label}</span><pre>{previewText(element.text)}</pre></section>;
   if (element.type === "timeline") return <RoadmapPreview element={element} onPreviewImage={onPreviewImage} />;
   return <section className={styles.flow}>{element.nodes.map((node, index) => <div key={index}><strong>{previewText(node.title, "Flow box title")}</strong>{node.text ? <span>{node.text}</span> : null}</div>)}</section>;
+}
+
+function isValidButtonUrl(value: string) {
+  const url = value.trim();
+  if (url.startsWith("/") && !url.startsWith("//")) return true;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function ImageGalleryPreview({ element, onPreviewImage }: { element: LibraryContentElement; onPreviewImage: (url: string) => void }) {
@@ -488,6 +506,40 @@ function ElementTable({ element }: { element: LibraryContentElement }) {
   return <div className={styles.tableWrap}><table className={columnWidths ? styles.sizedTable : undefined} style={columnWidths ? { minWidth: columnWidths.reduce((total, width) => total + width, 0) } : undefined}>{columnWidths ? <colgroup>{columnWidths.map((width, index) => <col key={index} style={{ width }} />)}</colgroup> : null}<thead><tr>{element.columns.map((column, index) => <th key={index}>{previewText(column, `Column ${index + 1}`)}</th>)}</tr></thead><tbody>{element.rows.map((row, rowIndex) => <tr key={rowIndex}>{element.columns.map((_, columnIndex) => <td key={columnIndex}>{row[columnIndex] ?? ""}</td>)}</tr>)}</tbody></table></div>;
 }
 
+function SharedImageUpload({ value, label, onChange, onPreview, previewClassName }: { value: string; label: string; onChange: (url: string) => void; onPreview: (url: string) => void; previewClassName?: string }) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState("");
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    if (!["image/png", "image/jpeg", "image/gif", "image/webp"].includes(file.type)) { setError("Use a PNG, JPEG, GIF, or WebP image."); return; }
+    if (file.size > 2 * 1024 * 1024) { setError("Image must be 2 MB or smaller."); return; }
+    setIsUploading(true);
+    setError("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch(withPpcBasePath("/api/library/images"), { method: "POST", headers: getPipelineAuthorizationHeader(), body });
+      const result: unknown = await response.json();
+      if (!response.ok || !result || typeof result !== "object" || typeof (result as Record<string, unknown>).url !== "string") {
+        throw new Error(result && typeof result === "object" && typeof (result as Record<string, unknown>).error === "string" ? String((result as Record<string, unknown>).error) : "Image upload failed.");
+      }
+      onChange(String((result as Record<string, unknown>).url));
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Image upload failed.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+  return <div className={styles.sharedImageUpload}>
+    <div className={styles.sharedImageActions}>
+      <label aria-disabled={isUploading}>{isUploading ? "Uploading…" : value ? "Replace image" : "Upload image"}<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" disabled={isUploading} onChange={event => void upload(event.target.files?.[0])} aria-label={label} /></label>
+      {value ? <button type="button" onClick={() => onChange("")}>Remove image</button> : null}
+    </div>
+    {error ? <p role="alert">{error}</p> : null}
+    {value ? <button className={previewClassName ?? styles.sharedImagePreview} type="button" onClick={() => onPreview(value)} aria-label={`Preview ${label.replace(/^Upload /, "")}`}><img src={value} alt="" /></button> : <div className={styles.sharedImagePlaceholder}>No image uploaded</div>}
+  </div>;
+}
+
 function ElementEditor({ element, onUpdate, onDelete, onPreviewImage }: { element: LibraryContentElement; onUpdate: (updates: Partial<LibraryContentElement>) => void; onDelete: () => void; onPreviewImage: (url: string) => void }) {
   const updateItem = (index: number, value: string) => onUpdate({ items: element.items.map((item, itemIndex) => itemIndex === index ? value : item) });
   const updateNode = (index: number, key: "title" | "text", value: string) => onUpdate({ nodes: element.nodes.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item) });
@@ -503,10 +555,11 @@ function ElementEditor({ element, onUpdate, onDelete, onPreviewImage }: { elemen
     if (element.type === "insight") return <section className={styles.insight}><input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Key Insight" /><textarea className={styles.area} value={element.text} onChange={event => onUpdate({ text: event.target.value })} placeholder="Insight content..." /></section>;
     if (element.type === "table") return <TableEditor element={element} onUpdate={onUpdate} />;
     if (element.type === "accordion") return <AccordionEditor element={element} onUpdate={onUpdate} />;
-    if (element.type === "feature") return <section className={styles.featureEditor}><div><input className={styles.input} value={element.label} onChange={event => onUpdate({ label: event.target.value })} placeholder="Feature label" /><input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Feature title" /><textarea className={styles.area} value={element.text} onChange={event => onUpdate({ text: event.target.value })} placeholder="Feature text..." /><input className={styles.input} value={element.buttonText} onChange={event => onUpdate({ buttonText: event.target.value })} placeholder="Button text" /></div><div><input className={styles.input} value={element.imageUrl} onChange={event => onUpdate({ imageUrl: event.target.value })} placeholder="Image URL" /><button className={styles.imageButton} type="button" onClick={() => element.imageUrl && onPreviewImage(element.imageUrl)}>{element.imageUrl ? <img src={element.imageUrl} alt="" /> : "Clickable image preview"}</button></div></section>;
+    if (element.type === "feature") return <section className={styles.featureEditor}><div><input className={styles.input} value={element.label} onChange={event => onUpdate({ label: event.target.value })} placeholder="Feature label" /><input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Feature title" /><textarea className={styles.area} value={element.text} onChange={event => onUpdate({ text: event.target.value })} placeholder="Feature text..." /><input className={styles.input} value={element.buttonText} onChange={event => onUpdate({ buttonText: event.target.value })} placeholder="Button text" /></div><SharedImageUpload value={element.imageUrl} label="Upload feature card image" onChange={imageUrl => onUpdate({ imageUrl })} onPreview={onPreviewImage} previewClassName={styles.imageButton} /></section>;
     if (element.type === "gallery") return <ImageGalleryEditor element={element} onUpdate={onUpdate} onPreviewImage={onPreviewImage} />;
     if (element.type === "code") return <section className={styles.code}><input value={element.label} onChange={event => onUpdate({ label: event.target.value })} placeholder="Block label" /><textarea value={element.text} onChange={event => onUpdate({ text: event.target.value })} placeholder="Blue text block content..." /></section>;
     if (element.type === "timeline") return <RoadmapEditor element={element} onUpdate={onUpdate} onPreviewImage={onPreviewImage} />;
+    if (element.type === "button") return <ButtonEditor element={element} onUpdate={onUpdate} />;
     return <section className={styles.flowEditor}>{element.nodes.map((node, index) => <div key={index}><input value={node.title} onChange={event => updateNode(index, "title", event.target.value)} placeholder="Flow box title" /><input value={node.text} onChange={event => updateNode(index, "text", event.target.value)} placeholder="Connector text" /></div>)}<button type="button" onClick={() => onUpdate({ nodes: [...element.nodes, { title: "", text: "" }] })}>Add flow step</button></section>;
   })();
   return <div className={styles.editorShell}><button className={styles.deleteBlock} type="button" onClick={onDelete} aria-label={`Delete ${element.type} block`}><Trash2 /></button>{editor}</div>;
@@ -518,61 +571,93 @@ function ImageGalleryEditor({ element, onUpdate, onPreviewImage }: { element: Li
   const layouts: Array<{ columns: 1 | 2 | 3 | 4; label: string }> = [{ columns: 1, label: "1 Whole image" }, { columns: 2, label: "2 Grid" }, { columns: 3, label: "3 Grid" }, { columns: 4, label: "4 Grid" }];
   const saveImages = (next: Array<{ url: string; alt: string }>) => onUpdate({ images: next });
   const updateImage = (index: number, field: "url" | "alt", value: string) => saveImages(images.map((image, imageIndex) => imageIndex === index ? { ...image, [field]: value } : image));
+  const selectLayout = (nextColumns: 1 | 2 | 3 | 4) => {
+    const missing = Math.max(0, nextColumns - images.length);
+    onUpdate({ galleryColumns: nextColumns, images: [...images, ...Array.from({ length: missing }, () => ({ url: "", alt: "" }))] });
+  };
+  const removeImage = (index: number) => {
+    const remaining = images.filter((_, imageIndex) => imageIndex !== index);
+    const missing = Math.max(0, columns - remaining.length);
+    saveImages([...remaining, ...Array.from({ length: missing }, () => ({ url: "", alt: "" }))]);
+  };
 
   return <section className={styles.galleryEditor}>
     <fieldset className={styles.galleryLayout}>
       <legend>Gallery layout</legend>
-      <div>{layouts.map(layout => <button key={layout.columns} type="button" aria-pressed={columns === layout.columns} onClick={() => onUpdate({ galleryColumns: layout.columns })}>{layout.label}</button>)}</div>
+      <div>{layouts.map(layout => <button key={layout.columns} type="button" aria-pressed={columns === layout.columns} onClick={() => selectLayout(layout.columns)}>{layout.label}</button>)}</div>
     </fieldset>
-    <div className={styles.galleryEditorList}>{images.map((image, index) => <div className={styles.galleryEditorItem} key={index}>
-      <input className={styles.input} type="url" value={image.url} onChange={event => updateImage(index, "url", event.target.value)} placeholder="Image URL" aria-label={`Gallery image ${index + 1} URL`} />
+    <div className={styles.galleryEditorList} data-gallery-columns={columns}>{images.map((image, index) => <div className={styles.galleryEditorItem} key={index}>
       <input className={styles.input} value={image.alt} onChange={event => updateImage(index, "alt", event.target.value)} placeholder="Image description" aria-label={`Gallery image ${index + 1} description`} />
-      {image.url ? <button className={styles.galleryEditorPreview} type="button" onClick={() => onPreviewImage(image.url)} aria-label={`Preview gallery image ${index + 1}`}><img src={image.url} alt="" /></button> : null}
-      {images.length > 1 ? <button className={styles.removeGalleryImage} type="button" onClick={() => saveImages(images.filter((_, imageIndex) => imageIndex !== index))} aria-label={`Remove gallery image ${index + 1}`}><Trash2 /></button> : null}
+      <SharedImageUpload value={image.url} label={`Upload gallery image ${index + 1}`} onChange={url => updateImage(index, "url", url)} onPreview={onPreviewImage} previewClassName={styles.galleryEditorPreview} />
+      {images.length > 1 ? <button className={styles.removeGalleryImage} type="button" onClick={() => removeImage(index)} aria-label={`Remove gallery image ${index + 1}`}><Trash2 /></button> : null}
     </div>)}</div>
     <button className={styles.addGalleryImage} type="button" onClick={() => saveImages([...images, { url: "", alt: "" }])}><Plus />Add image</button>
   </section>;
 }
 
+function ButtonEditor({ element, onUpdate }: { element: LibraryContentElement; onUpdate: (updates: Partial<LibraryContentElement>) => void }) {
+  const width = element.buttonWidth ?? "medium";
+  const alignment = element.buttonAlignment ?? "center";
+  const link = element.buttonUrl ?? "";
+  const showLinkError = Boolean(link.trim()) && !isValidButtonUrl(link);
+  const widths: Array<{ value: ButtonWidth; label: string }> = [{ value: "full", label: "Full" }, { value: "large", label: "Large" }, { value: "medium", label: "Medium" }, { value: "small", label: "Small" }];
+  const alignments: Array<{ value: ButtonAlignment; label: string }> = [{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }];
+  return <section className={styles.buttonEditor}>
+    <label>Button text<input className={styles.input} value={element.buttonText} onChange={event => onUpdate({ buttonText: event.target.value })} placeholder="Button label" /></label>
+    <label>Link<input className={styles.input} value={link} onChange={event => onUpdate({ buttonUrl: event.target.value })} placeholder="https://example.com or /library" aria-invalid={showLinkError} /></label>
+    {showLinkError ? <p role="alert">Enter an HTTP, HTTPS, or internal / link.</p> : null}
+    <fieldset><legend>Button width</legend><div>{widths.map(option => <button key={option.value} type="button" aria-pressed={width === option.value} onClick={() => onUpdate({ buttonWidth: option.value })}>{option.label}</button>)}</div></fieldset>
+    <fieldset><legend>Button alignment</legend><div>{alignments.map(option => <button key={option.value} type="button" aria-pressed={alignment === option.value} onClick={() => onUpdate({ buttonAlignment: option.value })}>{option.label}</button>)}</div></fieldset>
+    <div className={styles.buttonBlock} data-button-width={width} data-button-alignment={alignment}><span>{previewText(element.buttonText, "Button preview")}</span></div>
+  </section>;
+}
+
+function RoadmapTextComposer({ step, stepIndex, onChange }: { step: RoadmapStep; stepIndex: number; onChange: (text: string) => void }) {
+  const style = step.textStyle ?? "plain";
+  if (style === "plain") return <textarea className={styles.area} value={step.text} onChange={event => onChange(event.target.value)} placeholder="Step subtext" aria-label={`Step ${stepIndex + 1} subtext`} />;
+  const lines = step.text.split(/\r?\n/);
+  const focusLine = (lineIndex: number) => queueMicrotask(() => document.querySelector<HTMLInputElement>(`[data-roadmap-step="${stepIndex}"][data-roadmap-line="${lineIndex}"]`)?.focus());
+  const replaceLines = (lineIndex: number, replacements: string[]) => onChange([...lines.slice(0, lineIndex), ...replacements, ...lines.slice(lineIndex + 1)].join("\n"));
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>, lineIndex: number) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const start = event.currentTarget.selectionStart ?? event.currentTarget.value.length;
+      replaceLines(lineIndex, [event.currentTarget.value.slice(0, start), event.currentTarget.value.slice(start)]);
+      focusLine(lineIndex + 1);
+    } else if (event.key === "Backspace" && !event.currentTarget.value && lines.length > 1) {
+      event.preventDefault();
+      replaceLines(lineIndex, []);
+      focusLine(Math.max(0, lineIndex - 1));
+    }
+  };
+  const handlePaste = (event: ReactClipboardEvent<HTMLInputElement>, lineIndex: number) => {
+    const pasted = event.clipboardData.getData("text");
+    if (!/\r?\n/.test(pasted)) return;
+    event.preventDefault();
+    const start = event.currentTarget.selectionStart ?? 0;
+    const end = event.currentTarget.selectionEnd ?? start;
+    const parts = pasted.split(/\r?\n/);
+    parts[0] = event.currentTarget.value.slice(0, start) + parts[0];
+    parts[parts.length - 1] += event.currentTarget.value.slice(end);
+    replaceLines(lineIndex, parts);
+  };
+  return <div className={styles.roadmapTextComposer} data-text-style={style} aria-label={`Step ${stepIndex + 1} subtext composer`}>
+    {lines.map((line, lineIndex) => <label key={lineIndex}>
+      {style === "checklist" ? <input type="checkbox" disabled aria-hidden="true" /> : <span aria-hidden="true">{style === "numbered" ? `${lineIndex + 1}.` : "•"}</span>}
+      <input data-roadmap-step={stepIndex} data-roadmap-line={lineIndex} value={line} onChange={event => replaceLines(lineIndex, [event.target.value])} onKeyDown={event => handleKeyDown(event, lineIndex)} onPaste={event => handlePaste(event, lineIndex)} placeholder="Add an item" aria-label={`Step ${stepIndex + 1} subtext item ${lineIndex + 1}`} />
+    </label>)}
+  </div>;
+}
+
 function RoadmapEditor({ element, onUpdate, onPreviewImage }: { element: LibraryContentElement; onUpdate: (updates: Partial<LibraryContentElement>) => void; onPreviewImage: (url: string) => void }) {
   const alignment = element.alignment ?? "left";
   const numberPosition = element.numberPosition ?? "left";
-  const [uploadErrors, setUploadErrors] = useState<Record<number, string>>({});
-  const [uploadingStep, setUploadingStep] = useState<number | null>(null);
   const stepsRef = useRef(element.steps);
   useEffect(() => { stepsRef.current = element.steps; }, [element.steps]);
   const updateStep = (index: number, updates: Partial<RoadmapStep>) => {
     const steps = stepsRef.current.map((step, stepIndex) => stepIndex === index ? { ...step, ...updates } : step);
     stepsRef.current = steps;
     onUpdate({ steps });
-  };
-  const uploadStepImage = async (index: number, file: File | undefined) => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setUploadErrors(errors => ({ ...errors, [index]: "Choose an image file." }));
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setUploadErrors(errors => ({ ...errors, [index]: "Image must be 2 MB or smaller." }));
-      return;
-    }
-    setUploadingStep(index);
-    try {
-      const body = new FormData();
-      body.append("file", file);
-      const response = await fetch(withPpcBasePath("/api/library/images"), { method: "POST", headers: getPipelineAuthorizationHeader(), body });
-      const result: unknown = await response.json();
-      if (!response.ok || !result || typeof result !== "object" || typeof (result as Record<string, unknown>).url !== "string") {
-        const message = result && typeof result === "object" && typeof (result as Record<string, unknown>).error === "string" ? String((result as Record<string, unknown>).error) : "Image upload failed.";
-        throw new Error(message);
-      }
-      updateStep(index, { imageUrl: String((result as Record<string, unknown>).url) });
-      setUploadErrors(errors => ({ ...errors, [index]: "" }));
-    } catch (error) {
-      setUploadErrors(errors => ({ ...errors, [index]: error instanceof Error ? error.message : "Image upload failed." }));
-    } finally {
-      setUploadingStep(null);
-    }
   };
   const alignments: Array<{ value: RoadmapAlignment; label: string }> = [{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }];
   const numberPositions: Array<{ value: RoadmapNumberPosition; label: string }> = [{ value: "left", label: "Left number" }, { value: "center", label: "Center number" }, { value: "right", label: "Right number" }];
@@ -598,14 +683,8 @@ function RoadmapEditor({ element, onUpdate, onPreviewImage }: { element: Library
           <legend>Subtext format</legend>
           <div>{textStyles.map(option => <button key={option.value} type="button" aria-pressed={(step.textStyle ?? "plain") === option.value} onClick={() => updateStep(index, { textStyle: option.value })}>{option.label}</button>)}</div>
         </fieldset>
-        <textarea className={styles.area} value={step.text} onChange={event => updateStep(index, { text: event.target.value })} placeholder={(step.textStyle ?? "plain") === "plain" ? "Step subtext" : "Add one item per line"} aria-label={`Step ${index + 1} subtext`} />
-        {(step.textStyle ?? "plain") !== "plain" && step.text.trim() ? <div className={styles.roadmapFormattedPreview} aria-label={`Step ${index + 1} formatted subtext preview`}><span>Formatted preview</span><RoadmapStepText step={step} /></div> : null}
-        <div className={styles.roadmapUploadRow}>
-          <label className={styles.roadmapUploadButton} aria-disabled={uploadingStep === index}>{uploadingStep === index ? "Uploading…" : "Upload image"}<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" disabled={uploadingStep === index} onChange={event => void uploadStepImage(index, event.target.files?.[0])} aria-label={`Upload step ${index + 1} image`} /></label>
-          {step.imageUrl ? <button className={styles.roadmapRemoveImage} type="button" onClick={() => updateStep(index, { imageUrl: "" })}>Remove image</button> : null}
-        </div>
-        {uploadErrors[index] ? <p className={styles.roadmapUploadError} role="alert">{uploadErrors[index]}</p> : null}
-        {step.imageUrl ? <button className={styles.roadmapImage} type="button" onClick={() => onPreviewImage(step.imageUrl ?? "")} aria-label={`Preview step ${index + 1} image`}><img src={step.imageUrl} alt="" /></button> : null}
+        <RoadmapTextComposer step={step} stepIndex={index} onChange={text => updateStep(index, { text })} />
+        <SharedImageUpload value={step.imageUrl ?? ""} label={`Upload step ${index + 1} image`} onChange={imageUrl => updateStep(index, { imageUrl })} onPreview={onPreviewImage} previewClassName={styles.roadmapImage} />
       </div>
     </div>)}
     <button type="button" onClick={() => onUpdate({ steps: [...element.steps, { title: "", text: "", imageUrl: "", textStyle: "plain" }] })}>Add step</button>

@@ -14,7 +14,7 @@ function isGalleryImageArray(value: unknown) { return Array.isArray(value) && va
 function isContentElement(value: unknown): value is LibraryContentElement {
   if (!value || typeof value !== "object") return false;
   const element = value as Record<string, unknown>;
-  const types = ["topic", "statement", "quote", "bullets", "checklist", "numbered", "insight", "table", "accordion", "feature", "code", "timeline", "flowchart", "gallery"];
+  const types = ["topic", "statement", "quote", "bullets", "checklist", "numbered", "insight", "table", "accordion", "feature", "code", "timeline", "flowchart", "gallery", "button"];
   const textFields = ["id", "eyebrow", "label", "title", "text", "buttonText", "imageUrl"];
   return types.includes(String(element.type)) && textFields.every(field => typeof element[field] === "string") &&
     isStringArray(element.body) && isStringArray(element.items) && isStringArray(element.columns) &&
@@ -24,6 +24,9 @@ function isContentElement(value: unknown): value is LibraryContentElement {
     (element.alignment === undefined || ["left", "center", "right"].includes(String(element.alignment))) &&
     (element.numberPosition === undefined || ["left", "center", "right"].includes(String(element.numberPosition))) &&
     (element.galleryColumns === undefined || [1, 2, 3, 4].includes(Number(element.galleryColumns))) &&
+    (element.buttonUrl === undefined || typeof element.buttonUrl === "string") &&
+    (element.buttonWidth === undefined || ["full", "large", "medium", "small"].includes(String(element.buttonWidth))) &&
+    (element.buttonAlignment === undefined || ["left", "center", "right"].includes(String(element.buttonAlignment))) &&
     (element.images === undefined || isGalleryImageArray(element.images)) &&
     (element.dropdowns === undefined || isTextPairArray(element.dropdowns));
 }

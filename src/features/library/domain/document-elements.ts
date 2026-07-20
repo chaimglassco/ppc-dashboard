@@ -14,6 +14,9 @@ const emptyElement = (type: LibraryContentElementType, id: string): LibraryConte
   columns: ["Column 1", "Column 2"],
   rows: [["", ""]],
   buttonText: "",
+  buttonUrl: type === "button" ? "" : undefined,
+  buttonWidth: type === "button" ? "medium" : undefined,
+  buttonAlignment: type === "button" ? "center" : undefined,
   imageUrl: "",
   steps: [{ title: "", text: "", imageUrl: "", textStyle: "plain" }],
   alignment: type === "timeline" ? "left" : undefined,
@@ -31,6 +34,7 @@ export function createBlankContentElement(type: LibraryContentElementType, partN
   if (type === "accordion") return { ...element, dropdowns: [{ title: "", text: "" }] };
   if (type === "timeline") return { ...element, alignment: "left" as const, numberPosition: "left" as const, steps: [{ title: "", text: "", imageUrl: "", textStyle: "plain" as const }, { title: "", text: "", imageUrl: "", textStyle: "plain" as const }] };
   if (type === "gallery") return { ...element, galleryColumns: 1 as const, images: [{ url: "", alt: "" }] };
+  if (type === "button") return { ...element, buttonText: "", buttonUrl: "", buttonWidth: "medium" as const, buttonAlignment: "center" as const };
   if (type === "flowchart") return { ...element, nodes: [{ title: "", text: "" }, { title: "", text: "" }] };
   return element;
 }

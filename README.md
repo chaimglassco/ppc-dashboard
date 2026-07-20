@@ -37,11 +37,12 @@ It is deployed as the PPC application inside the unified Glassco website:
   - Key insights
   - Editable tables with resizable columns
   - Repeatable multiline dropdowns
-  - Feature cards
+  - Feature cards with shared image uploads
   - Blue text blocks
-  - Roadmaps with shared per-step image uploads, live plain/bulleted/checklist/numbered subtext previews, and layout controls
+  - Roadmaps with shared per-step image uploads, inline plain/bulleted/checklist/numbered composers, and layout controls
   - Diagnostic flows
-  - Image galleries with one-, two-, three-, or four-column layouts
+  - Image galleries with shared uploads and responsive one-, two-, three-, or four-column editor layouts
+  - Clickable buttons with width and alignment controls
 
 ## Architecture and persistence
 

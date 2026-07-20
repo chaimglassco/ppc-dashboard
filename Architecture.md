@@ -47,7 +47,9 @@ The builder owns:
 - Viewport-aware element menu placement
 - Repeatable dropdown editing
 - Table row/column sizing
-- Roadmap placement, step-number position, shared Blob-backed image uploads, live formatted-subtext previews, and full-width centered image rendering
+- Roadmap placement, step-number position, shared Blob-backed image uploads, inline list-style subtext composers, and full-width centered image rendering
+- Reusable authenticated image-upload controls for Roadmaps, Feature Cards, and Gallery slots, backed by the private Blob media route
+- Responsive Gallery editor grids with minimum slot creation, plus validated standalone Button blocks with width and alignment metadata
 - Video link validation and thumbnail derivation
 
 ## Document metadata editor

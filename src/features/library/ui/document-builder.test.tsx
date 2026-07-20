@@ -154,10 +154,12 @@ describe("DocumentBuilder roadmaps", () => {
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
     fireEvent.change(controls.getByLabelText("Upload step 1 image"), { target: { files: [new File(["roadmap image"], "roadmap.png", { type: "image/png" })] } });
     fireEvent.click(controls.getByRole("button", { name: "Bullets" }));
-    fireEvent.change(controls.getByRole("textbox", { name: "Step 1 subtext" }), { target: { value: "First action\nSecond action" } });
+    fireEvent.change(controls.getByRole("textbox", { name: "Step 1 subtext item 1" }), { target: { value: "First action" } });
+    fireEvent.keyDown(controls.getByRole("textbox", { name: "Step 1 subtext item 1" }), { key: "Enter" });
+    fireEvent.change(controls.getByRole("textbox", { name: "Step 1 subtext item 2" }), { target: { value: "Second action" } });
     fireEvent.click(controls.getByRole("button", { name: "Right" }));
     fireEvent.click(controls.getByRole("button", { name: "Center number" }));
-    expect(controls.getByLabelText("Step 1 formatted subtext preview").querySelectorAll("li")).toHaveLength(2);
+    expect(controls.getByLabelText("Step 1 subtext composer").querySelectorAll("label")).toHaveLength(2);
     await waitFor(() => expect(controls.getByRole("button", { name: "Preview step 1 image" })).toBeInTheDocument());
     fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
 
@@ -174,21 +176,27 @@ describe("DocumentBuilder roadmaps", () => {
     vi.unstubAllGlobals();
   });
 
-  it("previews checklist and numbered subtext formatting while editing", () => {
+  it("edits checklist and numbered rows inside the composer and handles multiline paste and empty-row deletion", () => {
     const baseDocument = getPublishedDocuments()[0];
     const roadmap = { ...createBlankContentElement("timeline", 1), steps: [{ title: "Step", text: "First\nSecond", imageUrl: "" }] };
     const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [roadmap] }} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
     const controls = within(view.container);
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
     fireEvent.click(controls.getByRole("button", { name: "Checklist" }));
-    expect(controls.getByLabelText("Step 1 formatted subtext preview").querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
+    expect(controls.getByLabelText("Step 1 subtext composer").querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
     fireEvent.click(controls.getByRole("button", { name: "Numbered" }));
-    expect(controls.getByLabelText("Step 1 formatted subtext preview").querySelector("ol")).toBeInTheDocument();
+    expect(controls.getByLabelText("Step 1 subtext composer")).toHaveAttribute("data-text-style", "numbered");
+    fireEvent.paste(controls.getByRole("textbox", { name: "Step 1 subtext item 2" }), { clipboardData: { getData: () => "Second\nThird" } });
+    expect(controls.getByRole("textbox", { name: "Step 1 subtext item 3" })).toHaveValue("Third");
+    fireEvent.change(controls.getByRole("textbox", { name: "Step 1 subtext item 3" }), { target: { value: "" } });
+    fireEvent.keyDown(controls.getByRole("textbox", { name: "Step 1 subtext item 3" }), { key: "Backspace" });
+    expect(controls.queryByRole("textbox", { name: "Step 1 subtext item 3" })).not.toBeInTheDocument();
   });
 });
 
 describe("DocumentBuilder image galleries", () => {
   it("saves the selected grid layout and repeatable images, then renders the gallery", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: "/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Fgallery.png" }), { status: 200, headers: { "Content-Type": "application/json" } })));
     const baseDocument = getPublishedDocuments()[0];
     const gallery = createBlankContentElement("gallery", 1);
     const document = { ...baseDocument, contentElements: [gallery] };
@@ -197,19 +205,85 @@ describe("DocumentBuilder image galleries", () => {
     const view = render(<DocumentBuilder canEdit doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
     const controls = within(view.container);
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
-    fireEvent.change(controls.getByRole("textbox", { name: "Gallery image 1 URL" }), { target: { value: "https://images.example.com/first.jpg" } });
     fireEvent.change(controls.getByRole("textbox", { name: "Gallery image 1 description" }), { target: { value: "First gallery image" } });
     fireEvent.click(controls.getByRole("button", { name: "3 Grid" }));
-    fireEvent.click(controls.getByRole("button", { name: "Add image" }));
-
-    expect(controls.getByRole("textbox", { name: "Gallery image 2 URL" })).toBeInTheDocument();
+    expect(controls.getByRole("textbox", { name: "Gallery image 3 description" })).toBeInTheDocument();
+    expect(view.container.querySelector('[data-gallery-columns="3"]')).toBeInTheDocument();
+    fireEvent.click(controls.getByRole("button", { name: "Remove gallery image 3" }));
+    expect(controls.getByRole("textbox", { name: "Gallery image 3 description" })).toBeInTheDocument();
+    fireEvent.change(controls.getByLabelText("Upload gallery image 1"), { target: { files: [new File(["gallery"], "gallery.png", { type: "image/png" })] } });
+    await waitFor(() => expect(controls.getByRole("button", { name: "Preview gallery image 1" })).toBeInTheDocument());
     fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const savedGallery = onSave.mock.calls[0][0][0];
     expect(savedGallery.galleryColumns).toBe(3);
-    expect(savedGallery.images[0]).toEqual({ url: "https://images.example.com/first.jpg", alt: "First gallery image" });
+    expect(savedGallery.images).toHaveLength(3);
+    expect(savedGallery.images[0]).toEqual({ url: expect.stringContaining("/ppc/api/library/images"), alt: "First gallery image" });
     expect(view.container.querySelector('section[data-gallery-columns="3"]')).toBeInTheDocument();
     expect(controls.getByRole("img", { name: "First gallery image" })).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("DocumentBuilder shared feature images and buttons", () => {
+  it("uploads a Feature Card image to shared storage and saves the returned URL", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: "/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Ffeature.png" }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    const baseDocument = getPublishedDocuments()[0];
+    const onSave = vi.fn();
+    const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [createBlankContentElement("feature", 1)] }} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    fireEvent.change(controls.getByLabelText("Upload feature card image"), { target: { files: [new File(["feature"], "feature.png", { type: "image/png" })] } });
+    await waitFor(() => expect(controls.getByRole("button", { name: "Preview feature card image" })).toBeInTheDocument());
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][0][0].imageUrl).toContain("/ppc/api/library/images");
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    fireEvent.click(controls.getByRole("button", { name: "Remove image" }));
+    expect(controls.queryByRole("button", { name: "Preview feature card image" })).not.toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("rejects an oversized shared image before making a request", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const baseDocument = getPublishedDocuments()[0];
+    const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [createBlankContentElement("feature", 1)] }} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    const file = new File(["x"], "large.png", { type: "image/png" });
+    Object.defineProperty(file, "size", { value: 2 * 1024 * 1024 + 1 });
+    fireEvent.change(controls.getByLabelText("Upload feature card image"), { target: { files: [file] } });
+    expect(controls.getByRole("alert")).toHaveTextContent("2 MB or smaller");
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("saves a valid standalone Button with width, alignment, and secure new-tab behavior", async () => {
+    const baseDocument = getPublishedDocuments()[0];
+    const onSave = vi.fn();
+    const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [createBlankContentElement("button", 1)] }} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    fireEvent.change(controls.getByRole("textbox", { name: "Button text" }), { target: { value: "Open guide" } });
+    fireEvent.change(controls.getByRole("textbox", { name: "Link" }), { target: { value: "https://example.com/guide" } });
+    fireEvent.click(controls.getByRole("button", { name: "Large" }));
+    fireEvent.click(controls.getByRole("button", { name: "Right" }));
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const saved = onSave.mock.calls[0][0][0];
+    expect(saved).toMatchObject({ type: "button", buttonText: "Open guide", buttonUrl: "https://example.com/guide", buttonWidth: "large", buttonAlignment: "right" });
+    expect(controls.getByRole("link", { name: "Open guide" })).toHaveAttribute("target", "_blank");
+    expect(controls.getByRole("link", { name: "Open guide" })).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("shows inline feedback for an unsafe Button link", () => {
+    const baseDocument = getPublishedDocuments()[0];
+    const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [createBlankContentElement("button", 1)] }} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    fireEvent.change(controls.getByRole("textbox", { name: "Link" }), { target: { value: "javascript:alert(1)" } });
+    expect(controls.getByRole("alert")).toHaveTextContent("HTTP, HTTPS, or internal / link");
   });
 });

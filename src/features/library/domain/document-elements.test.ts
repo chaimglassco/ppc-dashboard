@@ -21,6 +21,7 @@ describe("document content elements", () => {
     expect(createBlankContentElement("accordion", 1).dropdowns).toEqual([{ title: "", text: "" }]);
     expect(createBlankContentElement("timeline", 1)).toMatchObject({ alignment: "left", steps: [{ imageUrl: "", textStyle: "plain" }, { imageUrl: "", textStyle: "plain" }] });
     expect(createBlankContentElement("gallery", 1)).toMatchObject({ galleryColumns: 1, images: [{ url: "", alt: "" }] });
+    expect(createBlankContentElement("button", 1)).toMatchObject({ buttonText: "", buttonUrl: "", buttonWidth: "medium", buttonAlignment: "center" });
     expect(createBlankContentElement("flowchart", 1).nodes).toHaveLength(2);
   });
 

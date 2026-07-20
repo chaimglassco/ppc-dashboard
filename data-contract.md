@@ -61,6 +61,7 @@ code
 timeline
 flowchart
 gallery
+button
 ```
 
 Important structured fields:
@@ -75,6 +76,9 @@ Important structured fields:
 | `rows` | `string[][]` | Table cell data |
 | `columnWidths` | `number[]?` | Saved table widths in pixels |
 | `buttonText`, `imageUrl` | `string` | Feature card |
+| `buttonUrl` | `string?` | Standalone Button internal or HTTP(S) destination |
+| `buttonWidth` | `"full" \| "large" \| "medium" \| "small"` | Optional Button width; defaults to `medium` |
+| `buttonAlignment` | `"left" \| "center" \| "right"` | Optional Button alignment; defaults to `center` |
 | `steps` | `{title,text,imageUrl?,textStyle?}[]` | Roadmap steps with optional uploaded/legacy images and `plain`, `bullets`, `checklist`, or `numbered` subtext |
 | `alignment` | `"left" \| "center" \| "right"` | Optional Roadmap placement; defaults to `left` |
 | `numberPosition` | `"left" \| "center" \| "right"` | Optional Roadmap step-number position; defaults to `left` |
@@ -83,7 +87,7 @@ Important structured fields:
 | `galleryColumns` | `1 \| 2 \| 3 \| 4` | Image Gallery column layout |
 | `images` | `{url,alt}[]?` | Repeatable Image Gallery entries |
 
-Optional `columnWidths`, `dropdowns`, Roadmap `alignment`, Roadmap `numberPosition`, step `imageUrl`, step `textStyle`, `galleryColumns`, and `images` values preserve compatibility with content saved before those features existed. Newly uploaded Roadmap images are stored in the shared private Blob store and referenced through the authenticated library-image route; existing data URLs and HTTP(S) values remain valid.
+Optional `columnWidths`, `dropdowns`, Roadmap layout fields, step image/format fields, Gallery fields, and Button fields preserve compatibility with older content. Newly uploaded Roadmap, Feature Card, and Gallery images are stored in the shared private Blob store and referenced through the authenticated library-image route; existing data URLs and HTTP(S) values remain valid. Roadmap formatted rows remain newline-delimited in `steps[].text`.
 
 ## Repository Markdown front matter
 

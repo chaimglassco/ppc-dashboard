@@ -2,11 +2,13 @@ export const CATEGORIES=["Amazon PPC Foundations","Campaign Structure","Keyword 
 export const DOCUMENT_TYPES=["Guide","SOP","Checklist","Template","Playbook"] as const;
 export type Category=string; export type DocumentType=typeof DOCUMENT_TYPES[number];
 export type Topic={id:string;title:string;level:number};
-export type LibraryContentElementType="topic"|"statement"|"quote"|"bullets"|"checklist"|"numbered"|"insight"|"table"|"accordion"|"feature"|"code"|"timeline"|"flowchart"|"gallery";
+export type LibraryContentElementType="topic"|"statement"|"quote"|"bullets"|"checklist"|"numbered"|"insight"|"table"|"accordion"|"feature"|"code"|"timeline"|"flowchart"|"gallery"|"button";
 export type RoadmapAlignment="left"|"center"|"right";
 export type RoadmapNumberPosition="left"|"center"|"right";
 export type RoadmapTextStyle="plain"|"bullets"|"checklist"|"numbered";
 export type RoadmapStep={title:string;text:string;imageUrl?:string;textStyle?:RoadmapTextStyle};
+export type ButtonWidth="full"|"large"|"medium"|"small";
+export type ButtonAlignment="left"|"center"|"right";
 export type LibraryContentElement={
   id:string;
   type:LibraryContentElementType;
@@ -21,6 +23,9 @@ export type LibraryContentElement={
   rows:string[][];
   columnWidths?:number[];
   buttonText:string;
+  buttonUrl?:string;
+  buttonWidth?:ButtonWidth;
+  buttonAlignment?:ButtonAlignment;
   imageUrl:string;
   steps:RoadmapStep[];
   alignment?:RoadmapAlignment;
