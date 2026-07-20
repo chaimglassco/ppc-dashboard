@@ -4,6 +4,8 @@
 
 This document defines the repository content, shared server storage, and browser-only reading-state contracts used by the current Glassco Back Office Library MVP.
 
+The global application tabs continue to use `glassco.appRoutes.v1`; this visual relocation does not change the stored route schema.
+
 ## Library document
 
 `LibraryDocument` is the primary content contract.
@@ -73,7 +75,7 @@ Important structured fields:
 | `rows` | `string[][]` | Table cell data |
 | `columnWidths` | `number[]?` | Saved table widths in pixels |
 | `buttonText`, `imageUrl` | `string` | Feature card |
-| `steps` | `{title,text,imageUrl?}[]` | Roadmap steps with optional images |
+| `steps` | `{title,text,imageUrl?,textStyle?}[]` | Roadmap steps with optional uploaded/legacy images and `plain`, `bullets`, `checklist`, or `numbered` subtext |
 | `alignment` | `"left" \| "center" \| "right"` | Optional Roadmap placement; defaults to `left` |
 | `numberPosition` | `"left" \| "center" \| "right"` | Optional Roadmap step-number position; defaults to `left` |
 | `nodes` | `{title,text}[]` | Diagnostic flow |
@@ -81,7 +83,7 @@ Important structured fields:
 | `galleryColumns` | `1 \| 2 \| 3 \| 4` | Image Gallery column layout |
 | `images` | `{url,alt}[]?` | Repeatable Image Gallery entries |
 
-Optional `columnWidths`, `dropdowns`, Roadmap `alignment`, Roadmap `numberPosition`, step `imageUrl`, `galleryColumns`, and `images` values preserve compatibility with content saved before those features existed.
+Optional `columnWidths`, `dropdowns`, Roadmap `alignment`, Roadmap `numberPosition`, step `imageUrl`, step `textStyle`, `galleryColumns`, and `images` values preserve compatibility with content saved before those features existed. Newly uploaded Roadmap images are stored as data URLs in the existing `imageUrl` field; existing HTTP(S) values remain valid.
 
 ## Repository Markdown front matter
 

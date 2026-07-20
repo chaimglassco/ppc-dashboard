@@ -16,5 +16,15 @@
 @media(max-width:760px){.category-create>div{grid-template-columns:1fr}.category-row{grid-template-columns:auto minmax(0,1fr)}.category-actions{grid-column:2}.category-manager-body{padding:16px}.category-recovery .category-row{grid-template-columns:1fr}.category-recovery .secondary-button{justify-self:start}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition:none!important}}
 
+/* Global application tabs */
+.topbar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;border-bottom:1px solid var(--line);background:#fff}
+.breadcrumb{min-width:0}
+.topbar-actions{justify-self:end}
+.glassco-app-tabs{display:inline-flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--line);border-radius:999px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.1)}
+.glassco-app-tabs__tab{min-height:36px;border:0;border-radius:999px;padding:0 18px;background:transparent;color:var(--muted);font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer}
+.glassco-app-tabs__tab.active{background:var(--blue-dark);color:#fff}
+.glassco-app-tabs__tab:not(.active):hover{background:var(--blue-soft);color:var(--blue-dark)}
+@media(max-width:760px){.breadcrumb{visibility:hidden}.topbar{padding:0 10px}.glassco-app-tabs__tab{padding:0 13px;font-size:11px}}
+
 .shell-logo{margin-bottom:13px}.shell-app-switcher{position:relative;display:block;margin:0 0 29px}.shell-app-switcher select{width:100%;height:40px;border:1px solid #d8e0ee;border-radius:12px;background:#f8f9ff;color:#0047b4;padding:0 11px;font-size:12px;font-weight:800;cursor:pointer}.shell-app-switcher select:hover{background:#eef4ff}.session-gate{min-height:100vh;display:grid;place-content:center;gap:8px;text-align:center;color:var(--blue-dark)}.session-gate span{font-size:30px;font-weight:800}.session-gate p{margin:0;color:var(--muted);font-size:13px}.mobile-nav .shell-app-switcher{display:none}
 @media(max-width:760px){.mobile-nav{align-items:center}.mobile-nav .shell-app-switcher{display:block;flex:1;margin:0 6px}.mobile-nav .shell-app-switcher select{height:48px;font-size:11px}.mobile-nav a{max-width:90px}}

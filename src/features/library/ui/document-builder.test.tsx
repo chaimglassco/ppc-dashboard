@@ -138,7 +138,7 @@ describe("DocumentBuilder feature cards", () => {
 });
 
 describe("DocumentBuilder roadmaps", () => {
-  it("saves step images and roadmap alignment, then renders them in view mode", async () => {
+  it("uploads step images, saves formatted subtext and alignment, then renders them in view mode", async () => {
     const baseDocument = getPublishedDocuments()[0];
     const roadmap = {
       ...createBlankContentElement("timeline", 1),
@@ -151,18 +151,23 @@ describe("DocumentBuilder roadmaps", () => {
     const view = render(<DocumentBuilder canEdit doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
     const controls = within(view.container);
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
-    fireEvent.change(controls.getByRole("textbox", { name: "Step 1 image URL" }), { target: { value: "https://images.example.com/step-one.jpg" } });
+    fireEvent.change(controls.getByLabelText("Upload step 1 image"), { target: { files: [new File(["roadmap image"], "roadmap.png", { type: "image/png" })] } });
+    fireEvent.click(controls.getByRole("button", { name: "Bullets" }));
+    fireEvent.change(controls.getByRole("textbox", { name: "Step 1 subtext" }), { target: { value: "First action\nSecond action" } });
     fireEvent.click(controls.getByRole("button", { name: "Right" }));
     fireEvent.click(controls.getByRole("button", { name: "Center number" }));
+    await waitFor(() => expect(controls.getByRole("button", { name: "Preview step 1 image" })).toBeInTheDocument());
     fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const savedRoadmap = onSave.mock.calls[0][0][0];
     expect(savedRoadmap.alignment).toBe("right");
     expect(savedRoadmap.numberPosition).toBe("center");
-    expect(savedRoadmap.steps[0].imageUrl).toBe("https://images.example.com/step-one.jpg");
+    expect(savedRoadmap.steps[0].imageUrl).toMatch(/^data:image\/png;base64,/);
+    expect(savedRoadmap.steps[0].textStyle).toBe("bullets");
     expect(view.container.querySelector('section[data-alignment="right"]')).toBeInTheDocument();
     expect(view.container.querySelector('section[data-number-position="center"]')).toBeInTheDocument();
+    expect(controls.getByText("First action").closest("ul")).toBeInTheDocument();
     expect(controls.getByRole("img", { name: "Step one roadmap image" })).toBeInTheDocument();
   });
 });

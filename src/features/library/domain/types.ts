@@ -5,7 +5,8 @@ export type Topic={id:string;title:string;level:number};
 export type LibraryContentElementType="topic"|"statement"|"quote"|"bullets"|"checklist"|"numbered"|"insight"|"table"|"accordion"|"feature"|"code"|"timeline"|"flowchart"|"gallery";
 export type RoadmapAlignment="left"|"center"|"right";
 export type RoadmapNumberPosition="left"|"center"|"right";
-export type RoadmapStep={title:string;text:string;imageUrl?:string};
+export type RoadmapTextStyle="plain"|"bullets"|"checklist"|"numbered";
+export type RoadmapStep={title:string;text:string;imageUrl?:string;textStyle?:RoadmapTextStyle};
 export type LibraryContentElement={
   id:string;
   type:LibraryContentElementType;

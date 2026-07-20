@@ -69,6 +69,8 @@ Use this checklist before merging or deploying changes.
 - [x] Saved table widths render in view mode.
 - [x] Add checklist bullets.
 - [x] Roadmap step-number position saves as Left number, Center number, or Right number.
+- [x] Roadmap image uploads save and preview, reject non-images and files over 2 MB, and can be removed.
+- [x] Roadmap subtext saves and renders as Plain, Bullets, Checklist, or Numbered content, and step titles use the larger display style.
 - [x] Center number layout centers the number, title, and subtext and uses the full available width for the image.
 - [x] Save changes and return to view mode.
 
@@ -115,7 +117,7 @@ These security items are intentionally incomplete in the local MVP.
 - [ ] Missing, malformed, and expired Pipeline sessions redirect to Pipeline.
 - [ ] ADMIN sees catalog and document-builder controls and can save shared changes.
 - [ ] USER and VIEWER do not see admin controls; direct `PUT /ppc/api/library` returns 403.
-- [ ] The selector returns to the remembered Pipeline route and records the current PPC route.
-- [ ] The selector is usable in desktop sidebar and mobile navigation.
+- [ ] The application tabs return to the remembered Pipeline route and record the current PPC route.
+- [ ] The application tabs are visible in both apps, remain usable on desktop and mobile, show white active text, and do not overlay page content.
 - [ ] `glasscoppc.vercel.app` redirects to the equivalent canonical `/ppc` route without a loop.
 - [ ] No hydration or browser-console errors appear.

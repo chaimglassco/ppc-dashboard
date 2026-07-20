@@ -49,6 +49,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Checklist bullet element.
 - Centered statements, callouts, lists, insights, feature cards, text blocks, roadmaps, and diagnostic flows.
 - Roadmap step-number position controls for Left, Center, and Right layouts; Center stacks the step copy and displays images at full available width.
+- Roadmap steps now accept image-file uploads, Plain/Bullets/Checklist/Numbered subtext modes, and larger step titles while remaining compatible with previously saved image URLs.
 - Video tutorial links, YouTube thumbnails, and watch actions.
 - Video Add/Pencil controls restricted to document edit mode.
 
@@ -81,7 +82,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 # Unified Glassco integration
 
 - Added `/ppc` base-path support for pages, assets, and APIs.
-- Added responsive Product Pipeline/PPC Dashboard switching with remembered routes.
+- Replaced the sidebar dropdown with global, responsive Product Pipeline/PPC Dashboard tabs in a reserved top bar while preserving remembered routes.
 - Added Pipeline session verification and role-aware PPC administration.
 - Protected shared-library reads with a verified session and writes with an ADMIN session.
 - Added legacy `glasscoppc.vercel.app` canonical redirect handling.

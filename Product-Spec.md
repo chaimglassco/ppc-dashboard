@@ -57,6 +57,7 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 - **LIB-BUILDER-007** — Video Add/Pencil controls are visible only in document edit mode.
 - **LIB-BUILDER-008** — Builder edit mode replaces the blue header metadata with editable title, description, and category controls and saves those values with the structured elements.
 - **LIB-BUILDER-009** — Roadmaps independently support overall Left/Center/Right placement and Left/Center/Right step-number positions; centered numbers stack step copy and a full-width image.
+- **LIB-BUILDER-010** — Each Roadmap step supports a local image upload up to 2 MB and Plain, Bullets, Checklist, or Numbered subtext formatting while retaining legacy saved image URLs.
 
 ## Current acceptance criteria
 
@@ -76,7 +77,7 @@ These require a separately approved milestone and must replace—not expose—th
 # Unified Glassco application behavior
 
 - The PPC Dashboard is presented under the Pipeline domain at `/ppc`.
-- A responsive application selector switches between Product Pipeline and PPC Dashboard.
+- Responsive application tabs remain visible in the reserved top bar of both Product Pipeline and PPC Dashboard, with the active application shown in white text on blue.
 - PPC resumes its last valid route and otherwise opens `/ppc/library`.
 - A verified Pipeline session is required before the PPC interface renders.
 - ADMIN can create, edit, reorder, hide, delete, and recover content. USER and VIEWER are read-only apart from personal reading controls.

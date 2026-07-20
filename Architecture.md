@@ -47,7 +47,7 @@ The builder owns:
 - Viewport-aware element menu placement
 - Repeatable dropdown editing
 - Table row/column sizing
-- Roadmap placement, step-number position, and full-width centered image rendering
+- Roadmap placement, step-number position, per-step image uploads, formatted subtext, and full-width centered image rendering
 - Video link validation and thumbnail derivation
 
 ## Document metadata editor
@@ -75,6 +75,8 @@ This is an interface prototype, not a security boundary.
 ## Styling
 
 `src/app/globals.css` contains the base application design system. `src/app/library-admin.css` contains catalog/admin overrides and category-manager styling. The structured builder uses a colocated CSS module.
+
+The shared application switcher is a client-side segmented tab control rendered inside each application shell's reserved top bar. It reads and updates the existing `glassco.appRoutes.v1` browser route memory without changing its schema.
 
 ## Future replacement boundaries
 

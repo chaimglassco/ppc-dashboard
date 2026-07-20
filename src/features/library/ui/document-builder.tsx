@@ -2,9 +2,9 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { ArrowDown, ArrowUp, ExternalLink, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
-import { useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
-import type { Category, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, Topic } from "../domain/types";
+import type { Category, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, RoadmapTextStyle, Topic } from "../domain/types";
 import { Markdown } from "./markdown";
 import styles from "./document-builder.module.css";
 
@@ -465,11 +465,20 @@ function RoadmapPreview({ element, onPreviewImage }: { element: LibraryContentEl
       <span>{index + 1}</span>
       <div>
         <strong>{previewText(step.title, "Step title")}</strong>
-        <p>{previewText(step.text)}</p>
+        <RoadmapStepText step={step} />
         {step.imageUrl ? <button className={styles.roadmapImage} type="button" onClick={() => onPreviewImage(step.imageUrl ?? "")} aria-label={`Preview ${previewText(step.title, `step ${index + 1}`)} image`}><img src={step.imageUrl} alt={`${previewText(step.title, `Step ${index + 1}`)} roadmap image`} /></button> : null}
       </div>
     </div>)}
   </section>;
+}
+
+function RoadmapStepText({ step }: { step: RoadmapStep }) {
+  const textStyle = step.textStyle ?? "plain";
+  const items = step.text.split(/\r?\n/).map(item => item.trim()).filter(Boolean);
+  if (textStyle === "bullets") return <ul className={styles.roadmapSubtextList}>{items.map((item, index) => <li key={index}>{item}</li>)}</ul>;
+  if (textStyle === "numbered") return <ol className={styles.roadmapSubtextList}>{items.map((item, index) => <li key={index}>{item}</li>)}</ol>;
+  if (textStyle === "checklist") return <ul className={styles.roadmapSubtextChecklist}>{items.map((item, index) => <li key={index}><input type="checkbox" disabled aria-label={item} /><span>{item}</span></li>)}</ul>;
+  return <p>{previewText(step.text)}</p>;
 }
 
 function ElementTable({ element }: { element: LibraryContentElement }) {
@@ -526,9 +535,36 @@ function ImageGalleryEditor({ element, onUpdate, onPreviewImage }: { element: Li
 function RoadmapEditor({ element, onUpdate, onPreviewImage }: { element: LibraryContentElement; onUpdate: (updates: Partial<LibraryContentElement>) => void; onPreviewImage: (url: string) => void }) {
   const alignment = element.alignment ?? "left";
   const numberPosition = element.numberPosition ?? "left";
-  const updateStep = (index: number, key: "title" | "text" | "imageUrl", value: string) => onUpdate({ steps: element.steps.map((step, stepIndex) => stepIndex === index ? { ...step, [key]: value } : step) });
+  const [uploadErrors, setUploadErrors] = useState<Record<number, string>>({});
+  const stepsRef = useRef(element.steps);
+  useEffect(() => { stepsRef.current = element.steps; }, [element.steps]);
+  const updateStep = (index: number, updates: Partial<RoadmapStep>) => {
+    const steps = stepsRef.current.map((step, stepIndex) => stepIndex === index ? { ...step, ...updates } : step);
+    stepsRef.current = steps;
+    onUpdate({ steps });
+  };
+  const uploadStepImage = (index: number, file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setUploadErrors(errors => ({ ...errors, [index]: "Choose an image file." }));
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadErrors(errors => ({ ...errors, [index]: "Image must be 2 MB or smaller." }));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") return;
+      updateStep(index, { imageUrl: reader.result });
+      setUploadErrors(errors => ({ ...errors, [index]: "" }));
+    };
+    reader.onerror = () => setUploadErrors(errors => ({ ...errors, [index]: "Image upload could not be read." }));
+    reader.readAsDataURL(file);
+  };
   const alignments: Array<{ value: RoadmapAlignment; label: string }> = [{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }];
   const numberPositions: Array<{ value: RoadmapNumberPosition; label: string }> = [{ value: "left", label: "Left number" }, { value: "center", label: "Center number" }, { value: "right", label: "Right number" }];
+  const textStyles: Array<{ value: RoadmapTextStyle; label: string }> = [{ value: "plain", label: "Plain" }, { value: "bullets", label: "Bullets" }, { value: "checklist", label: "Checklist" }, { value: "numbered", label: "Numbered" }];
 
   return <section className={styles.timelineEditor} data-alignment={alignment} data-number-position={numberPosition}>
     <input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Roadmap title" />
@@ -545,13 +581,21 @@ function RoadmapEditor({ element, onUpdate, onPreviewImage }: { element: Library
     {element.steps.map((step, index) => <div key={index}>
       <span>{index + 1}</span>
       <div>
-        <input className={styles.input} value={step.title} onChange={event => updateStep(index, "title", event.target.value)} placeholder="Step title" />
-        <input className={styles.input} value={step.text} onChange={event => updateStep(index, "text", event.target.value)} placeholder="Step description" />
-        <input className={styles.input} type="url" value={step.imageUrl ?? ""} onChange={event => updateStep(index, "imageUrl", event.target.value)} placeholder="Step image URL (optional)" aria-label={`Step ${index + 1} image URL`} />
+        <input className={`${styles.input} ${styles.roadmapStepTitleInput}`} value={step.title} onChange={event => updateStep(index, { title: event.target.value })} placeholder="Step title" aria-label={`Step ${index + 1} title`} />
+        <fieldset className={styles.roadmapTextStyle}>
+          <legend>Subtext format</legend>
+          <div>{textStyles.map(option => <button key={option.value} type="button" aria-pressed={(step.textStyle ?? "plain") === option.value} onClick={() => updateStep(index, { textStyle: option.value })}>{option.label}</button>)}</div>
+        </fieldset>
+        <textarea className={styles.area} value={step.text} onChange={event => updateStep(index, { text: event.target.value })} placeholder={(step.textStyle ?? "plain") === "plain" ? "Step subtext" : "Add one item per line"} aria-label={`Step ${index + 1} subtext`} />
+        <div className={styles.roadmapUploadRow}>
+          <label className={styles.roadmapUploadButton}>Upload image<input type="file" accept="image/*" onChange={event => uploadStepImage(index, event.target.files?.[0])} aria-label={`Upload step ${index + 1} image`} /></label>
+          {step.imageUrl ? <button className={styles.roadmapRemoveImage} type="button" onClick={() => updateStep(index, { imageUrl: "" })}>Remove image</button> : null}
+        </div>
+        {uploadErrors[index] ? <p className={styles.roadmapUploadError} role="alert">{uploadErrors[index]}</p> : null}
         {step.imageUrl ? <button className={styles.roadmapImage} type="button" onClick={() => onPreviewImage(step.imageUrl ?? "")} aria-label={`Preview step ${index + 1} image`}><img src={step.imageUrl} alt="" /></button> : null}
       </div>
     </div>)}
-    <button type="button" onClick={() => onUpdate({ steps: [...element.steps, { title: "", text: "", imageUrl: "" }] })}>Add step</button>
+    <button type="button" onClick={() => onUpdate({ steps: [...element.steps, { title: "", text: "", imageUrl: "", textStyle: "plain" }] })}>Add step</button>
   </section>;
 }
 

@@ -12,7 +12,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 
 - Product Pipeline is the default application at `/`.
 - PPC Dashboard is mounted at `/ppc` while remaining independently deployable.
-- A Product Pipeline/PPC Dashboard selector switches the complete application shell.
+- Centered Product Pipeline/PPC Dashboard tabs remain visible in the reserved top bar of both applications and switch the complete application shell.
 - The last valid route for each application is remembered in browser storage.
 - PPC verifies the existing Pipeline session through Pipeline’s `/api/auth/session` endpoint.
 - ADMIN users can administer PPC content.
@@ -39,7 +39,7 @@ It is deployed as the PPC application inside the unified Glassco website:
   - Repeatable multiline dropdowns
   - Feature cards
   - Blue text blocks
-  - Roadmaps with images and layout controls
+  - Roadmaps with per-step image uploads, plain/bulleted/checklist/numbered subtext, and layout controls
   - Diagnostic flows
   - Image galleries with one-, two-, three-, or four-column layouts
 
