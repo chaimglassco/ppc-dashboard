@@ -47,7 +47,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Topic numbering and sidebar synchronization.
 - Repeatable dropdown entries with multiline preservation.
 - Editable tables with add-row, add-column, row-height, and column-width controls.
-- Checklist bullet element.
+- One unified Bullets element with Bullets, Checklist, and Numbers tabs; previously saved standalone list types remain compatible.
 - Centered statements, callouts, lists, color-configurable Key Insights, feature cards, text blocks, roadmaps, and diagnostic flows. Key Insights retain the existing Green default and provide persistent Green/Blue/Red tabs in edit mode.
 - Roadmap step-number position controls for Left, Center, and Right layouts; Center stacks the step copy and displays images at full available width.
 - Roadmap steps upload images to shared Blob storage and edit Plain/Bullets/Checklist/Numbered text directly inside the composer while remaining compatible with previously saved image URLs.
@@ -61,7 +61,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Fourteen Vitest files and 74 tests pass.
+- Sixteen Vitest files and 87 tests pass.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.
@@ -97,6 +97,6 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Added selection-aware inline styles, bullets, numbers, editable checklists, accessible toolbar state, keyboard shortcuts, and responsive controls.
 - Preserved standalone list elements with inline-only row formatting.
 - Added validated JSON persistence, synchronized legacy fallbacks, lazy legacy Markdown conversion, and malformed-JSON recovery.
-- Expanded automated coverage to 86 tests, including conversion, validation, paste sanitization, toolbar behavior, list semantics, ordered-list persistence, static rendering, and builder integration.
+- Expanded automated coverage to 87 tests, including conversion, validation, paste sanitization, toolbar behavior, unified Bullets tabs, list semantics, ordered-list persistence, static rendering, and builder integration.
 - Completed authenticated same-origin browser verification with the production build: ADMIN edit, selection-aware toolbar state, editable checked checklist state, save, disabled/static reader rendering, full refresh persistence, edit-mode rehydration, cleanup, and zero browser warnings or errors.
 - Restored visible disc/decimal markers in both editor and reader modes, aligned task-list checkbox/text rows, and normalized Tiptap ordered-list JSON so numbered formatting survives save and reader rendering.

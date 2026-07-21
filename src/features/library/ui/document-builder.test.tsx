@@ -105,6 +105,33 @@ describe("DocumentBuilder element insertion", () => {
     expect(savedElements[1].type).toBe("statement");
     expect(savedElements[2].id).toBe(initialElements[1].id);
   });
+
+  it("offers one Bullets element with Bullets, Checklist, and Numbers tabs", async () => {
+    const baseDocument = getPublishedDocuments()[0];
+    const bullets = { ...createBlankContentElement("bullets", 1), items: ["Keep this item"] };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [bullets] }} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    fireEvent.click(controls.getByRole("button", { name: "Add element after Keep this item" }));
+    expect(controls.getAllByRole("button", { name: "Bullets" })).toHaveLength(2);
+    expect(controls.queryByRole("button", { name: "Bullet Text" })).not.toBeInTheDocument();
+    expect(controls.queryByRole("button", { name: "Checklist Bullets" })).not.toBeInTheDocument();
+    expect(controls.queryByRole("button", { name: "Numbered Text" })).not.toBeInTheDocument();
+
+    const styleTabs = controls.getByRole("group", { name: "Bullets style" });
+    expect(within(styleTabs).getByRole("button", { name: "Bullets" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(within(styleTabs).getByRole("button", { name: "Checklist" }));
+    expect(within(styleTabs).getByRole("button", { name: "Checklist" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(within(styleTabs).getByRole("button", { name: "Numbers" }));
+    expect(within(styleTabs).getByRole("button", { name: "Numbers" })).toHaveAttribute("aria-pressed", "true");
+    expect(controls.getByText("1.")).toBeInTheDocument();
+
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0][0]).toMatchObject({ type: "numbered", items: ["Keep this item"] });
+  });
 });
 
 describe("DocumentBuilder dropdown elements", () => {

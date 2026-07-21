@@ -17,9 +17,7 @@ const ELEMENT_OPTIONS: Array<{ type: LibraryContentElementType; label: string }>
   { type: "topic", label: "Add Topic" },
   { type: "statement", label: "Centered Statement" },
   { type: "quote", label: "Blue Callout" },
-  { type: "bullets", label: "Bullet Text" },
-  { type: "checklist", label: "Checklist Bullets" },
-  { type: "numbered", label: "Numbered Text" },
+  { type: "bullets", label: "Bullets" },
   { type: "insight", label: "Key Insight" },
   { type: "table", label: "Editable Table" },
   { type: "accordion", label: "Dropdown" },
@@ -30,6 +28,12 @@ const ELEMENT_OPTIONS: Array<{ type: LibraryContentElementType; label: string }>
   { type: "timeline", label: "Roadmap" },
   { type: "flowchart", label: "Diagnostic Flow" },
 ];
+
+type BulletsStyle = Extract<LibraryContentElementType, "bullets" | "checklist" | "numbered">;
+
+function isBulletsStyle(type: LibraryContentElementType): type is BulletsStyle {
+  return type === "bullets" || type === "checklist" || type === "numbered";
+}
 
 type DocumentBuilderProps = {
   doc: LibraryDocument;
@@ -203,10 +207,10 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
 }
 
 function getElementSummary(element: LibraryContentElement, index: number) {
-  const typeLabel = ELEMENT_OPTIONS.find(option => option.type === element.type)?.label ?? element.type;
+  const typeLabel = isBulletsStyle(element.type) ? "Bullets" : ELEMENT_OPTIONS.find(option => option.type === element.type)?.label ?? element.type;
   if (element.type === "topic") return { typeLabel, title: previewText(element.title || element.label, `Topic ${index + 1}`) };
   if (element.type === "statement" || element.type === "quote" || element.type === "code") return { typeLabel, title: previewText(element.text, `Untitled ${typeLabel}`) };
-  if (element.type === "bullets" || element.type === "checklist" || element.type === "numbered") return { typeLabel, title: previewText(element.items.find(Boolean) ?? "", `Untitled ${typeLabel}`) };
+  if (isBulletsStyle(element.type)) return { typeLabel, title: previewText(element.items.find(Boolean) ?? "", `Untitled ${typeLabel}`) };
   if (element.type === "table") return { typeLabel, title: previewText(element.columns.filter(Boolean).join(" / "), "Untitled table") };
   if (element.type === "accordion") return { typeLabel, title: previewText(element.dropdowns?.[0]?.title || element.title, "Untitled dropdown") };
   if (element.type === "gallery") return { typeLabel, title: previewText(element.images?.find(image => image.alt)?.alt ?? "", "Untitled image gallery") };
@@ -560,10 +564,10 @@ function ElementEditor({ element, onUpdate, onDelete, onPreviewImage }: { elemen
     if (element.type === "topic") return <section id={element.id} className={styles.topicBlock}><p className={styles.eyebrow}>{element.eyebrow}</p><input className={styles.topicTitleInput} value={element.title} onChange={event => onUpdate({ title: event.target.value, label: event.target.value || element.label })} placeholder="Header topic title" /><span className={styles.rule} /><RichTextEditor ariaLabel="Topic content" value={resolveRichText(element.richText, element.body.join("\n\n"))} onChange={(richText) => onUpdate({ richText, body: richTextToParagraphs(richText) })} placeholder="Topic content..." /><RichTextEditor ariaLabel="Topic callout" value={resolveRichText(element.calloutRichText, element.callout ?? "")} onChange={(calloutRichText, callout) => onUpdate({ calloutRichText, callout })} placeholder="Optional topic callout" /></section>;
     if (element.type === "statement") return <RichTextEditor className={styles.statementEditor} ariaLabel="Centered statement" value={resolveRichText(element.richText, element.text)} onChange={(richText, text) => onUpdate({ richText, text })} placeholder="Centered statement text..." />;
     if (element.type === "quote") return <div className={styles.quote}><RichTextEditor ariaLabel="Blue callout" value={resolveRichText(element.richText, element.text)} onChange={(richText, text) => onUpdate({ richText, text })} placeholder="Blue callout text..." /></div>;
-    if (element.type === "bullets" || element.type === "checklist" || element.type === "numbered") {
+    if (isBulletsStyle(element.type)) {
       const placeholder = element.type === "numbered" ? "Numbered text..." : element.type === "checklist" ? "Checklist item..." : "Bullet text...";
       const addLabel = element.type === "numbered" ? "number" : element.type === "checklist" ? "checklist item" : "bullet";
-      return <div className={`${styles.itemEditor} ${element.type === "checklist" ? styles.checklistEditor : ""}`}>{element.items.map((item, index) => <div className={styles.richListItem} key={index}>{element.type === "checklist" ? <input type="checkbox" disabled aria-hidden="true" /> : <span>{element.type === "numbered" ? `${index + 1}.` : "•"}</span>}<RichTextEditor ariaLabel={`${placeholder} ${index + 1}`} allowLists={false} value={resolveRichText(element.itemRichText?.[index], item)} onChange={(richText, plainText) => updateItem(index, richText, plainText)} placeholder={placeholder} /></div>)}<button type="button" onClick={() => onUpdate({ items: [...element.items, ""], itemRichText: [...(element.itemRichText ?? element.items.map(item => resolveRichText(undefined, item))), resolveRichText(undefined, "")] })}>Add {addLabel}</button></div>;
+      return <div className={`${styles.itemEditor} ${element.type === "checklist" ? styles.checklistEditor : ""}`}><BulletsStyleTabs value={element.type} onChange={type => onUpdate({ type })} />{element.items.map((item, index) => <div className={styles.richListItem} key={index}>{element.type === "checklist" ? <input type="checkbox" disabled aria-hidden="true" /> : <span>{element.type === "numbered" ? `${index + 1}.` : "•"}</span>}<RichTextEditor ariaLabel={`${placeholder} ${index + 1}`} allowLists={false} value={resolveRichText(element.itemRichText?.[index], item)} onChange={(richText, plainText) => updateItem(index, richText, plainText)} placeholder={placeholder} /></div>)}<button type="button" onClick={() => onUpdate({ items: [...element.items, ""], itemRichText: [...(element.itemRichText ?? element.items.map(item => resolveRichText(undefined, item))), resolveRichText(undefined, "")] })}>Add {addLabel}</button></div>;
     }
     if (element.type === "insight") return <section className={`${styles.insight} ${styles.insightEditor}`} data-insight-color={element.insightColor ?? "green"}><InsightColorTabs value={element.insightColor ?? "green"} onChange={insightColor => onUpdate({ insightColor })} /><input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Key Insight" /><RichTextEditor ariaLabel="Key insight content" value={resolveRichText(element.richText, element.text)} onChange={(richText, text) => onUpdate({ richText, text })} placeholder="Insight content..." /></section>;
     if (element.type === "table") return <TableEditor element={element} onUpdate={onUpdate} />;
@@ -576,6 +580,17 @@ function ElementEditor({ element, onUpdate, onDelete, onPreviewImage }: { elemen
     return <section className={styles.flowEditor}>{element.nodes.map((node, index) => <div key={index}><input value={node.title} onChange={event => updateNode(index, "title", event.target.value)} placeholder="Flow box title" /><input value={node.text} onChange={event => updateNode(index, "text", event.target.value)} placeholder="Connector text" /></div>)}<button type="button" onClick={() => onUpdate({ nodes: [...element.nodes, { title: "", text: "" }] })}>Add flow step</button></section>;
   })();
   return <div className={styles.editorShell}><button className={styles.deleteBlock} type="button" onClick={onDelete} aria-label={`Delete ${element.type} block`}><Trash2 /></button>{editor}</div>;
+}
+
+function BulletsStyleTabs({ value, onChange }: { value: BulletsStyle; onChange: (style: BulletsStyle) => void }) {
+  const options: Array<{ value: BulletsStyle; label: string }> = [
+    { value: "bullets", label: "Bullets" },
+    { value: "checklist", label: "Checklist" },
+    { value: "numbered", label: "Numbers" },
+  ];
+  return <div className={styles.bulletsStyleTabs} role="group" aria-label="Bullets style">
+    {options.map(option => <button key={option.value} type="button" aria-pressed={value === option.value} onClick={() => onChange(option.value)}>{option.label}</button>)}
+  </div>;
 }
 
 function InsightColorTabs({ value, onChange }: { value: InsightColor; onChange: (color: InsightColor) => void }) {
