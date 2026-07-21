@@ -7,9 +7,9 @@
 .content,.editable{font:400 15px/1.65 inherit;color:inherit}
 .content p,.editable p{margin:0 0 12px}.content p:last-child,.editable p:last-child{margin-bottom:0}
 .content strong,.editable strong{font-weight:800}.content em,.editable em{font-style:italic}.content u,.editable u{text-decoration:underline;text-underline-offset:2px}
-.content ul,.content ol,.editable ul,.editable ol{margin:8px 0;padding-left:26px}.content li,.editable li{margin:4px 0;padding-left:3px}.content li p,.editable li p{margin:0}
-.content ul[data-type="taskList"],.editable ul[data-type="taskList"]{padding-left:0;list-style:none}
-.content li[data-type="taskItem"],.editable li[data-type="taskItem"]{display:flex;align-items:flex-start;gap:9px;padding-left:0}
-.content li[data-type="taskItem"]>label,.editable li[data-type="taskItem"]>label{display:flex;align-items:center;padding-top:4px}.content li[data-type="taskItem"]>div,.editable li[data-type="taskItem"]>div{min-width:0;flex:1}
+.content ul,.content ol,.editable ul,.editable ol{margin:8px 0;padding-inline-start:28px;list-style-position:outside}.content ul:not([data-type="taskList"]),.editable ul:not([data-type="taskList"]){list-style-type:disc}.content ol,.editable ol{list-style-type:decimal}.content li,.editable li{margin:4px 0;padding-inline-start:3px}.content li::marker,.editable li::marker{color:#164b9f;font-weight:700}.content li p,.editable li p{margin:0}
+.content ul[data-type="taskList"],.editable ul[data-type="taskList"]{padding-inline-start:0;list-style:none}
+.content ul[data-type="taskList"]>li,.editable ul[data-type="taskList"]>li{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:start;column-gap:9px;padding-inline-start:0;list-style:none}
+.content ul[data-type="taskList"]>li>label,.editable ul[data-type="taskList"]>li>label{display:flex;grid-column:1;align-items:center;padding-top:4px}.content ul[data-type="taskList"]>li>div,.editable ul[data-type="taskList"]>li>div{grid-column:2;min-width:0}
 .content input[type="checkbox"],.editable input[type="checkbox"]{width:16px;height:16px;margin:0;accent-color:#1260d6}
 @media(max-width:720px){.toolbar{flex-wrap:nowrap;overflow-x:auto}.toolbar button{flex:0 0 auto}.toolbar button span{display:none}.editable{min-height:96px;padding:11px}}

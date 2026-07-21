@@ -35,6 +35,21 @@ const inlineExtensions = [
   Underline,
 ];
 
+function normalizeEditorRichText(value: unknown): RichTextDocument | null {
+  const normalizeNode = (node: unknown): unknown => {
+    if (!node || typeof node !== "object" || Array.isArray(node)) return node;
+    const normalized = { ...(node as Record<string, unknown>) };
+    if (normalized.type === "orderedList" && normalized.attrs && typeof normalized.attrs === "object" && !Array.isArray(normalized.attrs)) {
+      const start = (normalized.attrs as Record<string, unknown>).start;
+      normalized.attrs = start === undefined ? {} : { start };
+    }
+    if (Array.isArray(normalized.content)) normalized.content = normalized.content.map(normalizeNode);
+    return normalized;
+  };
+  const normalized = normalizeNode(value);
+  return isRichTextDocument(normalized) ? normalized : null;
+}
+
 const renderRichText = renderJSONContentToReactElement<RichTextMark, RichTextNode>({
   nodeMapping: {
     doc: ({ children }) => <>{children}</>,
@@ -86,14 +101,14 @@ export function RichTextEditor({ value, onChange, ariaLabel, placeholder = "Star
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
-      const next = currentEditor.getJSON();
-      if (isRichTextDocument(next)) onChangeRef.current(next, richTextToPlainText(next));
+      const next = normalizeEditorRichText(currentEditor.getJSON());
+      if (next) onChangeRef.current(next, richTextToPlainText(next));
     },
   }, [allowLists]);
 
   useEffect(() => {
     if (!editor) return;
-    const current = editor.getJSON();
+    const current = normalizeEditorRichText(editor.getJSON());
     if (JSON.stringify(current) !== JSON.stringify(value)) editor.commands.setContent(value, { emitUpdate: false });
   }, [editor, value]);
 

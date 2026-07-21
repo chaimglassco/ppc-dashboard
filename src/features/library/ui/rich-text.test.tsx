@@ -29,6 +29,16 @@ describe("RichTextEditor", () => {
     expect(within(toolbar).getAllByRole("button").map(button => button.getAttribute("aria-label"))).toEqual(["Normal", "Bold", "Italic", "Underlined"]);
   });
 
+  it("emits validated ordered-list JSON when Numbers is selected", () => {
+    const onChange = vi.fn();
+    const view = render(<RichTextEditor ariaLabel="Numbered body" value={richTextFromMarkdown("First item")} onChange={onChange} />);
+    fireEvent.click(within(view.getByRole("toolbar", { name: "Numbered body formatting" })).getByRole("button", { name: "Numbers" }));
+    expect(view.getByRole("textbox", { name: "Numbered body" }).querySelector("ol")).toBeInTheDocument();
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      content: [expect.objectContaining({ type: "orderedList", attrs: { start: 1 } })],
+    }), "First item");
+  });
+
   it("sanitizes pasted HTML through the allowlisted editor schema", async () => {
     const view = render(<RichTextEditor ariaLabel="Paste body" value={richTextFromMarkdown("")} onChange={vi.fn()} />);
     const editor = view.getByRole("textbox", { name: "Paste body" });
@@ -48,5 +58,11 @@ describe("RichTextRenderer", () => {
     expect(view.getByText("Important").tagName).toBe("STRONG");
     expect(view.getByRole("checkbox", { name: "Checklist item" })).toBeChecked();
     expect(view.getByRole("checkbox", { name: "Checklist item" })).toBeDisabled();
+  });
+
+  it("keeps semantic unordered and ordered lists in reader output", () => {
+    const view = render(<RichTextRenderer value={richTextFromMarkdown("- Bullet item\n\n1. Numbered item")} />);
+    expect(view.getByText("Bullet item").closest("ul")).toBeInTheDocument();
+    expect(view.getByText("Numbered item").closest("ol")).toBeInTheDocument();
   });
 });

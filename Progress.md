@@ -97,5 +97,6 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Added selection-aware inline styles, bullets, numbers, editable checklists, accessible toolbar state, keyboard shortcuts, and responsive controls.
 - Preserved standalone list elements with inline-only row formatting.
 - Added validated JSON persistence, synchronized legacy fallbacks, lazy legacy Markdown conversion, and malformed-JSON recovery.
-- Expanded automated coverage to 84 tests, including conversion, validation, paste sanitization, toolbar behavior, static rendering, and builder integration.
+- Expanded automated coverage to 86 tests, including conversion, validation, paste sanitization, toolbar behavior, list semantics, ordered-list persistence, static rendering, and builder integration.
 - Completed authenticated same-origin browser verification with the production build: ADMIN edit, selection-aware toolbar state, editable checked checklist state, save, disabled/static reader rendering, full refresh persistence, edit-mode rehydration, cleanup, and zero browser warnings or errors.
+- Restored visible disc/decimal markers in both editor and reader modes, aligned task-list checkbox/text rows, and normalized Tiptap ordered-list JSON so numbered formatting survives save and reader rendering.
