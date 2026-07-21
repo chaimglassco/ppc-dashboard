@@ -148,6 +148,32 @@ describe("DocumentBuilder feature cards", () => {
   });
 });
 
+describe("DocumentBuilder key insights", () => {
+  it("defaults legacy insights to green and saves Green, Blue, or Red color choices", async () => {
+    const baseDocument = getPublishedDocuments()[0];
+    const insight = { ...createBlankContentElement("insight", 1), title: "Pro Tip", text: "Use the account data." };
+    delete insight.insightColor;
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [insight] }} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+
+    expect(view.container.querySelector('[data-insight-color="green"]')).toBeInTheDocument();
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    const colors = controls.getByRole("group", { name: "Insight color" });
+    expect(within(colors).getByRole("button", { name: "Green" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(colors).getByRole("button", { name: "Blue" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(colors).getByRole("button", { name: "Red" })).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(within(colors).getByRole("button", { name: "Red" }));
+    expect(view.container.querySelector('[data-insight-color="red"]')).toBeInTheDocument();
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0][0].insightColor).toBe("red");
+    expect(view.container.querySelector('[data-insight-color="red"]')).toBeInTheDocument();
+  });
+});
+
 describe("DocumentBuilder roadmaps", () => {
   it("uploads step images, saves formatted subtext and alignment, then renders them in view mode", async () => {
     installSharedImageFetch("/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Fshared.png");

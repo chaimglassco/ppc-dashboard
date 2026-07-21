@@ -35,7 +35,7 @@ It is deployed as the PPC application inside the unified Glassco website:
   - Blue callouts
   - Bullet and numbered text
   - Checklist bullets
-  - Key insights
+  - Key insights with one-click Green, Blue, and Red color variants
   - Editable tables with resizable columns
   - Repeatable multiline dropdowns
   - Feature cards with shared image uploads

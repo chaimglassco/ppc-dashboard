@@ -80,6 +80,7 @@ The existing `.gitignore` already excludes these paths.
 11. Use the Category Plus control to create and select a temporary category.
 12. Use the Category Pencil control to open the category manager; verify rename, reorder, and recoverable deletion controls.
 13. Confirm deleted categories are absent from the main list, then use the recovery icon to open the recovery dialog and recover one.
+   Add a Key Insight, click Green, Blue, and Red, and confirm each color previews immediately; save on Red, refresh, and confirm Red persists. Confirm an older insight without `insightColor` remains Green.
 14. Add a Roadmap, select Center number, and confirm its number, title, and subtext are centered and its image uses the full step width after saving.
 15. Upload a Roadmap step image, confirm its shared upload completes, and verify each subtext format edits directly inside the composer and persists in a second browser session.
 16. Upload Feature Card and Gallery images, switch every Gallery layout, and confirm minimum slots, responsive grids, shared previews, replacement, and removal.

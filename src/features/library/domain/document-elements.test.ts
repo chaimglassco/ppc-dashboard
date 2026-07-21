@@ -17,6 +17,7 @@ describe("document content elements", () => {
 
   it("creates the supplied defaults for complex elements", () => {
     expect(createBlankContentElement("checklist", 1).items).toEqual([""]);
+    expect(createBlankContentElement("insight", 1).insightColor).toBe("green");
     expect(createBlankContentElement("table", 1).rows).toEqual([["", ""]]);
     expect(createBlankContentElement("accordion", 1).dropdowns).toEqual([{ title: "", text: "" }]);
     expect(createBlankContentElement("timeline", 1)).toMatchObject({ alignment: "left", steps: [{ imageUrl: "", textStyle: "plain" }, { imageUrl: "", textStyle: "plain" }] });

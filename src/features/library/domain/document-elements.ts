@@ -8,6 +8,7 @@ const emptyElement = (type: LibraryContentElementType, id: string): LibraryConte
   label: "",
   title: "",
   text: "",
+  insightColor: type === "insight" ? "green" : undefined,
   body: [""],
   callout: "",
   items: [""],

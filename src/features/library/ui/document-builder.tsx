@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
-import type { ButtonAlignment, ButtonWidth, Category, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, RoadmapTextStyle, Topic } from "../domain/types";
+import type { ButtonAlignment, ButtonWidth, Category, InsightColor, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, RoadmapTextStyle, Topic } from "../domain/types";
 import { getVideoPresentation, normalizeVideoUrl } from "../domain/video-links";
 import { Markdown } from "./markdown";
 import styles from "./document-builder.module.css";
@@ -419,7 +419,7 @@ function ElementPreview({ element, onPreviewImage }: { element: LibraryContentEl
   if (element.type === "bullets") return <ul className={`${styles.list} ${styles.bulletList}`}>{element.items.filter(Boolean).map((item, index) => <li key={index}>{item}</li>)}</ul>;
   if (element.type === "checklist") return <ul className={styles.checklist}>{element.items.filter(Boolean).map((item, index) => <li key={index}><input type="checkbox" disabled aria-label={item} /><span>{item}</span></li>)}</ul>;
   if (element.type === "numbered") return <ol className={`${styles.list} ${styles.numberedList}`}>{element.items.filter(Boolean).map((item, index) => <li key={index}>{item}</li>)}</ol>;
-  if (element.type === "insight") return <section className={styles.insight}><strong>{previewText(element.title, "Key Insight")}</strong><p>{previewText(element.text)}</p></section>;
+  if (element.type === "insight") return <section className={styles.insight} data-insight-color={element.insightColor ?? "green"}><strong>{previewText(element.title, "Key Insight")}</strong><p>{previewText(element.text)}</p></section>;
   if (element.type === "table") return <ElementTable element={element} />;
   if (element.type === "accordion") return <section className={styles.accordionList}>{getDropdowns(element).map((dropdown, index) => <details className={styles.accordion} key={index}><summary>{previewText(dropdown.title, "Dropdown title")}</summary><p>{previewText(dropdown.text)}</p></details>)}</section>;
   if (element.type === "feature") return <section className={styles.feature}><div><span>{element.label}</span><h3>{previewText(element.title, "Feature title")}</h3><div className={styles.featureText}>{previewText(element.text).split(/\r?\n/).filter(line => line.trim()).map((line, index) => <p key={index}>{line}</p>)}</div>{element.buttonText ? <button type="button">{element.buttonText}</button> : null}</div><button className={styles.imageButton} type="button" onClick={() => element.imageUrl && onPreviewImage(element.imageUrl)}>{element.imageUrl ? <AuthenticatedImage url={element.imageUrl} alt={`${previewText(element.title, "Feature")} image`} /> : "Image preview"}</button></section>;
@@ -565,7 +565,7 @@ function ElementEditor({ element, onUpdate, onDelete, onPreviewImage }: { elemen
       const addLabel = element.type === "numbered" ? "number" : element.type === "checklist" ? "checklist item" : "bullet";
       return <div className={`${styles.itemEditor} ${element.type === "checklist" ? styles.checklistEditor : ""}`}>{element.items.map((item, index) => <label key={index}>{element.type === "checklist" ? <input type="checkbox" disabled aria-hidden="true" /> : <span>{element.type === "numbered" ? `${index + 1}.` : "•"}</span>}<input className={styles.input} value={item} onChange={event => updateItem(index, event.target.value)} placeholder={placeholder} /></label>)}<button type="button" onClick={() => onUpdate({ items: [...element.items, ""] })}>Add {addLabel}</button></div>;
     }
-    if (element.type === "insight") return <section className={styles.insight}><input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Key Insight" /><textarea className={styles.area} value={element.text} onChange={event => onUpdate({ text: event.target.value })} placeholder="Insight content..." /></section>;
+    if (element.type === "insight") return <section className={`${styles.insight} ${styles.insightEditor}`} data-insight-color={element.insightColor ?? "green"}><InsightColorTabs value={element.insightColor ?? "green"} onChange={insightColor => onUpdate({ insightColor })} /><input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Key Insight" /><textarea className={styles.area} value={element.text} onChange={event => onUpdate({ text: event.target.value })} placeholder="Insight content..." /></section>;
     if (element.type === "table") return <TableEditor element={element} onUpdate={onUpdate} />;
     if (element.type === "accordion") return <AccordionEditor element={element} onUpdate={onUpdate} />;
     if (element.type === "feature") return <section className={styles.featureEditor}><div><input className={styles.input} value={element.label} onChange={event => onUpdate({ label: event.target.value })} placeholder="Feature label" /><input className={styles.input} value={element.title} onChange={event => onUpdate({ title: event.target.value })} placeholder="Feature title" /><textarea className={styles.area} value={element.text} onChange={event => onUpdate({ text: event.target.value })} placeholder="Feature text..." /><input className={styles.input} value={element.buttonText} onChange={event => onUpdate({ buttonText: event.target.value })} placeholder="Button text" /></div><SharedImageUpload value={element.imageUrl} label="Upload feature card image" onChange={imageUrl => onUpdate({ imageUrl })} onPreview={onPreviewImage} previewClassName={styles.imageButton} /></section>;
@@ -576,6 +576,13 @@ function ElementEditor({ element, onUpdate, onDelete, onPreviewImage }: { elemen
     return <section className={styles.flowEditor}>{element.nodes.map((node, index) => <div key={index}><input value={node.title} onChange={event => updateNode(index, "title", event.target.value)} placeholder="Flow box title" /><input value={node.text} onChange={event => updateNode(index, "text", event.target.value)} placeholder="Connector text" /></div>)}<button type="button" onClick={() => onUpdate({ nodes: [...element.nodes, { title: "", text: "" }] })}>Add flow step</button></section>;
   })();
   return <div className={styles.editorShell}><button className={styles.deleteBlock} type="button" onClick={onDelete} aria-label={`Delete ${element.type} block`}><Trash2 /></button>{editor}</div>;
+}
+
+function InsightColorTabs({ value, onChange }: { value: InsightColor; onChange: (color: InsightColor) => void }) {
+  const colors: Array<{ value: InsightColor; label: string }> = [{ value: "green", label: "Green" }, { value: "blue", label: "Blue" }, { value: "red", label: "Red" }];
+  return <div className={styles.insightColorTabs} role="group" aria-label="Insight color">
+    {colors.map(color => <button key={color.value} type="button" data-color={color.value} aria-pressed={value === color.value} onClick={() => onChange(color.value)}>{color.label}</button>)}
+  </div>;
 }
 
 function ImageGalleryEditor({ element, onUpdate, onPreviewImage }: { element: LibraryContentElement; onUpdate: (updates: Partial<LibraryContentElement>) => void; onPreviewImage: (url: string) => void }) {

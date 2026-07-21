@@ -69,6 +69,7 @@ Use this checklist before merging or deploying changes.
 - [x] Resize table rows and columns.
 - [x] Saved table widths render in view mode.
 - [x] Add checklist bullets.
+- [x] A single Key Insight element offers Green, Blue, and Red color tabs, previews the choice immediately, persists it after save, and keeps legacy insights Green.
 - [x] Roadmap step-number position saves as Left number, Center number, or Right number.
 - [x] Roadmap image uploads save to shared Blob storage, preview through the authenticated media route, reject unsupported images and files over 2 MB, and can be removed.
 - [x] Roadmap subtext edits inline as Plain, Bullets, Checklist, or Numbered rows; Enter, multiline paste, and empty-row Backspace preserve newline storage.

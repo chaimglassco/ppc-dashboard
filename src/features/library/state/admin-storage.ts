@@ -27,6 +27,7 @@ function isContentElement(value: unknown): value is LibraryContentElement {
     (element.buttonUrl === undefined || typeof element.buttonUrl === "string") &&
     (element.buttonWidth === undefined || ["full", "large", "medium", "small"].includes(String(element.buttonWidth))) &&
     (element.buttonAlignment === undefined || ["left", "center", "right"].includes(String(element.buttonAlignment))) &&
+    (element.insightColor === undefined || ["green", "blue", "red"].includes(String(element.insightColor))) &&
     (element.images === undefined || isGalleryImageArray(element.images)) &&
     (element.dropdowns === undefined || isTextPairArray(element.dropdowns));
 }

@@ -69,6 +69,7 @@ Important structured fields:
 | Field | Type | Used by |
 | --- | --- | --- |
 | `eyebrow`, `label`, `title`, `text` | `string` | Topics and text-based blocks |
+| `insightColor` | `"green" \| "blue" \| "red"` | Optional Key Insight presentation; defaults to `green` when absent |
 | `body` | `string[]` | Topic paragraphs |
 | `callout` | `string?` | Optional topic callout |
 | `items` | `string[]` | Bullets, checklist, numbered text |
@@ -87,7 +88,7 @@ Important structured fields:
 | `galleryColumns` | `1 \| 2 \| 3 \| 4` | Image Gallery column layout |
 | `images` | `{url,alt}[]?` | Repeatable Image Gallery entries. Source dimensions remain unchanged; square-tile containment is presentation-only. |
 
-Optional `columnWidths`, `dropdowns`, Roadmap layout fields, step image/format fields, Gallery fields, and Button fields preserve compatibility with older content. Newly uploaded Roadmap, Feature Card, and Gallery images are stored in the shared private Blob store and referenced through the authenticated library-image route; existing data URLs and HTTP(S) values remain valid. Roadmap formatted rows remain newline-delimited in `steps[].text`.
+Optional `insightColor`, `columnWidths`, `dropdowns`, Roadmap layout fields, step image/format fields, Gallery fields, and Button fields preserve compatibility with older content. Newly uploaded Roadmap, Feature Card, and Gallery images are stored in the shared private Blob store and referenced through the authenticated library-image route; existing data URLs and HTTP(S) values remain valid. Roadmap formatted rows remain newline-delimited in `steps[].text`.
 
 Private library-image route values remain persisted as relative URLs. Client image surfaces retrieve those URLs with the Pipeline bearer token and render the returned bytes through temporary object URLs; Gallery modals may reuse the currently rendered temporary source to avoid a duplicate request. Temporary URLs are presentation-only and are never persisted.
 

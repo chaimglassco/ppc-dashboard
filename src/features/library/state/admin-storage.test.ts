@@ -15,4 +15,11 @@ describe("admin library storage", () => {
     const value = JSON.stringify({ version: 1, documents: [{ ...seed[0], contentElements: [legacy, button] }] });
     expect(parseAdminLibraryState(value)?.documents[0].contentElements).toHaveLength(2);
   });
+  it("accepts supported Insight colors and rejects unsupported values", () => {
+    const insight = { ...createBlankContentElement("insight", 1), insightColor: "red" as const };
+    const valid = JSON.stringify({ version: 1, documents: [{ ...seed[0], contentElements: [insight] }] });
+    const invalid = JSON.stringify({ version: 1, documents: [{ ...seed[0], contentElements: [{ ...insight, insightColor: "purple" }] }] });
+    expect(parseAdminLibraryState(valid)?.documents[0].contentElements?.[0].insightColor).toBe("red");
+    expect(parseAdminLibraryState(invalid)?.documents).toHaveLength(0);
+  });
 });

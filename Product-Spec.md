@@ -51,7 +51,7 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 
 - **LIB-BUILDER-001** — Documents support separate view and edit modes.
 - **LIB-BUILDER-002** — The element menu remains inside the viewport and scrolls when necessary.
-- **LIB-BUILDER-003** — Topics, statements, callouts, lists, checklists, insights, tables, dropdowns, feature cards, text blocks, roadmaps, galleries, buttons, and flows can be added.
+- **LIB-BUILDER-003** — Topics, statements, callouts, lists, checklists, insights, tables, dropdowns, feature cards, text blocks, roadmaps, galleries, buttons, and flows can be added. A single Key Insight element supports persistent Green, Blue, and Red presentation choices through segmented color tabs.
 - **LIB-BUILDER-004** — Tables support rows, columns, row height, and saved column width.
 - **LIB-BUILDER-005** — Dropdown blocks support multiple entries and preserved line breaks.
 - **LIB-BUILDER-006** — Video links render in a large responsive player inside the blue document header’s right column. YouTube and shared Google Drive files use embedded players, Google Drive’s play control and playback content remain centered in the visible 16:9 frame with a compact new-tab icon, direct video files use native controls, and generic HTTPS links retain a secure clickable fallback.

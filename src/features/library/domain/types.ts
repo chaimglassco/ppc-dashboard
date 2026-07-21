@@ -9,6 +9,7 @@ export type RoadmapTextStyle="plain"|"bullets"|"checklist"|"numbered";
 export type RoadmapStep={title:string;text:string;imageUrl?:string;textStyle?:RoadmapTextStyle};
 export type ButtonWidth="full"|"large"|"medium"|"small";
 export type ButtonAlignment="left"|"center"|"right";
+export type InsightColor="green"|"blue"|"red";
 export type LibraryContentElement={
   id:string;
   type:LibraryContentElementType;
@@ -16,6 +17,7 @@ export type LibraryContentElement={
   label:string;
   title:string;
   text:string;
+  insightColor?:InsightColor;
   body:string[];
   callout?:string;
   items:string[];

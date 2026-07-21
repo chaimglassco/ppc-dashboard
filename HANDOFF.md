@@ -28,6 +28,7 @@ The PPC Dashboard checkout contains an unreleased video-header placement update.
 
 - Video playback now sits in a large responsive right-hand section inside the blue header. Google Drive’s fixed toolbar is cropped outside the visible frame so its play control and playing content remain centered; a compact new-tab overlay remains and the redundant OPEN VIDEO text button is removed.
 - Gallery full-image previews now reuse each tile’s already-resolved image source, so opening the modal does not trigger another authenticated media download.
+- Key Insight remains one builder element and now includes persistent Green, Blue, and Red color tabs; missing legacy `insightColor` values render Green.
 - The square Gallery presentation, catalog hydration fix, and Google Drive `/preview` URL support are already included in synchronized commit `d792d4c`.
 
 ## What is implemented

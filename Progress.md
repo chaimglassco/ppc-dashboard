@@ -48,7 +48,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Repeatable dropdown entries with multiline preservation.
 - Editable tables with add-row, add-column, row-height, and column-width controls.
 - Checklist bullet element.
-- Centered statements, callouts, lists, insights, feature cards, text blocks, roadmaps, and diagnostic flows.
+- Centered statements, callouts, lists, color-configurable Key Insights, feature cards, text blocks, roadmaps, and diagnostic flows. Key Insights retain the existing Green default and provide persistent Green/Blue/Red tabs in edit mode.
 - Roadmap step-number position controls for Left, Center, and Right layouts; Center stacks the step copy and displays images at full available width.
 - Roadmap steps upload images to shared Blob storage and edit Plain/Bullets/Checklist/Numbered text directly inside the composer while remaining compatible with previously saved image URLs.
 - Feature Cards and Galleries use the shared upload flow; Gallery layout selection immediately creates the minimum responsive upload slots. Saved and editor Gallery tiles are square, show the complete uncropped source image, and open full-image previews from the already-loaded tile source without a second request.
