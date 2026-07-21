@@ -74,6 +74,7 @@ Use this checklist before merging or deploying changes.
 - [x] Feature Card and Gallery images use authenticated shared uploads with progress, validation, preview, replacement, removal, and legacy URL compatibility.
 - [x] Private shared-image previews send the Pipeline bearer token, resolve to browser object URLs, render actual images in edit/view/modal surfaces, and revoke temporary URLs during cleanup.
 - [x] Gallery layout changes create minimum upload slots and immediately display the selected responsive editor grid without deleting extras.
+- [x] Gallery tiles remain square in edit and view modes, show square/portrait/landscape sources without cropping, and open the full-image modal when clicked.
 - [x] Standalone Buttons validate internal and HTTP(S) links, persist width/alignment, open safely in a new tab, and become full-width on mobile.
 - [x] Center number layout centers the number, title, and subtext and uses the full available width for the image.
 - [x] Save changes and return to view mode.

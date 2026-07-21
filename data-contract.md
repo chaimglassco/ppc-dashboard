@@ -85,7 +85,7 @@ Important structured fields:
 | `nodes` | `{title,text}[]` | Diagnostic flow |
 | `dropdowns` | `{title,text}[]?` | Repeatable dropdown entries |
 | `galleryColumns` | `1 \| 2 \| 3 \| 4` | Image Gallery column layout |
-| `images` | `{url,alt}[]?` | Repeatable Image Gallery entries |
+| `images` | `{url,alt}[]?` | Repeatable Image Gallery entries. Source dimensions remain unchanged; square-tile containment is presentation-only. |
 
 Optional `columnWidths`, `dropdowns`, Roadmap layout fields, step image/format fields, Gallery fields, and Button fields preserve compatibility with older content. Newly uploaded Roadmap, Feature Card, and Gallery images are stored in the shared private Blob store and referenced through the authenticated library-image route; existing data URLs and HTTP(S) values remain valid. Roadmap formatted rows remain newline-delimited in `steps[].text`.
 

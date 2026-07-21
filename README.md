@@ -41,7 +41,7 @@ It is deployed as the PPC application inside the unified Glassco website:
   - Blue text blocks
   - Roadmaps with shared per-step image uploads, inline plain/bulleted/checklist/numbered composers, and layout controls
   - Diagnostic flows
-  - Image galleries with shared uploads and responsive one-, two-, three-, or four-column editor layouts
+  - Image galleries with shared uploads, responsive one- to four-column layouts, square tiles that preserve the complete image ratio, and click-to-preview viewing
   - Clickable buttons with width and alignment controls
 
 ## Architecture and persistence

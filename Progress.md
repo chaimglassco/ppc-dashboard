@@ -50,7 +50,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Centered statements, callouts, lists, insights, feature cards, text blocks, roadmaps, and diagnostic flows.
 - Roadmap step-number position controls for Left, Center, and Right layouts; Center stacks the step copy and displays images at full available width.
 - Roadmap steps upload images to shared Blob storage and edit Plain/Bullets/Checklist/Numbered text directly inside the composer while remaining compatible with previously saved image URLs.
-- Feature Cards and Galleries use the shared upload flow; Gallery layout selection immediately creates the minimum responsive upload slots.
+- Feature Cards and Galleries use the shared upload flow; Gallery layout selection immediately creates the minimum responsive upload slots. Saved and editor Gallery tiles are square, show the complete uncropped source image, and remain clickable for full-image preview.
 - Private shared images now display through authenticated object-URL previews instead of broken direct `<img>` requests to bearer-protected media routes.
 - Standalone Button elements support validated links, four widths, three alignments, secure new-tab navigation, and mobile full-width rendering.
 - Video tutorials now render as a large responsive section below the blue document header; YouTube and Google Drive links embed their provider player, direct files use native playback, and generic HTTPS links retain a safe open action.

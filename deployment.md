@@ -83,6 +83,7 @@ The existing `.gitignore` already excludes these paths.
 15. Upload a Roadmap step image, confirm its shared upload completes, and verify each subtext format edits directly inside the composer and persists in a second browser session.
 16. Upload Feature Card and Gallery images, switch every Gallery layout, and confirm minimum slots, responsive grids, shared previews, replacement, and removal.
    Confirm the preview request includes authenticated media access and displays the actual image rather than a broken image icon.
+   Confirm square, portrait, and landscape Gallery sources are fully visible inside square tiles without cropping, then click each tile to verify the full-image preview.
 17. Add Buttons for internal and HTTPS links; verify every width/alignment option, invalid-link feedback, secure new-tab attributes, and mobile full-width behavior.
 18. Add a shared Google Drive video link and confirm a large 16:9 Drive preview player appears below the blue document header. Confirm the file is shared with the intended viewers and the original link opens from OPEN VIDEO.
 19. Open a private browser window and confirm that temporary document is visible.

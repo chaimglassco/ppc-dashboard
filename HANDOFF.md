@@ -19,17 +19,16 @@ Local repositories:
 
 Current production commits:
 
-- PPC Dashboard: `8060b8d` — latest production deployment before the local video-player update
+- PPC Dashboard: `376d4fa` — latest synchronized Library video-player update
 - Product Pipeline: `c507888` — current synchronized gateway repository state
 
-The PPC Dashboard checkout contains an unreleased Library video-player update. Pipeline remains synchronized with `origin/main`.
+The PPC Dashboard checkout contains an unreleased Gallery presentation update. Pipeline remains synchronized with `origin/main`.
 
 ## Unreleased local work
 
-- Moved document videos out of the blue header and into a large responsive 16:9 section immediately below it.
-- Added embedded playback for YouTube and Google Drive shared-file URLs, native playback for direct MP4/WebM/OGG URLs, and a safe fallback for other HTTPS links.
-- Added pure URL-presentation tests. Lint, TypeScript, 13 test files/72 tests, and the production build pass.
-- Browser verification reached the Pipeline sign-in gate; the signed-in reader flow still needs a final visual smoke test before release.
+- Gallery tiles now use a square frame with `object-fit: contain` in edit and view modes, preserving the complete square, portrait, or landscape source without cropping.
+- Existing Gallery click-to-preview behavior remains unchanged and opens the complete image in the modal.
+- The large video section and Google Drive `/preview` support are already included in synchronized commit `376d4fa`.
 
 ## What is implemented
 

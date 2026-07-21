@@ -50,7 +50,7 @@ The builder owns:
 - Roadmap placement, step-number position, shared Blob-backed image uploads, inline list-style subtext composers, and full-width centered image rendering
 - Reusable authenticated image-upload controls for Roadmaps, Feature Cards, and Gallery slots, backed by the private Blob media route
 - Authenticated image rendering fetches private media with the stored Pipeline bearer token, creates a temporary object URL, and revokes it when the preview unmounts or changes
-- Responsive Gallery editor grids with minimum slot creation, plus validated standalone Button blocks with width and alignment metadata
+- Responsive Gallery editor grids with minimum slot creation; square `object-fit: contain` presentation preserves each source ratio while the image modal provides full-size inspection
 - Video link validation and presentation derivation: YouTube privacy-enhanced embeds, Google Drive `/preview` embeds, native direct-file playback, and secure link fallback
 
 ## Document metadata editor
