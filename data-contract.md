@@ -213,3 +213,11 @@ Remembered application routes use `glassco.appRoutes.v1`:
 ```
 
 This integration does not change library document, category, topic, content-element, bookmark, history, or completion schemas.
+
+## Optional rich-text fields
+
+Content elements now accept `richText` on supported primary bodies, `calloutRichText` on topics, `itemRichText[]` aligned with standalone `items[]`, and `richText` on roadmap steps and dropdown entries.
+
+Rich documents use a ProseMirror-style `{ "type": "doc", "content": [...] }` object. Allowed nodes are `doc`, `paragraph`, `text`, `hardBreak`, `bulletList`, `orderedList`, `listItem`, `taskList`, and `taskItem`. Allowed marks are `bold`, `italic`, and `underline`; persisted attributes are limited to `orderedList.start` and `taskItem.checked`.
+
+The corresponding legacy body/text fields remain required search and compatibility fallbacks and are updated with every edit. Consumers prefer valid rich JSON and reconstruct it from those fields when JSON is absent or invalid.

@@ -90,3 +90,12 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Added Pipeline session verification and role-aware PPC administration.
 - Protected shared-library reads with a verified session and writes with an ADMIN session.
 - Added legacy `glasscoppc.vercel.app` canonical redirect handling.
+
+# WYSIWYG Library composers
+
+- Added Tiptap 3.28.0 rich-text editors and static React rendering for all supported element body fields.
+- Added selection-aware inline styles, bullets, numbers, editable checklists, accessible toolbar state, keyboard shortcuts, and responsive controls.
+- Preserved standalone list elements with inline-only row formatting.
+- Added validated JSON persistence, synchronized legacy fallbacks, lazy legacy Markdown conversion, and malformed-JSON recovery.
+- Expanded automated coverage to 84 tests, including conversion, validation, paste sanitization, toolbar behavior, static rendering, and builder integration.
+- Completed authenticated same-origin browser verification with the production build: ADMIN edit, selection-aware toolbar state, editable checked checklist state, save, disabled/static reader rendering, full refresh persistence, edit-mode rehydration, cleanup, and zero browser warnings or errors.

@@ -1,4 +1,5 @@
 import { DOCUMENT_TYPES, type LibraryContentElement, type LibraryDocument } from "../domain/types";
+import { isRichTextDocument } from "../domain/rich-text";
 
 export const ADMIN_LIBRARY_KEY = "glassco-library-admin-state";
 export type ManagedLibraryDocument = LibraryDocument & { deletedAt?: string };
@@ -43,9 +44,31 @@ function isDocument(value: unknown): value is ManagedLibraryDocument {
     (doc.contentElements === undefined || (Array.isArray(doc.contentElements) && doc.contentElements.every(isContentElement)));
 }
 
+function sanitizeRichText(document: ManagedLibraryDocument): ManagedLibraryDocument {
+  if (!document.contentElements) return document;
+  return {
+    ...document,
+    contentElements: document.contentElements.map(element => {
+      const next = { ...element };
+      if (!isRichTextDocument(next.richText)) delete next.richText;
+      if (!isRichTextDocument(next.calloutRichText)) delete next.calloutRichText;
+      if (!next.itemRichText?.every(isRichTextDocument)) delete next.itemRichText;
+      next.steps = next.steps.map(step => {
+        const richText = isRichTextDocument(step.richText) ? step.richText : undefined;
+        return { ...step, richText };
+      });
+      next.dropdowns = next.dropdowns?.map(dropdown => {
+        const richText = isRichTextDocument(dropdown.richText) ? dropdown.richText : undefined;
+        return { ...dropdown, richText };
+      });
+      return next;
+    }),
+  };
+}
+
 export function parseAdminLibraryState(raw: string | null): AdminLibraryState | null {
   if (!raw) return null;
-  try { const value: unknown = JSON.parse(raw); if (!value || typeof value !== "object") return null; const state = value as Record<string, unknown>; if (state.version !== 1 || !Array.isArray(state.documents)) return null; return { version: 1, documents: state.documents.filter(isDocument) }; } catch { return null; }
+  try { const value: unknown = JSON.parse(raw); if (!value || typeof value !== "object") return null; const state = value as Record<string, unknown>; if (state.version !== 1 || !Array.isArray(state.documents)) return null; return { version: 1, documents: state.documents.filter(isDocument).map(sanitizeRichText) }; } catch { return null; }
 }
 
 export function mergeAdminDocuments(seed: LibraryDocument[], stored: AdminLibraryState | null): ManagedLibraryDocument[] {

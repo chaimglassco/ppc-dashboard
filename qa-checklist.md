@@ -129,3 +129,15 @@ These security items are intentionally incomplete in the local MVP.
 - [ ] The application tabs are visible in both apps, remain usable on desktop and mobile, show white active text, and do not overlay page content.
 - [ ] `glasscoppc.vercel.app` redirects to the equivalent canonical `/ppc` route without a loop.
 - [ ] No hydration or browser-console errors appear.
+
+## Rich-text composer
+
+- [x] Every supported body field shows the full formatting toolbar in edit mode; excluded title, metadata, table, code, button, and flow fields remain plain.
+- [x] Selecting text and applying Normal, Bold, Italic, or Underlined updates only the selection and matches reader typography after save.
+- [x] Bullets, Numbers, and Checklists can be toggled or converted, and toolbar `aria-pressed` states follow the cursor or selection.
+- [x] Checklist state survives save and refresh; reader checkboxes are checked correctly and disabled.
+- [x] Standalone Bullet Text, Checklist Bullets, and Numbered Text rows show only the four inline-style controls.
+- [x] Pasting from Google Docs, Word, and webpages keeps supported formatting and removes links, media, colors, fonts, headings, and unsupported HTML.
+- [x] Existing Markdown formatting appears correctly when first opened in structured edit mode.
+- [x] Malformed rich JSON falls back to legacy text without removing the document.
+- [x] Desktop and mobile toolbars remain keyboard accessible and do not create horizontal page overflow.

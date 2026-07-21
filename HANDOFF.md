@@ -111,3 +111,12 @@ Read [README.md](README.md), [Architecture.md](Architecture.md), [data-contract.
 ## Recommended next milestone
 
 Move Pipeline authentication to secure same-origin cookies and enforce authenticated page access before PPC HTML is served. Then add browser E2E coverage using dedicated ADMIN, USER, and VIEWER test accounts.
+
+## July 21, 2026 — WYSIWYG Library composers
+
+- Tiptap 3.28.0 powers supported body composers with Normal, Bold, Italic, Underlined, Bullets, Checklist, and Numbers controls.
+- Reader content uses static React rendering; checklist state persists and reader checkboxes are disabled.
+- Optional JSON fields coexist with synchronized legacy strings. Legacy Markdown converts lazily, and malformed rich JSON falls back to saved text.
+- Standalone list rows intentionally expose inline formatting only.
+- Automated status at handoff: lint, typecheck, all 84 tests, and the 15-route production build pass. Rerun all four gates after any further changes.
+- Authenticated browser verification now passes through a temporary local same-origin gateway that mirrors the production Pipeline `/ppc/*` rewrite: real Pipeline ADMIN login, PPC session verification, selection-aware Bold/Underline/Checklist editing, checked checklist persistence, save, reader rendering, full refresh, return to edit mode, and cleanup were verified against the production PPC build with no browser warnings or errors. The gateway and test content were removed afterward; no authentication bypass was added.

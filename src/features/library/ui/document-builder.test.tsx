@@ -191,12 +191,9 @@ describe("DocumentBuilder roadmaps", () => {
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
     fireEvent.change(controls.getByLabelText("Upload step 1 image"), { target: { files: [new File(["roadmap image"], "roadmap.png", { type: "image/png" })] } });
     fireEvent.click(controls.getByRole("button", { name: "Bullets" }));
-    fireEvent.change(controls.getByRole("textbox", { name: "Step 1 subtext item 1" }), { target: { value: "First action" } });
-    fireEvent.keyDown(controls.getByRole("textbox", { name: "Step 1 subtext item 1" }), { key: "Enter" });
-    fireEvent.change(controls.getByRole("textbox", { name: "Step 1 subtext item 2" }), { target: { value: "Second action" } });
     fireEvent.click(controls.getByRole("button", { name: "Right" }));
     fireEvent.click(controls.getByRole("button", { name: "Center number" }));
-    expect(controls.getByLabelText("Step 1 subtext composer").querySelectorAll("label")).toHaveLength(2);
+    expect(controls.getByRole("textbox", { name: "Step 1 subtext" }).querySelector("ul")).toBeInTheDocument();
     await waitFor(() => expect(controls.getByRole("button", { name: "Preview step 1 image" })).toBeInTheDocument());
     fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
 
@@ -208,26 +205,23 @@ describe("DocumentBuilder roadmaps", () => {
     expect(savedRoadmap.steps[0].textStyle).toBe("bullets");
     expect(view.container.querySelector('section[data-alignment="right"]')).toBeInTheDocument();
     expect(view.container.querySelector('section[data-number-position="center"]')).toBeInTheDocument();
-    expect(controls.getByText("First action").closest("ul")).toBeInTheDocument();
+    expect(controls.getByText("Complete the first step").closest("ul")).toBeInTheDocument();
     await waitFor(() => expect(controls.getByRole("img", { name: "Step one roadmap image" })).toHaveAttribute("src", "blob:shared-image"));
     vi.unstubAllGlobals();
   });
 
-  it("edits checklist and numbered rows inside the composer and handles multiline paste and empty-row deletion", () => {
+  it("converts roadmap text between checklist and numbered rich-text formats", async () => {
     const baseDocument = getPublishedDocuments()[0];
     const roadmap = { ...createBlankContentElement("timeline", 1), steps: [{ title: "Step", text: "First\nSecond", imageUrl: "" }] };
     const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [roadmap] }} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
     const controls = within(view.container);
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
     fireEvent.click(controls.getByRole("button", { name: "Checklist" }));
-    expect(controls.getByLabelText("Step 1 subtext composer").querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
-    fireEvent.click(controls.getByRole("button", { name: "Numbered" }));
-    expect(controls.getByLabelText("Step 1 subtext composer")).toHaveAttribute("data-text-style", "numbered");
-    fireEvent.paste(controls.getByRole("textbox", { name: "Step 1 subtext item 2" }), { clipboardData: { getData: () => "Second\nThird" } });
-    expect(controls.getByRole("textbox", { name: "Step 1 subtext item 3" })).toHaveValue("Third");
-    fireEvent.change(controls.getByRole("textbox", { name: "Step 1 subtext item 3" }), { target: { value: "" } });
-    fireEvent.keyDown(controls.getByRole("textbox", { name: "Step 1 subtext item 3" }), { key: "Backspace" });
-    expect(controls.queryByRole("textbox", { name: "Step 1 subtext item 3" })).not.toBeInTheDocument();
+    await waitFor(() => expect(controls.getByRole("textbox", { name: "Step 1 subtext" }).querySelectorAll('input[type="checkbox"]')).toHaveLength(1));
+    expect(controls.getByRole("button", { name: "Checklist" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(controls.getByRole("button", { name: "Numbers" }));
+    await waitFor(() => expect(controls.getByRole("textbox", { name: "Step 1 subtext" }).querySelector("ol")).toBeInTheDocument());
+    expect(controls.getByRole("button", { name: "Numbers" })).toHaveAttribute("aria-pressed", "true");
   });
 });
 

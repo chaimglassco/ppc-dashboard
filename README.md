@@ -132,3 +132,9 @@ See [deployment.md](deployment.md) for the full rollout, verification, and rollb
 - [Deployment](deployment.md)
 - [Data contract](data-contract.md)
 - [Agent guidance](AGENTS.md)
+
+## Rich-text Library content
+
+Supported Library body fields use a visual Tiptap composer with Normal, Bold, Italic, Underlined, Bullets, Checklist, and Numbers controls. Topic callouts, statements, quotes, insights, feature cards, dropdown bodies, and roadmap step bodies share the same editor and reader typography. Standalone Bullet Text, Checklist Bullets, and Numbered Text rows intentionally expose inline styles only.
+
+Rich content is stored as validated JSON beside synchronized legacy text fields. Existing plain-text and repository Markdown documents are converted when opened; no migration is required. Reader checklists are disabled, while checklist state can be edited and persisted in the builder.

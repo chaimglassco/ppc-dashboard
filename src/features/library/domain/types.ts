@@ -6,7 +6,11 @@ export type LibraryContentElementType="topic"|"statement"|"quote"|"bullets"|"che
 export type RoadmapAlignment="left"|"center"|"right";
 export type RoadmapNumberPosition="left"|"center"|"right";
 export type RoadmapTextStyle="plain"|"bullets"|"checklist"|"numbered";
-export type RoadmapStep={title:string;text:string;imageUrl?:string;textStyle?:RoadmapTextStyle};
+export type RichTextMark={type:"bold"|"italic"|"underline"};
+export type RichTextNode={type:string;text?:string;attrs?:{checked?:boolean;start?:number};marks?:RichTextMark[];content?:RichTextNode[]};
+export type RichTextDocument=RichTextNode&{type:"doc";content:RichTextNode[]};
+export type RoadmapStep={title:string;text:string;richText?:RichTextDocument;imageUrl?:string;textStyle?:RoadmapTextStyle};
+export type LibraryDropdown={title:string;text:string;richText?:RichTextDocument};
 export type ButtonWidth="full"|"large"|"medium"|"small";
 export type ButtonAlignment="left"|"center"|"right";
 export type InsightColor="green"|"blue"|"red";
@@ -19,8 +23,11 @@ export type LibraryContentElement={
   text:string;
   insightColor?:InsightColor;
   body:string[];
+  richText?:RichTextDocument;
   callout?:string;
+  calloutRichText?:RichTextDocument;
   items:string[];
+  itemRichText?:RichTextDocument[];
   columns:string[];
   rows:string[][];
   columnWidths?:number[];
@@ -33,7 +40,7 @@ export type LibraryContentElement={
   alignment?:RoadmapAlignment;
   numberPosition?:RoadmapNumberPosition;
   nodes:Array<{title:string;text:string}>;
-  dropdowns?:Array<{title:string;text:string}>;
+  dropdowns?:LibraryDropdown[];
   galleryColumns?:1|2|3|4;
   images?:Array<{url:string;alt:string}>;
 };

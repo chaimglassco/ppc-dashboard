@@ -115,3 +115,11 @@ Next.js is compiled with `basePath: "/ppc"`. Pipeline proxies `/ppc/:path*` to t
 `GlasscoSessionProvider` reads the existing Pipeline bearer session and verifies it through the PPC `/api/pipeline-session` server route. That route delegates verification to Pipeline `/api/auth/session`. The Library route handler repeats verification for reads and requires `ADMIN` for writes. The client gate improves navigation but is not treated as the authorization boundary; mutation authorization is server-enforced.
 
 `PIPELINE_AUTH_ORIGIN` may override the server verification origin, and `NEXT_PUBLIC_PIPELINE_ORIGIN` may override the browser return destination. Both default to `https://glasscopipeline.vercel.app`.
+
+# Rich-text architecture
+
+`domain/rich-text.ts` owns the persistence allowlist, legacy Markdown/plain-text conversion, text fallback generation, and malformed-document fallback. The domain contract intentionally does not depend on Tiptap types.
+
+`ui/rich-text.tsx` is the client-only editor boundary. It configures Tiptap with `immediatelyRender: false`, excludes unsupported nodes and marks, and emits both JSON and searchable legacy text. Reader output uses `@tiptap/static-renderer` React mappings rather than raw HTML. The same CSS typography rules are applied to editable and static content.
+
+Rich JSON fields are optional and additive. Shared/local state validation removes invalid optional rich content while retaining the surrounding document so the builder can reconstruct it from legacy strings.

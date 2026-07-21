@@ -22,4 +22,11 @@ describe("admin library storage", () => {
     expect(parseAdminLibraryState(valid)?.documents[0].contentElements?.[0].insightColor).toBe("red");
     expect(parseAdminLibraryState(invalid)?.documents).toHaveLength(0);
   });
+  it("keeps a valid document but drops malformed rich text so legacy text can be used", () => {
+    const statement = { ...createBlankContentElement("statement", 1), text: "Legacy fallback", richText: { type: "doc", content: [{ type: "script", text: "bad" }] } };
+    const value = JSON.stringify({ version: 1, documents: [{ ...seed[0], contentElements: [statement] }] });
+    const parsed = parseAdminLibraryState(value)?.documents[0].contentElements?.[0];
+    expect(parsed?.text).toBe("Legacy fallback");
+    expect(parsed?.richText).toBeUndefined();
+  });
 });

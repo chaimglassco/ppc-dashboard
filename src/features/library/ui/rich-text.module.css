@@ -1,0 +1,15 @@
+.composer{overflow:hidden;border:1px solid #c8d7ee;border-radius:11px;background:#fff;color:#0a1f3a}
+.toolbar{display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-bottom:1px solid #dbe5f3;background:#f7f9fd}
+.toolbar button{display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:5px 8px;border:1px solid transparent;border-radius:7px;background:transparent;color:#164b9f;font:700 11px/1.1 inherit;cursor:pointer}
+.toolbar button:hover{background:#eaf2ff}.toolbar button[aria-pressed="true"]{border-color:#9fc0f3;background:#dceaff;color:#0648b6}.toolbar button:focus-visible{outline:2px solid #1b66dc;outline-offset:1px}.toolbar button:disabled{cursor:not-allowed;opacity:.5}.toolbar svg{width:15px;height:15px;stroke-width:2}
+.editable{min-height:112px;padding:13px;outline:none;white-space:pre-wrap}
+.editable:empty::before{color:#8090a8;content:attr(data-placeholder);pointer-events:none}
+.content,.editable{font:400 15px/1.65 inherit;color:inherit}
+.content p,.editable p{margin:0 0 12px}.content p:last-child,.editable p:last-child{margin-bottom:0}
+.content strong,.editable strong{font-weight:800}.content em,.editable em{font-style:italic}.content u,.editable u{text-decoration:underline;text-underline-offset:2px}
+.content ul,.content ol,.editable ul,.editable ol{margin:8px 0;padding-left:26px}.content li,.editable li{margin:4px 0;padding-left:3px}.content li p,.editable li p{margin:0}
+.content ul[data-type="taskList"],.editable ul[data-type="taskList"]{padding-left:0;list-style:none}
+.content li[data-type="taskItem"],.editable li[data-type="taskItem"]{display:flex;align-items:flex-start;gap:9px;padding-left:0}
+.content li[data-type="taskItem"]>label,.editable li[data-type="taskItem"]>label{display:flex;align-items:center;padding-top:4px}.content li[data-type="taskItem"]>div,.editable li[data-type="taskItem"]>div{min-width:0;flex:1}
+.content input[type="checkbox"],.editable input[type="checkbox"]{width:16px;height:16px;margin:0;accent-color:#1260d6}
+@media(max-width:720px){.toolbar{flex-wrap:nowrap;overflow-x:auto}.toolbar button{flex:0 0 auto}.toolbar button span{display:none}.editable{min-height:96px;padding:11px}}

@@ -85,3 +85,11 @@ These require a separately approved milestone and must replace—not expose—th
 - PPC resumes its last valid route and otherwise opens `/ppc/library`.
 - A verified Pipeline session is required before the PPC interface renders.
 - ADMIN can create, edit, reorder, hide, delete, and recover content. USER and VIEWER are read-only apart from personal reading controls.
+
+# Rich-text composer behavior
+
+- Supported element body fields provide selection-aware Normal, Bold, Italic, Underlined, Bullets, Checklist, and Numbers controls with a live WYSIWYG editing surface.
+- Titles, labels, metadata, button text, tables, code blocks, and diagnostic-flow nodes remain plain-text controls.
+- Standalone list-element rows retain their element-level markers and support only Normal, Bold, Italic, and Underlined formatting.
+- Pasted content is constrained by the editor schema to supported paragraphs, marks, lists, and checklists; links, images, colors, fonts, headings, and arbitrary HTML are not persisted.
+- Checklist boxes are editable in admin mode and disabled in reader mode.

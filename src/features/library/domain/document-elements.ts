@@ -1,4 +1,5 @@
 import { slugifyHeading } from "./headings";
+import { resolveRichText, richTextFromMarkdown } from "./rich-text";
 import type { LibraryContentElement, LibraryContentElementType, LibraryDocument, Topic } from "./types";
 
 const emptyElement = (type: LibraryContentElementType, id: string): LibraryContentElement => ({
@@ -52,28 +53,51 @@ function cleanMarkdown(value: string) {
 }
 
 function topicElement(id: string, title: string, body: string, partNumber: number): LibraryContentElement {
+  const richText = richTextFromMarkdown(body);
   return {
     ...emptyElement("topic", id),
     eyebrow: `Part ${partNumber}`,
     label: title,
     title,
     body: body.split(/\n\s*\n/).map(cleanMarkdown).filter(Boolean),
+    richText,
   };
 }
 
-export function getInitialContentElements(document: LibraryDocument): LibraryContentElement[] {
-  if (document.contentElements?.length) return document.contentElements.map(element => ({
+function cloneElement(element: LibraryContentElement): LibraryContentElement {
+  const next: LibraryContentElement = {
     ...element,
     body: [...element.body],
     items: [...element.items],
     columns: [...element.columns],
     rows: element.rows.map(row => [...row]),
     columnWidths: element.columnWidths ? [...element.columnWidths] : undefined,
-    steps: element.steps.map(step => ({ ...step })),
+    steps: element.steps.map(step => ({
+      ...step,
+      richText: resolveRichText(step.richText, step.text, step.textStyle ?? "plain"),
+    })),
     nodes: element.nodes.map(node => ({ ...node })),
-    dropdowns: element.dropdowns?.map(dropdown => ({ ...dropdown })),
+    dropdowns: element.dropdowns?.map(dropdown => ({
+      ...dropdown,
+      richText: resolveRichText(dropdown.richText, dropdown.text),
+    })),
     images: element.images?.map(image => ({ ...image })),
-  }));
+  };
+  if (["topic", "statement", "quote", "insight", "feature"].includes(element.type)) {
+    const fallback = element.type === "topic" ? element.body.join("\n\n") : element.text;
+    next.richText = resolveRichText(element.richText, fallback);
+  }
+  if (element.type === "topic" && (element.callout || element.calloutRichText)) {
+    next.calloutRichText = resolveRichText(element.calloutRichText, element.callout ?? "");
+  }
+  if (["bullets", "checklist", "numbered"].includes(element.type)) {
+    next.itemRichText = element.items.map((item, index) => resolveRichText(element.itemRichText?.[index], item));
+  }
+  return next;
+}
+
+export function getInitialContentElements(document: LibraryDocument): LibraryContentElement[] {
+  if (document.contentElements?.length) return document.contentElements.map(cloneElement);
 
   const headings = [...document.body.matchAll(/^##\s+(.+)$/gm)];
   if (!headings.length) {
