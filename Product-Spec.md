@@ -54,12 +54,12 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 - **LIB-BUILDER-003** — Topics, statements, callouts, lists, checklists, insights, tables, dropdowns, feature cards, text blocks, roadmaps, galleries, buttons, and flows can be added.
 - **LIB-BUILDER-004** — Tables support rows, columns, row height, and saved column width.
 - **LIB-BUILDER-005** — Dropdown blocks support multiple entries and preserved line breaks.
-- **LIB-BUILDER-006** — Video links render in a large responsive player inside the blue document header’s right column. YouTube and shared Google Drive files use embedded players, direct video files use native controls, generic HTTPS links retain a secure clickable fallback, and no separate external-link button is shown.
+- **LIB-BUILDER-006** — Video links render in a large responsive player inside the blue document header’s right column. YouTube and shared Google Drive files use embedded players, Google Drive’s play control and playback content remain centered in the visible 16:9 frame with a compact new-tab icon, direct video files use native controls, and generic HTTPS links retain a secure clickable fallback.
 - **LIB-BUILDER-007** — Video Add/Pencil controls are visible only in document edit mode.
 - **LIB-BUILDER-008** — Builder edit mode replaces the blue header metadata with editable title, description, and category controls and saves those values with the structured elements.
 - **LIB-BUILDER-009** — Roadmaps independently support overall Left/Center/Right placement and Left/Center/Right step-number positions; centered numbers stack step copy and a full-width image.
 - **LIB-BUILDER-010** — Each Roadmap step supports a shared Blob-backed image upload up to 2 MB and an inline Plain, Bullets, Checklist, or Numbered composer while retaining legacy saved image URLs.
-- **LIB-BUILDER-011** — Feature Cards and Gallery slots use shared authenticated image uploads; selecting a Gallery layout immediately creates its minimum visible slots without deleting extras. Gallery tiles are square, contain the complete uncropped image at its natural ratio, and open the existing full-image preview when clicked.
+- **LIB-BUILDER-011** — Feature Cards and Gallery slots use shared authenticated image uploads; selecting a Gallery layout immediately creates its minimum visible slots without deleting extras. Gallery tiles are square, contain the complete uncropped image at its natural ratio, and open the existing full-image preview from the already-rendered tile source without a second media fetch.
 - **LIB-BUILDER-011A** — Uploaded private images render as actual previews in editors, saved documents, Roadmaps, Galleries, Feature Cards, and image modals through authenticated media retrieval.
 - **LIB-BUILDER-012** — Standalone Buttons support validated internal or HTTP(S) links, Full/Large/Medium/Small widths, Left/Center/Right alignment, and secure new-tab navigation.
 

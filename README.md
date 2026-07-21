@@ -27,7 +27,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Create, rename, hide, reorder, delete, recover, and categorize documents as an ADMIN.
 - Keep the catalog list hidden behind a loading skeleton until saved shared state is resolved, preventing deleted documents from flashing during refresh.
 - Create, rename, hide, reorder, delete, and recover category options as an ADMIN.
-- Attach YouTube, Google Drive, direct-file, or other HTTPS video links; supported providers render in a large responsive player inside the blue document header’s right column without a redundant external-link button.
+- Attach YouTube, Google Drive, direct-file, or other HTTPS video links; supported providers render in a large responsive player inside the blue document header’s right column. Google Drive playback is centered in the visible frame and keeps a compact new-tab icon without a redundant text button.
 - Reorder content elements by dragging or insert new elements between existing blocks.
 - Build documents from reusable elements:
   - Topics
@@ -42,7 +42,7 @@ It is deployed as the PPC application inside the unified Glassco website:
   - Blue text blocks
   - Roadmaps with shared per-step image uploads, inline plain/bulleted/checklist/numbered composers, and layout controls
   - Diagnostic flows
-  - Image galleries with shared uploads, responsive one- to four-column layouts, square tiles that preserve the complete image ratio, and click-to-preview viewing
+  - Image galleries with shared uploads, responsive one- to four-column layouts, square tiles that preserve the complete image ratio, and instant click-to-preview viewing that reuses the loaded tile image
   - Clickable buttons with width and alignment controls
 
 ## Architecture and persistence

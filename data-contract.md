@@ -26,7 +26,7 @@ The global application tabs continue to use `glassco.appRoutes.v1`; this visual 
 | `body` | `string` | Markdown source for repository/legacy documents. |
 | `topics` | `Topic[]` | Derived navigation metadata. |
 | `contentElements` | `LibraryContentElement[]?` | Structured builder representation. |
-| `videoUrl` | `string?` | Normalized HTTP(S) tutorial link. Provider-specific embed and thumbnail URLs and the responsive header placement are derived at render time and are not persisted. |
+| `videoUrl` | `string?` | Normalized HTTP(S) tutorial link. Provider-specific embed/thumbnail URLs, centered Google Drive viewport treatment, and responsive header placement are derived at render time and are not persisted. |
 
 The catalog document editor is creation-only and exposes `title`, `description`, and `category`. New documents receive the existing defaults for `type`, `tags`, and legacy `body`, then are authored further in the structured builder.
 
@@ -89,7 +89,7 @@ Important structured fields:
 
 Optional `columnWidths`, `dropdowns`, Roadmap layout fields, step image/format fields, Gallery fields, and Button fields preserve compatibility with older content. Newly uploaded Roadmap, Feature Card, and Gallery images are stored in the shared private Blob store and referenced through the authenticated library-image route; existing data URLs and HTTP(S) values remain valid. Roadmap formatted rows remain newline-delimited in `steps[].text`.
 
-Private library-image route values remain persisted as relative URLs. Client image surfaces retrieve those URLs with the Pipeline bearer token and render the returned bytes through temporary object URLs; the temporary URL is presentation-only and is never persisted.
+Private library-image route values remain persisted as relative URLs. Client image surfaces retrieve those URLs with the Pipeline bearer token and render the returned bytes through temporary object URLs; Gallery modals may reuse the currently rendered temporary source to avoid a duplicate request. Temporary URLs are presentation-only and are never persisted.
 
 ## Repository Markdown front matter
 

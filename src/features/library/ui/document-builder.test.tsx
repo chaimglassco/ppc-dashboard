@@ -207,7 +207,7 @@ describe("DocumentBuilder roadmaps", () => {
 
 describe("DocumentBuilder image galleries", () => {
   it("saves the selected grid layout and repeatable images, then renders the gallery", async () => {
-    installSharedImageFetch("/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Fgallery.png");
+    const fetchMock = installSharedImageFetch("/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Fgallery.png");
     const baseDocument = getPublishedDocuments()[0];
     const gallery = createBlankContentElement("gallery", 1);
     const document = { ...baseDocument, contentElements: [gallery] };
@@ -233,6 +233,10 @@ describe("DocumentBuilder image galleries", () => {
     expect(savedGallery.images[0]).toEqual({ url: expect.stringContaining("/ppc/api/library/images"), alt: "First gallery image" });
     expect(view.container.querySelector('section[data-gallery-columns="3"]')).toBeInTheDocument();
     await waitFor(() => expect(controls.getByRole("img", { name: "First gallery image" })).toHaveAttribute("src", "blob:shared-image"));
+    const imageRequestsBeforePreview = fetchMock.mock.calls.filter(([, init]) => init?.method !== "POST").length;
+    fireEvent.click(controls.getByRole("button", { name: "Preview First gallery image" }));
+    expect(within(controls.getByRole("dialog", { name: "Image preview" })).getByRole("img", { name: "Document feature preview" })).toHaveAttribute("src", "blob:shared-image");
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method !== "POST")).toHaveLength(imageRequestsBeforePreview);
     vi.unstubAllGlobals();
   });
 });
@@ -247,6 +251,8 @@ describe("DocumentBuilder video header", () => {
 
     expect(header).toBeInTheDocument();
     expect(player).toHaveAttribute("src", "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/preview");
+    expect(player?.parentElement?.className).toContain("googleDrivePlayer");
+    expect(within(header as HTMLElement).getByRole("link", { name: "Open video tutorial in a new tab" })).toHaveAttribute("href", document.videoUrl);
     expect(view.container.querySelector("article > section[aria-label='Video tutorial']")).not.toBeInTheDocument();
     expect(within(view.container).queryByText("OPEN VIDEO")).not.toBeInTheDocument();
   });

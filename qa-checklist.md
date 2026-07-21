@@ -75,7 +75,7 @@ Use this checklist before merging or deploying changes.
 - [x] Feature Card and Gallery images use authenticated shared uploads with progress, validation, preview, replacement, removal, and legacy URL compatibility.
 - [x] Private shared-image previews send the Pipeline bearer token, resolve to browser object URLs, render actual images in edit/view/modal surfaces, and revoke temporary URLs during cleanup.
 - [x] Gallery layout changes create minimum upload slots and immediately display the selected responsive editor grid without deleting extras.
-- [x] Gallery tiles remain square in edit and view modes, show square/portrait/landscape sources without cropping, and open the full-image modal when clicked.
+- [x] Gallery tiles remain square in edit and view modes, show square/portrait/landscape sources without cropping, and open the full-image modal from the tile’s resolved source without issuing a second authenticated image request.
 - [x] Standalone Buttons validate internal and HTTP(S) links, persist width/alignment, open safely in a new tab, and become full-width on mobile.
 - [x] Center number layout centers the number, title, and subtext and uses the full available width for the image.
 - [x] Save changes and return to view mode.
@@ -85,9 +85,9 @@ Use this checklist before merging or deploying changes.
 - [x] Add Video Link is hidden in document view mode.
 - [x] Add/Pencil video controls appear in document edit mode.
 - [x] Valid HTTPS, YouTube, and Google Drive links save.
-- [x] YouTube and shared Google Drive links render a responsive 16:9 embedded player inside the blue document header’s right column.
+- [x] YouTube and shared Google Drive links render a responsive 16:9 embedded player inside the blue document header’s right column; the Drive play control and playing content are centered in the visible frame.
 - [x] Direct MP4/WebM/OGG links render native controls; other HTTPS links retain a safe open fallback.
-- [x] No separate OPEN VIDEO button renders; provider-native controls and the generic-link fallback handle external viewing.
+- [x] No separate OPEN VIDEO text button renders; Google Drive retains a compact new-tab icon and generic links retain their safe fallback.
 - [x] Video Pencil is hidden after returning to view mode.
 
 ## Reading state

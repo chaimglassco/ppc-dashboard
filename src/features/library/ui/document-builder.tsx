@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { ArrowDown, ArrowUp, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
 import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
@@ -392,13 +392,14 @@ function DocumentVideo({ doc, isEditMode, onSaveVideoUrl }: { doc: LibraryDocume
         {error ? <p role="alert">{error}</p> : null}
         <div><button type="submit" disabled={isSaving || !draft.trim()}>{isSaving ? "Saving…" : "Save link"}</button><button type="button" onClick={() => { setDraft(videoUrl); setError(""); setIsEditing(false); }}>Cancel</button>{videoUrl ? <button type="button" onClick={() => void removeVideo()} disabled={isSaving}>Remove</button> : null}</div>
       </form> : video ? <div className={styles.videoPlayerWrap}>
-        <div className={styles.videoPlayer}>
+        <div className={`${styles.videoPlayer} ${video.kind === "google-drive" ? styles.googleDrivePlayer : ""}`}>
           {video.embedUrl ? <iframe src={video.embedUrl} title={`${doc.title} video tutorial`} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />
             : video.kind === "direct" ? <video src={video.url} controls preload="metadata">Your browser does not support the video player.</video>
               : <a href={video.url} target="_blank" rel="noopener noreferrer" aria-label="Open video tutorial">
                 <span className={styles.genericThumbnail}><Video aria-hidden="true" />Video tutorial</span>
                 <span className={styles.playBadge} aria-hidden="true"><Play /></span>
               </a>}
+          {video.kind === "google-drive" ? <a className={styles.videoExternalLink} href={video.url} target="_blank" rel="noopener noreferrer" aria-label="Open video tutorial in a new tab"><ExternalLink aria-hidden="true" /></a> : null}
         </div>
         {isEditMode ? <button className={styles.videoEditButton} type="button" onClick={() => setIsEditing(true)} aria-label="Edit video tutorial link"><Pencil /></button> : null}
       </div> : <button className={styles.addVideoButton} type="button" onClick={() => setIsEditing(true)}><Video aria-hidden="true" />Add a Video Link</button>}
@@ -449,7 +450,10 @@ function ImageGalleryPreview({ element, onPreviewImage }: { element: LibraryCont
   const columns = element.galleryColumns ?? 1;
   const images = (element.images ?? []).filter(image => image.url.trim());
   return <section className={styles.gallery} data-gallery-columns={columns} aria-label="Image gallery">
-    {images.map((image, index) => <button className={styles.galleryImage} type="button" key={index} onClick={() => onPreviewImage(image.url)} aria-label={`Preview ${previewText(image.alt, `gallery image ${index + 1}`)}`}>
+    {images.map((image, index) => <button className={styles.galleryImage} type="button" key={index} onClick={event => {
+      const displayedImage = event.currentTarget.querySelector("img");
+      onPreviewImage(displayedImage?.currentSrc || displayedImage?.src || image.url);
+    }} aria-label={`Preview ${previewText(image.alt, `gallery image ${index + 1}`)}`}>
       <AuthenticatedImage url={image.url} alt={previewText(image.alt, `Gallery image ${index + 1}`)} />
     </button>)}
   </section>;
