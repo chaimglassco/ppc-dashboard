@@ -33,6 +33,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [showDocumentReorder, setShowDocumentReorder] = useState(false);
   const [editor, setEditor] = useState<"new" | null>(null);
   const [notice, setNotice] = useState("");
+  const [isCatalogReady, setIsCatalogReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,11 +41,13 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       if (cancelled) return;
       setManaged(state.documents);
       setCategories(state.categories);
+      setIsCatalogReady(true);
     }).catch(() => {
       if (cancelled) return;
       setManaged(readAdminDocuments(documents, window.localStorage));
       setCategories(readAdminCategories(window.localStorage));
       setNotice("Shared library is unavailable. Showing this browser's cached copy.");
+      setIsCatalogReady(true);
     });
     return () => { cancelled = true; };
   }, [documents]);
@@ -161,11 +164,11 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     </div>
     {manageMode && <div className="admin-mode-banner"><span>Admin mode</span><p>Edit documents and manage category dropdown options, visibility, order, deletion, and recovery.</p></div>}
     {notice && <p className="admin-notice" role="status">{notice}</p>}
-    <p className="result-bar" aria-live="polite">{results.length} {results.length === 1 ? "document" : "documents"}</p>
+    {isCatalogReady ? <><p className="result-bar" aria-live="polite">{results.length} {results.length === 1 ? "document" : "documents"}</p>
     {results.length ? <div className="document-grid">{results.map(doc => {
       const activeIndex = activeDocuments.findIndex(document => document.id === doc.id);
       return <DocumentCard key={doc.id} doc={doc} admin={manageMode ? { onToggleHidden: () => persist(current => current.map(document => document.id === doc.id ? { ...document, hidden: !document.hidden, updatedAt: new Date().toISOString() } : document), doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => persist(current => current.map(document => document.id === doc.id ? { ...document, deletedAt: new Date().toISOString() } : document), "Document moved to recovery."), onMoveUp: () => persist(current => moveDocument(current, doc.id, -1), "Document moved up."), onMoveDown: () => persist(current => moveDocument(current, doc.id, 1), "Document moved down."), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1 } : undefined}/>;
-    })}</div> : <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div>}
+    })}</div> : <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div>}</> : <div className="skeleton-grid" aria-label="Loading library documents">{[1, 2, 3].map(item => <div className="skeleton" key={item} />)}</div>}
     {canAdmin && showDocumentRecovery ? <DeletedDocuments documents={deleted} onClose={() => setShowDocumentRecovery(false)} onRecover={id => persist(current => current.map(document => document.id === id ? { ...document, deletedAt: undefined } : document), "Document recovered.")} /> : null}
     {canAdmin && editor ? <DocumentEditor key="new" categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft} onCreateCategory={createCategory} onManageCategories={() => setShowCategoryManager(true)}/> : null}
     {canAdmin && showDocumentReorder ? <DocumentReorderDialog documents={activeDocuments} onCancel={() => setShowDocumentReorder(false)} onSave={saveDocumentOrder} /> : null}

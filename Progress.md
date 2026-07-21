@@ -38,6 +38,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Category Plus and Pencil controls beside the document Category field for quick creation and full category management.
 - Removed the catalog-card Edit / Rename action; existing document title, description, and category now edit directly in the blue document header during builder edit mode.
 - Device-local persistence and recovery.
+- Refresh-safe catalog hydration keeps seed documents behind a skeleton until shared state or the cached fallback resolves, eliminating deleted-document flashes.
 
 ### Structured document builder
 
@@ -60,7 +61,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Thirteen Vitest files and 72 tests pass.
+- Fourteen Vitest files and 73 tests pass.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.

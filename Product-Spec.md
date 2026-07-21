@@ -45,6 +45,7 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 - **LIB-ADMIN-010** — Category controls beside the document Category field support quick creation and open the full rename, reorder, delete, and recovery manager.
 - **LIB-ADMIN-011** — Deleted categories stay hidden from the category manager until the recovery icon opens a dedicated recovery dialog.
 - **LIB-ADMIN-012** — Deleted documents stay out of the catalog layout until the admin toolbar recovery icon opens a dedicated recovery dialog.
+- **LIB-ADMIN-013** — The catalog renders a loading skeleton until shared administration state or its cached fallback is ready, so deleted seed documents never flash in the active list during refresh.
 
 ### Structured builder
 

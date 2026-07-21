@@ -73,6 +73,7 @@ The existing `.gitignore` already excludes these paths.
 5. Enter admin mode, create a temporary document, and save it.
 6. Return to view mode and confirm the Plus control remains visible and can open new-document creation.
 7. Delete a temporary document in admin mode; confirm no recovery list appears below the catalog, then use the toolbar recovery icon to open the dialog and recover it.
+   Before recovering it, refresh the page and confirm the deleted card never appears while the shared catalog is loading.
 8. Confirm catalog admin cards do not show an Edit / Rename action.
 9. Open a document, enter edit mode, and change its title, description, and category in the blue header; save and refresh to confirm persistence.
 10. Open the new-document form and confirm it does not show Document Type, Tags, or Content Markdown.

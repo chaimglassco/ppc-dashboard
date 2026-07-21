@@ -63,6 +63,8 @@ The creation modal retains Category Plus and Pencil controls for quick creation 
 
 The catalog toolbar keeps document creation available in both view and admin modes. Document recovery remains an admin action: deleted documents are excluded from the catalog layout, and an admin-only recovery icon opens a focused dialog containing the recoverable document list.
 
+The catalog’s server-provided seed documents are not rendered as active cards while client administration state is hydrating. The document grid remains a skeleton until the shared snapshot succeeds or the validated browser cache is selected as fallback, preventing stale deleted records from appearing during refresh.
+
 ## Browser-local persistence
 
 Three independent versioned stores are used:

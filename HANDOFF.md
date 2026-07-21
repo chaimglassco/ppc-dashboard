@@ -19,16 +19,15 @@ Local repositories:
 
 Current production commits:
 
-- PPC Dashboard: `376d4fa` — latest synchronized Library video-player update
+- PPC Dashboard: `e1657ae` — latest synchronized Gallery and video-player update
 - Product Pipeline: `c507888` — current synchronized gateway repository state
 
-The PPC Dashboard checkout contains an unreleased Gallery presentation update. Pipeline remains synchronized with `origin/main`.
+The PPC Dashboard checkout contains an unreleased catalog hydration fix. Pipeline remains synchronized with `origin/main`.
 
 ## Unreleased local work
 
-- Gallery tiles now use a square frame with `object-fit: contain` in edit and view modes, preserving the complete square, portrait, or landscape source without cropping.
-- Existing Gallery click-to-preview behavior remains unchanged and opens the complete image in the modal.
-- The large video section and Google Drive `/preview` support are already included in synchronized commit `376d4fa`.
+- Catalog cards remain behind a loading skeleton until shared administration state or the cached fallback resolves, preventing deleted documents from flashing after refresh.
+- The square, uncropped Gallery presentation, large video section, and Google Drive `/preview` support are already included in synchronized commit `e1657ae`.
 
 ## What is implemented
 
@@ -65,7 +64,7 @@ npm test
 npm run build
 ```
 
-All passed with 13 test files and 72 tests.
+All passed with 14 test files and 73 tests.
 
 Product Pipeline:
 

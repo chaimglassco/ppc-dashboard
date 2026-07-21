@@ -6,7 +6,7 @@ Use this checklist before merging or deploying changes.
 
 - [x] `npm run lint`
 - [x] `npm run typecheck`
-- [x] `npm test` — 72 tests passing across 13 test files
+- [x] `npm test` — 73 tests passing across 14 test files
 - [x] `npm run build`
 
 ## Catalog and navigation
@@ -36,6 +36,7 @@ Use this checklist before merging or deploying changes.
 - [x] Admin toolbar recovery icon opens the deleted-document recovery dialog.
 - [x] Recover a deleted document.
 - [x] Hidden/deleted documents are unavailable in normal reader mode.
+- [x] Refreshing the catalog shows skeletons until saved state resolves; deleted seed documents never flash in the active list.
 
 ## Category administration
 

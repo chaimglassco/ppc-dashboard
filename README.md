@@ -25,6 +25,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Read responsive documents with numbered, scroll-synchronized topic navigation.
 - Bookmark documents, track recent views, and mark documents complete.
 - Create, rename, hide, reorder, delete, recover, and categorize documents as an ADMIN.
+- Keep the catalog list hidden behind a loading skeleton until saved shared state is resolved, preventing deleted documents from flashing during refresh.
 - Create, rename, hide, reorder, delete, and recover category options as an ADMIN.
 - Attach YouTube, Google Drive, direct-file, or other HTTPS video links; supported providers render in a large responsive player below the document header.
 - Reorder content elements by dragging or insert new elements between existing blocks.
@@ -92,7 +93,7 @@ npm test
 npm run build
 ```
 
-The last verified state passes all four commands with 13 test files and 72 tests.
+The last verified state passes all four commands with 14 test files and 73 tests.
 
 ## Project structure
 
