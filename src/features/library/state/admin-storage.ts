@@ -10,19 +10,21 @@ type WriteStore = Pick<Storage, "setItem">;
 function isStringArray(value: unknown): value is string[] { return Array.isArray(value) && value.every(item => typeof item === "string"); }
 function isNumberArray(value: unknown) { return Array.isArray(value) && value.every(item => typeof item === "number" && Number.isFinite(item) && item > 0); }
 function isTextPairArray(value: unknown) { return Array.isArray(value) && value.every(item => Boolean(item) && typeof item === "object" && typeof (item as Record<string, unknown>).title === "string" && typeof (item as Record<string, unknown>).text === "string"); }
+function isDiagnosticFlowNodeArray(value: unknown) { return Array.isArray(value) && value.every(item => Boolean(item) && typeof item === "object" && typeof (item as Record<string, unknown>).title === "string" && typeof (item as Record<string, unknown>).text === "string" && ((item as Record<string, unknown>).description === undefined || typeof (item as Record<string, unknown>).description === "string")); }
 function isRoadmapStepArray(value: unknown) { return Array.isArray(value) && value.every(item => Boolean(item) && typeof item === "object" && typeof (item as Record<string, unknown>).title === "string" && typeof (item as Record<string, unknown>).text === "string" && ((item as Record<string, unknown>).imageUrl === undefined || typeof (item as Record<string, unknown>).imageUrl === "string") && ((item as Record<string, unknown>).textStyle === undefined || ["plain", "bullets", "checklist", "numbered"].includes(String((item as Record<string, unknown>).textStyle)))); }
 function isGalleryImageArray(value: unknown) { return Array.isArray(value) && value.every(item => Boolean(item) && typeof item === "object" && typeof (item as Record<string, unknown>).url === "string" && typeof (item as Record<string, unknown>).alt === "string"); }
 function isContentElement(value: unknown): value is LibraryContentElement {
   if (!value || typeof value !== "object") return false;
   const element = value as Record<string, unknown>;
-  const types = ["topic", "statement", "quote", "bullets", "checklist", "numbered", "insight", "table", "accordion", "feature", "code", "timeline", "flowchart", "gallery", "button"];
+  const types = ["topic", "statement", "headline", "description", "quote", "bullets", "checklist", "numbered", "insight", "table", "accordion", "feature", "code", "timeline", "flowchart", "gallery", "button"];
   const textFields = ["id", "eyebrow", "label", "title", "text", "buttonText", "imageUrl"];
   return types.includes(String(element.type)) && textFields.every(field => typeof element[field] === "string") &&
     isStringArray(element.body) && isStringArray(element.items) && isStringArray(element.columns) &&
     Array.isArray(element.rows) && element.rows.every(isStringArray) &&
     (element.columnWidths === undefined || isNumberArray(element.columnWidths)) &&
-    isRoadmapStepArray(element.steps) && isTextPairArray(element.nodes) &&
+    isRoadmapStepArray(element.steps) && isDiagnosticFlowNodeArray(element.nodes) &&
     (element.alignment === undefined || ["left", "center", "right"].includes(String(element.alignment))) &&
+    (element.textAlignment === undefined || ["left", "center", "right"].includes(String(element.textAlignment))) &&
     (element.numberPosition === undefined || ["left", "center", "right"].includes(String(element.numberPosition))) &&
     (element.galleryColumns === undefined || [1, 2, 3, 4].includes(Number(element.galleryColumns))) &&
     (element.buttonUrl === undefined || typeof element.buttonUrl === "string") &&
@@ -56,6 +58,10 @@ function sanitizeRichText(document: ManagedLibraryDocument): ManagedLibraryDocum
       next.steps = next.steps.map(step => {
         const richText = isRichTextDocument(step.richText) ? step.richText : undefined;
         return { ...step, richText };
+      });
+      next.nodes = next.nodes.map(node => {
+        const descriptionRichText = isRichTextDocument(node.descriptionRichText) ? node.descriptionRichText : undefined;
+        return { ...node, description: node.description ?? "", descriptionRichText };
       });
       next.dropdowns = next.dropdowns?.map(dropdown => {
         const richText = isRichTextDocument(dropdown.richText) ? dropdown.richText : undefined;

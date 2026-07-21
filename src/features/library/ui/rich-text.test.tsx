@@ -1,7 +1,7 @@
 import { fireEvent, render, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { richTextFromMarkdown } from "../domain/rich-text";
-import { RichTextEditor, RichTextRenderer } from "./rich-text";
+import { RichTextEditor, RichTextRenderer, shouldShowSelectionToolbar } from "./rich-text";
 
 describe("RichTextEditor", () => {
   it("shows the full accessible toolbar and toggles list formatting visually", () => {
@@ -27,6 +27,20 @@ describe("RichTextEditor", () => {
     const view = render(<RichTextEditor ariaLabel="Bullet row" allowLists={false} value={richTextFromMarkdown("Text")} onChange={vi.fn()} />);
     const toolbar = view.getByRole("toolbar", { name: "Bullet row formatting" });
     expect(within(toolbar).getAllByRole("button").map(button => button.getAttribute("aria-label"))).toEqual(["Normal", "Bold", "Italic", "Underlined"]);
+  });
+
+  it("preserves the active editor selection when formatting controls receive mouse down", () => {
+    const view = render(<RichTextEditor ariaLabel="Selection body" value={richTextFromMarkdown("Selected text")} onChange={vi.fn()} />);
+    const bold = within(view.getByRole("toolbar", { name: "Selection body formatting" })).getByRole("button", { name: "Bold" });
+    const mouseDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    bold.dispatchEvent(mouseDown);
+    expect(mouseDown.defaultPrevented).toBe(true);
+  });
+
+  it("shows the selection toolbar only for a non-empty selection in an editable composer", () => {
+    expect(shouldShowSelectionToolbar({ isEditable: true, from: 2, to: 8 })).toBe(true);
+    expect(shouldShowSelectionToolbar({ isEditable: true, from: 4, to: 4 })).toBe(false);
+    expect(shouldShowSelectionToolbar({ isEditable: false, from: 2, to: 8 })).toBe(false);
   });
 
   it("emits validated ordered-list JSON when Numbers is selected", () => {

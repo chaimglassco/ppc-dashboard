@@ -7,7 +7,7 @@ import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
 import { resolveRichText, richTextToParagraphs, richTextToRoadmapStyle } from "../domain/rich-text";
-import type { ButtonAlignment, ButtonWidth, Category, InsightColor, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, Topic } from "../domain/types";
+import type { ButtonAlignment, ButtonWidth, Category, InsightColor, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, TextAlignment, Topic } from "../domain/types";
 import { getVideoPresentation, normalizeVideoUrl } from "../domain/video-links";
 import { Markdown } from "./markdown";
 import { RichTextEditor, RichTextRenderer } from "./rich-text";
@@ -16,6 +16,8 @@ import styles from "./document-builder.module.css";
 const ELEMENT_OPTIONS: Array<{ type: LibraryContentElementType; label: string }> = [
   { type: "topic", label: "Add Topic" },
   { type: "statement", label: "Centered Statement" },
+  { type: "headline", label: "Headline" },
+  { type: "description", label: "Description" },
   { type: "quote", label: "Blue Callout" },
   { type: "bullets", label: "Bullets" },
   { type: "insight", label: "Key Insight" },
@@ -209,7 +211,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
 function getElementSummary(element: LibraryContentElement, index: number) {
   const typeLabel = isBulletsStyle(element.type) ? "Bullets" : ELEMENT_OPTIONS.find(option => option.type === element.type)?.label ?? element.type;
   if (element.type === "topic") return { typeLabel, title: previewText(element.title || element.label, `Topic ${index + 1}`) };
-  if (element.type === "statement" || element.type === "quote" || element.type === "code") return { typeLabel, title: previewText(element.text, `Untitled ${typeLabel}`) };
+  if (element.type === "statement" || element.type === "headline" || element.type === "description" || element.type === "quote" || element.type === "code") return { typeLabel, title: previewText(element.text, `Untitled ${typeLabel}`) };
   if (isBulletsStyle(element.type)) return { typeLabel, title: previewText(element.items.find(Boolean) ?? "", `Untitled ${typeLabel}`) };
   if (element.type === "table") return { typeLabel, title: previewText(element.columns.filter(Boolean).join(" / "), "Untitled table") };
   if (element.type === "accordion") return { typeLabel, title: previewText(element.dropdowns?.[0]?.title || element.title, "Untitled dropdown") };
@@ -421,6 +423,8 @@ function ElementPreview({ element, onPreviewImage }: { element: LibraryContentEl
     {element.callout || element.calloutRichText ? <div className={styles.quote}><RichTextRenderer value={resolveRichText(element.calloutRichText, element.callout ?? "")} /></div> : null}
   </section>;
   if (element.type === "statement") return <section className={styles.statement}><RichTextRenderer value={resolveRichText(element.richText, element.text)} /></section>;
+  if (element.type === "headline") return <section className={styles.headline} data-text-alignment={element.textAlignment ?? "left"} role="heading" aria-level={2}><RichTextRenderer value={resolveRichText(element.richText, element.text)} /></section>;
+  if (element.type === "description") return <section className={styles.description} data-text-alignment={element.textAlignment ?? "left"}><RichTextRenderer value={resolveRichText(element.richText, element.text)} /></section>;
   if (element.type === "quote") return <section className={styles.quote}><RichTextRenderer value={resolveRichText(element.richText, element.text)} /></section>;
   if (element.type === "bullets") return <ul className={`${styles.list} ${styles.bulletList}`}>{element.items.map((item, index) => item || element.itemRichText?.[index] ? <li key={index}><RichTextRenderer value={resolveRichText(element.itemRichText?.[index], item)} /></li> : null)}</ul>;
   if (element.type === "checklist") return <ul className={styles.checklist}>{element.items.map((item, index) => item || element.itemRichText?.[index] ? <li key={index}><input type="checkbox" disabled aria-label={item || `Checklist item ${index + 1}`} /><RichTextRenderer value={resolveRichText(element.itemRichText?.[index], item)} /></li> : null)}</ul>;
@@ -438,7 +442,7 @@ function ElementPreview({ element, onPreviewImage }: { element: LibraryContentEl
   }
   if (element.type === "code") return <section className={styles.code}><span>{element.label}</span><pre>{previewText(element.text)}</pre></section>;
   if (element.type === "timeline") return <RoadmapPreview element={element} onPreviewImage={onPreviewImage} />;
-  return <section className={styles.flow}>{element.nodes.map((node, index) => <div key={index}><strong>{previewText(node.title, "Flow box title")}</strong>{node.text ? <span>{node.text}</span> : null}</div>)}</section>;
+  return <section className={styles.flow}>{element.nodes.map((node, index) => <div key={index}><strong>{previewText(node.title, "Flow box title")}</strong>{node.description || node.descriptionRichText ? <RichTextRenderer className={styles.flowDescription} value={resolveRichText(node.descriptionRichText, node.description ?? "")} /> : null}{node.text ? <span>{node.text}</span> : null}</div>)}</section>;
 }
 
 function isValidButtonUrl(value: string) {
@@ -560,9 +564,11 @@ function ElementEditor({ element, onUpdate, onDelete, onPreviewImage }: { elemen
     itemRichText: element.items.map((item, itemIndex) => itemIndex === index ? richText : resolveRichText(element.itemRichText?.[itemIndex], item)),
   });
   const updateNode = (index: number, key: "title" | "text", value: string) => onUpdate({ nodes: element.nodes.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item) });
+  const updateNodeDescription = (index: number, descriptionRichText: NonNullable<LibraryContentElement["richText"]>, description: string) => onUpdate({ nodes: element.nodes.map((item, itemIndex) => itemIndex === index ? { ...item, description, descriptionRichText } : item) });
   const editor = (() => {
     if (element.type === "topic") return <section id={element.id} className={styles.topicBlock}><p className={styles.eyebrow}>{element.eyebrow}</p><input className={styles.topicTitleInput} value={element.title} onChange={event => onUpdate({ title: event.target.value, label: event.target.value || element.label })} placeholder="Header topic title" /><span className={styles.rule} /><RichTextEditor ariaLabel="Topic content" value={resolveRichText(element.richText, element.body.join("\n\n"))} onChange={(richText) => onUpdate({ richText, body: richTextToParagraphs(richText) })} placeholder="Topic content..." /><RichTextEditor ariaLabel="Topic callout" value={resolveRichText(element.calloutRichText, element.callout ?? "")} onChange={(calloutRichText, callout) => onUpdate({ calloutRichText, callout })} placeholder="Optional topic callout" /></section>;
     if (element.type === "statement") return <RichTextEditor className={styles.statementEditor} ariaLabel="Centered statement" value={resolveRichText(element.richText, element.text)} onChange={(richText, text) => onUpdate({ richText, text })} placeholder="Centered statement text..." />;
+    if (element.type === "headline" || element.type === "description") return <TextElementEditor element={element} onUpdate={onUpdate} />;
     if (element.type === "quote") return <div className={styles.quote}><RichTextEditor ariaLabel="Blue callout" value={resolveRichText(element.richText, element.text)} onChange={(richText, text) => onUpdate({ richText, text })} placeholder="Blue callout text..." /></div>;
     if (isBulletsStyle(element.type)) {
       const placeholder = element.type === "numbered" ? "Numbered text..." : element.type === "checklist" ? "Checklist item..." : "Bullet text...";
@@ -577,9 +583,25 @@ function ElementEditor({ element, onUpdate, onDelete, onPreviewImage }: { elemen
     if (element.type === "code") return <section className={styles.code}><input value={element.label} onChange={event => onUpdate({ label: event.target.value })} placeholder="Block label" /><textarea value={element.text} onChange={event => onUpdate({ text: event.target.value })} placeholder="Blue text block content..." /></section>;
     if (element.type === "timeline") return <RoadmapEditor element={element} onUpdate={onUpdate} onPreviewImage={onPreviewImage} />;
     if (element.type === "button") return <ButtonEditor element={element} onUpdate={onUpdate} />;
-    return <section className={styles.flowEditor}>{element.nodes.map((node, index) => <div key={index}><input value={node.title} onChange={event => updateNode(index, "title", event.target.value)} placeholder="Flow box title" /><input value={node.text} onChange={event => updateNode(index, "text", event.target.value)} placeholder="Connector text" /></div>)}<button type="button" onClick={() => onUpdate({ nodes: [...element.nodes, { title: "", text: "" }] })}>Add flow step</button></section>;
+    return <section className={styles.flowEditor}>{element.nodes.map((node, index) => <div key={index}><input className={styles.flowTitleInput} value={node.title} onChange={event => updateNode(index, "title", event.target.value)} placeholder="Flow box title" /><RichTextEditor ariaLabel={`Flow step ${index + 1} description`} value={resolveRichText(node.descriptionRichText, node.description ?? "")} onChange={(richText, description) => updateNodeDescription(index, richText, description)} placeholder="Flow step description..." /><input className={styles.flowConnectorInput} value={node.text} onChange={event => updateNode(index, "text", event.target.value)} placeholder="Connector text" /></div>)}<button type="button" onClick={() => onUpdate({ nodes: [...element.nodes, { title: "", text: "", description: "" }] })}>Add flow step</button></section>;
   })();
   return <div className={styles.editorShell}><button className={styles.deleteBlock} type="button" onClick={onDelete} aria-label={`Delete ${element.type} block`}><Trash2 /></button>{editor}</div>;
+}
+
+function TextElementEditor({ element, onUpdate }: { element: LibraryContentElement; onUpdate: (updates: Partial<LibraryContentElement>) => void }) {
+  const alignment = element.textAlignment ?? "left";
+  const isHeadline = element.type === "headline";
+  return <section className={`${styles.textElementEditor} ${isHeadline ? styles.headlineEditor : styles.descriptionEditor}`} data-text-alignment={alignment}>
+    <TextAlignmentTabs value={alignment} onChange={textAlignment => onUpdate({ textAlignment })} />
+    <RichTextEditor ariaLabel={isHeadline ? "Headline" : "Description"} allowLists={!isHeadline} value={resolveRichText(element.richText, element.text)} onChange={(richText, text) => onUpdate({ richText, text })} placeholder={isHeadline ? "Headline text..." : "Description text..."} />
+  </section>;
+}
+
+function TextAlignmentTabs({ value, onChange }: { value: TextAlignment; onChange: (alignment: TextAlignment) => void }) {
+  const alignments: Array<{ value: TextAlignment; label: string }> = [{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }];
+  return <div className={styles.textAlignmentTabs} role="group" aria-label="Text alignment">
+    {alignments.map(option => <button key={option.value} type="button" aria-pressed={value === option.value} onClick={() => onChange(option.value)}>{option.label}</button>)}
+  </div>;
 }
 
 function BulletsStyleTabs({ value, onChange }: { value: BulletsStyle; onChange: (style: BulletsStyle) => void }) {
@@ -734,5 +756,17 @@ function TableEditor({ element, onUpdate }: { element: LibraryContentElement; on
     window.addEventListener("pointerup", onUp, { once: true });
   };
   const addColumn = () => onUpdate({ columns: [...element.columns, ""], rows: element.rows.map(row => [...row, ""]), columnWidths: columnWidths ? [...columnWidths, 150] : undefined });
-  return <div className={styles.tableEditor}><div className={styles.tableWrap}><table className={columnWidths ? styles.sizedTable : undefined} style={columnWidths ? { minWidth: columnWidths.reduce((total, width) => total + width, 0) } : undefined}>{columnWidths ? <colgroup>{columnWidths.map((width, index) => <col key={index} style={{ width }} />)}</colgroup> : null}<thead><tr>{element.columns.map((column, index) => <th key={index}><input className={styles.input} value={column} onChange={event => updateColumn(index, event.target.value)} placeholder="Column" /><button className={styles.columnResize} type="button" onPointerDown={event => startColumnResize(index, event)} aria-label={`Resize column ${index + 1}`} /></th>)}</tr></thead><tbody>{element.rows.map((row, rowIndex) => <tr key={rowIndex}>{element.columns.map((_, columnIndex) => <td key={columnIndex}><textarea className={styles.area} value={row[columnIndex] ?? ""} onChange={event => updateCell(rowIndex, columnIndex, event.target.value)} placeholder="Cell text" /></td>)}</tr>)}</tbody></table></div><div><button type="button" onClick={addColumn}>Add column</button><button type="button" onClick={() => onUpdate({ rows: [...element.rows, element.columns.map(() => "")] })}>Add row</button></div></div>;
+  const deleteColumn = (index: number) => {
+    if (element.columns.length <= 1) return;
+    onUpdate({
+      columns: element.columns.filter((_, columnIndex) => columnIndex !== index),
+      rows: element.rows.map(row => row.filter((_, columnIndex) => columnIndex !== index)),
+      columnWidths: columnWidths?.filter((_, columnIndex) => columnIndex !== index),
+    });
+  };
+  const deleteRow = (index: number) => {
+    if (element.rows.length <= 1) return;
+    onUpdate({ rows: element.rows.filter((_, rowIndex) => rowIndex !== index) });
+  };
+  return <div className={styles.tableEditor}><div className={styles.tableWrap}><table className={columnWidths ? styles.sizedTable : undefined} style={columnWidths ? { minWidth: columnWidths.reduce((total, width) => total + width, 0) } : undefined}>{columnWidths ? <colgroup>{columnWidths.map((width, index) => <col key={index} style={{ width }} />)}<col className={styles.tableActionColumn} /></colgroup> : null}<thead><tr>{element.columns.map((column, index) => <th key={index}><input className={styles.input} value={column} onChange={event => updateColumn(index, event.target.value)} placeholder="Column" /><button className={styles.deleteTableColumn} type="button" onClick={() => deleteColumn(index)} disabled={element.columns.length <= 1} aria-label={`Delete column ${index + 1}`} title={element.columns.length <= 1 ? "A table must keep at least one column" : `Delete column ${index + 1}`}><Trash2 /></button><button className={styles.columnResize} type="button" onPointerDown={event => startColumnResize(index, event)} aria-label={`Resize column ${index + 1}`} /></th>)}<th className={styles.tableActionHeader} aria-label="Row actions" /></tr></thead><tbody>{element.rows.map((row, rowIndex) => <tr key={rowIndex}>{element.columns.map((_, columnIndex) => <td key={columnIndex}><textarea className={styles.area} value={row[columnIndex] ?? ""} onChange={event => updateCell(rowIndex, columnIndex, event.target.value)} placeholder="Cell text" /></td>)}<td className={styles.tableRowAction}><button type="button" onClick={() => deleteRow(rowIndex)} disabled={element.rows.length <= 1} aria-label={`Delete row ${rowIndex + 1}`} title={element.rows.length <= 1 ? "A table must keep at least one row" : `Delete row ${rowIndex + 1}`}><Trash2 /></button></td></tr>)}</tbody></table></div><div><button type="button" onClick={addColumn}>Add column</button><button type="button" onClick={() => onUpdate({ rows: [...element.rows, element.columns.map(() => "")] })}>Add row</button></div></div>;
 }

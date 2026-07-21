@@ -23,7 +23,12 @@ describe("document content elements", () => {
     expect(createBlankContentElement("timeline", 1)).toMatchObject({ alignment: "left", steps: [{ imageUrl: "", textStyle: "plain" }, { imageUrl: "", textStyle: "plain" }] });
     expect(createBlankContentElement("gallery", 1)).toMatchObject({ galleryColumns: 1, images: [{ url: "", alt: "" }] });
     expect(createBlankContentElement("button", 1)).toMatchObject({ buttonText: "", buttonUrl: "", buttonWidth: "medium", buttonAlignment: "center" });
-    expect(createBlankContentElement("flowchart", 1).nodes).toHaveLength(2);
+    expect(createBlankContentElement("headline", 1)).toMatchObject({ textAlignment: "left" });
+    expect(createBlankContentElement("description", 1)).toMatchObject({ textAlignment: "left" });
+    expect(createBlankContentElement("flowchart", 1).nodes).toEqual([
+      { title: "", text: "", description: "" },
+      { title: "", text: "", description: "" },
+    ]);
   });
 
   it("derives numbered reader topics from topic blocks only", () => {
@@ -38,5 +43,11 @@ describe("document content elements", () => {
     const elements = getInitialContentElements(structured);
     expect(elements[0].dropdowns).toHaveLength(2);
     expect(elements[1].columnWidths).toEqual([180, 320]);
+  });
+
+  it("hydrates legacy diagnostic-flow nodes with empty rich-text descriptions", () => {
+    const flow = { ...createBlankContentElement("flowchart", 1), nodes: [{ title: "Legacy step", text: "Continue" }] };
+    const [hydrated] = getInitialContentElements({ ...document, contentElements: [flow] });
+    expect(hydrated.nodes[0]).toMatchObject({ title: "Legacy step", text: "Continue", description: "", descriptionRichText: { type: "doc" } });
   });
 });

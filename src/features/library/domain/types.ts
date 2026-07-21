@@ -2,8 +2,9 @@ export const CATEGORIES=["Amazon PPC Foundations","Campaign Structure","Keyword 
 export const DOCUMENT_TYPES=["Guide","SOP","Checklist","Template","Playbook"] as const;
 export type Category=string; export type DocumentType=typeof DOCUMENT_TYPES[number];
 export type Topic={id:string;title:string;level:number};
-export type LibraryContentElementType="topic"|"statement"|"quote"|"bullets"|"checklist"|"numbered"|"insight"|"table"|"accordion"|"feature"|"code"|"timeline"|"flowchart"|"gallery"|"button";
+export type LibraryContentElementType="topic"|"statement"|"headline"|"description"|"quote"|"bullets"|"checklist"|"numbered"|"insight"|"table"|"accordion"|"feature"|"code"|"timeline"|"flowchart"|"gallery"|"button";
 export type RoadmapAlignment="left"|"center"|"right";
+export type TextAlignment="left"|"center"|"right";
 export type RoadmapNumberPosition="left"|"center"|"right";
 export type RoadmapTextStyle="plain"|"bullets"|"checklist"|"numbered";
 export type RichTextMark={type:"bold"|"italic"|"underline"};
@@ -11,6 +12,7 @@ export type RichTextNode={type:string;text?:string;attrs?:{checked?:boolean;star
 export type RichTextDocument=RichTextNode&{type:"doc";content:RichTextNode[]};
 export type RoadmapStep={title:string;text:string;richText?:RichTextDocument;imageUrl?:string;textStyle?:RoadmapTextStyle};
 export type LibraryDropdown={title:string;text:string;richText?:RichTextDocument};
+export type DiagnosticFlowNode={title:string;text:string;description?:string;descriptionRichText?:RichTextDocument};
 export type ButtonWidth="full"|"large"|"medium"|"small";
 export type ButtonAlignment="left"|"center"|"right";
 export type InsightColor="green"|"blue"|"red";
@@ -38,8 +40,9 @@ export type LibraryContentElement={
   imageUrl:string;
   steps:RoadmapStep[];
   alignment?:RoadmapAlignment;
+  textAlignment?:TextAlignment;
   numberPosition?:RoadmapNumberPosition;
-  nodes:Array<{title:string;text:string}>;
+  nodes:DiagnosticFlowNode[];
   dropdowns?:LibraryDropdown[];
   galleryColumns?:1|2|3|4;
   images?:Array<{url:string;alt:string}>;

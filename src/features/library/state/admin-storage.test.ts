@@ -29,4 +29,15 @@ describe("admin library storage", () => {
     expect(parsed?.text).toBe("Legacy fallback");
     expect(parsed?.richText).toBeUndefined();
   });
+  it("accepts aligned text elements and sanitizes diagnostic-flow description rich text", () => {
+    const headline = { ...createBlankContentElement("headline", 1), text: "Headline", textAlignment: "right" as const };
+    const flow = { ...createBlankContentElement("flowchart", 1), nodes: [{ title: "Step", text: "Next", description: "Legacy description", descriptionRichText: { type: "doc", content: [{ type: "script", text: "bad" }] } }] };
+    const valid = JSON.stringify({ version: 1, documents: [{ ...seed[0], contentElements: [headline, flow] }] });
+    const parsed = parseAdminLibraryState(valid)?.documents[0].contentElements;
+    expect(parsed?.[0]).toMatchObject({ type: "headline", textAlignment: "right" });
+    expect(parsed?.[1].nodes[0]).toMatchObject({ description: "Legacy description", descriptionRichText: undefined });
+
+    const invalid = JSON.stringify({ version: 1, documents: [{ ...seed[0], contentElements: [{ ...headline, textAlignment: "justify" }] }] });
+    expect(parseAdminLibraryState(invalid)?.documents).toHaveLength(0);
+  });
 });

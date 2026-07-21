@@ -30,6 +30,9 @@ The PPC Dashboard checkout contains an unreleased video-header placement update.
 - Gallery full-image previews now reuse each tile’s already-resolved image source, so opening the modal does not trigger another authenticated media download.
 - Key Insight remains one builder element and now includes persistent Green, Blue, and Red color tabs; missing legacy `insightColor` values render Green.
 - Bullet Text, Checklist Bullets, and Numbered Text are consolidated into one **Bullets** picker item with Bullets, Checklist, and Numbers tabs. Existing saved list types remain compatible.
+- Diagnostic Flow steps now include independent multiline rich-text descriptions above their connector labels; legacy nodes hydrate with empty descriptions.
+- Text selections open a viewport-aware formatting Bubble Menu while the fixed composer toolbar remains available, and large-text elements no longer enlarge toolbar controls.
+- Editable Tables can delete exact rows and columns while retaining at least one of each. Standalone Headline and Description elements provide Left/Center/Right alignment with inline-only and full formatting respectively.
 - The square Gallery presentation, catalog hydration fix, and Google Drive `/preview` URL support are already included in synchronized commit `d792d4c`.
 
 ## What is implemented
@@ -67,7 +70,7 @@ npm test
 npm run build
 ```
 
-All passed with 16 test files and 87 tests.
+All passed with 16 test files and 94 tests.
 
 Product Pipeline:
 
@@ -119,6 +122,7 @@ Move Pipeline authentication to secure same-origin cookies and enforce authentic
 - Reader content uses static React rendering; checklist state persists and reader checkboxes are disabled.
 - Optional JSON fields coexist with synchronized legacy strings. Legacy Markdown converts lazily, and malformed rich JSON falls back to saved text.
 - Standalone list rows intentionally expose inline formatting only.
-- Automated status at handoff: lint, typecheck, all 87 tests, and the 15-route production build pass. Rerun all four gates after any further changes.
+- Automated status at handoff: lint, typecheck, all 94 tests, and the 15-route production build pass. Rerun all four gates after any further changes.
+- Authenticated browser verification covers the new selection toolbar, Headline/Description picker and alignment controls, Diagnostic Flow descriptions, exact table deletion safeguards, compact 11px/32px toolbar controls, desktop layout, and a 390px viewport. All verification edits were discarded without saving and produced no browser warnings or errors.
 - Authenticated browser verification now passes through a temporary local same-origin gateway that mirrors the production Pipeline `/ppc/*` rewrite: real Pipeline ADMIN login, PPC session verification, selection-aware Bold/Underline/Checklist editing, checked checklist persistence, save, reader rendering, full refresh, return to edit mode, and cleanup were verified against the production PPC build with no browser warnings or errors. The gateway and test content were removed afterward; no authentication bypass was added.
 - Rich-text list presentation explicitly restores disc and decimal markers removed by the Tailwind reset. Task-list items use the actual editor/reader DOM contract so checkbox and copy remain in one aligned row. Ordered-list editor JSON drops Tiptap's unsupported `type: null` attribute before strict validation, allowing numbered formatting to persist after save.

@@ -22,8 +22,9 @@ const emptyElement = (type: LibraryContentElementType, id: string): LibraryConte
   imageUrl: "",
   steps: [{ title: "", text: "", imageUrl: "", textStyle: "plain" }],
   alignment: type === "timeline" ? "left" : undefined,
+  textAlignment: type === "headline" || type === "description" ? "left" : undefined,
   numberPosition: type === "timeline" ? "left" : undefined,
-  nodes: [{ title: "", text: "" }],
+  nodes: [{ title: "", text: "", description: "" }],
   dropdowns: type === "accordion" ? [{ title: "", text: "" }] : undefined,
   galleryColumns: type === "gallery" ? 1 : undefined,
   images: type === "gallery" ? [{ url: "", alt: "" }] : undefined,
@@ -37,7 +38,7 @@ export function createBlankContentElement(type: LibraryContentElementType, partN
   if (type === "timeline") return { ...element, alignment: "left" as const, numberPosition: "left" as const, steps: [{ title: "", text: "", imageUrl: "", textStyle: "plain" as const }, { title: "", text: "", imageUrl: "", textStyle: "plain" as const }] };
   if (type === "gallery") return { ...element, galleryColumns: 1 as const, images: [{ url: "", alt: "" }] };
   if (type === "button") return { ...element, buttonText: "", buttonUrl: "", buttonWidth: "medium" as const, buttonAlignment: "center" as const };
-  if (type === "flowchart") return { ...element, nodes: [{ title: "", text: "" }, { title: "", text: "" }] };
+  if (type === "flowchart") return { ...element, nodes: [{ title: "", text: "", description: "" }, { title: "", text: "", description: "" }] };
   return element;
 }
 
@@ -76,14 +77,18 @@ function cloneElement(element: LibraryContentElement): LibraryContentElement {
       ...step,
       richText: resolveRichText(step.richText, step.text, step.textStyle ?? "plain"),
     })),
-    nodes: element.nodes.map(node => ({ ...node })),
+    nodes: element.nodes.map(node => ({
+      ...node,
+      description: node.description ?? "",
+      descriptionRichText: resolveRichText(node.descriptionRichText, node.description ?? ""),
+    })),
     dropdowns: element.dropdowns?.map(dropdown => ({
       ...dropdown,
       richText: resolveRichText(dropdown.richText, dropdown.text),
     })),
     images: element.images?.map(image => ({ ...image })),
   };
-  if (["topic", "statement", "quote", "insight", "feature"].includes(element.type)) {
+  if (["topic", "statement", "headline", "description", "quote", "insight", "feature"].includes(element.type)) {
     const fallback = element.type === "topic" ? element.body.join("\n\n") : element.text;
     next.richText = resolveRichText(element.richText, fallback);
   }

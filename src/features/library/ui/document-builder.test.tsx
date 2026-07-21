@@ -15,6 +15,10 @@ function installSharedImageFetch(url: string) {
   return fetchMock;
 }
 
+function pastePlainText(target: HTMLElement, value: string) {
+  fireEvent.paste(target, { clipboardData: { types: ["text/plain"], getData: (type: string) => type === "text/plain" ? value : "" } });
+}
+
 describe("DocumentBuilder metadata editing", () => {
   it("edits and saves the title, description, and category inside document edit mode", async () => {
     const document = getPublishedDocuments()[0];
@@ -131,6 +135,89 @@ describe("DocumentBuilder element insertion", () => {
     fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0][0][0]).toMatchObject({ type: "numbered", items: ["Keep this item"] });
+  });
+});
+
+describe("DocumentBuilder diagnostic flows", () => {
+  it("adds and saves a multiline rich-text description separately from connector text", async () => {
+    const baseDocument = getPublishedDocuments()[0];
+    const flow = { ...createBlankContentElement("flowchart", 1), nodes: [{ title: "Check performance", text: "If inefficient" }] };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [flow] }} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+
+    expect(controls.queryByText("Flow description line one")).not.toBeInTheDocument();
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    const description = controls.getByRole("textbox", { name: "Flow step 1 description" });
+    pastePlainText(description, "Flow description line one\nFlow description line two");
+    await waitFor(() => expect(description).toHaveTextContent("Flow description line one"));
+    expect(controls.getByDisplayValue("If inefficient")).toHaveAttribute("placeholder", "Connector text");
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0][0].nodes[0]).toMatchObject({ title: "Check performance", text: "If inefficient", description: expect.stringContaining("Flow description line one"), descriptionRichText: { type: "doc" } });
+    expect(controls.getByText("Flow description line one")).toBeInTheDocument();
+    expect(controls.getByText("If inefficient")).toBeInTheDocument();
+  });
+});
+
+describe("DocumentBuilder aligned text elements", () => {
+  it("offers separate Headline and Description elements and persists their formatting alignment", async () => {
+    const baseDocument = getPublishedDocuments()[0];
+    const headline = createBlankContentElement("headline", 1);
+    const description = createBlankContentElement("description", 1);
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [headline, description] }} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Add document element" })[0]);
+    expect(controls.getAllByRole("button", { name: "Headline" })).toHaveLength(2);
+    expect(controls.getAllByRole("button", { name: "Description" })).toHaveLength(2);
+    fireEvent.click(controls.getAllByRole("button", { name: "Add document element" })[0]);
+
+    const headlineTextbox = controls.getByRole("textbox", { name: "Headline" });
+    const descriptionTextbox = controls.getByRole("textbox", { name: "Description" });
+    const headlineEditor = headlineTextbox.closest<HTMLElement>('[data-text-alignment="left"]');
+    const descriptionEditor = descriptionTextbox.closest<HTMLElement>('[data-text-alignment="left"]');
+    expect(headlineEditor).not.toBeNull();
+    expect(descriptionEditor).not.toBeNull();
+    expect(within(controls.getByRole("toolbar", { name: "Headline formatting" })).queryByRole("button", { name: "Bullets" })).not.toBeInTheDocument();
+    expect(within(controls.getByRole("toolbar", { name: "Description formatting" })).getByRole("button", { name: "Bullets" })).toBeInTheDocument();
+    pastePlainText(headlineTextbox, "Aligned headline");
+    pastePlainText(descriptionTextbox, "Aligned description");
+    fireEvent.click(within(headlineEditor as HTMLElement).getByRole("button", { name: "Center" }));
+    fireEvent.click(within(descriptionEditor as HTMLElement).getByRole("button", { name: "Right" }));
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0][0]).toMatchObject({ type: "headline", text: "Aligned headline", textAlignment: "center", richText: { type: "doc" } });
+    expect(onSave.mock.calls[0][0][1]).toMatchObject({ type: "description", text: "Aligned description", textAlignment: "right", richText: { type: "doc" } });
+    expect(controls.getByText("Aligned headline").closest("section")).toHaveAttribute("data-text-alignment", "center");
+    expect(controls.getByText("Aligned description").closest("section")).toHaveAttribute("data-text-alignment", "right");
+  });
+});
+
+describe("DocumentBuilder editable tables", () => {
+  it("deletes the selected row and column, keeps widths synchronized, and preserves one of each", async () => {
+    const baseDocument = getPublishedDocuments()[0];
+    const table = { ...createBlankContentElement("table", 1), columns: ["First", "Second"], rows: [["A1", "A2"], ["B1", "B2"]], columnWidths: [180, 260] };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const view = render(<DocumentBuilder canEdit doc={{ ...baseDocument, contentElements: [table] }} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    fireEvent.click(controls.getByRole("button", { name: "Delete column 2" }));
+    expect(controls.queryByDisplayValue("Second")).not.toBeInTheDocument();
+    expect(controls.queryByDisplayValue("A2")).not.toBeInTheDocument();
+    fireEvent.click(controls.getByRole("button", { name: "Delete row 2" }));
+    expect(controls.queryByDisplayValue("B1")).not.toBeInTheDocument();
+    expect(controls.getByRole("button", { name: "Delete column 1" })).toBeDisabled();
+    expect(controls.getByRole("button", { name: "Delete row 1" })).toBeDisabled();
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0][0]).toMatchObject({ columns: ["First"], rows: [["A1"]], columnWidths: [180] });
   });
 });
 

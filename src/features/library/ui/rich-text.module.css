@@ -1,7 +1,8 @@
 .composer{overflow:hidden;border:1px solid #c8d7ee;border-radius:11px;background:#fff;color:#0a1f3a}
 .toolbar{display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-bottom:1px solid #dbe5f3;background:#f7f9fd}
-.toolbar button{display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:5px 8px;border:1px solid transparent;border-radius:7px;background:transparent;color:#164b9f;font:700 11px/1.1 inherit;cursor:pointer}
+.toolbar button,.bubbleToolbar button{display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:5px 8px;border:1px solid transparent;border-radius:7px;background:transparent;color:#164b9f;font-family:inherit;font-size:11px;font-weight:700;line-height:1.1;cursor:pointer}
 .toolbar button:hover{background:#eaf2ff}.toolbar button[aria-pressed="true"]{border-color:#9fc0f3;background:#dceaff;color:#0648b6}.toolbar button:focus-visible{outline:2px solid #1b66dc;outline-offset:1px}.toolbar button:disabled{cursor:not-allowed;opacity:.5}.toolbar svg{width:15px;height:15px;stroke-width:2}
+.bubbleToolbar{z-index:120;display:flex;flex-wrap:wrap;gap:3px;max-width:min(520px,calc(100vw - 24px));padding:5px;border:1px solid #c8d7ee;border-radius:10px;background:#fff;box-shadow:0 12px 32px rgba(11,28,48,.22)}.bubbleToolbar button:hover{background:#eaf2ff}.bubbleToolbar button[aria-pressed="true"]{border-color:#9fc0f3;background:#dceaff;color:#0648b6}.bubbleToolbar button:focus-visible{outline:2px solid #1b66dc;outline-offset:1px}.bubbleToolbar button:disabled{cursor:not-allowed;opacity:.5}.bubbleToolbar svg{width:15px;height:15px;stroke-width:2}
 .editable{min-height:112px;padding:13px;outline:none;white-space:pre-wrap}
 .editable:empty::before{color:#8090a8;content:attr(data-placeholder);pointer-events:none}
 .content,.editable{font:400 15px/1.65 inherit;color:inherit}

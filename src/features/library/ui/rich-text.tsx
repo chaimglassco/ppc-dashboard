@@ -5,6 +5,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
+import { BubbleMenu, type BubbleMenuProps } from "@tiptap/react/menus";
 import { renderJSONContentToReactElement } from "@tiptap/static-renderer/json/react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { isRichTextDocument, richTextToPlainText } from "../domain/rich-text";
@@ -85,6 +86,14 @@ type RichTextEditorProps = {
   className?: string;
 };
 
+export function shouldShowSelectionToolbar({ isEditable, from, to }: { isEditable: boolean; from: number; to: number }) {
+  return isEditable && from !== to;
+}
+
+const bubbleMenuShouldShow: NonNullable<BubbleMenuProps["shouldShow"]> = ({ editor, from, to }) => shouldShowSelectionToolbar({ isEditable: editor.isEditable, from, to });
+const bubbleMenuOptions = { strategy: "fixed", placement: "top", offset: 8, flip: true, shift: true } as const;
+const appendBubbleMenuToBody = () => document.body;
+
 export function RichTextEditor({ value, onChange, ariaLabel, placeholder = "Start typing…", allowLists = true, className = "" }: RichTextEditorProps) {
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -133,19 +142,25 @@ export function RichTextEditor({ value, onChange, ariaLabel, placeholder = "Star
       {icon}<span>{label}</span>
     </button>
   );
+  const formattingButtons = () => <>
+    {toolbarButton("Normal", !(active?.bold || active?.italic || active?.underline), <Pilcrow aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).unsetAllMarks().unsetBold().unsetItalic().unsetUnderline().run())}
+    {toolbarButton("Bold", Boolean(active?.bold), <Bold aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleBold().run())}
+    {toolbarButton("Italic", Boolean(active?.italic), <Italic aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleItalic().run())}
+    {toolbarButton("Underlined", Boolean(active?.underline), <UnderlineIcon aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleUnderline().run())}
+    {allowLists ? <>
+      {toolbarButton("Bullets", Boolean(active?.bulletList), <List aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleBulletList().run())}
+      {toolbarButton("Checklist", Boolean(active?.taskList), <ListChecks aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleTaskList().run())}
+      {toolbarButton("Numbers", Boolean(active?.orderedList), <ListOrdered aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleOrderedList().run())}
+    </> : null}
+  </>;
 
   return <section className={`${styles.composer} ${className}`.trim()}>
     <div className={styles.toolbar} role="toolbar" aria-label={`${ariaLabel} formatting`}>
-      {toolbarButton("Normal", !(active?.bold || active?.italic || active?.underline), <Pilcrow aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).unsetAllMarks().unsetBold().unsetItalic().unsetUnderline().run())}
-      {toolbarButton("Bold", Boolean(active?.bold), <Bold aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleBold().run())}
-      {toolbarButton("Italic", Boolean(active?.italic), <Italic aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleItalic().run())}
-      {toolbarButton("Underlined", Boolean(active?.underline), <UnderlineIcon aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleUnderline().run())}
-      {allowLists ? <>
-        {toolbarButton("Bullets", Boolean(active?.bulletList), <List aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleBulletList().run())}
-        {toolbarButton("Checklist", Boolean(active?.taskList), <ListChecks aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleTaskList().run())}
-        {toolbarButton("Numbers", Boolean(active?.orderedList), <ListOrdered aria-hidden="true" />, () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleOrderedList().run())}
-      </> : null}
+      {formattingButtons()}
     </div>
+    {editor ? <BubbleMenu editor={editor} appendTo={appendBubbleMenuToBody} shouldShow={bubbleMenuShouldShow} options={bubbleMenuOptions} className={styles.bubbleToolbar} role="toolbar" aria-label={`${ariaLabel} selection formatting`}>
+      {formattingButtons()}
+    </BubbleMenu> : null}
     <EditorContent editor={editor} />
   </section>;
 }
