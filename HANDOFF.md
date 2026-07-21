@@ -1,6 +1,6 @@
 # Glassco PPC Dashboard Handoff
 
-Last updated: July 17, 2026
+Last updated: July 21, 2026
 
 ## Start here
 
@@ -14,15 +14,22 @@ Canonical production URLs:
 
 Local repositories:
 
-- PPC Dashboard: `C:\Users\HomePC\Documents\PPC Dashboard`
+- PPC Dashboard: `C:\Users\HomePC\Documents\GitHub\ppc-dashboard`
 - Product Pipeline: `C:\Users\HomePC\Documents\GitHub\pipeline`
 
 Current production commits:
 
-- PPC Dashboard: `0ce977d` — `Integrate PPC dashboard with Pipeline gateway`
-- Product Pipeline: `f19a7ce` — `Add unified Glassco app gateway`
+- PPC Dashboard: `8060b8d` — latest production deployment before the local video-player update
+- Product Pipeline: `c507888` — current synchronized gateway repository state
 
-Both repositories were clean and synchronized with `origin/main` at handoff.
+The PPC Dashboard checkout contains an unreleased Library video-player update. Pipeline remains synchronized with `origin/main`.
+
+## Unreleased local work
+
+- Moved document videos out of the blue header and into a large responsive 16:9 section immediately below it.
+- Added embedded playback for YouTube and Google Drive shared-file URLs, native playback for direct MP4/WebM/OGG URLs, and a safe fallback for other HTTPS links.
+- Added pure URL-presentation tests. Lint, TypeScript, 13 test files/72 tests, and the production build pass.
+- Browser verification reached the Pipeline sign-in gate; the signed-in reader flow still needs a final visual smoke test before release.
 
 ## What is implemented
 
@@ -59,7 +66,7 @@ npm test
 npm run build
 ```
 
-All passed with 12 test files and 62 tests.
+All passed with 13 test files and 72 tests.
 
 Product Pipeline:
 

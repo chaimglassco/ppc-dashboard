@@ -84,11 +84,12 @@ The existing `.gitignore` already excludes these paths.
 16. Upload Feature Card and Gallery images, switch every Gallery layout, and confirm minimum slots, responsive grids, shared previews, replacement, and removal.
    Confirm the preview request includes authenticated media access and displays the actual image rather than a broken image icon.
 17. Add Buttons for internal and HTTPS links; verify every width/alignment option, invalid-link feedback, secure new-tab attributes, and mobile full-width behavior.
-18. Open a private browser window and confirm that temporary document is visible.
-19. Add and reorder temporary document elements, then confirm the saved order in the private window.
-20. Check the browser console for hydration or runtime errors.
-21. Confirm mobile layout at approximately 390px width.
-22. Confirm the Product Pipeline/PPC Dashboard tabs appear in the reserved top bar, show white text for the active app, switch to the remembered route, and never overlap page content.
+18. Add a shared Google Drive video link and confirm a large 16:9 Drive preview player appears below the blue document header. Confirm the file is shared with the intended viewers and the original link opens from OPEN VIDEO.
+19. Open a private browser window and confirm that temporary document is visible.
+20. Add and reorder temporary document elements, then confirm the saved order in the private window.
+21. Check the browser console for hydration or runtime errors.
+22. Confirm mobile layout at approximately 390px width.
+23. Confirm the Product Pipeline/PPC Dashboard tabs appear in the reserved top bar, show white text for the active app, switch to the remembered route, and never overlap page content.
 
 ## Temporary access warning
 

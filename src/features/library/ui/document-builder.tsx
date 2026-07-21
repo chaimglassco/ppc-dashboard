@@ -7,6 +7,7 @@ import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
 import type { ButtonAlignment, ButtonWidth, Category, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, RoadmapTextStyle, Topic } from "../domain/types";
+import { getVideoPresentation, normalizeVideoUrl } from "../domain/video-links";
 import { Markdown } from "./markdown";
 import styles from "./document-builder.module.css";
 
@@ -161,7 +162,8 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
         {canEdit ? <BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} /> : null}
       </aside>
       <article className={`prose ${styles.document}`}>
-        <DocumentHeader doc={doc} metadata={metadata} categories={categoryOptions} isEditMode={isEditMode} onMetadataChange={updates => setMetadata(current => ({ ...current, ...updates }))} onSaveVideoUrl={onSaveVideoUrl} />
+        <DocumentHeader doc={doc} metadata={metadata} categories={categoryOptions} isEditMode={isEditMode} onMetadataChange={updates => setMetadata(current => ({ ...current, ...updates }))} />
+        <DocumentVideo doc={doc} isEditMode={isEditMode} onSaveVideoUrl={onSaveVideoUrl} />
         {isEditMode ? (
           <div className={styles.reorderBar} aria-label="Document element controls">
             <button
@@ -323,24 +325,41 @@ function BuilderControls({ isEditMode, isSaving, isOpen, notice, onToggle, onTog
   </div>;
 }
 
-function DocumentHeader({ doc, metadata, categories, isEditMode, onMetadataChange, onSaveVideoUrl }: { doc: LibraryDocument; metadata: DocumentMetadataDraft; categories: Category[]; isEditMode: boolean; onMetadataChange: (updates: Partial<DocumentMetadataDraft>) => void; onSaveVideoUrl: (url: string) => Promise<void> | void }) {
+function DocumentHeader({ doc, metadata, categories, isEditMode, onMetadataChange }: { doc: LibraryDocument; metadata: DocumentMetadataDraft; categories: Category[]; isEditMode: boolean; onMetadataChange: (updates: Partial<DocumentMetadataDraft>) => void }) {
+  return <header className={`reader-header ${styles.documentHeader} ${isEditMode ? styles.editingHeader : ""}`}>
+    <div className={styles.headerCopy}>
+      {isEditMode ? <div className={styles.metadataEditor}>
+        <label><span>Category</span><select aria-label="Document category" value={metadata.category} onChange={event => onMetadataChange({ category: event.target.value })}>{categories.map(category => <option key={category} value={category}>{category}</option>)}</select></label>
+        <label><span>Document title</span><textarea className={styles.metadataTitle} aria-label="Document title" value={metadata.title} onChange={event => onMetadataChange({ title: event.target.value })} rows={2} required /></label>
+        <label><span>Description</span><textarea aria-label="Document description" value={metadata.description} onChange={event => onMetadataChange({ description: event.target.value })} rows={3} /></label>
+      </div> : <>
+        <div className="eyebrow">{metadata.category} · {doc.type}</div>
+        <h1>{metadata.title}</h1>
+        <p>{metadata.description}</p>
+      </>}
+      <div className="reader-meta"><span>Updated {new Date(doc.updatedAt).toLocaleDateString("en", { month: "long", day: "numeric", year: "numeric" })}</span><span>{doc.readingMinutes} min read</span></div>
+    </div>
+  </header>;
+}
+
+function DocumentVideo({ doc, isEditMode, onSaveVideoUrl }: { doc: LibraryDocument; isEditMode: boolean; onSaveVideoUrl: (url: string) => Promise<void> | void }) {
   const videoUrl = normalizeVideoUrl(doc.videoUrl ?? "");
-  const videoThumbnailUrl = getYouTubeThumbnailUrl(videoUrl);
+  const video = getVideoPresentation(videoUrl);
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(videoUrl);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const saveVideo = async () => {
-    const value = draft.trim();
-    const normalizedUrl = normalizeVideoUrl(value);
+    const normalizedUrl = normalizeVideoUrl(draft);
     if (!normalizedUrl) {
-      setError("Enter a valid YouTube or HTTPS video link.");
+      setError("Enter a valid YouTube, Google Drive, or HTTPS video link.");
       return;
     }
     setIsSaving(true);
     try {
       await onSaveVideoUrl(normalizedUrl);
+      setDraft(normalizedUrl);
       setError("");
       setIsEditing(false);
     } catch (saveError) {
@@ -364,66 +383,29 @@ function DocumentHeader({ doc, metadata, categories, isEditMode, onMetadataChang
     }
   };
 
-  return <header className={`reader-header ${styles.documentHeader} ${isEditMode ? styles.editingHeader : ""}`}>
-    <div className={styles.headerCopy}>
-      {isEditMode ? <div className={styles.metadataEditor}>
-        <label><span>Category</span><select aria-label="Document category" value={metadata.category} onChange={event => onMetadataChange({ category: event.target.value })}>{categories.map(category => <option key={category} value={category}>{category}</option>)}</select></label>
-        <label><span>Document title</span><textarea className={styles.metadataTitle} aria-label="Document title" value={metadata.title} onChange={event => onMetadataChange({ title: event.target.value })} rows={2} required /></label>
-        <label><span>Description</span><textarea aria-label="Document description" value={metadata.description} onChange={event => onMetadataChange({ description: event.target.value })} rows={3} /></label>
-      </div> : <>
-        <div className="eyebrow">{metadata.category} · {doc.type}</div>
-        <h1>{metadata.title}</h1>
-        <p>{metadata.description}</p>
-      </>}
-      <div className="reader-meta"><span>Updated {new Date(doc.updatedAt).toLocaleDateString("en", { month: "long", day: "numeric", year: "numeric" })}</span><span>{doc.readingMinutes} min read</span></div>
-    </div>
-    <div className={styles.videoControl}>
-      {isEditing && isEditMode ? <form onSubmit={event => { event.preventDefault(); void saveVideo(); }}>
+  if (!video && !isEditMode) return null;
+
+  return <section className={styles.videoSection} aria-label="Video tutorial">
+      {isEditing && isEditMode ? <form className={styles.videoForm} onSubmit={event => { event.preventDefault(); void saveVideo(); }}>
         <label htmlFor={`video-url-${doc.id}`}>Video tutorial link</label>
-        <input id={`video-url-${doc.id}`} type="url" value={draft} onChange={event => setDraft(event.target.value)} placeholder="https://youtube.com/watch?v=..." autoFocus />
+        <input id={`video-url-${doc.id}`} type="url" value={draft} onChange={event => setDraft(event.target.value)} placeholder="YouTube, Google Drive, or direct video URL" autoFocus />
         {error ? <p role="alert">{error}</p> : null}
         <div><button type="submit" disabled={isSaving || !draft.trim()}>{isSaving ? "Saving…" : "Save link"}</button><button type="button" onClick={() => { setDraft(videoUrl); setError(""); setIsEditing(false); }}>Cancel</button>{videoUrl ? <button type="button" onClick={() => void removeVideo()} disabled={isSaving}>Remove</button> : null}</div>
-      </form> : videoUrl ? <div className={styles.videoActions}>
-        <a className={styles.videoThumbnail} href={videoUrl} target="_blank" rel="noopener noreferrer" aria-label="Open video tutorial">
-          {videoThumbnailUrl ? <img src={videoThumbnailUrl} alt={`${doc.title} video tutorial thumbnail`} /> : <span className={styles.genericThumbnail}><Video aria-hidden="true" />Video tutorial</span>}
-          <span className={styles.playBadge} aria-hidden="true"><Play /></span>
-        </a>
+      </form> : video ? <>
+        <div className={styles.videoPlayer}>
+          {video.embedUrl ? <iframe src={video.embedUrl} title={`${doc.title} video tutorial`} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />
+            : video.kind === "direct" ? <video src={video.url} controls preload="metadata">Your browser does not support the video player.</video>
+              : <a href={video.url} target="_blank" rel="noopener noreferrer" aria-label="Open video tutorial">
+                <span className={styles.genericThumbnail}><Video aria-hidden="true" />Video tutorial</span>
+                <span className={styles.playBadge} aria-hidden="true"><Play /></span>
+              </a>}
+        </div>
         <div className={styles.videoActionRow}>
-          <a className={styles.watchVideoButton} href={videoUrl} target="_blank" rel="noopener noreferrer">WATCH THE VIDEO <ExternalLink aria-hidden="true" /></a>
+          <a className={styles.watchVideoButton} href={video.url} target="_blank" rel="noopener noreferrer">OPEN VIDEO <ExternalLink aria-hidden="true" /></a>
           {isEditMode ? <button type="button" onClick={() => setIsEditing(true)} aria-label="Edit video tutorial link"><Pencil /></button> : null}
         </div>
-      </div> : isEditMode ? <button className={styles.addVideoButton} type="button" onClick={() => setIsEditing(true)}><Video aria-hidden="true" />Add a Video Link</button> : null}
-    </div>
-  </header>;
-}
-
-function normalizeVideoUrl(value: string) {
-  try {
-    const parsed = new URL(value);
-    return ["http:", "https:"].includes(parsed.protocol) ? parsed.toString() : "";
-  } catch {
-    return "";
-  }
-}
-
-function getYouTubeThumbnailUrl(value: string) {
-  if (!value) return "";
-  try {
-    const url = new URL(value);
-    const host = url.hostname.toLowerCase().replace(/^www\./, "");
-    let videoId = "";
-    if (host === "youtu.be") videoId = url.pathname.split("/").filter(Boolean)[0] ?? "";
-    if (host === "youtube.com" || host === "m.youtube.com") {
-      videoId = url.searchParams.get("v") ?? "";
-      if (!videoId) {
-        const parts = url.pathname.split("/").filter(Boolean);
-        if (["embed", "shorts", "live"].includes(parts[0])) videoId = parts[1] ?? "";
-      }
-    }
-    return /^[a-zA-Z0-9_-]{6,}$/.test(videoId) ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : "";
-  } catch {
-    return "";
-  }
+      </> : <button className={styles.addVideoButton} type="button" onClick={() => setIsEditing(true)}><Video aria-hidden="true" />Add a Video Link</button>}
+  </section>;
 }
 
 function previewText(value: string, fallback = "") { return value.trim() || fallback; }

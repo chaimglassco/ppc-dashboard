@@ -53,7 +53,7 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 - **LIB-BUILDER-003** — Topics, statements, callouts, lists, checklists, insights, tables, dropdowns, feature cards, text blocks, roadmaps, galleries, buttons, and flows can be added.
 - **LIB-BUILDER-004** — Tables support rows, columns, row height, and saved column width.
 - **LIB-BUILDER-005** — Dropdown blocks support multiple entries and preserved line breaks.
-- **LIB-BUILDER-006** — Video links support thumbnails and a new-tab watch action.
+- **LIB-BUILDER-006** — Video links render in a large responsive section below the document header. YouTube and shared Google Drive files use embedded players, direct video files use native controls, and every saved URL retains a secure new-tab action.
 - **LIB-BUILDER-007** — Video Add/Pencil controls are visible only in document edit mode.
 - **LIB-BUILDER-008** — Builder edit mode replaces the blue header metadata with editable title, description, and category controls and saves those values with the structured elements.
 - **LIB-BUILDER-009** — Roadmaps independently support overall Left/Center/Right placement and Left/Center/Right step-number positions; centered numbers stack step copy and a full-width image.
