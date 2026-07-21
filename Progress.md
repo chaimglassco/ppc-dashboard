@@ -54,14 +54,14 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Feature Cards and Galleries use the shared upload flow; Gallery layout selection immediately creates the minimum responsive upload slots. Saved and editor Gallery tiles are square, show the complete uncropped source image, and remain clickable for full-image preview.
 - Private shared images now display through authenticated object-URL previews instead of broken direct `<img>` requests to bearer-protected media routes.
 - Standalone Button elements support validated links, four widths, three alignments, secure new-tab navigation, and mobile full-width rendering.
-- Video tutorials now render as a large responsive section below the blue document header; YouTube and Google Drive links embed their provider player, direct files use native playback, and generic HTTPS links retain a safe open action.
+- Video tutorials now render as a large responsive player inside the blue document header’s right column; YouTube and Google Drive links embed their provider player, direct files use native playback, generic HTTPS links retain a safe clickable fallback, and the redundant OPEN VIDEO button is removed.
 - Video Add/Pencil controls restricted to document edit mode.
 
 ### Quality
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Fourteen Vitest files and 73 tests pass.
+- Fourteen Vitest files and 74 tests pass.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.

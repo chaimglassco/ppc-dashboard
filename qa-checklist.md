@@ -6,7 +6,7 @@ Use this checklist before merging or deploying changes.
 
 - [x] `npm run lint`
 - [x] `npm run typecheck`
-- [x] `npm test` — 73 tests passing across 14 test files
+- [x] `npm test` — 74 tests passing across 14 test files
 - [x] `npm run build`
 
 ## Catalog and navigation
@@ -85,9 +85,9 @@ Use this checklist before merging or deploying changes.
 - [x] Add Video Link is hidden in document view mode.
 - [x] Add/Pencil video controls appear in document edit mode.
 - [x] Valid HTTPS, YouTube, and Google Drive links save.
-- [x] YouTube and shared Google Drive links render a responsive 16:9 embedded player below the blue document header.
+- [x] YouTube and shared Google Drive links render a responsive 16:9 embedded player inside the blue document header’s right column.
 - [x] Direct MP4/WebM/OGG links render native controls; other HTTPS links retain a safe open fallback.
-- [x] OPEN VIDEO opens the original saved URL in a new tab.
+- [x] No separate OPEN VIDEO button renders; provider-native controls and the generic-link fallback handle external viewing.
 - [x] Video Pencil is hidden after returning to view mode.
 
 ## Reading state

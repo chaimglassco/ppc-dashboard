@@ -237,6 +237,21 @@ describe("DocumentBuilder image galleries", () => {
   });
 });
 
+describe("DocumentBuilder video header", () => {
+  it("renders a Google Drive player inside the blue header without a separate open-video button", () => {
+    const baseDocument = getPublishedDocuments()[0];
+    const document = { ...baseDocument, videoUrl: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view?usp=sharing" };
+    const view = render(<DocumentBuilder doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={vi.fn()} onSaveVideoUrl={vi.fn()} />);
+    const header = view.container.querySelector("header.reader-header");
+    const player = header?.querySelector("iframe");
+
+    expect(header).toBeInTheDocument();
+    expect(player).toHaveAttribute("src", "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/preview");
+    expect(view.container.querySelector("article > section[aria-label='Video tutorial']")).not.toBeInTheDocument();
+    expect(within(view.container).queryByText("OPEN VIDEO")).not.toBeInTheDocument();
+  });
+});
+
 describe("DocumentBuilder shared feature images and buttons", () => {
   it("uploads a Feature Card image to shared storage and saves the returned URL", async () => {
     const fetchMock = installSharedImageFetch("/ppc/api/library/images?pathname=glassco%2Flibrary-images%2Ffeature.png");

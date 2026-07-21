@@ -26,7 +26,7 @@ The global application tabs continue to use `glassco.appRoutes.v1`; this visual 
 | `body` | `string` | Markdown source for repository/legacy documents. |
 | `topics` | `Topic[]` | Derived navigation metadata. |
 | `contentElements` | `LibraryContentElement[]?` | Structured builder representation. |
-| `videoUrl` | `string?` | Normalized HTTP(S) tutorial link. Provider-specific embed and thumbnail URLs are derived at render time and are not persisted. |
+| `videoUrl` | `string?` | Normalized HTTP(S) tutorial link. Provider-specific embed and thumbnail URLs and the responsive header placement are derived at render time and are not persisted. |
 
 The catalog document editor is creation-only and exposes `title`, `description`, and `category`. New documents receive the existing defaults for `type`, `tags`, and legacy `body`, then are authored further in the structured builder.
 

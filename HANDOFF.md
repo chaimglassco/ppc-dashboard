@@ -19,15 +19,15 @@ Local repositories:
 
 Current production commits:
 
-- PPC Dashboard: `e1657ae` — latest synchronized Gallery and video-player update
+- PPC Dashboard: `d792d4c` — latest synchronized Gallery and catalog-hydration update
 - Product Pipeline: `c507888` — current synchronized gateway repository state
 
-The PPC Dashboard checkout contains an unreleased catalog hydration fix. Pipeline remains synchronized with `origin/main`.
+The PPC Dashboard checkout contains an unreleased video-header placement update. Pipeline remains synchronized with `origin/main`.
 
 ## Unreleased local work
 
-- Catalog cards remain behind a loading skeleton until shared administration state or the cached fallback resolves, preventing deleted documents from flashing after refresh.
-- The square, uncropped Gallery presentation, large video section, and Google Drive `/preview` support are already included in synchronized commit `e1657ae`.
+- Video playback now sits in a large responsive right-hand section inside the blue header, and the redundant OPEN VIDEO button is removed while provider-native controls remain.
+- The square Gallery presentation, catalog hydration fix, and Google Drive `/preview` URL support are already included in synchronized commit `d792d4c`.
 
 ## What is implemented
 
@@ -64,7 +64,7 @@ npm test
 npm run build
 ```
 
-All passed with 14 test files and 73 tests.
+All passed with 14 test files and 74 tests.
 
 Product Pipeline:
 

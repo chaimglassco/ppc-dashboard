@@ -51,7 +51,7 @@ The builder owns:
 - Reusable authenticated image-upload controls for Roadmaps, Feature Cards, and Gallery slots, backed by the private Blob media route
 - Authenticated image rendering fetches private media with the stored Pipeline bearer token, creates a temporary object URL, and revokes it when the preview unmounts or changes
 - Responsive Gallery editor grids with minimum slot creation; square `object-fit: contain` presentation preserves each source ratio while the image modal provides full-size inspection
-- Video link validation and presentation derivation: YouTube privacy-enhanced embeds, Google Drive `/preview` embeds, native direct-file playback, and secure link fallback
+- Video link validation and header presentation derivation: YouTube privacy-enhanced embeds, Google Drive `/preview` embeds, native direct-file playback, and secure link fallback render in the blue header’s responsive right column without a separate open-video action
 
 ## Document metadata editor
 

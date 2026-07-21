@@ -27,7 +27,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Create, rename, hide, reorder, delete, recover, and categorize documents as an ADMIN.
 - Keep the catalog list hidden behind a loading skeleton until saved shared state is resolved, preventing deleted documents from flashing during refresh.
 - Create, rename, hide, reorder, delete, and recover category options as an ADMIN.
-- Attach YouTube, Google Drive, direct-file, or other HTTPS video links; supported providers render in a large responsive player below the document header.
+- Attach YouTube, Google Drive, direct-file, or other HTTPS video links; supported providers render in a large responsive player inside the blue document header’s right column without a redundant external-link button.
 - Reorder content elements by dragging or insert new elements between existing blocks.
 - Build documents from reusable elements:
   - Topics
@@ -93,7 +93,7 @@ npm test
 npm run build
 ```
 
-The last verified state passes all four commands with 14 test files and 73 tests.
+The last verified state passes all four commands with 14 test files and 74 tests.
 
 ## Project structure
 

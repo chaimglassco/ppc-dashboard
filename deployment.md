@@ -86,7 +86,7 @@ The existing `.gitignore` already excludes these paths.
    Confirm the preview request includes authenticated media access and displays the actual image rather than a broken image icon.
    Confirm square, portrait, and landscape Gallery sources are fully visible inside square tiles without cropping, then click each tile to verify the full-image preview.
 17. Add Buttons for internal and HTTPS links; verify every width/alignment option, invalid-link feedback, secure new-tab attributes, and mobile full-width behavior.
-18. Add a shared Google Drive video link and confirm a large 16:9 Drive preview player appears below the blue document header. Confirm the file is shared with the intended viewers and the original link opens from OPEN VIDEO.
+18. Add a shared Google Drive video link and confirm a large 16:9 Drive preview player appears inside the blue document header’s right column. Confirm the file is shared with the intended viewers, its provider-native pop-out control is available, and no separate OPEN VIDEO button appears.
 19. Open a private browser window and confirm that temporary document is visible.
 20. Add and reorder temporary document elements, then confirm the saved order in the private window.
 21. Check the browser console for hydration or runtime errors.

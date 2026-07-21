@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { ArrowDown, ArrowUp, ExternalLink, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
 import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
@@ -162,8 +162,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
         {canEdit ? <BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} /> : null}
       </aside>
       <article className={`prose ${styles.document}`}>
-        <DocumentHeader doc={doc} metadata={metadata} categories={categoryOptions} isEditMode={isEditMode} onMetadataChange={updates => setMetadata(current => ({ ...current, ...updates }))} />
-        <DocumentVideo doc={doc} isEditMode={isEditMode} onSaveVideoUrl={onSaveVideoUrl} />
+        <DocumentHeader doc={doc} metadata={metadata} categories={categoryOptions} isEditMode={isEditMode} onMetadataChange={updates => setMetadata(current => ({ ...current, ...updates }))} onSaveVideoUrl={onSaveVideoUrl} />
         {isEditMode ? (
           <div className={styles.reorderBar} aria-label="Document element controls">
             <button
@@ -325,7 +324,7 @@ function BuilderControls({ isEditMode, isSaving, isOpen, notice, onToggle, onTog
   </div>;
 }
 
-function DocumentHeader({ doc, metadata, categories, isEditMode, onMetadataChange }: { doc: LibraryDocument; metadata: DocumentMetadataDraft; categories: Category[]; isEditMode: boolean; onMetadataChange: (updates: Partial<DocumentMetadataDraft>) => void }) {
+function DocumentHeader({ doc, metadata, categories, isEditMode, onMetadataChange, onSaveVideoUrl }: { doc: LibraryDocument; metadata: DocumentMetadataDraft; categories: Category[]; isEditMode: boolean; onMetadataChange: (updates: Partial<DocumentMetadataDraft>) => void; onSaveVideoUrl: (url: string) => Promise<void> | void }) {
   return <header className={`reader-header ${styles.documentHeader} ${isEditMode ? styles.editingHeader : ""}`}>
     <div className={styles.headerCopy}>
       {isEditMode ? <div className={styles.metadataEditor}>
@@ -339,6 +338,7 @@ function DocumentHeader({ doc, metadata, categories, isEditMode, onMetadataChang
       </>}
       <div className="reader-meta"><span>Updated {new Date(doc.updatedAt).toLocaleDateString("en", { month: "long", day: "numeric", year: "numeric" })}</span><span>{doc.readingMinutes} min read</span></div>
     </div>
+    <DocumentVideo doc={doc} isEditMode={isEditMode} onSaveVideoUrl={onSaveVideoUrl} />
   </header>;
 }
 
@@ -391,7 +391,7 @@ function DocumentVideo({ doc, isEditMode, onSaveVideoUrl }: { doc: LibraryDocume
         <input id={`video-url-${doc.id}`} type="url" value={draft} onChange={event => setDraft(event.target.value)} placeholder="YouTube, Google Drive, or direct video URL" autoFocus />
         {error ? <p role="alert">{error}</p> : null}
         <div><button type="submit" disabled={isSaving || !draft.trim()}>{isSaving ? "Saving…" : "Save link"}</button><button type="button" onClick={() => { setDraft(videoUrl); setError(""); setIsEditing(false); }}>Cancel</button>{videoUrl ? <button type="button" onClick={() => void removeVideo()} disabled={isSaving}>Remove</button> : null}</div>
-      </form> : video ? <>
+      </form> : video ? <div className={styles.videoPlayerWrap}>
         <div className={styles.videoPlayer}>
           {video.embedUrl ? <iframe src={video.embedUrl} title={`${doc.title} video tutorial`} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />
             : video.kind === "direct" ? <video src={video.url} controls preload="metadata">Your browser does not support the video player.</video>
@@ -400,11 +400,8 @@ function DocumentVideo({ doc, isEditMode, onSaveVideoUrl }: { doc: LibraryDocume
                 <span className={styles.playBadge} aria-hidden="true"><Play /></span>
               </a>}
         </div>
-        <div className={styles.videoActionRow}>
-          <a className={styles.watchVideoButton} href={video.url} target="_blank" rel="noopener noreferrer">OPEN VIDEO <ExternalLink aria-hidden="true" /></a>
-          {isEditMode ? <button type="button" onClick={() => setIsEditing(true)} aria-label="Edit video tutorial link"><Pencil /></button> : null}
-        </div>
-      </> : <button className={styles.addVideoButton} type="button" onClick={() => setIsEditing(true)}><Video aria-hidden="true" />Add a Video Link</button>}
+        {isEditMode ? <button className={styles.videoEditButton} type="button" onClick={() => setIsEditing(true)} aria-label="Edit video tutorial link"><Pencil /></button> : null}
+      </div> : <button className={styles.addVideoButton} type="button" onClick={() => setIsEditing(true)}><Video aria-hidden="true" />Add a Video Link</button>}
   </section>;
 }
 
