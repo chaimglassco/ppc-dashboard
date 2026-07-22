@@ -48,14 +48,14 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     setShared(response);
     setManaged(response.state.documents);
     setCategories(response.state.categories);
-    if (cache) cacheSharedLibraryResponse(response, window.localStorage);
+    if (cache) cacheSharedLibraryResponse(response, window.localStorage, { summary: true });
   }, []);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     if (refreshInFlightRef.current) return;
     refreshInFlightRef.current = true;
     try {
-      const response = await fetchSharedLibraryState(signal);
+      const response = await fetchSharedLibraryState(signal, { summary: true });
       applySharedResponse(response);
       setLibrarySource("server");
       setMutationsEnabled(response.initialized);
@@ -73,7 +73,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   useEffect(() => {
     const controller = new AbortController();
     refreshInFlightRef.current = true;
-    void hydrateSharedLibraryState(window.localStorage, controller.signal).then(({ response, source }) => {
+    void hydrateSharedLibraryState(window.localStorage, controller.signal, { summary: true }).then(({ response, source }) => {
       if (controller.signal.aborted) return;
       applySharedResponse(response, source === "server");
       setLibrarySource(source);
@@ -128,7 +128,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       return false;
     }
     try {
-      const saved = await mutateSharedLibrary(mutation);
+      const saved = await mutateSharedLibrary(mutation, { summary: true });
       applySharedResponse(saved);
       setNotice(message);
       return true;

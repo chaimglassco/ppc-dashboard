@@ -23,14 +23,14 @@ export function ManagedReader({ slug }: { slug: string }) {
     sharedRef.current = response;
     setDocument(response.state.documents.find(item => item.slug === slug && !item.deletedAt && !item.hidden) ?? null);
     setCategories(response.state.categories.filter(category => !category.deletedAt).map(category => category.name));
-    if (cache) cacheSharedLibraryResponse(response, window.localStorage);
+    if (cache) cacheSharedLibraryResponse(response, window.localStorage, { slug });
   }, [slug]);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     if (refreshInFlightRef.current) return;
     refreshInFlightRef.current = true;
     try {
-      const response = await fetchSharedLibraryState(signal);
+      const response = await fetchSharedLibraryState(signal, { slug });
       applyResponse(response);
       setMigrationPending(!response.initialized);
       setMutationsEnabled(response.initialized);
@@ -42,12 +42,12 @@ export function ManagedReader({ slug }: { slug: string }) {
     } finally {
       refreshInFlightRef.current = false;
     }
-  }, [applyResponse]);
+  }, [applyResponse, slug]);
 
   useEffect(() => {
     const controller = new AbortController();
     refreshInFlightRef.current = true;
-    void hydrateSharedLibraryState(window.localStorage, controller.signal).then(({ response, source }) => {
+    void hydrateSharedLibraryState(window.localStorage, controller.signal, { slug }).then(({ response, source }) => {
       if (controller.signal.aborted) return;
       applyResponse(response, source === "server");
       setMigrationPending(source === "server" && !response.initialized);
@@ -63,7 +63,7 @@ export function ManagedReader({ slug }: { slug: string }) {
       refreshInFlightRef.current = false;
     });
     return () => controller.abort();
-  }, [applyResponse]);
+  }, [applyResponse, slug]);
 
   useEffect(() => {
     const onFocus = () => { if (globalThis.document.visibilityState === "visible") void refresh(); };
@@ -78,7 +78,7 @@ export function ManagedReader({ slug }: { slug: string }) {
     const expectedVersion = sharedRef.current?.recordVersions.documents[updated.id];
     if (!mutationsEnabled || expectedVersion === undefined) throw new Error("Shared library editing is unavailable.");
     try {
-      const saved = await mutateSharedLibrary({ operation: "document.update", documentId: updated.id, expectedVersion, document: updated });
+      const saved = await mutateSharedLibrary({ operation: "document.update", documentId: updated.id, expectedVersion, document: updated }, { slug });
       applyResponse(saved);
     } catch (error) {
       if (error instanceof SharedLibraryConflictError) {

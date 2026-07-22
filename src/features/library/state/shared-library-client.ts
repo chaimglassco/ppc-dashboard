@@ -7,6 +7,8 @@ import { parseSharedLibraryResponse, type SharedLibraryResponse, type SharedLibr
 export const SHARED_LIBRARY_CACHE_KEY = "glassco-library-confirmed-cache-v2";
 export const SHARED_LIBRARY_REQUEST_TIMEOUT_MS = 10_000;
 
+export type SharedLibraryReadOptions = { summary?: boolean; slug?: string };
+
 export class SharedLibraryTimeoutError extends Error {
   constructor() {
     super("The shared library took too long to respond.");
@@ -29,6 +31,18 @@ export class SharedLibraryConflictError extends Error {
   constructor(public readonly latest: SharedLibraryResponse) {
     super("The shared library changed in another session. The latest version has been loaded.");
   }
+}
+
+function sharedLibraryUrl(options: SharedLibraryReadOptions = {}) {
+  const params = new URLSearchParams();
+  if (options.summary) params.set("summary", "1");
+  if (options.slug) params.set("slug", options.slug);
+  const query = params.toString();
+  return `${withPpcBasePath("/api/library")}${query ? `?${query}` : ""}`;
+}
+
+export function getSharedLibraryCacheKey(options: SharedLibraryReadOptions = {}) {
+  return options.slug ? `${SHARED_LIBRARY_CACHE_KEY}:document:${encodeURIComponent(options.slug)}` : SHARED_LIBRARY_CACHE_KEY;
 }
 
 async function readJson(response: Response): Promise<unknown> {
@@ -67,8 +81,8 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
   }
 }
 
-export async function fetchSharedLibraryState(signal?: AbortSignal): Promise<SharedLibraryResponse> {
-  const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library"), {
+export async function fetchSharedLibraryState(signal?: AbortSignal, options: SharedLibraryReadOptions = {}): Promise<SharedLibraryResponse> {
+  const value = await readJson(await fetchWithTimeout(sharedLibraryUrl(options), {
     cache: "no-store",
     headers: getPipelineAuthorizationHeader(),
     signal,
@@ -78,8 +92,8 @@ export async function fetchSharedLibraryState(signal?: AbortSignal): Promise<Sha
   return parsed;
 }
 
-export async function mutateSharedLibrary(mutation: SharedLibraryMutation): Promise<SharedLibraryResponse> {
-  const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library"), {
+export async function mutateSharedLibrary(mutation: SharedLibraryMutation, options: SharedLibraryReadOptions = {}): Promise<SharedLibraryResponse> {
+  const value = await readJson(await fetchWithTimeout(sharedLibraryUrl(options), {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
     body: JSON.stringify(mutation),
@@ -100,25 +114,25 @@ export async function initializeCleanLibrary(): Promise<SharedLibraryResponse> {
   return parsed;
 }
 
-export function cacheSharedLibraryResponse(response: SharedLibraryResponse, storage: Pick<Storage, "setItem">): boolean {
-  try { storage.setItem(SHARED_LIBRARY_CACHE_KEY, JSON.stringify(response)); return true; } catch { return false; }
+export function cacheSharedLibraryResponse(response: SharedLibraryResponse, storage: Pick<Storage, "setItem">, options: SharedLibraryReadOptions = {}): boolean {
+  try { storage.setItem(getSharedLibraryCacheKey(options), JSON.stringify(response)); return true; } catch { return false; }
 }
 
-export function readCachedSharedLibraryResponse(storage: Pick<Storage, "getItem">): SharedLibraryResponse | null {
+export function readCachedSharedLibraryResponse(storage: Pick<Storage, "getItem">, options: SharedLibraryReadOptions = {}): SharedLibraryResponse | null {
   try {
-    const raw = storage.getItem(SHARED_LIBRARY_CACHE_KEY);
+    const raw = storage.getItem(getSharedLibraryCacheKey(options));
     return raw ? parseSharedLibraryResponse(JSON.parse(raw)) : null;
   } catch { return null; }
 }
 
-export async function hydrateSharedLibraryState(storage: Storage, signal?: AbortSignal): Promise<{ response: SharedLibraryResponse; source: "server" | "cache" }> {
+export async function hydrateSharedLibraryState(storage: Storage, signal?: AbortSignal, options: SharedLibraryReadOptions = {}): Promise<{ response: SharedLibraryResponse; source: "server" | "cache" }> {
   try {
-    const response = await fetchSharedLibraryState(signal);
-    cacheSharedLibraryResponse(response, storage);
+    const response = await fetchSharedLibraryState(signal, options);
+    cacheSharedLibraryResponse(response, storage, options);
     return { response, source: "server" };
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
-    const cached = readCachedSharedLibraryResponse(storage);
+    const cached = readCachedSharedLibraryResponse(storage, options);
     if (!cached) throw error;
     return { response: cached, source: "cache" };
   }

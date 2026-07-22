@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "./category-storage";
-import { fetchSharedLibraryState, hydrateSharedLibraryState, initializeCleanLibrary, mutateSharedLibrary, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryTimeoutError } from "./shared-library-client";
+import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeCleanLibrary, mutateSharedLibrary, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryTimeoutError } from "./shared-library-client";
 
 const response = {
   initialized: true,
@@ -43,6 +43,25 @@ describe("shared library client", () => {
   it("validates fetched response envelopes", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(response), { status: 200 })));
     await expect(fetchSharedLibraryState()).resolves.toMatchObject({ revision: 2 });
+  });
+
+  it("requests compact catalog summaries without mixing them with document caches", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(response), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchSharedLibraryState(undefined, { summary: true });
+
+    expect(fetchMock).toHaveBeenCalledWith("/ppc/api/library?summary=1", expect.any(Object));
+    expect(getSharedLibraryCacheKey({ slug: "checking-spend" })).toBe(`${SHARED_LIBRARY_CACHE_KEY}:document:checking-spend`);
+  });
+
+  it("requests only the full document opened by the reader", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(response), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchSharedLibraryState(undefined, { slug: "checking-spend" });
+
+    expect(fetchMock).toHaveBeenCalledWith("/ppc/api/library?slug=checking-spend", expect.any(Object));
   });
 
   it("aborts a hung shared-state request instead of leaving hydration pending forever", async () => {
