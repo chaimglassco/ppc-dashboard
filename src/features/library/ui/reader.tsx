@@ -76,6 +76,19 @@ export function Reader({ doc, categories, onSaveContentElements, onSaveVideoUrl,
     if (id) history.replaceState(null, "", `#${id}`);
   };
 
+  const preserveTopicDuringModeChange = (id: string) => {
+    if (!id) return;
+    ignoreScrollUntilRef.current = window.performance.now() + 1_200;
+    activeTopicRef.current = id;
+    setActive(id);
+    setTopic(doc.id, id);
+    history.replaceState(null, "", `#${id}`);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "auto", block: "start" });
+      ignoreScrollUntilRef.current = window.performance.now() + 400;
+    }));
+  };
+
   return <>
     <div className="reader-top">
       <Link href="/library">← Back to Library</Link>
@@ -87,6 +100,7 @@ export function Reader({ doc, categories, onSaveContentElements, onSaveVideoUrl,
       categories={categories}
       activeTopicId={resolvedActive}
       onTopicChange={go}
+      onModeTransition={preserveTopicDuringModeChange}
       onSave={onSaveContentElements}
       onSaveVideoUrl={onSaveVideoUrl}
       canEdit={canEdit && mutationsEnabled}

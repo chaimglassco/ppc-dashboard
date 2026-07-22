@@ -42,6 +42,7 @@ type DocumentBuilderProps = {
   categories?: Category[];
   activeTopicId: string;
   onTopicChange: (id: string) => void;
+  onModeTransition?: (id: string) => void;
   onSave: (elements: LibraryContentElement[], metadata: DocumentMetadataDraft) => Promise<void> | void;
   onSaveVideoUrl: (url: string) => Promise<void> | void;
   canEdit?: boolean;
@@ -49,11 +50,10 @@ type DocumentBuilderProps = {
 
 export type DocumentMetadataDraft = Pick<LibraryDocument, "title" | "description" | "category">;
 
-export function DocumentBuilder({ doc, categories = [doc.category], activeTopicId, onTopicChange, onSave, onSaveVideoUrl, canEdit = false }: DocumentBuilderProps) {
+export function DocumentBuilder({ doc, categories = [doc.category], activeTopicId, onTopicChange, onModeTransition = () => undefined, onSave, onSaveVideoUrl, canEdit = false }: DocumentBuilderProps) {
   const [elements, setElements] = useState(() => getInitialContentElements(doc));
   const [metadata, setMetadata] = useState<DocumentMetadataDraft>(() => ({ title: doc.title, description: doc.description, category: doc.category }));
   const [isEditMode, setIsEditMode] = useState(false);
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [previewImage, setPreviewImage] = useState("");
@@ -79,7 +79,6 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
       let topicNumber = 0;
       return [...current.slice(0, safeIndex), next, ...current.slice(safeIndex)].map(element => element.type === "topic" ? { ...element, eyebrow: `Part ${++topicNumber}` } : element);
     });
-    setIsAddMenuOpen(false);
     setInsertMenuIndex(null);
     if (type === "topic") window.requestAnimationFrame(() => onTopicChange(next.id));
   };
@@ -90,7 +89,6 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
   };
 
   const openReorder = () => {
-    setIsAddMenuOpen(false);
     setInsertMenuIndex(null);
     setReorderIds(elements.map(element => element.id));
     setIsReorderOpen(true);
@@ -135,6 +133,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
     if (!isEditMode) {
       setNotice("");
       setIsEditMode(true);
+      onModeTransition(activeTopicId);
       return;
     }
     setIsSaving(true);
@@ -145,8 +144,8 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
       setMetadata(nextMetadata);
       setUseStructuredPreview(true);
       setIsEditMode(false);
-      setIsAddMenuOpen(false);
       setInsertMenuIndex(null);
+      onModeTransition(activeTopicId);
       setNotice("Changes saved. Preview updated.");
       window.setTimeout(() => setNotice(""), 2400);
     } catch (error) {
@@ -167,7 +166,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
           <strong>ON THIS PAGE</strong>
           <TopicLinks topics={topics} active={activeTopicId} onSelect={onTopicChange} onDelete={isEditMode ? deleteElement : undefined} />
         </div>
-        {canEdit ? <BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} /> : null}
+        {canEdit ? <BuilderControls isEditMode={isEditMode} isSaving={isSaving} notice={notice} onToggle={toggleEditMode} /> : null}
       </aside>
       <article className={`prose ${styles.document}`}>
         <DocumentHeader doc={doc} metadata={metadata} categories={categoryOptions} isEditMode={isEditMode} onMetadataChange={updates => setMetadata(current => ({ ...current, ...updates }))} onSaveVideoUrl={onSaveVideoUrl} />
@@ -192,7 +191,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
               inline
               isOpen={insertMenuIndex === index + 1}
               ariaLabel={`Add element after ${getElementSummary(element, index).title}`}
-              onToggle={() => { setIsAddMenuOpen(false); setInsertMenuIndex(current => current === index + 1 ? null : index + 1); }}
+              onToggle={() => setInsertMenuIndex(current => current === index + 1 ? null : index + 1)}
               onAdd={type => addElement(type, index + 1)}
             />
           </div>
@@ -200,7 +199,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
           : <Markdown body={doc.body} topics={doc.topics} onTopic={onTopicChange} />}
       </article>
     </div>
-    {canEdit ? <div className={styles.mobileControls}><BuilderControls isEditMode={isEditMode} isSaving={isSaving} isOpen={isAddMenuOpen} notice={notice} onToggle={toggleEditMode} onToggleMenu={() => { setInsertMenuIndex(null); setIsAddMenuOpen(value => !value); }} onAdd={type => addElement(type)} /></div> : null}
+    {canEdit ? <div className={styles.mobileControls}><BuilderControls isEditMode={isEditMode} isSaving={isSaving} notice={notice} onToggle={toggleEditMode} /></div> : null}
     {previewImage ? <div className={styles.imageModal} role="dialog" aria-modal="true" aria-label="Image preview">
       <div><button type="button" onClick={() => setPreviewImage("")} aria-label="Close image preview"><X /></button><AuthenticatedImage url={previewImage} alt="Document feature preview" /></div>
     </div> : null}
@@ -320,14 +319,13 @@ function ElementAddMenu({ isOpen, onToggle, onAdd, ariaLabel, inline = false }: 
   </div>;
 }
 
-function BuilderControls({ isEditMode, isSaving, isOpen, notice, onToggle, onToggleMenu, onAdd }: { isEditMode: boolean; isSaving: boolean; isOpen: boolean; notice: string; onToggle: () => void; onToggleMenu: () => void; onAdd: (type: LibraryContentElementType) => void }) {
+function BuilderControls({ isEditMode, isSaving, notice, onToggle }: { isEditMode: boolean; isSaving: boolean; notice: string; onToggle: () => void }) {
   return <div className={styles.controls}>
     {notice ? <p role="status">{notice}</p> : null}
     <div>
       <button className={`${styles.modeButton} ${isEditMode ? styles.editing : ""}`} type="button" onClick={onToggle} disabled={isSaving} aria-pressed={isEditMode} aria-label={isEditMode ? "Save changes and switch to view mode" : "Switch to edit mode"}>
-        {isSaving ? <LoaderCircle className={styles.spinner} /> : isEditMode ? <Pencil /> : <Eye />}
+        {isSaving ? <LoaderCircle className={styles.spinner} /> : <Eye />}
       </button>
-      {isEditMode ? <ElementAddMenu isOpen={isOpen} onToggle={onToggleMenu} onAdd={onAdd} ariaLabel="Add document element" /> : null}
     </div>
   </div>;
 }

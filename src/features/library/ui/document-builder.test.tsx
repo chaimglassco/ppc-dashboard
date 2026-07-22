@@ -171,10 +171,12 @@ describe("DocumentBuilder aligned text elements", () => {
     const controls = within(view.container);
 
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
-    fireEvent.click(controls.getAllByRole("button", { name: "Add document element" })[0]);
-    expect(controls.getAllByRole("button", { name: "Headline" })).toHaveLength(2);
-    expect(controls.getAllByRole("button", { name: "Description" })).toHaveLength(2);
-    fireEvent.click(controls.getAllByRole("button", { name: "Add document element" })[0]);
+    expect(controls.queryByRole("button", { name: "Add document element" })).not.toBeInTheDocument();
+    const inlineAddButtons = controls.getAllByRole("button", { name: /Add element after/ });
+    fireEvent.click(inlineAddButtons[0]);
+    expect(controls.getByRole("button", { name: "Headline" })).toBeVisible();
+    expect(controls.getByRole("button", { name: "Description" })).toBeVisible();
+    fireEvent.click(inlineAddButtons[0]);
 
     const headlineTextbox = controls.getByRole("textbox", { name: "Headline" });
     const descriptionTextbox = controls.getByRole("textbox", { name: "Description" });
@@ -195,6 +197,30 @@ describe("DocumentBuilder aligned text elements", () => {
     expect(onSave.mock.calls[0][0][1]).toMatchObject({ type: "description", text: "Aligned description", textAlignment: "right", richText: { type: "doc" } });
     expect(controls.getByText("Aligned headline").closest("section")).toHaveAttribute("data-text-alignment", "center");
     expect(controls.getByText("Aligned description").closest("section")).toHaveAttribute("data-text-alignment", "right");
+  });
+});
+
+describe("DocumentBuilder mode controls", () => {
+  it("keeps one Eye control, removes the adjacent global add control, and preserves the active topic", async () => {
+    const document = getPublishedDocuments()[0];
+    const activeTopicId = document.topics.find(topic => topic.level === 2)?.id ?? "";
+    const onModeTransition = vi.fn();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const view = render(<DocumentBuilder canEdit doc={document} activeTopicId={activeTopicId} onTopicChange={vi.fn()} onModeTransition={onModeTransition} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+    const enterEdit = controls.getAllByRole("button", { name: "Switch to edit mode" })[0];
+
+    expect(enterEdit.querySelector(".lucide-eye")).not.toBeNull();
+    expect(controls.queryByRole("button", { name: "Add document element" })).not.toBeInTheDocument();
+    fireEvent.click(enterEdit);
+
+    expect(onModeTransition).toHaveBeenLastCalledWith(activeTopicId);
+    expect(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0].querySelector(".lucide-eye")).not.toBeNull();
+    expect(controls.getAllByRole("button", { name: /Add element after/ }).length).toBeGreaterThan(0);
+
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onModeTransition).toHaveBeenLastCalledWith(activeTopicId);
   });
 });
 

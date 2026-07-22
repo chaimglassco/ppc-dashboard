@@ -15,9 +15,15 @@ describe("application navigation style contract", () => {
   });
 
   it("compacts and horizontally scrolls the cards on narrow screens", () => {
-    expect(css).toContain("@media(max-width:760px){.topbar{grid-template-columns:0 minmax(0,1fr) 0;padding:0 10px}");
-    expect(css).toContain(".glassco-app-tabs{width:100%;max-width:100%;gap:7px;padding-inline:2px}");
+    expect(css).toContain("@media(max-width:760px){.topbar{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:\"tabs tabs\" \"breadcrumb actions\"");
+    expect(css).toContain(".glassco-app-tabs{grid-area:tabs;width:100%;max-width:100%;gap:7px;padding-inline:2px}");
+    expect(css).toContain(".account-actions__identity{display:none}");
     expect(css).toContain("scrollbar-width:none");
+  });
+
+  it("removes the redundant Library shell column while retaining the dashboard shell", () => {
+    expect(css).toContain(".app-shell--library{display:block}");
+    expect(css).toContain(".app-shell--library .app-main{grid-column:1;width:100%}");
   });
 
   it("centers the dashboard placeholder below the shared top bar", () => {

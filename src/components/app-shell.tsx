@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { Library, Search } from "lucide-react";
+import { CircleUserRound, Library, LogOut } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, type MouseEvent, type ReactNode } from "react";
-import { GLASSCO_DEFAULT_APP_ROUTES, PIPELINE_HOME, readGlasscoAppRoutes, rememberGlasscoAppRoute } from "@/lib/glassco-apps";
-import { createBrowserPipelineSessionHandoff, type GlasscoAuthTarget } from "@/lib/pipeline-session";
+import { GLASSCO_DEFAULT_APP_ROUTES, getPipelineLoginUrl, getPipelineProfileUrl, PIPELINE_HOME, readGlasscoAppRoutes, rememberGlasscoAppRoute } from "@/lib/glassco-apps";
+import { clearAndBroadcastGlasscoSession, createBrowserPipelineSessionHandoff, type GlasscoAuthTarget } from "@/lib/pipeline-session";
+import { useGlasscoSession } from "./glassco-session";
 
 type PreparedTab = "pipeline" | "ppc" | "ppcDashboard";
 
@@ -30,9 +32,33 @@ function AppTabs({ pathname }: { pathname: string }) {
   </nav>;
 }
 
+function AccountActions() {
+  const { user } = useGlasscoSession();
+  const profileUrl = getPipelineProfileUrl();
+  const avatarUrl = user.avatarUrl || user.avatarDataUrl || "";
+  const prepareProfile = (event: MouseEvent<HTMLAnchorElement>) => {
+    createBrowserPipelineSessionHandoff("pipeline");
+    event.currentTarget.href = profileUrl;
+  };
+  const logout = () => {
+    const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    clearAndBroadcastGlasscoSession();
+    window.location.replace(getPipelineLoginUrl(returnTo));
+  };
+
+  return <div className="account-actions" aria-label="Account actions">
+    <span className="account-actions__identity"><strong>{user.name}</strong><span>{user.role}</span></span>
+    <a className="account-actions__profile" href={profileUrl} target="_blank" rel="noopener noreferrer" aria-label="Open profile" onMouseDown={prepareProfile} onClick={prepareProfile}>
+      {avatarUrl ? <Image src={avatarUrl} alt="" width={36} height={36} unoptimized /> : <CircleUserRound aria-hidden="true" />}
+    </a>
+    <button type="button" aria-label="Log out" onClick={logout}><LogOut aria-hidden="true" /></button>
+  </div>;
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isDashboard = pathname === "/dashboard" || pathname === "/ppc/dashboard";
+  const isLibrary = pathname === "/library" || pathname.startsWith("/library/");
   const section = isDashboard ? "PPC Dashboard" : pathname.includes("bookmarks") ? "Bookmarks" : pathname.includes("recent") ? "Recent" : "Team SOP Library";
 
   useEffect(() => {
@@ -40,15 +66,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     rememberGlasscoAppRoute(window.localStorage, isDashboard ? "ppcDashboard" : "ppc", route);
   }, [isDashboard, pathname]);
 
-  return <div className="app-shell">
-    <aside className="sidebar">
+  return <div className={`app-shell${isLibrary ? " app-shell--library" : ""}`}>
+    {!isLibrary ? <aside className="sidebar">
       <Link className="shell-logo glassco-wordmark" href="/library" aria-label="Glassco Library home">Glassco</Link>
       <nav className="shell-nav" aria-label="Primary navigation"><Link href="/library" className={`shell-nav-link${!isDashboard ? " active" : ""}`} aria-current={!isDashboard ? "page" : undefined}><Library aria-hidden="true" /><span>Library</span></Link></nav>
-    </aside>
+    </aside> : null}
     <div className="app-main">
-      <header className="topbar"><div className="breadcrumb"><span>GLASSCO WORKSPACE</span><i>/</i><strong>{section}</strong></div><AppTabs pathname={pathname} /><div className="topbar-actions"><label className="course-search"><span className="sr-only">Search courses</span><input placeholder="Search courses..." disabled/><Search aria-hidden="true" /></label></div></header>
+      <header className="topbar"><div className="breadcrumb"><span>GLASSCO WORKSPACE</span><i>/</i><strong>{section}</strong></div><AppTabs pathname={pathname} /><div className="topbar-actions"><AccountActions /></div></header>
       <main id="main-content" tabIndex={-1}>{children}</main>
     </div>
-    <nav className="mobile-nav" aria-label="Mobile navigation"><Link href="/library" aria-current={!isDashboard ? "page" : undefined}><Library/><span>Library</span></Link></nav>
+    {!isLibrary ? <nav className="mobile-nav" aria-label="Mobile navigation"><Link href="/library" aria-current={!isDashboard ? "page" : undefined}><Library/><span>Library</span></Link></nav> : null}
   </div>;
 }

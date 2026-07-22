@@ -1,5 +1,6 @@
 export const PIPELINE_SESSION_STORAGE_KEY = "launchflow.authSession.v1";
 export const GLASSCO_AUTH_HANDOFF_STORAGE_KEY = "glassco.authHandoff.v1";
+export const GLASSCO_LOGOUT_STORAGE_KEY = "glassco.logout.v1";
 export const GLASSCO_AUTH_HANDOFF_TTL_MS = 30_000;
 
 export type PipelineRole = "ADMIN" | "USER" | "VIEWER";
@@ -10,6 +11,9 @@ export type PipelineUser = {
   email: string;
   name: string;
   role: PipelineRole;
+  jobTitle?: string;
+  avatarDataUrl?: string;
+  avatarUrl?: string;
 };
 
 export type StoredPipelineSession = PipelineUser & { token: string };
@@ -101,6 +105,12 @@ export function clearStoredPipelineSession() {
   window.localStorage.removeItem(PIPELINE_SESSION_STORAGE_KEY);
   window.sessionStorage.removeItem(PIPELINE_SESSION_STORAGE_KEY);
   window.localStorage.removeItem(GLASSCO_AUTH_HANDOFF_STORAGE_KEY);
+}
+
+export function clearAndBroadcastGlasscoSession(now = Date.now()) {
+  if (typeof window === "undefined") return;
+  clearStoredPipelineSession();
+  window.localStorage.setItem(GLASSCO_LOGOUT_STORAGE_KEY, String(now));
 }
 
 export function getPipelineAuthorizationHeader(): Record<string, string> {

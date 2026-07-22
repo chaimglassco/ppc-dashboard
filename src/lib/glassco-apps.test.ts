@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   GLASSCO_APP_ROUTES_STORAGE_KEY,
   getPipelineLoginUrl,
+  getPipelineProfileUrl,
   getSafeGlasscoReturnRoute,
   readGlasscoAppRoutes,
   rememberGlasscoAppRoute,
@@ -24,6 +25,10 @@ describe("Glassco app routing", () => {
   it("prefixes PPC routes once", () => {
     expect(withPpcBasePath("/library")).toBe("/ppc/library");
     expect(withPpcBasePath("/ppc/library")).toBe("/ppc/library");
+  });
+
+  it("builds the canonical Pipeline profile deep link", () => {
+    expect(getPipelineProfileUrl()).toBe("https://glasscopipeline.vercel.app/?open=profile");
   });
 
   it("keeps legacy route memory and supplies the new dashboard fallback", () => {

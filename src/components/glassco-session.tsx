@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getPipelineLoginUrl, withPpcBasePath } from "@/lib/glassco-apps";
-import { clearStoredPipelineSession, readStoredPipelineSession, type PipelineUser } from "@/lib/pipeline-session";
+import { clearStoredPipelineSession, GLASSCO_LOGOUT_STORAGE_KEY, readStoredPipelineSession, type PipelineUser } from "@/lib/pipeline-session";
 
 type GlasscoSessionContextValue = { user: PipelineUser; canAdmin: boolean; canEdit: boolean };
 const GlasscoSessionContext = createContext<GlasscoSessionContextValue | null>(null);
@@ -53,6 +53,16 @@ export function GlasscoSessionProvider({ children }: { children: ReactNode }) {
     });
 
     return () => { cancelled = true; window.clearTimeout(timeout); controller.abort(); };
+  }, []);
+
+  useEffect(() => {
+    const handleSharedLogout = (event: StorageEvent) => {
+      if (event.key !== GLASSCO_LOGOUT_STORAGE_KEY || !event.newValue) return;
+      clearStoredPipelineSession();
+      redirectToPipelineLogin();
+    };
+    window.addEventListener("storage", handleSharedLogout);
+    return () => window.removeEventListener("storage", handleSharedLogout);
   }, []);
 
   const value = useMemo(() => user ? { user, canAdmin: user.role === "ADMIN", canEdit: user.role === "ADMIN" || user.role === "USER" } : null, [user]);

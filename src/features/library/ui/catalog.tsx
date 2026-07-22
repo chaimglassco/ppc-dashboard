@@ -11,6 +11,7 @@ import { createDefaultCategories, type ManagedCategory } from "../state/category
 import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, initializeCleanLibrary, mutateSharedLibrary, SharedLibraryConflictError, type SharedLibraryMutation } from "../state/shared-library-client";
 import type { SharedLibraryResponse } from "../state/shared-library-state";
 import { CategoryManager } from "./category-manager";
+import { DeleteDocumentDialog } from "./delete-document-dialog";
 import { DeletedDocuments } from "./deleted-documents";
 import { DocumentCard } from "./document-card";
 import { DocumentEditor, type DocumentDraft } from "./document-editor";
@@ -42,6 +43,21 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const sharedRef = useRef<SharedLibraryResponse | null>(null);
   const refreshInFlightRef = useRef(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [documentToDelete, setDocumentToDelete] = useState<ManagedLibraryDocument | null>(null);
+  const [isDeletingDocument, setIsDeletingDocument] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const successTimerRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (successTimerRef.current !== null) window.clearTimeout(successTimerRef.current);
+  }, []);
+
+  const announceSuccess = (message: string) => {
+    setSuccessMessage(message);
+    if (successTimerRef.current !== null) window.clearTimeout(successTimerRef.current);
+    successTimerRef.current = window.setTimeout(() => setSuccessMessage(""), 4_000);
+  };
 
   const applySharedResponse = useCallback((response: SharedLibraryResponse, cache = true) => {
     sharedRef.current = response;
@@ -142,6 +158,31 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       }
       return false;
     }
+  };
+
+  const requestDocumentDelete = (document: ManagedLibraryDocument) => {
+    setDeleteError("");
+    setDocumentToDelete(document);
+  };
+
+  const confirmDocumentDelete = async () => {
+    if (!documentToDelete || isDeletingDocument) return;
+    const expectedVersion = sharedRef.current?.recordVersions.documents[documentToDelete.id];
+    if (expectedVersion === undefined) {
+      setDeleteError("The current document version is unavailable. Close this message and try again.");
+      return;
+    }
+    setIsDeletingDocument(true);
+    setDeleteError("");
+    const deleted = await commitMutation({ operation: "document.delete", documentId: documentToDelete.id, expectedVersion }, "");
+    setIsDeletingDocument(false);
+    if (!deleted) {
+      setDeleteError("The document could not be deleted. Check the Library connection and try again.");
+      return;
+    }
+    const title = documentToDelete.title;
+    setDocumentToDelete(null);
+    announceSuccess(`${title} was deleted successfully.`);
   };
 
   const migrateLibrary = async () => {
@@ -251,11 +292,13 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         [next[activeIndex], next[target]] = [next[target], next[activeIndex]];
         void commitMutation({ operation: "documents.reorder", documentIds: next.map(document => document.id), expectedRevision: sharedRef.current.revision }, "Document order updated.");
       };
-      return <DocumentCard key={doc.id} doc={doc} admin={manageMode && mutationsEnabled ? { onToggleHidden: () => updateDocument({ ...doc, hidden: !doc.hidden, updatedAt: new Date().toISOString() }, doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => expectedVersion === undefined ? undefined : void commitMutation({ operation: "document.delete", documentId: doc.id, expectedVersion }, "Document moved to recovery."), onMoveUp: () => reorder(-1), onMoveDown: () => reorder(1), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1 } : undefined}/>;
+      return <DocumentCard key={doc.id} doc={doc} admin={manageMode && mutationsEnabled ? { onToggleHidden: () => updateDocument({ ...doc, hidden: !doc.hidden, updatedAt: new Date().toISOString() }, doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => requestDocumentDelete(doc), onMoveUp: () => reorder(-1), onMoveDown: () => reorder(1), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1 } : undefined}/>;
     })}</div> : <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div>}</> : <div className="skeleton-grid" aria-label="Loading library documents">{[1, 2, 3].map(item => <div className="skeleton" key={item} />)}</div>}
     {canAdmin && showDocumentRecovery ? <DeletedDocuments documents={deleted} onClose={() => setShowDocumentRecovery(false)} onRecover={id => { const expectedVersion = sharedRef.current?.recordVersions.documents[id]; if (expectedVersion !== undefined) void commitMutation({ operation: "document.restore", documentId: id, expectedVersion }, "Document recovered."); }} /> : null}
     {canEdit && editor && mutationsEnabled ? <DocumentEditor key="new" categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft} onCreateCategory={canAdmin ? createCategory : undefined} onManageCategories={canAdmin ? () => setShowCategoryManager(true) : undefined}/> : null}
     {canAdmin && showDocumentReorder ? <DocumentReorderDialog documents={activeDocuments} onCancel={() => setShowDocumentReorder(false)} onSave={saveDocumentOrder} /> : null}
     {canAdmin && showCategoryManager ? <CategoryManager categories={categories} documentCounts={documentCounts} onClose={() => setShowCategoryManager(false)} onCreate={createCategory} onRename={renameCategory} onToggleHidden={toggleCategoryHidden} onDelete={deleteCategory} onRecover={id => { const expectedVersion = sharedRef.current?.recordVersions.categories[id]; if (expectedVersion !== undefined) void commitMutation({ operation: "category.restore", categoryId: id, expectedVersion }, "Category recovered."); }} onMove={(id, direction) => { const active = categories.filter(item => !item.deletedAt); const position = active.findIndex(item => item.id === id); const target = position + direction; if (position < 0 || target < 0 || target >= active.length || !sharedRef.current) return; const ordered = [...active]; [ordered[position], ordered[target]] = [ordered[target], ordered[position]]; void commitMutation({ operation: "categories.reorder", categoryIds: ordered.map(item => item.id), expectedRevision: sharedRef.current.revision }, "Category order updated."); }} /> : null}
+    {documentToDelete ? <DeleteDocumentDialog document={documentToDelete} isDeleting={isDeletingDocument} error={deleteError} onCancel={() => { if (isDeletingDocument) return; setDocumentToDelete(null); setDeleteError(""); }} onConfirm={() => void confirmDocumentDelete()} /> : null}
+    {successMessage ? <div className="catalog-success-toast" role="status" aria-live="polite">{successMessage}</div> : null}
   </section>;
 }

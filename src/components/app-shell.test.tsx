@@ -31,6 +31,11 @@ describe("Glassco application tabs", () => {
     const library = tabs.getByRole("link", { name: "Team SOP Library" });
     const dashboard = tabs.getByRole("link", { name: "PPC Dashboard" });
 
+    expect(screen.queryByRole("navigation", { name: "Primary navigation" })).not.toBeInTheDocument();
+    expect(screen.getByText("Test admin")).toBeVisible();
+    expect(screen.getByText("ADMIN")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Log out" })).toBeVisible();
+
     fireEvent.click(pipeline);
     expect(pipeline).toHaveAttribute("href", "https://glasscopipeline.vercel.app/products?stage=shipping#timeline");
     expect(JSON.parse(window.localStorage.getItem(GLASSCO_AUTH_HANDOFF_STORAGE_KEY) || "null").targetApp).toBe("pipeline");
@@ -42,6 +47,11 @@ describe("Glassco application tabs", () => {
     fireEvent.click(dashboard);
     expect(dashboard).toHaveAttribute("href", "/ppc/dashboard?range=30d");
     expect(JSON.parse(window.localStorage.getItem(GLASSCO_AUTH_HANDOFF_STORAGE_KEY) || "null").targetApp).toBe("ppc");
+
+    const profile = screen.getByRole("link", { name: "Open profile" });
+    fireEvent.click(profile);
+    expect(profile).toHaveAttribute("href", "https://glasscopipeline.vercel.app/?open=profile");
+    expect(JSON.parse(window.localStorage.getItem(GLASSCO_AUTH_HANDOFF_STORAGE_KEY) || "null").targetApp).toBe("pipeline");
 
     for (const tab of [pipeline, library, dashboard]) {
       expect(tab).toHaveAttribute("target", "_blank");
@@ -57,5 +67,6 @@ describe("Glassco application tabs", () => {
     expect(screen.getByRole("link", { name: "PPC Dashboard" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Team SOP Library" })).not.toHaveAttribute("aria-current");
     expect(within(screen.getByRole("navigation", { name: "Primary navigation" })).getByRole("link", { name: "Library" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("button", { name: "Log out" })).toBeVisible();
   });
 });

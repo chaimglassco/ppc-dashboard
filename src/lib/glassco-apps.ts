@@ -50,6 +50,12 @@ export function getPipelineLoginUrl(returnTo: unknown): string {
   return url.toString();
 }
 
+export function getPipelineProfileUrl(): string {
+  const url = new URL(PIPELINE_HOME);
+  url.searchParams.set("open", "profile");
+  return url.toString();
+}
+
 export function readGlasscoAppRoutes(storage: Storage): Record<GlasscoAppId, string> {
   const fallback = { ...GLASSCO_DEFAULT_APP_ROUTES };
   try {

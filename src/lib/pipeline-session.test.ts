@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  GLASSCO_LOGOUT_STORAGE_KEY,
   GLASSCO_AUTH_HANDOFF_STORAGE_KEY,
   PIPELINE_SESSION_STORAGE_KEY,
+  clearAndBroadcastGlasscoSession,
   consumePipelineSessionHandoff,
   createPipelineSessionHandoff,
   parseStoredPipelineSession,
@@ -69,5 +71,22 @@ describe("cross-tab authentication handoff", () => {
     const local = storage({ [GLASSCO_AUTH_HANDOFF_STORAGE_KEY]: JSON.stringify({ version: 1, targetApp: "pipeline", expiresAt: 31_000, session: validSession }) });
     expect(consumePipelineSessionHandoff(local, storage(), "ppc", 1_000)).toBeNull();
     expect(local.getItem(GLASSCO_AUTH_HANDOFF_STORAGE_KEY)).not.toBeNull();
+  });
+});
+
+describe("shared logout", () => {
+  it("clears persistent and tab sessions and broadcasts the logout timestamp", () => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    window.localStorage.setItem(PIPELINE_SESSION_STORAGE_KEY, JSON.stringify(validSession));
+    window.sessionStorage.setItem(PIPELINE_SESSION_STORAGE_KEY, JSON.stringify(validSession));
+    window.localStorage.setItem(GLASSCO_AUTH_HANDOFF_STORAGE_KEY, "pending");
+
+    clearAndBroadcastGlasscoSession(12_345);
+
+    expect(window.localStorage.getItem(PIPELINE_SESSION_STORAGE_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(PIPELINE_SESSION_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(GLASSCO_AUTH_HANDOFF_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(GLASSCO_LOGOUT_STORAGE_KEY)).toBe("12345");
   });
 });
