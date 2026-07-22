@@ -11,7 +11,8 @@ export async function verifyPipelineRequest(request: Request, requireAdmin = fal
   try {
     const response = await fetch(`${pipelineOrigin}/api/auth/session`, { headers: { Authorization: authorization }, cache: "no-store" });
     const value: unknown = await response.json();
-    if (!response.ok || !value || typeof value !== "object") return Response.json({ error: "Your Pipeline session has expired." }, { status: 401 });
+    if (response.status === 401) return Response.json({ error: "Your Pipeline session has expired." }, { status: 401 });
+    if (!response.ok || !value || typeof value !== "object") return Response.json({ error: "Pipeline authentication is temporarily unavailable." }, { status: 503 });
     const user = (value as Record<string, unknown>).user;
     if (!user || typeof user !== "object") return Response.json({ error: "Your Pipeline session is invalid." }, { status: 401 });
     const candidate = user as Record<string, unknown>;

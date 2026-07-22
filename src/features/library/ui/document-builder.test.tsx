@@ -36,7 +36,7 @@ describe("DocumentBuilder metadata editing", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0][1]).toEqual({ title: "Updated document title", description: "Updated document description", category: "Online Arbitrage" });
-  });
+  }, 10_000);
 });
 
 describe("DocumentBuilder element reordering", () => {

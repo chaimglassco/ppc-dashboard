@@ -1,5 +1,5 @@
 import type { LibraryDocument } from "../domain/types";
-import { mergeAdminDocuments, parseAdminLibraryState, type ManagedLibraryDocument } from "./admin-storage";
+import { parseAdminLibraryState, type ManagedLibraryDocument } from "./admin-storage";
 import { createDefaultCategories, parseCategoryState, type ManagedCategory } from "./category-storage";
 
 export type SharedLibraryState = {
@@ -8,9 +8,18 @@ export type SharedLibraryState = {
   categories: ManagedCategory[];
 };
 
+export type SharedLibraryRecordVersions = {
+  documents: Record<string, number>;
+  categories: Record<string, number>;
+};
+
 export type SharedLibraryResponse = {
   initialized: boolean;
   state: SharedLibraryState;
+  revision: number;
+  recordVersions: SharedLibraryRecordVersions;
+  updatedAt: string | null;
+  updatedBy: string | null;
 };
 
 export function parseSharedLibraryState(value: unknown): SharedLibraryState | null {
@@ -27,35 +36,29 @@ export function createSharedLibraryState(seed: LibraryDocument[]): SharedLibrary
   return { version: 1, documents: seed.map(document => ({ ...document })), categories: createDefaultCategories() };
 }
 
-export function mergeSharedLibraryState(seed: LibraryDocument[], stored: SharedLibraryState | null): SharedLibraryState {
-  const defaults = createDefaultCategories();
-  if (!stored) return createSharedLibraryState(seed);
-  const categoryIds = new Set(stored.categories.map(category => category.id));
-  return {
-    version: 1,
-    documents: mergeAdminDocuments(seed, { version: 1, documents: stored.documents }),
-    categories: [...stored.categories, ...defaults.filter(category => !categoryIds.has(category.id))],
-  };
+function parseVersionMap(value: unknown): Record<string, number> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (!entries.every(([, version]) => Number.isInteger(version) && Number(version) >= 0)) return null;
+  return Object.fromEntries(entries.map(([id, version]) => [id, Number(version)]));
 }
 
-export function mergeLocalOnlyIntoShared(shared: SharedLibraryState, localDocuments: ManagedLibraryDocument[], localCategories: ManagedCategory[]): SharedLibraryState {
-  const documentIds = new Set(shared.documents.map(document => document.id));
-  const categoryIds = new Set(shared.categories.map(category => category.id));
+export function parseSharedLibraryResponse(value: unknown): SharedLibraryResponse | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Record<string, unknown>;
+  const state = parseSharedLibraryState(candidate.state);
+  const versions = candidate.recordVersions as Record<string, unknown> | undefined;
+  const documents = parseVersionMap(versions?.documents);
+  const categories = parseVersionMap(versions?.categories);
+  if (typeof candidate.initialized !== "boolean" || !state || !Number.isInteger(candidate.revision) || Number(candidate.revision) < 0 || !documents || !categories) return null;
+  if (candidate.updatedAt !== null && candidate.updatedAt !== undefined && typeof candidate.updatedAt !== "string") return null;
+  if (candidate.updatedBy !== null && candidate.updatedBy !== undefined && typeof candidate.updatedBy !== "string") return null;
   return {
-    version: 1,
-    documents: [...shared.documents, ...localDocuments.filter(document => !documentIds.has(document.id))],
-    categories: [...shared.categories, ...localCategories.filter(category => !categoryIds.has(category.id))],
-  };
-}
-
-export function mergeLocalIntoShared(shared: SharedLibraryState, localDocuments: ManagedLibraryDocument[], localCategories: ManagedCategory[]): SharedLibraryState {
-  const localDocumentById = new Map(localDocuments.map(document => [document.id, document]));
-  const localCategoryById = new Map(localCategories.map(category => [category.id, category]));
-  const sharedDocumentIds = new Set(shared.documents.map(document => document.id));
-  const sharedCategoryIds = new Set(shared.categories.map(category => category.id));
-  return {
-    version: 1,
-    documents: [...shared.documents.map(document => localDocumentById.get(document.id) ?? document), ...localDocuments.filter(document => !sharedDocumentIds.has(document.id))],
-    categories: [...shared.categories.map(category => localCategoryById.get(category.id) ?? category), ...localCategories.filter(category => !sharedCategoryIds.has(category.id))],
+    initialized: candidate.initialized,
+    state,
+    revision: Number(candidate.revision),
+    recordVersions: { documents, categories },
+    updatedAt: typeof candidate.updatedAt === "string" ? candidate.updatedAt : null,
+    updatedBy: typeof candidate.updatedBy === "string" ? candidate.updatedBy : null,
   };
 }

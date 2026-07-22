@@ -33,4 +33,11 @@ describe("Pipeline server authorization", () => {
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).status).toBe(401);
   });
+
+  it("keeps temporary upstream failures distinct from expired sessions", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: "Unavailable" }), { status: 503 })));
+    const result = await verifyPipelineRequest(request());
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(503);
+  });
 });

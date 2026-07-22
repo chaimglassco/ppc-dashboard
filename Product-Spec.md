@@ -2,11 +2,11 @@
 
 ## Product direction
 
-Glassco Back Office Library is the knowledge and operating-procedure foundation for a future Amazon PPC management suite. It provides a searchable document catalog, guided reading experience, local administration prototype, and structured document builder.
+Glassco Back Office Library is the knowledge and operating-procedure foundation for the Amazon PPC management suite. It provides a searchable shared document catalog, guided reading experience, role-aware administration, and structured document builder.
 
 ## Current implementation mode
 
-The current milestone is an unauthenticated, browser-local MVP for one operator on one device. It does not provide accounts, shared workspaces, secure administration, or cross-device synchronization.
+The current milestone uses the existing Pipeline identity and one authoritative Postgres catalog shared across accounts and devices. ADMIN has full administration, USER can create/edit documents, and VIEWER is read-only.
 
 ## Implemented requirements
 
@@ -15,7 +15,7 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 - **LIB-001** — A published, visible document catalog is available at `/library`.
 - **LIB-002** — Search covers title, description, tags, and document type case-insensitively.
 - **LIB-003** — A configurable category filter combines with search and is represented in the URL.
-- **LIB-004** — Eight realistic starter documents use validated IDs, slugs, categories, and types.
+- **LIB-004** — Repository bootstrap fixtures use validated IDs, slugs, categories, and types without being merged into an initialized shared catalog.
 - **LIB-005** — Reader pages render safe Markdown without arbitrary raw HTML.
 - **LIB-006** — Topic navigation uses stable IDs and numbered main headings.
 - **LIB-007** — Topic tooltips appear only when sidebar text is truncated.
@@ -31,21 +31,25 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 - **LIB-LOCAL-005** — Missing, blocked, malformed, or old storage falls back safely.
 - **LIB-LOCAL-006** — Server and browser markup hydrate without reading-state mismatch.
 
-### Local administration
+### Shared administration
 
 - **LIB-ADMIN-001** — View mode displays Eye, admin mode displays Pencil, and the Plus control for creating a document remains visible in both modes.
-- **LIB-ADMIN-002** — An operator can create and edit documents.
+- **LIB-ADMIN-002** — ADMIN and USER can create documents and edit active document content/metadata.
 - **LIB-ADMIN-003** — Documents can be renamed, hidden, reordered, deleted, and recovered.
 - **LIB-ADMIN-004** — Categories can be created, renamed, hidden, reordered, deleted, and recovered.
-- **LIB-ADMIN-005** — Category renames update locally assigned documents.
+- **LIB-ADMIN-005** — ADMIN category renames atomically update assigned active documents.
 - **LIB-ADMIN-006** — Normal reader access excludes hidden and deleted documents.
-- **LIB-ADMIN-007** — Administration state is versioned and device-local.
+- **LIB-ADMIN-007** — Pipeline Postgres stores one globally revisioned catalog with per-document and per-category versions, audit attribution, and recoverable tombstones.
 - **LIB-ADMIN-008** — The new-document form exposes only title, description, and category; document type, tags, and legacy Markdown use preserved defaults and are not edited there.
 - **LIB-ADMIN-009** — Existing documents are not renamed from catalog cards; their title, description, and assigned category are edited directly in the document header while builder edit mode is active.
 - **LIB-ADMIN-010** — Category controls beside the document Category field support quick creation and open the full rename, reorder, delete, and recovery manager.
 - **LIB-ADMIN-011** — Deleted categories stay hidden from the category manager until the recovery icon opens a dedicated recovery dialog.
 - **LIB-ADMIN-012** — Deleted documents stay out of the catalog layout until the admin toolbar recovery icon opens a dedicated recovery dialog.
 - **LIB-ADMIN-013** — The catalog renders a loading skeleton until shared administration state or its cached fallback is ready, so deleted seed documents never flash in the active list during refresh.
+- **LIB-ADMIN-014** — Visible tabs synchronize every five seconds and revalidate immediately on focus.
+- **LIB-ADMIN-015** — A validated confirmed cache may be shown during an outage only in read-only mode; stale browser administration data is never merged or uploaded.
+- **LIB-ADMIN-016** — Same-record stale edits receive a conflict and current server state rather than silently overwriting another account.
+- **LIB-ADMIN-017** — ADMIN exclusively controls document/category delete, restore, reorder, category management, and shared backups; VIEWER cannot mutate catalog content.
 
 ### Structured builder
 
@@ -65,26 +69,27 @@ The current milestone is an unauthenticated, browser-local MVP for one operator 
 
 ## Current acceptance criteria
 
-An operator can open the Library, search and filter content, read documents, navigate topics, bookmark and complete documents, use the simplified document form, create or manage categories beside its selector, build structured content, add a video tutorial, refresh the browser, and retain local state without hydration errors.
+Authenticated users can open the Library, search/filter/read shared content, and retain personal reading state. ADMIN and USER changes synchronize across accounts within five seconds or on focus; ADMIN-only lifecycle actions remain protected. Deleted records do not reappear unless restored, conflicts do not silently overwrite work, and an outage cache remains read-only.
 
 ## Deferred requirements
 
-- Authentication and account recovery.
-- Users, organizations, workspaces, roles, and invitations.
-- Server-backed content, preferences, and audit history.
-- Authorization and row-level security.
+- Secure same-origin cookie sessions and account recovery.
+- Organizations, workspaces, and invitations beyond the current shared team catalog.
+- Row-level multi-workspace isolation beyond current role authorization.
 - Amazon Ads API integrations.
 - PPC analyzers, audits, reporting automation, collaboration, and analytics.
 - Public sharing and billing.
 
-These require a separately approved milestone and must replace—not expose—the local browser-storage administration model.
+These require a separately approved milestone and must preserve the current shared-state and stable-ID contracts.
 # Unified Glassco application behavior
 
-- The PPC Dashboard is presented under the Pipeline domain at `/ppc`.
-- Responsive application tabs remain visible in the reserved top bar of both Product Pipeline and PPC Dashboard, with the active application shown in white text on blue.
-- PPC resumes its last valid route and otherwise opens `/ppc/library`.
+- Team SOP Library is presented at `/ppc/library/*`; PPC Dashboard is the authenticated `/ppc/dashboard` coming-soon page.
+- Three responsive application cards remain visible in the reserved top bar, with the active application shown in white text on blue.
+- Clicking any application card, including the active card, opens its remembered route in a new browser tab and leaves the current page unchanged.
+- Team SOP Library and PPC Dashboard remember routes independently and otherwise open `/ppc/library` and `/ppc/dashboard` respectively.
+- A session-only Pipeline login is handed off once to the destination tab; missing or expired authentication returns to the requested safe PPC route after login.
 - A verified Pipeline session is required before the PPC interface renders.
-- ADMIN can create, edit, reorder, hide, delete, and recover content. USER and VIEWER are read-only apart from personal reading controls.
+- ADMIN can create/edit/reorder/hide/delete/recover documents, manage categories, and manage backups. USER can create and edit active documents. VIEWER is read-only apart from personal reading controls.
 
 # Rich-text composer behavior
 

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { GLASSCO_APP_ROUTES_STORAGE_KEY, readGlasscoAppRoutes, rememberGlasscoAppRoute, withPpcBasePath } from "./glassco-apps";
+import {
+  GLASSCO_APP_ROUTES_STORAGE_KEY,
+  getPipelineLoginUrl,
+  getSafeGlasscoReturnRoute,
+  readGlasscoAppRoutes,
+  rememberGlasscoAppRoute,
+  withPpcBasePath,
+} from "./glassco-apps";
 
 function storage(initial: Record<string, string> = {}): Storage {
   const values = new Map(Object.entries(initial));
@@ -19,13 +26,47 @@ describe("Glassco app routing", () => {
     expect(withPpcBasePath("/ppc/library")).toBe("/ppc/library");
   });
 
-  it("rejects unsafe remembered routes", () => {
-    const source = storage({ [GLASSCO_APP_ROUTES_STORAGE_KEY]: JSON.stringify({ pipeline: "https://example.com", ppc: "/library" }) });
-    expect(readGlasscoAppRoutes(source)).toEqual({ pipeline: "/", ppc: "/ppc/library" });
+  it("keeps legacy route memory and supplies the new dashboard fallback", () => {
+    const source = storage({ [GLASSCO_APP_ROUTES_STORAGE_KEY]: JSON.stringify({ pipeline: "/products?stage=shipping", ppc: "/ppc/library/example" }) });
+    expect(readGlasscoAppRoutes(source)).toEqual({
+      pipeline: "/products?stage=shipping",
+      ppc: "/ppc/library/example",
+      ppcDashboard: "/ppc/dashboard",
+    });
   });
 
-  it("remembers a valid PPC route", () => {
+  it("rejects unsafe remembered routes", () => {
+    const source = storage({ [GLASSCO_APP_ROUTES_STORAGE_KEY]: JSON.stringify({ pipeline: "//example.com", ppc: "/ppc/dashboard", ppcDashboard: "https://example.com" }) });
+    expect(readGlasscoAppRoutes(source)).toEqual({ pipeline: "/", ppc: "/ppc/library", ppcDashboard: "/ppc/dashboard" });
+  });
+
+  it("remembers valid destinations independently", () => {
     const source = storage();
-    expect(rememberGlasscoAppRoute(source, "ppc", "/ppc/library/example").ppc).toBe("/ppc/library/example");
+    rememberGlasscoAppRoute(source, "ppc", "/ppc/library/example?mode=read#topic");
+    const routes = rememberGlasscoAppRoute(source, "ppcDashboard", "/ppc/dashboard?range=30d#summary");
+    expect(routes.ppc).toBe("/ppc/library/example?mode=read#topic");
+    expect(routes.ppcDashboard).toBe("/ppc/dashboard?range=30d#summary");
+  });
+
+  it.each([
+    "/ppc/library",
+    "/ppc/library/example?mode=read#topic",
+    "/ppc/dashboard",
+    "/ppc/dashboard?range=30d#summary",
+  ])("accepts the safe return destination %s", route => {
+    expect(getSafeGlasscoReturnRoute(route)).toBe(route);
+    expect(getPipelineLoginUrl(route)).toContain(`returnTo=${encodeURIComponent(route)}`);
+  });
+
+  it.each([
+    "https://evil.example/ppc/library",
+    "//evil.example/ppc/library",
+    "/ppc/library\\evil",
+    "/ppc/dashboard/extra",
+    "/ppc/other",
+    "not-a-route",
+  ])("rejects the unsafe return destination %s", route => {
+    expect(getSafeGlasscoReturnRoute(route)).toBeNull();
+    expect(new URL(getPipelineLoginUrl(route)).searchParams.has("returnTo")).toBe(false);
   });
 });

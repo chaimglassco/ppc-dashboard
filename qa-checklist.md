@@ -6,7 +6,7 @@ Use this checklist before merging or deploying changes.
 
 - [x] `npm run lint`
 - [x] `npm run typecheck`
-- [x] `npm test` — 74 tests passing across 14 test files
+- [x] `npm test` — 124 tests passing across 22 test files
 - [x] `npm run build`
 
 ## Catalog and navigation
@@ -110,23 +110,34 @@ Use this checklist before merging or deploying changes.
 - [ ] Re-run physical Android Chrome verification before a public release.
 - [ ] Complete an external WCAG audit before a public release.
 
-## Security checks for a shared deployment
+## Shared persistence and authorization
 
-- [ ] Authentication implemented.
-- [ ] Server-side authorization implemented.
-- [ ] Admin mutations moved off browser-only storage.
-- [ ] Database backup and restore tested.
-- [ ] Audit logging implemented.
-
-These security items are intentionally incomplete in the local MVP.
+- [x] Library reads require a verified Pipeline session.
+- [x] Pipeline Postgres is the authoritative document/category store; `/ppc/api/library` is an adapter only.
+- [x] Server authorization permits ADMIN full access, USER document create/update, and VIEWER read-only access.
+- [x] Scoped mutations use global/record versions and return current state on `409` conflicts.
+- [x] Deleted records remain tombstoned until explicit ADMIN restore.
+- [x] Repository Markdown is not merged after initialization; legacy local admin/category snapshots are ignored and never uploaded.
+- [x] Successful responses update a validated confirmed cache; outage fallback is read-only and disables mutations.
+- [x] Visible tabs poll every five seconds and refresh immediately on focus.
+- [x] Pipeline audit and backup/restore contracts are covered by automated tests.
+- [ ] Complete production backup/restore verification after deploying Pipeline and before catalog initialization.
+- [ ] Complete authenticated multi-account browser verification with dedicated ADMIN, USER, and VIEWER accounts.
+- [ ] Move bearer authentication to secure same-origin cookies before treating returned HTML as access-controlled.
 # Unified application checks
 
 - [ ] `/ppc/library`, nested documents, recent, and bookmarks load directly and after refresh.
-- [ ] Missing, malformed, and expired Pipeline sessions redirect to Pipeline.
-- [ ] ADMIN sees catalog and document-builder controls and can save shared changes.
-- [ ] USER and VIEWER do not see admin controls; direct `PUT /ppc/api/library` returns 403.
-- [ ] The application tabs return to the remembered Pipeline route and record the current PPC route.
-- [ ] The application tabs are visible in both apps, remain usable on desktop and mobile, show white active text, and do not overlay page content.
+- [ ] `/ppc/dashboard` loads inside the authenticated shared shell and shows only the centered coming-soon placeholder.
+- [ ] Missing and expired Pipeline sessions redirect to Pipeline with a validated requested PPC `returnTo`; temporary server failures remain on a retry gate.
+- [ ] ADMIN sees full catalog/category controls and can save shared changes.
+- [ ] USER can create/edit active documents but cannot delete, restore, reorder, or manage categories; forbidden direct `PATCH /ppc/api/library` returns `403`.
+- [ ] VIEWER sees no mutation controls and direct `PATCH /ppc/api/library` returns `403`.
+- [ ] All three application cards open their remembered routes in new browser tabs, including the active card, while the source page remains unchanged.
+- [ ] Team SOP Library and PPC Dashboard active states follow `/ppc/library/*` and `/ppc/dashboard` independently.
+- [ ] Legacy `{ pipeline, ppc }` route memory receives the dashboard fallback without losing its saved routes.
+- [ ] Session-only handoff is consumed once into destination session storage and removed; malformed, expired, and wrong-target values are rejected; “Remember me” remains persistent.
+- [ ] External, malformed, and unsupported `returnTo` destinations are rejected; successful login restores valid library and dashboard requests.
+- [ ] The application cards remain keyboard accessible on desktop and mobile, preserve hover/focus states, scroll horizontally when needed, and do not overlap account controls.
 - [ ] `glasscoppc.vercel.app` redirects to the equivalent canonical `/ppc` route without a loop.
 - [ ] No hydration or browser-console errors appear.
 

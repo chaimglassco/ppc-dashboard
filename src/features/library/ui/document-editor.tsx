@@ -21,8 +21,8 @@ type DocumentEditorProps = {
   categories?: string[];
   onCancel: () => void;
   onSave: (draft: DocumentDraft) => void;
-  onCreateCategory: (name: string) => boolean;
-  onManageCategories: () => void;
+  onCreateCategory?: (name: string) => boolean;
+  onManageCategories?: () => void;
 };
 
 export function DocumentEditor({ document, categories = [...CATEGORIES], onCancel, onSave, onCreateCategory, onManageCategories }: DocumentEditorProps) {
@@ -48,7 +48,7 @@ export function DocumentEditor({ document, categories = [...CATEGORIES], onCance
 
   const createCategory = () => {
     const name = newCategoryName.trim();
-    if (!name || !onCreateCategory(name)) return;
+    if (!name || !onCreateCategory?.(name)) return;
     pendingCategory.current = name;
     update("category", name);
     setNewCategoryName("");
@@ -63,10 +63,10 @@ export function DocumentEditor({ document, categories = [...CATEGORIES], onCance
         <label><span>Description</span><textarea required rows={3} value={draft.description} onChange={event => update("description", event.target.value)} placeholder="A concise summary of this topic." /></label>
         <div className="editor-category-control">
           <label><span>Category</span><select value={draft.category} onChange={event => update("category", event.target.value as Category)}>{categoryOptions.map(category => <option key={category}>{category}</option>)}</select></label>
-          <div className="editor-category-actions" aria-label="Category controls">
+          {onCreateCategory && onManageCategories ? <div className="editor-category-actions" aria-label="Category controls">
             <button type="button" onClick={() => setShowCategoryCreator(value => !value)} aria-label="Create category" aria-expanded={showCategoryCreator}><Plus /></button>
             <button type="button" onClick={onManageCategories} aria-label="Edit categories"><Pencil /></button>
-          </div>
+          </div> : null}
         </div>
         {showCategoryCreator ? <div className="quick-category-create">
           <label htmlFor="document-new-category"><span>New category</span><input id="document-new-category" value={newCategoryName} onChange={event => setNewCategoryName(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); createCategory(); } }} placeholder="Enter category name" autoFocus /></label>

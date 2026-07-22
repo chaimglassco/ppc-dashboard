@@ -2,9 +2,9 @@
 
 ## Scope
 
-This document defines the repository content, shared server storage, and browser-only reading-state contracts used by the current Glassco Back Office Library MVP.
+This document defines the repository bootstrap content, authoritative Pipeline Postgres state, scoped mutation protocol, private-media/legacy-migration storage, and browser-only reading-state contracts used by the Glassco Back Office Library.
 
-The global application tabs continue to use `glassco.appRoutes.v1`; this visual relocation does not change the stored route schema.
+The global application tabs continue to use `glassco.appRoutes.v1` as their new-browser-tab destinations; this navigation change does not alter the stored route schema.
 
 ## Library document
 
@@ -114,28 +114,41 @@ Repository validation rejects duplicate IDs/slugs and invalid starter taxonomy v
 
 ## Shared library storage
 
-Document administration and category administration are stored together in one versioned shared snapshot served by `/api/library`.
-
-Production storage: private Vercel Blob object `glassco/library-state-v1.json`.
-
-Local development storage: `.data/library-state-v1.json`.
+Pipeline Postgres is the only authoritative catalog store. Pipeline exposes `/api/library-state`; the Library's `/ppc/api/library` route forwards authenticated GET, PATCH, and POST requests to it and never maintains a second writable snapshot.
 
 ```ts
 {
-  version: 1;
-  documents: Array<LibraryDocument & { deletedAt?: string }>;
-  categories: Array<{
-    id: string;
-    name: string;
-    hidden: boolean;
-    deletedAt?: string;
-  }>;
+  state: {
+    version: 1;
+    documents: Array<LibraryDocument & { deletedAt?: string }>;
+    categories: Array<{ id: string; name: string; hidden: boolean; deletedAt?: string }>;
+  };
+  revision: number;
+  recordVersions: {
+    documents: Record<string, number>;
+    categories: Record<string, number>;
+  };
+  updatedAt: string | null;
+  updatedBy: string | null;
 }
 ```
 
-The API is intentionally open for this pre-authentication MVP. All visitors can currently use the admin controls. Add server-side authorization before introducing user roles or sharing the app outside the intended team.
+Pipeline tables separate catalog metadata, documents, categories, backups, and audit records. Stable document/category IDs remain primary keys; `deletedAt` is a recoverable tombstone and is cleared only by an explicit restore.
 
-The previous browser-local admin snapshots are retained as a cache and one-time migration source. Documents that exist only in an existing browser are uploaded to shared storage when that browser next opens the updated app.
+### Scoped mutation protocol
+
+`PATCH /ppc/api/library` accepts one flat operation per request:
+
+- `catalog.initialize` with `state` and `expectedRevision: 0`
+- `document.create` with `document`
+- `document.update` with `documentId`, `expectedVersion`, and `document`
+- `document.delete` / `document.restore` with `documentId` and `expectedVersion`
+- `documents.reorder` with all active `documentIds` and `expectedRevision`
+- equivalent category create/update/delete/restore/reorder operations
+
+Updates, delete, and restore compare the target record version. Reorders and initialization compare the global revision. A mismatch or unavailable target returns HTTP `409`, `conflict: true`, and the current full shared response. Successful mutations increment the global revision, update record versions as applicable, and record actor/revision audit metadata.
+
+Pipeline reloads the caller from `launchflow_users` for every request. ADMIN may initialize, create/update/delete/restore/reorder documents, manage categories, and manage backups. USER may create documents and update active documents only. VIEWER is read-only.
 
 ## Browser-storage contracts
 
@@ -155,53 +168,32 @@ Schema version: `1`
 }
 ```
 
-### Document administration cache and migration source
+### Confirmed shared-state cache
 
-Key: `glassco-library-admin-state`
+Key: `glassco-library-confirmed-cache-v2`
 
-Schema version: `1`
+The value is the last schema-valid full shared response. A successful server fetch replaces it. If the server is unavailable, it may be rendered only with mutations disabled. It is never treated as pending work and is never uploaded to Pipeline.
 
-```ts
-{
-  version: 1;
-  documents: Array<LibraryDocument & { deletedAt?: string }>;
-}
-```
-
-### Category administration cache and migration source
-
-Key: `glassco-library-category-state`
-
-Schema version: `1`
-
-```ts
-{
-  version: 1;
-  categories: Array<{
-    id: string;
-    name: string;
-    hidden: boolean;
-    deletedAt?: string;
-  }>;
-}
-```
+Legacy keys `glassco-library-admin-state` and `glassco-library-category-state` are ignored for shared hydration/migration. Their contents cannot merge with repository seeds or authoritative state.
 
 ## Validation and fallback rules
 
 - Treat all browser-storage input as untrusted.
-- Invalid or missing state falls back to seeded/default state.
+- Invalid or missing authoritative state does not fall back to writable seed state. A validated confirmed cache may be shown read-only; otherwise the error state remains visible.
 - Storage write failures must not crash the UI.
 - Deleted records use recoverable timestamps instead of destructive removal.
 - Recovery dialogs are presentation-only views over records carrying `deletedAt`; moving recovery lists behind toolbar icons does not change the storage schema.
 - Catalog hydration is presentation-only: seed documents remain behind a loading skeleton until the shared snapshot or validated local fallback resolves, and no persistence fields change.
-- Renaming a category updates locally managed documents assigned to the old name.
+- Renaming a category updates assigned active documents in the authoritative mutation.
 - Quick category creation uses the existing category schema, generates a stable category ID, and selects the new name in the open document draft without changing the storage version.
 - Reading state stores references and timestamps, never document bodies.
-- The server snapshot must remain deterministic; browser state is applied after hydration.
+- Server state remains authoritative; browser catalog data is never applied after hydration.
 
-## Future database migration
+## Legacy Blob migration and backups
 
-A future database should preserve document IDs, slugs, topic IDs, element IDs, and category IDs. Add a schema version and migration path before changing any existing storage shape. Server-side authorization must be added when role access is introduced. The current Blob snapshot uses last-write-wins semantics and is intended for the low-concurrency MVP only.
+Private Blob object `glassco/library-state-v1.json` is the legacy source only. The ADMIN-protected `/ppc/api/library/migration` route validates it, supports authenticated download, and creates an immutable checksum-addressed copy under `glassco/library-backups/`. `initialize-clean-catalog` first ensures that backup, retains the existing IDs/slugs/content/settings for exactly **Sample Document with all the elements** and **Checking Spenders with No Sales**, tombstones every other legacy document, and submits `catalog.initialize` to an empty revision-zero Pipeline catalog.
+
+Pipeline backup operations use POST `/api/library-state` with `create-backup` or `restore-backup`; list/detail are ADMIN-only GET queries. Restore requires `expectedRevision` and automatically creates a before-restore backup. Private Blob continues to store authenticated uploaded images and the legacy migration artifact, not current catalog state.
 # Unified session and route contracts
 
 The PPC application reads the existing Pipeline session from local or session storage key `launchflow.authSession.v1`. Required fields are `token` and `email`; `name` and `role` are normalized after server verification. Roles normalize to `ADMIN`, `USER`, or `VIEWER`.
@@ -209,8 +201,12 @@ The PPC application reads the existing Pipeline session from local or session st
 Remembered application routes use `glassco.appRoutes.v1`:
 
 ```json
-{ "pipeline": "/", "ppc": "/ppc/library" }
+{ "pipeline": "/", "ppc": "/ppc/library", "ppcDashboard": "/ppc/dashboard" }
 ```
+
+The `ppcDashboard` property is optional on read so legacy `{ pipeline, ppc }` values remain valid. Pipeline accepts only safe non-`/ppc` paths, `ppc` accepts `/ppc/library` and descendants, and `ppcDashboard` accepts `/ppc/dashboard`.
+
+For a session stored only in the source tab, `glassco.authHandoff.v1` temporarily stores `{ version: 1, targetApp, expiresAt, session }` in same-origin local storage. It expires after 30 seconds, can only be consumed by its `pipeline` or `ppc` target, is copied to the destination tab's `launchflow.authSession.v1` session storage, and is immediately removed. Malformed and expired values are deleted; a valid value still requires server verification. Persistent “Remember me” sessions do not use this record.
 
 This integration does not change library document, category, topic, content-element, bookmark, history, or completion schemas.
 

@@ -1,11 +1,8 @@
 import { DOCUMENT_TYPES, type LibraryContentElement, type LibraryDocument } from "../domain/types";
 import { isRichTextDocument } from "../domain/rich-text";
 
-export const ADMIN_LIBRARY_KEY = "glassco-library-admin-state";
 export type ManagedLibraryDocument = LibraryDocument & { deletedAt?: string };
 export type AdminLibraryState = { version: 1; documents: ManagedLibraryDocument[] };
-type ReadStore = Pick<Storage, "getItem">;
-type WriteStore = Pick<Storage, "setItem">;
 
 function isStringArray(value: unknown): value is string[] { return Array.isArray(value) && value.every(item => typeof item === "string"); }
 function isNumberArray(value: unknown) { return Array.isArray(value) && value.every(item => typeof item === "number" && Number.isFinite(item) && item > 0); }
@@ -75,20 +72,6 @@ function sanitizeRichText(document: ManagedLibraryDocument): ManagedLibraryDocum
 export function parseAdminLibraryState(raw: string | null): AdminLibraryState | null {
   if (!raw) return null;
   try { const value: unknown = JSON.parse(raw); if (!value || typeof value !== "object") return null; const state = value as Record<string, unknown>; if (state.version !== 1 || !Array.isArray(state.documents)) return null; return { version: 1, documents: state.documents.filter(isDocument).map(sanitizeRichText) }; } catch { return null; }
-}
-
-export function mergeAdminDocuments(seed: LibraryDocument[], stored: AdminLibraryState | null): ManagedLibraryDocument[] {
-  if (!stored) return seed.map(document => ({ ...document }));
-  const ids = new Set(stored.documents.map(document => document.id));
-  return [...stored.documents, ...seed.filter(document => !ids.has(document.id))];
-}
-
-export function readAdminDocuments(seed: LibraryDocument[], storage?: ReadStore): ManagedLibraryDocument[] {
-  try { return mergeAdminDocuments(seed, parseAdminLibraryState(storage?.getItem(ADMIN_LIBRARY_KEY) ?? null)); } catch { return mergeAdminDocuments(seed, null); }
-}
-
-export function writeAdminDocuments(documents: ManagedLibraryDocument[], storage?: WriteStore) {
-  try { storage?.setItem(ADMIN_LIBRARY_KEY, JSON.stringify({ version: 1, documents } satisfies AdminLibraryState)); return true; } catch { return false; }
 }
 
 export function moveDocument(documents: ManagedLibraryDocument[], id: string, direction: -1 | 1) {

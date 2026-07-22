@@ -1,10 +1,10 @@
 # Project Progress
 
-Last updated: July 17, 2026
+Last updated: July 22, 2026
 
 ## Overall status
 
-The Glassco Back Office Library UI milestone is complete and buildable. The product currently operates as an unauthenticated, browser-local MVP.
+The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgres-authoritative shared persistence, scoped versioned mutations, read-only outage caching, and cross-account synchronization.
 
 ## Completed
 
@@ -26,7 +26,7 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Responsive tables and document layouts.
 - Hydration-safe browser reading state.
 
-### Local library administration
+### Shared library administration
 
 - Eye control in view mode, Pencil control in admin mode, and an always-visible Plus control for creating documents.
 - Create and edit documents.
@@ -37,8 +37,11 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Creation-only document form with document type, tags, and legacy Markdown removed from the visible form while their saved defaults remain preserved.
 - Category Plus and Pencil controls beside the document Category field for quick creation and full category management.
 - Removed the catalog-card Edit / Rename action; existing document title, description, and category now edit directly in the blue document header during builder edit mode.
-- Device-local persistence and recovery.
-- Refresh-safe catalog hydration keeps seed documents behind a skeleton until shared state or the cached fallback resolves, eliminating deleted-document flashes.
+- Pipeline Postgres persistence with recoverable tombstones, global revision, per-record versions, audit attribution, and backup/restore support.
+- Refresh-safe catalog hydration keeps all document cards behind a skeleton until authoritative state or the confirmed read-only cache resolves, eliminating deleted-document flashes.
+- Repository Markdown is bootstrap-only after initialization; legacy browser administration state cannot merge into or upload to the shared catalog.
+- Visible tabs poll every five seconds and refresh on focus. Server failure switches a validated confirmed cache to read-only mode instead of queuing local writes.
+- ADMIN has full catalog/category lifecycle control, USER can create/update documents, and VIEWER is read-only; Pipeline enforces each permission against the current active user record.
 
 ### Structured document builder
 
@@ -65,34 +68,34 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Sixteen Vitest files and 94 tests pass.
+- Twenty-two Vitest files and 124 tests pass.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.
 
 ## Not implemented
 
-- Authentication and administrator identity.
-- Users, teams, organizations, workspaces, or roles.
-- Server database or cross-device synchronization.
-- Server-side authorization or row-level security.
+- Secure cookie-based page authentication and account recovery.
+- Organizations, workspaces, invitations, or row-level multi-tenant isolation.
 - Amazon Ads API integration.
 - Analytics, reporting automation, and PPC analyzers.
 - Automated committed browser E2E suite.
 
 ## Recommended next milestone
 
-1. Add authentication and a server-backed persistence adapter.
-2. Migrate browser-local documents, categories, and reading state.
-3. Add server-side authorization for every admin mutation.
-4. Add Playwright coverage for catalog, builder, recovery, and persistence flows.
-5. Add staging and production deployment environments.
+1. Deploy and verify Pipeline's authoritative `/api/library-state` endpoint.
+2. Deploy the Library adapter, scoped mutation client, polling/focus sync, and read-only cache behavior.
+3. Create the protected immutable legacy Blob backup, then initialize the revision-zero Postgres catalog with the two retained production documents and all others tombstoned.
+4. Complete authenticated multi-account browser verification for ADMIN, USER, VIEWER, conflict, deletion, recovery, and outage behavior.
+5. Add committed Playwright coverage and secure cookie-based page authentication.
 # Unified Glassco integration
 
-- Added `/ppc` base-path support for pages, assets, and APIs.
-- Replaced the sidebar dropdown with global, responsive Product Pipeline/PPC Dashboard tabs in a reserved top bar while preserving remembered routes.
-- Added Pipeline session verification and role-aware PPC administration.
-- Protected shared-library reads with a verified session and writes with an ADMIN session.
+- Production deployment `dpl_6xM9bVCRqW8dLUqGL8GXtymQRR1V` was released first on 2026-07-22 and aliased to `glasscoppc.vercel.app`; the canonical Pipeline gateway serves `/ppc/dashboard` with HTTP 200 and rejects unsigned session checks with HTTP 401.
+- Added `/ppc` base-path support for pages, assets, and APIs, including the authenticated `/ppc/dashboard` coming-soon route.
+- Replaced the combined switcher with three independent, responsive Product Pipeline, Team SOP Library, and PPC Dashboard new-tab cards with per-application active states and remembered routes.
+- Added a 30-second one-use cross-tab handoff for session-only logins, preserved “Remember me,” and added validated post-login return destinations.
+- Added Pipeline session verification and role-aware Team SOP Library administration.
+- Protected shared-library reads and scoped writes through Pipeline: ADMIN has full access, USER may create/update documents, and VIEWER is read-only.
 - Added legacy `glasscoppc.vercel.app` canonical redirect handling.
 
 # WYSIWYG Library composers
@@ -101,6 +104,6 @@ The Glassco Back Office Library UI milestone is complete and buildable. The prod
 - Added selection-aware inline styles, bullets, numbers, editable checklists, accessible toolbar state, keyboard shortcuts, and responsive controls.
 - Preserved standalone list elements with inline-only row formatting.
 - Added validated JSON persistence, synchronized legacy fallbacks, lazy legacy Markdown conversion, and malformed-JSON recovery.
-- Expanded automated coverage to 94 tests, including conversion, validation, paste sanitization, fixed and selection-toolbar behavior, unified Bullets tabs, Diagnostic Flow descriptions, aligned text elements, exact table deletion, list semantics, ordered-list persistence, static rendering, and builder integration.
+- Expanded automated coverage to 124 tests across 22 files, including shared-state validation/cache behavior, scoped permissions and conflicts, legacy cleanup/backup safety, catalog hydration, and the existing navigation/editor coverage.
 - Completed authenticated same-origin browser verification with the production build: ADMIN edit, selection-aware toolbar state, editable checked checklist state, save, disabled/static reader rendering, full refresh persistence, edit-mode rehydration, cleanup, and zero browser warnings or errors.
 - Restored visible disc/decimal markers in both editor and reader modes, aligned task-list checkbox/text rows, and normalized Tiptap ordered-list JSON so numbered formatting survives save and reader rendering.

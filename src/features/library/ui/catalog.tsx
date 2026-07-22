@@ -2,13 +2,14 @@
 
 import { ArrowUpDown, Eye, Pencil, Plus, RotateCcw, Search, Settings2, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
 import type { LibraryDocument } from "../domain/types";
 import { extractTopics, slugifyHeading } from "../domain/headings";
 import { filterDocuments } from "../domain/search";
-import { moveDocument, readAdminDocuments, writeAdminDocuments, type ManagedLibraryDocument } from "../state/admin-storage";
-import { createDefaultCategories, moveCategory, readAdminCategories, writeAdminCategories, type ManagedCategory } from "../state/category-storage";
-import { cacheSharedLibraryState, hydrateSharedLibraryState, saveSharedLibraryState } from "../state/shared-library-client";
+import { type ManagedLibraryDocument } from "../state/admin-storage";
+import { createDefaultCategories, type ManagedCategory } from "../state/category-storage";
+import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, initializeCleanLibrary, mutateSharedLibrary, SharedLibraryConflictError, type SharedLibraryMutation } from "../state/shared-library-client";
+import type { SharedLibraryResponse } from "../state/shared-library-state";
 import { CategoryManager } from "./category-manager";
 import { DeletedDocuments } from "./deleted-documents";
 import { DocumentCard } from "./document-card";
@@ -17,7 +18,7 @@ import { DocumentReorderDialog } from "./document-reorder-dialog";
 import { useGlasscoSession } from "@/components/glassco-session";
 
 export function Catalog({ documents }: { documents: LibraryDocument[] }) {
-  const { canAdmin } = useGlasscoSession();
+  const { canAdmin, canEdit } = useGlasscoSession();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -34,23 +35,68 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [editor, setEditor] = useState<"new" | null>(null);
   const [notice, setNotice] = useState("");
   const [isCatalogReady, setIsCatalogReady] = useState(false);
+  const [mutationsEnabled, setMutationsEnabled] = useState(false);
+  const [librarySource, setLibrarySource] = useState<"server" | "cache" | null>(null);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [shared, setShared] = useState<SharedLibraryResponse | null>(null);
+  const sharedRef = useRef<SharedLibraryResponse | null>(null);
+
+  const applySharedResponse = useCallback((response: SharedLibraryResponse, cache = true) => {
+    sharedRef.current = response;
+    setShared(response);
+    setManaged(response.state.documents);
+    setCategories(response.state.categories);
+    if (cache) cacheSharedLibraryResponse(response, window.localStorage);
+  }, []);
+
+  const refresh = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await fetchSharedLibraryState(signal);
+      applySharedResponse(response);
+      setLibrarySource("server");
+      setMutationsEnabled(response.initialized);
+      setNotice(response.initialized ? "" : "Library migration pending. The shared catalog is read-only until an administrator completes initialization.");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setMutationsEnabled(false);
+      setLibrarySource("cache");
+      setNotice("Shared library is unavailable. Showing the last confirmed copy in read-only mode.");
+    }
+  }, [applySharedResponse]);
 
   useEffect(() => {
-    let cancelled = false;
-    void hydrateSharedLibraryState(documents, window.localStorage).then(state => {
-      if (cancelled) return;
-      setManaged(state.documents);
-      setCategories(state.categories);
+    const controller = new AbortController();
+    void hydrateSharedLibraryState(window.localStorage, controller.signal).then(({ response, source }) => {
+      if (controller.signal.aborted) return;
+      applySharedResponse(response, source === "server");
+      setLibrarySource(source);
+      setMutationsEnabled(source === "server" && response.initialized);
+      if (source === "cache") setNotice("Shared library is unavailable. Showing the last confirmed copy in read-only mode.");
+      else if (!response.initialized) setNotice("Library migration pending. The shared catalog is read-only until an administrator completes initialization.");
       setIsCatalogReady(true);
     }).catch(() => {
-      if (cancelled) return;
-      setManaged(readAdminDocuments(documents, window.localStorage));
-      setCategories(readAdminCategories(window.localStorage));
-      setNotice("Shared library is unavailable. Showing this browser's cached copy.");
+      if (controller.signal.aborted) return;
+      setManaged([]);
+      setCategories([]);
+      setLibrarySource(null);
+      setMutationsEnabled(false);
+      setNotice("Shared library is unavailable and no confirmed cached copy exists.");
       setIsCatalogReady(true);
     });
-    return () => { cancelled = true; };
-  }, [documents]);
+    return () => controller.abort();
+  }, [applySharedResponse]);
+
+  useEffect(() => {
+    const onFocus = () => { if (document.visibilityState === "visible") void refresh(); };
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible") void refresh(); }, 5_000);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [refresh]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -67,28 +113,44 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
   };
 
-  const commitSharedState = async (nextDocuments: ManagedLibraryDocument[], nextCategories: ManagedCategory[], message: string) => {
-    setManaged(nextDocuments);
-    setCategories(nextCategories);
-    writeAdminDocuments(nextDocuments, window.localStorage);
-    writeAdminCategories(nextCategories, window.localStorage);
+  const commitMutation = async (mutation: SharedLibraryMutation, message: string) => {
+    if (!mutationsEnabled) {
+      setNotice("Shared library is unavailable. Changes are disabled until the connection returns.");
+      return false;
+    }
     try {
-      const saved = await saveSharedLibraryState({ version: 1, documents: nextDocuments, categories: nextCategories });
-      cacheSharedLibraryState(saved, window.localStorage);
-      setManaged(saved.documents);
-      setCategories(saved.categories);
+      const saved = await mutateSharedLibrary(mutation);
+      applySharedResponse(saved);
       setNotice(message);
-    } catch {
-      setNotice("Unable to save to the shared library. Your change is only cached in this browser.");
+      return true;
+    } catch (error) {
+      if (error instanceof SharedLibraryConflictError) {
+        applySharedResponse(error.latest);
+        setNotice(error.message);
+      } else {
+        setMutationsEnabled(false);
+        setNotice("Unable to save to the shared library. No local-only change was kept.");
+      }
+      return false;
     }
   };
 
-  const persist = (change: (current: ManagedLibraryDocument[]) => ManagedLibraryDocument[], message: string) => {
-    void commitSharedState(change(managed), categories, message);
-  };
-
-  const commitCategories = (next: ManagedCategory[], message: string) => {
-    void commitSharedState(managed, next, message);
+  const migrateLibrary = async () => {
+    if (!canAdmin || librarySource !== "server" || shared?.initialized !== false || isMigrating) return;
+    if (!window.confirm("Back up the legacy Library and restore the approved two-document catalog? This can only initialize an empty shared Library.")) return;
+    setIsMigrating(true);
+    setNotice("Backing up and restoring the Library…");
+    try {
+      const response = await initializeCleanLibrary();
+      applySharedResponse(response);
+      setLibrarySource("server");
+      setMutationsEnabled(response.initialized);
+      setNotice("Library backup and restoration completed successfully.");
+    } catch (error) {
+      setNotice(error instanceof Error ? `Library migration failed: ${error.message}` : "Library migration failed. No changes were applied.");
+    } finally {
+      setIsMigrating(false);
+    }
   };
 
   const categoryNameExists = (name: string, ignoredId = "") => categories.some(item => item.id !== ignoredId && item.name.toLocaleLowerCase() === name.toLocaleLowerCase());
@@ -96,28 +158,32 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     const normalizedName = name.trim();
     if (!normalizedName) return false;
     if (categoryNameExists(normalizedName)) { setNotice("That category name already exists."); return false; }
-    commitCategories([...categories, { id: `category-${crypto.randomUUID()}`, name: normalizedName, hidden: false }], "Category created.");
+    void commitMutation({ operation: "category.create", category: { id: `category-${crypto.randomUUID()}`, name: normalizedName, hidden: false } }, "Category created.");
     return true;
   };
   const renameCategory = (id: string, name: string) => {
     if (categoryNameExists(name, id)) { setNotice("That category name already exists."); return; }
     const current = categories.find(item => item.id === id);
     if (!current) return;
-    const nextCategories = categories.map(item => item.id === id ? { ...item, name } : item);
-    const nextDocuments = managed.map(document => document.category === current.name ? { ...document, category: name, updatedAt: new Date().toISOString() } : document);
-    void commitSharedState(nextDocuments, nextCategories, "Category renamed and assigned documents updated.");
+    const expectedVersion = sharedRef.current?.recordVersions.categories[id];
+    if (expectedVersion === undefined) return;
+    void commitMutation({ operation: "category.update", categoryId: id, expectedVersion, category: { ...current, name } }, "Category renamed and assigned documents updated.");
     if (category === current.name) update("category", name);
   };
   const deleteCategory = (id: string) => {
     const current = categories.find(item => item.id === id);
     if (!current) return;
-    commitCategories(categories.map(item => item.id === id ? { ...item, hidden: true, deletedAt: new Date().toISOString() } : item), "Category moved to recovery.");
+    const expectedVersion = sharedRef.current?.recordVersions.categories[id];
+    if (expectedVersion === undefined) return;
+    void commitMutation({ operation: "category.delete", categoryId: id, expectedVersion }, "Category moved to recovery.");
     if (category === current.name) update("category", "");
   };
   const toggleCategoryHidden = (id: string) => {
     const current = categories.find(item => item.id === id);
     if (!current) return;
-    commitCategories(categories.map(item => item.id === id ? { ...item, hidden: !item.hidden } : item), current.hidden ? "Category shown in the dropdown." : "Category hidden from the dropdown.");
+    const expectedVersion = sharedRef.current?.recordVersions.categories[id];
+    if (expectedVersion === undefined) return;
+    void commitMutation({ operation: "category.update", categoryId: id, expectedVersion, category: { ...current, hidden: !current.hidden } }, current.hidden ? "Category shown in the dropdown." : "Category hidden from the dropdown.");
     if (!current.hidden && category === current.name) update("category", "");
   };
 
@@ -129,9 +195,11 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     const id = `admin-${crypto.randomUUID()}`;
     const slug = `${slugifyHeading(draft.title) || "library-topic"}-${id.slice(-8)}`;
     const document: ManagedLibraryDocument = { id, slug, title: draft.title.trim(), description: draft.description.trim(), category: draft.category, type: draft.type, tags, body, topics: extractTopics(body), readingMinutes: Math.max(1, Math.ceil(body.split(/\s+/).length / 200)), updatedAt: now, status: "published", hidden: false };
-    persist(current => [...current, document], "Topic added.");
-    setEditor(null);
-    setManageMode(true);
+    void commitMutation({ operation: "document.create", document }, "Topic added.").then(saved => {
+      if (!saved) return;
+      setEditor(null);
+      if (canAdmin) setManageMode(true);
+    });
   };
 
   const activeCategories = categories.filter(item => !item.deletedAt);
@@ -145,12 +213,9 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const deleted = managed.filter(document => document.deletedAt);
   const documentCounts = managed.reduce<Record<string, number>>((counts, document) => { counts[document.category] = (counts[document.category] ?? 0) + 1; return counts; }, {});
   const saveDocumentOrder = async (order: string[]) => {
-    const activeById = new Map(activeDocuments.map(document => [document.id, document]));
-    const orderedActive = order.map(id => activeById.get(id)).filter((document): document is ManagedLibraryDocument => Boolean(document));
-    let activeIndex = 0;
-    const nextDocuments = managed.map(document => document.deletedAt ? document : orderedActive[activeIndex++] ?? document);
-    await commitSharedState(nextDocuments, categories, "Library document order updated.");
-    setShowDocumentReorder(false);
+    const revision = sharedRef.current?.revision;
+    if (revision === undefined) return;
+    if (await commitMutation({ operation: "documents.reorder", documentIds: order, expectedRevision: revision }, "Library document order updated.")) setShowDocumentReorder(false);
   };
 
   return <section className="catalog-panel" aria-label="Library documents">
@@ -160,18 +225,28 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         <label className="search-input"><span className="sr-only">Search documents</span><input value={q} onChange={event => setQ(event.target.value)} placeholder="Search documentation..."/><Search aria-hidden="true" /></label>
         {filtered && <button className="clear-button" type="button" onClick={clear} aria-label="Clear all filters"><X /></button>}
       </div>
-      {canAdmin ? <div className="admin-toolbar">{manageMode ? <button className="document-recovery-trigger" type="button" onClick={() => setShowDocumentRecovery(true)} disabled={!deleted.length} aria-label={`Open document recovery${deleted.length ? ` (${deleted.length})` : ""}`} title={deleted.length ? `${deleted.length} deleted ${deleted.length === 1 ? "document" : "documents"}` : "No deleted documents"}><RotateCcw /></button> : null}<button className="catalog-reorder-button" type="button" onClick={() => setShowDocumentReorder(true)} disabled={activeDocuments.length < 2}><ArrowUpDown /><span>REORDER</span></button><button className={manageMode ? "active" : ""} type="button" onClick={() => { if (manageMode && category && !activeCategories.some(item => item.name === category && !item.hidden)) update("category", ""); if (manageMode) setShowDocumentRecovery(false); setManageMode(value => !value); setNotice(""); }} aria-label={manageMode ? "Return to library view" : "Manage library"} aria-pressed={manageMode}>{manageMode ? <Pencil /> : <Eye />}</button><button className="add-topic-button" type="button" onClick={() => setEditor("new")} aria-label="Add new topic"><Plus /></button></div> : null}
+      {canEdit ? <div className="admin-toolbar">{canAdmin && manageMode ? <button className="document-recovery-trigger" type="button" onClick={() => setShowDocumentRecovery(true)} disabled={!mutationsEnabled || !deleted.length} aria-label={`Open document recovery${deleted.length ? ` (${deleted.length})` : ""}`} title={deleted.length ? `${deleted.length} deleted ${deleted.length === 1 ? "document" : "documents"}` : "No deleted documents"}><RotateCcw /></button> : null}{canAdmin ? <><button className="catalog-reorder-button" type="button" onClick={() => setShowDocumentReorder(true)} disabled={!mutationsEnabled || activeDocuments.length < 2}><ArrowUpDown /><span>REORDER</span></button><button className={manageMode ? "active" : ""} type="button" disabled={!mutationsEnabled} onClick={() => { if (manageMode && category && !activeCategories.some(item => item.name === category && !item.hidden)) update("category", ""); if (manageMode) setShowDocumentRecovery(false); setManageMode(value => !value); setNotice(""); }} aria-label={manageMode ? "Return to library view" : "Manage library"} aria-pressed={manageMode}>{manageMode ? <Pencil /> : <Eye />}</button></> : null}<button className="add-topic-button" type="button" disabled={!mutationsEnabled} onClick={() => setEditor("new")} aria-label="Add new topic"><Plus /></button></div> : null}
     </div>
     {manageMode && <div className="admin-mode-banner"><span>Admin mode</span><p>Edit documents and manage category dropdown options, visibility, order, deletion, and recovery.</p></div>}
     {notice && <p className="admin-notice" role="status">{notice}</p>}
+    {canAdmin && librarySource === "server" && shared?.initialized === false ? <button className="primary-button" type="button" onClick={() => void migrateLibrary()} disabled={isMigrating}>{isMigrating ? "BACKING UP AND RESTORING…" : "Back up and restore Library"}</button> : null}
     {isCatalogReady ? <><p className="result-bar" aria-live="polite">{results.length} {results.length === 1 ? "document" : "documents"}</p>
     {results.length ? <div className="document-grid">{results.map(doc => {
       const activeIndex = activeDocuments.findIndex(document => document.id === doc.id);
-      return <DocumentCard key={doc.id} doc={doc} admin={manageMode ? { onToggleHidden: () => persist(current => current.map(document => document.id === doc.id ? { ...document, hidden: !document.hidden, updatedAt: new Date().toISOString() } : document), doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => persist(current => current.map(document => document.id === doc.id ? { ...document, deletedAt: new Date().toISOString() } : document), "Document moved to recovery."), onMoveUp: () => persist(current => moveDocument(current, doc.id, -1), "Document moved up."), onMoveDown: () => persist(current => moveDocument(current, doc.id, 1), "Document moved down."), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1 } : undefined}/>;
+      const expectedVersion = shared?.recordVersions.documents[doc.id];
+      const updateDocument = (updated: ManagedLibraryDocument, message: string) => expectedVersion === undefined ? undefined : void commitMutation({ operation: "document.update", documentId: doc.id, expectedVersion, document: updated }, message);
+      const reorder = (direction: -1 | 1) => {
+        const next = [...activeDocuments];
+        const target = activeIndex + direction;
+        if (target < 0 || target >= next.length || sharedRef.current === null) return;
+        [next[activeIndex], next[target]] = [next[target], next[activeIndex]];
+        void commitMutation({ operation: "documents.reorder", documentIds: next.map(document => document.id), expectedRevision: sharedRef.current.revision }, "Document order updated.");
+      };
+      return <DocumentCard key={doc.id} doc={doc} admin={manageMode && mutationsEnabled ? { onToggleHidden: () => updateDocument({ ...doc, hidden: !doc.hidden, updatedAt: new Date().toISOString() }, doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => expectedVersion === undefined ? undefined : void commitMutation({ operation: "document.delete", documentId: doc.id, expectedVersion }, "Document moved to recovery."), onMoveUp: () => reorder(-1), onMoveDown: () => reorder(1), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1 } : undefined}/>;
     })}</div> : <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div>}</> : <div className="skeleton-grid" aria-label="Loading library documents">{[1, 2, 3].map(item => <div className="skeleton" key={item} />)}</div>}
-    {canAdmin && showDocumentRecovery ? <DeletedDocuments documents={deleted} onClose={() => setShowDocumentRecovery(false)} onRecover={id => persist(current => current.map(document => document.id === id ? { ...document, deletedAt: undefined } : document), "Document recovered.")} /> : null}
-    {canAdmin && editor ? <DocumentEditor key="new" categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft} onCreateCategory={createCategory} onManageCategories={() => setShowCategoryManager(true)}/> : null}
+    {canAdmin && showDocumentRecovery ? <DeletedDocuments documents={deleted} onClose={() => setShowDocumentRecovery(false)} onRecover={id => { const expectedVersion = sharedRef.current?.recordVersions.documents[id]; if (expectedVersion !== undefined) void commitMutation({ operation: "document.restore", documentId: id, expectedVersion }, "Document recovered."); }} /> : null}
+    {canEdit && editor && mutationsEnabled ? <DocumentEditor key="new" categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft} onCreateCategory={canAdmin ? createCategory : undefined} onManageCategories={canAdmin ? () => setShowCategoryManager(true) : undefined}/> : null}
     {canAdmin && showDocumentReorder ? <DocumentReorderDialog documents={activeDocuments} onCancel={() => setShowDocumentReorder(false)} onSave={saveDocumentOrder} /> : null}
-    {canAdmin && showCategoryManager ? <CategoryManager categories={categories} documentCounts={documentCounts} onClose={() => setShowCategoryManager(false)} onCreate={createCategory} onRename={renameCategory} onToggleHidden={toggleCategoryHidden} onDelete={deleteCategory} onRecover={id => commitCategories(categories.map(item => item.id === id ? { ...item, hidden: false, deletedAt: undefined } : item), "Category recovered.")} onMove={(id, direction) => commitCategories(moveCategory(categories, id, direction), "Category order updated.")} /> : null}
+    {canAdmin && showCategoryManager ? <CategoryManager categories={categories} documentCounts={documentCounts} onClose={() => setShowCategoryManager(false)} onCreate={createCategory} onRename={renameCategory} onToggleHidden={toggleCategoryHidden} onDelete={deleteCategory} onRecover={id => { const expectedVersion = sharedRef.current?.recordVersions.categories[id]; if (expectedVersion !== undefined) void commitMutation({ operation: "category.restore", categoryId: id, expectedVersion }, "Category recovered."); }} onMove={(id, direction) => { const active = categories.filter(item => !item.deletedAt); const position = active.findIndex(item => item.id === id); const target = position + direction; if (position < 0 || target < 0 || target >= active.length || !sharedRef.current) return; const ordered = [...active]; [ordered[position], ordered[target]] = [ordered[target], ordered[position]]; void commitMutation({ operation: "categories.reorder", categoryIds: ordered.map(item => item.id), expectedRevision: sharedRef.current.revision }, "Category order updated."); }} /> : null}
   </section>;
 }

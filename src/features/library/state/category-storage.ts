@@ -1,7 +1,5 @@
 import { CATEGORIES } from "../domain/types";
 
-export const ADMIN_CATEGORIES_KEY = "glassco-library-category-state";
-
 export type ManagedCategory = {
   id: string;
   name: string;
@@ -10,8 +8,6 @@ export type ManagedCategory = {
 };
 
 type CategoryState = { version: 1; categories: ManagedCategory[] };
-type ReadStore = Pick<Storage, "getItem">;
-type WriteStore = Pick<Storage, "setItem">;
 
 const categoryId = (name: string, index: number) => `category-${index}-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
 
@@ -34,27 +30,6 @@ export function parseCategoryState(raw: string | null): CategoryState | null {
     return { version: 1, categories };
   } catch {
     return null;
-  }
-}
-
-export function readAdminCategories(storage?: ReadStore): ManagedCategory[] {
-  const defaults = createDefaultCategories();
-  try {
-    const stored = parseCategoryState(storage?.getItem(ADMIN_CATEGORIES_KEY) ?? null);
-    if (!stored) return defaults;
-    const storedIds = new Set(stored.categories.map(category => category.id));
-    return [...stored.categories, ...defaults.filter(category => !storedIds.has(category.id))];
-  } catch {
-    return defaults;
-  }
-}
-
-export function writeAdminCategories(categories: ManagedCategory[], storage?: WriteStore) {
-  try {
-    storage?.setItem(ADMIN_CATEGORIES_KEY, JSON.stringify({ version: 1, categories } satisfies CategoryState));
-    return true;
-  } catch {
-    return false;
   }
 }
 

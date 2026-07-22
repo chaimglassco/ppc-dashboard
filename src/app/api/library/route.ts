@@ -1,36 +1,28 @@
-import { loadAllDocuments } from "@/features/library/data/repository";
-import { readSharedLibraryStore, writeSharedLibraryStore } from "@/features/library/data/shared-library-store";
-import { mergeSharedLibraryState, parseSharedLibraryState } from "@/features/library/state/shared-library-state";
-import { verifyPipelineRequest } from "@/lib/pipeline-auth-server";
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const noStoreHeaders = { "Cache-Control": "no-store, max-age=0" };
+const pipelineOrigin = (process.env.PIPELINE_AUTH_ORIGIN || "https://glasscopipeline.vercel.app").replace(/\/$/, "");
 
-export async function GET(request: Request) {
-  const verified = await verifyPipelineRequest(request);
-  if (verified instanceof Response) return verified;
+async function proxyLibraryRequest(request: Request, method: "GET" | "PATCH" | "POST") {
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) return Response.json({ error: "Sign in through Product Pipeline to continue." }, { status: 401, headers: noStoreHeaders });
   try {
-    const stored = await readSharedLibraryStore();
-    const state = mergeSharedLibraryState(loadAllDocuments(), stored);
-    return Response.json({ initialized: Boolean(stored), state }, { headers: noStoreHeaders });
+    const requestUrl = new URL(request.url);
+    const upstream = new URL("/api/library-state", pipelineOrigin);
+    upstream.search = requestUrl.search;
+    const response = await fetch(upstream, {
+      method,
+      headers: { Authorization: authorization, ...(method === "GET" ? {} : { "Content-Type": "application/json" }) },
+      body: method === "GET" ? undefined : await request.text(),
+      cache: "no-store",
+    });
+    return new Response(response.body, { status: response.status, headers: { ...noStoreHeaders, "Content-Type": response.headers.get("content-type") || "application/json" } });
   } catch {
     return Response.json({ error: "The shared library is temporarily unavailable." }, { status: 503, headers: noStoreHeaders });
   }
 }
 
-export async function PUT(request: Request) {
-  const verified = await verifyPipelineRequest(request, true);
-  if (verified instanceof Response) return verified;
-  try {
-    const body: unknown = await request.json();
-    const requested = body && typeof body === "object" ? parseSharedLibraryState((body as Record<string, unknown>).state) : null;
-    if (!requested) return Response.json({ error: "Invalid shared library data." }, { status: 400, headers: noStoreHeaders });
-    const state = mergeSharedLibraryState(loadAllDocuments(), requested);
-    await writeSharedLibraryStore(state);
-    return Response.json({ state }, { headers: noStoreHeaders });
-  } catch {
-    return Response.json({ error: "Unable to save the shared library." }, { status: 503, headers: noStoreHeaders });
-  }
-}
+export function GET(request: Request) { return proxyLibraryRequest(request, "GET"); }
+export function PATCH(request: Request) { return proxyLibraryRequest(request, "PATCH"); }
+export function POST(request: Request) { return proxyLibraryRequest(request, "POST"); }
