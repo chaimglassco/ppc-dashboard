@@ -21,8 +21,11 @@ export function GlasscoSessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10_000);
     const stored = readStoredPipelineSession();
     if (!stored) {
+      window.clearTimeout(timeout);
       redirectToPipelineLogin();
       return;
     }
@@ -30,6 +33,7 @@ export function GlasscoSessionProvider({ children }: { children: ReactNode }) {
     void fetch(withPpcBasePath("/api/pipeline-session"), {
       headers: { Authorization: `Bearer ${stored.token}` },
       cache: "no-store",
+      signal: controller.signal,
     }).then(async response => {
       if (response.status === 401) {
         clearStoredPipelineSession();
@@ -44,9 +48,11 @@ export function GlasscoSessionProvider({ children }: { children: ReactNode }) {
       if (!cancelled) setUser(verified as PipelineUser);
     }).catch(() => {
       if (!cancelled) setVerificationFailed(true);
+    }).finally(() => {
+      window.clearTimeout(timeout);
     });
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true; window.clearTimeout(timeout); controller.abort(); };
   }, []);
 
   const value = useMemo(() => user ? { user, canAdmin: user.role === "ADMIN", canEdit: user.role === "ADMIN" || user.role === "USER" } : null, [user]);

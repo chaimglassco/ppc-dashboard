@@ -1,12 +1,12 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "../state/category-storage";
 import { ReadingStateProvider } from "../state/reading-state";
 import type { SharedLibraryState } from "../state/shared-library-state";
 import { Catalog } from "./catalog";
 
-const client = vi.hoisted(() => ({ hydrateSharedLibraryState: vi.fn(), initializeCleanLibrary: vi.fn() }));
+const client = vi.hoisted(() => ({ fetchSharedLibraryState: vi.fn(), hydrateSharedLibraryState: vi.fn(), initializeCleanLibrary: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), usePathname: () => "/library", useSearchParams: () => new URLSearchParams() }));
 vi.mock("../state/shared-library-client", async importOriginal => {
@@ -16,9 +16,23 @@ vi.mock("../state/shared-library-client", async importOriginal => {
 
 describe("catalog hydration", () => {
   beforeEach(() => {
+    client.fetchSharedLibraryState.mockReset();
     client.hydrateSharedLibraryState.mockReset();
     client.initializeCleanLibrary.mockReset();
     window.localStorage.clear();
+  });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("does not start overlapping five-second polls while initial hydration is pending", async () => {
+    vi.useFakeTimers();
+    client.hydrateSharedLibraryState.mockReturnValue(new Promise(() => undefined));
+    const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(20_000); });
+
+    expect(client.fetchSharedLibraryState).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Loading library documents")).toBeVisible();
+    view.unmount();
   });
 
   it("never renders seed documents while the saved deletion state is loading", async () => {

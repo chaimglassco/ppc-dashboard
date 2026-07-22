@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "./category-storage";
-import { fetchSharedLibraryState, hydrateSharedLibraryState, initializeCleanLibrary, mutateSharedLibrary, SHARED_LIBRARY_CACHE_KEY } from "./shared-library-client";
+import { fetchSharedLibraryState, hydrateSharedLibraryState, initializeCleanLibrary, mutateSharedLibrary, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryTimeoutError } from "./shared-library-client";
 
 const response = {
   initialized: true,
@@ -14,6 +14,7 @@ const response = {
 
 describe("shared library client", () => {
   beforeEach(() => { vi.restoreAllMocks(); window.localStorage.clear(); });
+  afterEach(() => { vi.useRealTimers(); });
 
   it("uses only the last server-confirmed cache when the server is unavailable", async () => {
     window.localStorage.setItem(SHARED_LIBRARY_CACHE_KEY, JSON.stringify(response));
@@ -42,6 +43,21 @@ describe("shared library client", () => {
   it("validates fetched response envelopes", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(response), { status: 200 })));
     await expect(fetchSharedLibraryState()).resolves.toMatchObject({ revision: 2 });
+  });
+
+  it("aborts a hung shared-state request instead of leaving hydration pending forever", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const request = fetchSharedLibraryState();
+    const rejection = expect(request).rejects.toBeInstanceOf(SharedLibraryTimeoutError);
+    await vi.advanceTimersByTimeAsync(SHARED_LIBRARY_REQUEST_TIMEOUT_MS);
+
+    await rejection;
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("uses the authenticated migration action without exposing a token in the URL", async () => {

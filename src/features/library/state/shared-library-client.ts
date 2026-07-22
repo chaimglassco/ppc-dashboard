@@ -5,6 +5,14 @@ import type { ManagedCategory } from "./category-storage";
 import { parseSharedLibraryResponse, type SharedLibraryResponse, type SharedLibraryState } from "./shared-library-state";
 
 export const SHARED_LIBRARY_CACHE_KEY = "glassco-library-confirmed-cache-v2";
+export const SHARED_LIBRARY_REQUEST_TIMEOUT_MS = 10_000;
+
+export class SharedLibraryTimeoutError extends Error {
+  constructor() {
+    super("The shared library took too long to respond.");
+    this.name = "SharedLibraryTimeoutError";
+  }
+}
 
 export type SharedLibraryMutation =
   | { operation: "catalog.initialize"; state: SharedLibraryState; expectedRevision: 0 }
@@ -37,8 +45,30 @@ async function readJson(response: Response): Promise<unknown> {
   return value;
 }
 
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const parentSignal = init.signal;
+  let timedOut = false;
+  const abortFromParent = () => controller.abort(parentSignal?.reason);
+  if (parentSignal?.aborted) abortFromParent();
+  else parentSignal?.addEventListener("abort", abortFromParent, { once: true });
+  const timer = window.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, SHARED_LIBRARY_REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (timedOut) throw new SharedLibraryTimeoutError();
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+    parentSignal?.removeEventListener("abort", abortFromParent);
+  }
+}
+
 export async function fetchSharedLibraryState(signal?: AbortSignal): Promise<SharedLibraryResponse> {
-  const value = await readJson(await fetch(withPpcBasePath("/api/library"), {
+  const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library"), {
     cache: "no-store",
     headers: getPipelineAuthorizationHeader(),
     signal,
@@ -49,7 +79,7 @@ export async function fetchSharedLibraryState(signal?: AbortSignal): Promise<Sha
 }
 
 export async function mutateSharedLibrary(mutation: SharedLibraryMutation): Promise<SharedLibraryResponse> {
-  const value = await readJson(await fetch(withPpcBasePath("/api/library"), {
+  const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library"), {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
     body: JSON.stringify(mutation),
@@ -60,7 +90,7 @@ export async function mutateSharedLibrary(mutation: SharedLibraryMutation): Prom
 }
 
 export async function initializeCleanLibrary(): Promise<SharedLibraryResponse> {
-  const value = await readJson(await fetch(withPpcBasePath("/api/library/migration"), {
+  const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library/migration"), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
     body: JSON.stringify({ action: "initialize-clean-catalog" }),

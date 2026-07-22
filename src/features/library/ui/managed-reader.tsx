@@ -17,6 +17,7 @@ export function ManagedReader({ slug }: { slug: string }) {
   const [migrationPending, setMigrationPending] = useState(false);
   const [notice, setNotice] = useState("");
   const sharedRef = useRef<SharedLibraryResponse | null>(null);
+  const refreshInFlightRef = useRef(false);
 
   const applyResponse = useCallback((response: SharedLibraryResponse, cache = true) => {
     sharedRef.current = response;
@@ -26,6 +27,8 @@ export function ManagedReader({ slug }: { slug: string }) {
   }, [slug]);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
     try {
       const response = await fetchSharedLibraryState(signal);
       applyResponse(response);
@@ -36,11 +39,14 @@ export function ManagedReader({ slug }: { slug: string }) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setMutationsEnabled(false);
       setNotice("Shared library is unavailable. This confirmed copy is read-only.");
+    } finally {
+      refreshInFlightRef.current = false;
     }
   }, [applyResponse]);
 
   useEffect(() => {
     const controller = new AbortController();
+    refreshInFlightRef.current = true;
     void hydrateSharedLibraryState(window.localStorage, controller.signal).then(({ response, source }) => {
       if (controller.signal.aborted) return;
       applyResponse(response, source === "server");
@@ -53,6 +59,8 @@ export function ManagedReader({ slug }: { slug: string }) {
         setDocument(null);
         setMutationsEnabled(false);
       }
+    }).finally(() => {
+      refreshInFlightRef.current = false;
     });
     return () => controller.abort();
   }, [applyResponse]);
