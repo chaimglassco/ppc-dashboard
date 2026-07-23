@@ -48,6 +48,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [deleteError, setDeleteError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const successTimerRef = useRef<number | null>(null);
+  const lastMutationErrorRef = useRef("");
 
   useEffect(() => () => {
     if (successTimerRef.current !== null) window.clearTimeout(successTimerRef.current);
@@ -139,8 +140,11 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   };
 
   const commitMutation = async (mutation: SharedLibraryMutation, message: string) => {
+    lastMutationErrorRef.current = "";
     if (!mutationsEnabled) {
-      setNotice("Shared library is unavailable. Changes are disabled until the connection returns.");
+      const unavailableMessage = "Shared library is unavailable. Refresh the Library and try again.";
+      lastMutationErrorRef.current = unavailableMessage;
+      setNotice(unavailableMessage);
       return false;
     }
     try {
@@ -151,10 +155,14 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     } catch (error) {
       if (error instanceof SharedLibraryConflictError) {
         applySharedResponse(error.latest);
+        lastMutationErrorRef.current = error.message;
         setNotice(error.message);
       } else {
-        setMutationsEnabled(false);
-        setNotice("Unable to save to the shared library. No local-only change was kept.");
+        const errorMessage = error instanceof Error && error.message
+          ? error.message
+          : "Unable to save to the shared library. No local-only change was kept.";
+        lastMutationErrorRef.current = errorMessage;
+        setNotice(errorMessage);
       }
       return false;
     }
@@ -177,7 +185,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     const deleted = await commitMutation({ operation: "document.delete", documentId: documentToDelete.id, expectedVersion }, "");
     setIsDeletingDocument(false);
     if (!deleted) {
-      setDeleteError("The document could not be deleted. Check the Library connection and try again.");
+      setDeleteError(lastMutationErrorRef.current || "The document could not be deleted. Please try again.");
       return;
     }
     const title = documentToDelete.title;

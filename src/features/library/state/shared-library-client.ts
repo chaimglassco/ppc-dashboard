@@ -5,7 +5,7 @@ import type { ManagedCategory } from "./category-storage";
 import { parseSharedLibraryResponse, type SharedLibraryResponse, type SharedLibraryState } from "./shared-library-state";
 
 export const SHARED_LIBRARY_CACHE_KEY = "glassco-library-confirmed-cache-v2";
-export const SHARED_LIBRARY_REQUEST_TIMEOUT_MS = 10_000;
+export const SHARED_LIBRARY_REQUEST_TIMEOUT_MS = 18_000;
 
 export type SharedLibraryReadOptions = { summary?: boolean; slug?: string };
 

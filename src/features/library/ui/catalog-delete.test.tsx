@@ -75,8 +75,10 @@ describe("catalog document deletion", () => {
     expect(client.mutateSharedLibrary).toHaveBeenCalledWith({ operation: "document.delete", documentId: document.id, expectedVersion: 1 }, { summary: true });
   });
 
-  it("keeps the document and confirmation available when deletion fails", async () => {
-    client.mutateSharedLibrary.mockRejectedValue(new Error("offline"));
+  it("keeps the document available, shows the server error, and permits a real retry", async () => {
+    client.mutateSharedLibrary
+      .mockRejectedValueOnce(new Error("The shared Library database did not respond in time. Please retry."))
+      .mockResolvedValueOnce(response("2026-07-22T12:00:00.000Z"));
     renderCatalog();
     await enterAdminMode();
 
@@ -84,8 +86,13 @@ describe("catalog document deletion", () => {
     const dialog = screen.getByRole("dialog", { name: "Delete document?" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
-    await waitFor(() => expect(within(dialog).getByRole("alert")).toHaveTextContent("could not be deleted"));
+    await waitFor(() => expect(within(dialog).getByRole("alert")).toHaveTextContent("The shared Library database did not respond in time. Please retry."));
     expect(screen.getByRole("heading", { name: document.title })).toBeVisible();
     expect(within(dialog).getByRole("button", { name: "Delete" })).toBeEnabled();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Delete document?" })).not.toBeInTheDocument());
+    expect(client.mutateSharedLibrary).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("heading", { name: document.title })).not.toBeInTheDocument();
   });
 });
