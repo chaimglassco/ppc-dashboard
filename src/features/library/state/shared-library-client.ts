@@ -16,6 +16,20 @@ export class SharedLibraryTimeoutError extends Error {
   }
 }
 
+export class SharedLibraryRequestError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string,
+    public readonly stage?: string,
+    public readonly retryable = false,
+    public readonly requestId?: string,
+  ) {
+    super(message);
+    this.name = "SharedLibraryRequestError";
+  }
+}
+
 export type SharedLibraryMutation =
   | { operation: "catalog.initialize"; state: SharedLibraryState; expectedRevision: 0 }
   | { operation: "document.create"; document: ManagedLibraryDocument }
@@ -51,10 +65,21 @@ async function readJson(response: Response): Promise<unknown> {
   if (!response.ok) {
     const parsed = parseSharedLibraryResponse(value);
     if (response.status === 409 && parsed) throw new SharedLibraryConflictError(parsed);
-    const message = value && typeof value === "object" && typeof (value as Record<string, unknown>).error === "string"
-      ? String((value as Record<string, unknown>).error)
-      : "Shared library request failed.";
-    throw new Error(message);
+    const details = value && typeof value === "object" ? value as Record<string, unknown> : {};
+    const requestId = response.headers.get("x-request-id") || (
+      typeof details.requestId === "string" ? details.requestId : undefined
+    );
+    const message = typeof details.error === "string"
+      ? details.error
+      : `Shared library request failed (HTTP ${response.status}).${requestId ? ` Reference: ${requestId}.` : ""}`;
+    throw new SharedLibraryRequestError(
+      message,
+      response.status,
+      typeof details.code === "string" ? details.code : undefined,
+      typeof details.stage === "string" ? details.stage : undefined,
+      details.retryable === true,
+      requestId,
+    );
   }
   return value;
 }

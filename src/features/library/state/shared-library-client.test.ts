@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "./category-storage";
-import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeCleanLibrary, mutateSharedLibrary, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryTimeoutError } from "./shared-library-client";
+import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeCleanLibrary, mutateSharedLibrary, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryRequestError, SharedLibraryTimeoutError } from "./shared-library-client";
 
 const response = {
   initialized: true,
@@ -38,6 +38,36 @@ describe("shared library client", () => {
     vi.stubGlobal("fetch", fetchMock);
     await mutateSharedLibrary({ operation: "document.create", document: response.state.documents[0] });
     expect(fetchMock).toHaveBeenCalledWith("/ppc/api/library", expect.objectContaining({ method: "PATCH", body: expect.stringContaining('"operation":"document.create"') }));
+  });
+
+  it("preserves structured retry details from a failed shared Library request", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: "The shared Library database did not respond in time. Please retry.",
+      code: "LIBRARY_DATABASE_TIMEOUT",
+      stage: "read-library-state",
+      retryable: true,
+      requestId: "req-structured",
+    }), { status: 503, headers: { "X-Request-ID": "req-structured" } })));
+
+    await expect(mutateSharedLibrary({ operation: "document.create", document: response.state.documents[0] }))
+      .rejects.toMatchObject({
+        name: "SharedLibraryRequestError",
+        status: 503,
+        code: "LIBRARY_DATABASE_TIMEOUT",
+        stage: "read-library-state",
+        retryable: true,
+        requestId: "req-structured",
+      } satisfies Partial<SharedLibraryRequestError>);
+  });
+
+  it("reports the HTTP status and request reference for a non-JSON proxy failure", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Gateway failure", {
+      status: 500,
+      headers: { "X-Request-ID": "req-proxy" },
+    })));
+
+    await expect(mutateSharedLibrary({ operation: "document.create", document: response.state.documents[0] }))
+      .rejects.toThrow("Shared library request failed (HTTP 500). Reference: req-proxy.");
   });
 
   it("validates fetched response envelopes", async () => {
