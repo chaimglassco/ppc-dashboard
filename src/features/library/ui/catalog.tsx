@@ -9,6 +9,7 @@ import { filterDocuments } from "../domain/search";
 import { type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories, type ManagedCategory } from "../state/category-storage";
 import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, initializeCleanLibrary, mutateSharedLibrary, SharedLibraryConflictError, type SharedLibraryMutation } from "../state/shared-library-client";
+import { getSharedLibraryRefreshDelay } from "../state/shared-library-retry";
 import type { SharedLibraryResponse } from "../state/shared-library-state";
 import { CategoryManager } from "./category-manager";
 import { DeleteDocumentDialog } from "./delete-document-dialog";
@@ -42,7 +43,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [shared, setShared] = useState<SharedLibraryResponse | null>(null);
   const sharedRef = useRef<SharedLibraryResponse | null>(null);
   const refreshInFlightRef = useRef(false);
-  const [loadAttempt, setLoadAttempt] = useState(0);
+  const consecutiveFailuresRef = useRef(0);
   const [documentToDelete, setDocumentToDelete] = useState<ManagedLibraryDocument | null>(null);
   const [isDeletingDocument, setIsDeletingDocument] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -69,19 +70,26 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   }, []);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
-    if (refreshInFlightRef.current) return;
+    if (refreshInFlightRef.current) return false;
     refreshInFlightRef.current = true;
     try {
       const response = await fetchSharedLibraryState(signal, { summary: true });
       applySharedResponse(response);
+      consecutiveFailuresRef.current = 0;
       setLibrarySource("server");
       setMutationsEnabled(response.initialized);
       setNotice(response.initialized ? "" : "Library migration pending. The shared catalog is read-only until an administrator completes initialization.");
+      return true;
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
+      if (error instanceof DOMException && error.name === "AbortError") return false;
+      consecutiveFailuresRef.current += 1;
       setMutationsEnabled(false);
-      setLibrarySource("cache");
-      setNotice("Shared library is unavailable. Showing the last confirmed copy in read-only mode.");
+      const hasConfirmedCopy = sharedRef.current !== null;
+      setLibrarySource(hasConfirmedCopy ? "cache" : null);
+      setNotice(hasConfirmedCopy
+        ? "Shared library is unavailable. Showing the last confirmed copy in read-only mode."
+        : "Shared library is unavailable and no confirmed cached copy exists.");
+      return false;
     } finally {
       refreshInFlightRef.current = false;
     }
@@ -93,6 +101,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     void hydrateSharedLibraryState(window.localStorage, controller.signal, { summary: true }).then(({ response, source }) => {
       if (controller.signal.aborted) return;
       applySharedResponse(response, source === "server");
+      consecutiveFailuresRef.current = source === "server" ? 0 : 1;
       setLibrarySource(source);
       setMutationsEnabled(source === "server" && response.initialized);
       if (source === "cache") setNotice("Shared library is unavailable. Showing the last confirmed copy in read-only mode.");
@@ -103,6 +112,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       setManaged([]);
       setCategories([]);
       setLibrarySource(null);
+      consecutiveFailuresRef.current = 1;
       setMutationsEnabled(false);
       setNotice("Shared library is unavailable and no confirmed cached copy exists.");
       setIsCatalogReady(true);
@@ -110,19 +120,30 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       refreshInFlightRef.current = false;
     });
     return () => controller.abort();
-  }, [applySharedResponse, loadAttempt]);
+  }, [applySharedResponse]);
 
   useEffect(() => {
+    if (!isCatalogReady) return;
+    let cancelled = false;
+    let timer: number | undefined;
+    const schedule = () => {
+      timer = window.setTimeout(async () => {
+        if (cancelled) return;
+        if (document.visibilityState === "visible") await refresh();
+        if (!cancelled) schedule();
+      }, getSharedLibraryRefreshDelay(consecutiveFailuresRef.current));
+    };
+    schedule();
     const onFocus = () => { if (document.visibilityState === "visible") void refresh(); };
-    const timer = window.setInterval(() => { if (document.visibilityState === "visible") void refresh(); }, 5_000);
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     return () => {
-      window.clearInterval(timer);
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };
-  }, [refresh]);
+  }, [isCatalogReady, refresh]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -286,7 +307,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       {canEdit ? <div className="admin-toolbar">{canAdmin && manageMode ? <button className="document-recovery-trigger" type="button" onClick={() => setShowDocumentRecovery(true)} disabled={!mutationsEnabled || !deleted.length} aria-label={`Open document recovery${deleted.length ? ` (${deleted.length})` : ""}`} title={deleted.length ? `${deleted.length} deleted ${deleted.length === 1 ? "document" : "documents"}` : "No deleted documents"}><RotateCcw /></button> : null}{canAdmin ? <><button className="catalog-reorder-button" type="button" onClick={() => setShowDocumentReorder(true)} disabled={!mutationsEnabled || activeDocuments.length < 2}><ArrowUpDown /><span>REORDER</span></button><button className={manageMode ? "active" : ""} type="button" disabled={!mutationsEnabled} onClick={() => { if (manageMode && category && !activeCategories.some(item => item.name === category && !item.hidden)) update("category", ""); if (manageMode) setShowDocumentRecovery(false); setManageMode(value => !value); setNotice(""); }} aria-label={manageMode ? "Return to library view" : "Manage library"} aria-pressed={manageMode}>{manageMode ? <Pencil /> : <Eye />}</button></> : null}<button className="add-topic-button" type="button" disabled={!mutationsEnabled} onClick={() => setEditor("new")} aria-label="Add new topic"><Plus /></button></div> : null}
     </div>
     {manageMode && <div className="admin-mode-banner"><span>Admin mode</span><p>Edit documents and manage category dropdown options, visibility, order, deletion, and recovery.</p></div>}
-    {notice && <p className="admin-notice" role="status">{notice}{librarySource === null && isCatalogReady ? <> <button className="inline-retry-button" type="button" onClick={() => { setIsCatalogReady(false); setNotice(""); setLoadAttempt(value => value + 1); }}>Try again</button></> : null}</p>}
+    {notice && <p className="admin-notice" role="status">{notice}{librarySource !== "server" && isCatalogReady ? <> <button className="inline-retry-button" type="button" onClick={() => void refresh()}>Try again</button></> : null}</p>}
     {canAdmin && librarySource === "server" && shared?.initialized === false ? <button className="primary-button" type="button" onClick={() => void migrateLibrary()} disabled={isMigrating}>{isMigrating ? "BACKING UP AND RESTORING…" : "Back up and restore Library"}</button> : null}
     {isCatalogReady ? <><p className="result-bar" aria-live="polite">{results.length} {results.length === 1 ? "document" : "documents"}</p>
     {results.length ? <div className="document-grid">{results.map(doc => {

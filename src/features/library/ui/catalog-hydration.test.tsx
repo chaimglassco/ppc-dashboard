@@ -86,6 +86,32 @@ describe("catalog hydration", () => {
     expect(catalog.queryByText(getPublishedDocuments()[0].title)).not.toBeInTheDocument();
   });
 
+  it("keeps cached controls read-only, offers Retry, and restores admin controls after reconnecting", async () => {
+    const documents = getPublishedDocuments().slice(0, 2);
+    const cachedResponse = {
+      initialized: true,
+      state: { version: 1 as const, documents, categories: createDefaultCategories() },
+      revision: 3,
+      recordVersions: { documents: Object.fromEntries(documents.map(document => [document.id, 1])), categories: {} },
+      updatedAt: null,
+      updatedBy: null,
+    };
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: cachedResponse, source: "cache" });
+    client.fetchSharedLibraryState.mockResolvedValue(cachedResponse);
+    const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>);
+    const catalog = within(view.container);
+
+    await waitFor(() => expect(catalog.getByRole("button", { name: "Try again" })).toBeEnabled());
+    expect(catalog.getByRole("button", { name: "Manage library" })).toBeDisabled();
+    expect(catalog.getByRole("button", { name: "REORDER" })).toBeDisabled();
+
+    fireEvent.click(catalog.getByRole("button", { name: "Try again" }));
+
+    await waitFor(() => expect(catalog.getByRole("button", { name: "Manage library" })).toBeEnabled());
+    expect(catalog.getByRole("button", { name: "REORDER" })).toBeEnabled();
+    expect(catalog.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  });
+
   it("lets an ADMIN confirm and run the protected migration", async () => {
     const uninitialized = {
       initialized: false,

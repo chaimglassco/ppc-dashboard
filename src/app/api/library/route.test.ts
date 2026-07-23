@@ -19,14 +19,18 @@ function mutationRequest() {
 
 describe("Library API proxy", () => {
   it("forwards the upstream status and error body", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(
       { error: "The shared Library database did not respond in time. Please retry." },
       { status: 503 },
-    )));
+    ));
+    vi.stubGlobal("fetch", fetchMock);
 
     const response = await PATCH(mutationRequest());
 
     expect(response.status).toBe(503);
+    const upstreamInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(upstreamInit.headers).get("x-request-id")).toBeTruthy();
+    expect(response.headers.get("x-request-id")).toBeTruthy();
     await expect(response.json()).resolves.toEqual({
       error: "The shared Library database did not respond in time. Please retry.",
     });
