@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "./category-storage";
-import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeCleanLibrary, mutateSharedLibrary, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryRequestError, SharedLibraryTimeoutError } from "./shared-library-client";
+import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryRequestError, SharedLibraryTimeoutError } from "./shared-library-client";
 
 const response = {
   initialized: true,
@@ -113,11 +113,11 @@ describe("shared library client", () => {
     window.localStorage.setItem("launchflow.authSession.v1", JSON.stringify({ token: "secret-token", email: "admin@example.com", role: "ADMIN" }));
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(response), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
-    await initializeCleanLibrary();
+    await initializeSharedLibrary();
     expect(fetchMock).toHaveBeenCalledWith("/ppc/api/library/migration", expect.objectContaining({
       method: "POST",
       headers: expect.objectContaining({ Authorization: "Bearer secret-token" }),
-      body: JSON.stringify({ action: "initialize-clean-catalog" }),
+      body: JSON.stringify({ action: "initialize-catalog" }),
     }));
     expect(String(fetchMock.mock.calls[0][0])).not.toContain("secret-token");
   });

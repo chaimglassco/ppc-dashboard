@@ -35,6 +35,7 @@ export type SharedLibraryMutation =
   | { operation: "document.create"; document: ManagedLibraryDocument }
   | { operation: "document.update"; documentId: string; expectedVersion: number; document: ManagedLibraryDocument }
   | { operation: "document.delete" | "document.restore"; documentId: string; expectedVersion: number }
+  | { operation: "documents.restoreSystemDeleted"; documentIds: string[]; expectedRevision: number }
   | { operation: "documents.reorder"; documentIds: string[]; expectedRevision: number }
   | { operation: "category.create"; category: ManagedCategory }
   | { operation: "category.update"; categoryId: string; expectedVersion: number; category: ManagedCategory }
@@ -128,11 +129,11 @@ export async function mutateSharedLibrary(mutation: SharedLibraryMutation, optio
   return parsed;
 }
 
-export async function initializeCleanLibrary(): Promise<SharedLibraryResponse> {
+export async function initializeSharedLibrary(): Promise<SharedLibraryResponse> {
   const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library/migration"), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
-    body: JSON.stringify({ action: "initialize-clean-catalog" }),
+    body: JSON.stringify({ action: "initialize-catalog" }),
   }));
   const parsed = parseSharedLibraryResponse(value);
   if (!parsed) throw new Error("Library migration returned invalid data.");

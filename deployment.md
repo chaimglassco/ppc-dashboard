@@ -82,21 +82,23 @@ The existing `.gitignore` already excludes these paths.
 11. Use the Category Plus control to create and select a temporary category.
 12. Use the Category Pencil control to open the category manager; verify rename, reorder, and recoverable deletion controls.
 13. Confirm deleted categories are absent from the main list, then use the recovery icon to open the recovery dialog and recover one.
-   Add a Key Insight, click Green, Blue, and Red, and confirm each color previews immediately; save on Red, refresh, and confirm Red persists. Confirm an older insight without `insightColor` remains Green.
-14. Add a Roadmap, select Center number, and confirm its number, title, and subtext are centered and its image uses the full step width after saving.
-15. Upload a Roadmap step image, confirm its shared upload completes, and verify each subtext format edits directly inside the composer and persists in a second browser session.
-16. Upload Feature Card and Gallery images, switch every Gallery layout, and confirm minimum slots, responsive grids, shared previews, replacement, and removal.
+14. In document recovery, confirm manual deletions show the user name/email/role, July 22 cleanup records show `System — Initial Library cleanup`, unmatched historical records show the unknown-source fallback, and backup-attributed records identify the initiating administrator when available.
+15. Confirm **Recover system-deleted documents** shows the affected count and confirmation, restores only migration-attributed documents atomically, reports progress/success, and returns `409` without partial recovery after a deliberate stale-revision change.
+16. Add a Key Insight, click Green, Blue, and Red, and confirm each color previews immediately; save on Red, refresh, and confirm Red persists. Confirm an older insight without `insightColor` remains Green.
+17. Add a Roadmap, select Center number, and confirm its number, title, and subtext are centered and its image uses the full step width after saving.
+18. Upload a Roadmap step image, confirm its shared upload completes, and verify each subtext format edits directly inside the composer and persists in a second browser session.
+19. Upload Feature Card and Gallery images, switch every Gallery layout, and confirm minimum slots, responsive grids, shared previews, replacement, and removal.
    Confirm the preview request includes authenticated media access and displays the actual image rather than a broken image icon.
    Confirm square, portrait, and landscape Gallery sources are fully visible inside square tiles without cropping, then click each loaded tile to verify the full-image preview opens immediately without another media request.
-17. Add Buttons for internal and HTTPS links; verify every width/alignment option, invalid-link feedback, secure new-tab attributes, and mobile full-width behavior.
-18. Add a shared Google Drive video link and confirm a large 16:9 Drive preview player appears inside the blue document header’s right column. Confirm the play icon and playing video content are centered, the compact new-tab icon works, and no separate OPEN VIDEO text button appears.
-19. Open a second authenticated account and confirm the temporary document appears within five seconds, then edit it and confirm the ADMIN tab updates within five seconds or immediately after focus.
-20. Verify USER can create/edit active documents but cannot delete, recover, reorder, or manage categories; verify VIEWER cannot mutate and direct forbidden PATCH requests return `403`.
-21. Check the browser console for hydration or runtime errors.
-22. Confirm mobile layout at approximately 390px width.
-23. Confirm the Product Pipeline, Team SOP Library, and PPC Dashboard cards appear separately in the reserved top bar, show white text for the active app, and each open its remembered route in a new browser tab—including the active tab—without changing or overlapping the source page.
-24. Confirm `/ppc/dashboard` renders the shared authenticated shell and centered “PPC Dashboard — Coming soon” placeholder.
-25. From a session-only Pipeline login, open each PPC card and confirm the one-time handoff is consumed without another login. Confirm persistent “Remember me,” expired-session return, external `returnTo` rejection, keyboard focus, hover, and narrow-screen horizontal scrolling.
+20. Add Buttons for internal and HTTPS links; verify every width/alignment option, invalid-link feedback, secure new-tab attributes, and mobile full-width behavior.
+21. Add a shared Google Drive video link and confirm a large 16:9 Drive preview player appears inside the blue document header’s right column. Confirm the play icon and playing video content are centered, the compact new-tab icon works, and no separate OPEN VIDEO text button appears.
+22. Open a second authenticated account and confirm the temporary document appears within five seconds, then edit it and confirm the ADMIN tab updates within five seconds or immediately after focus.
+23. Verify USER can create/edit active documents but cannot delete, recover, reorder, or manage categories; verify VIEWER cannot mutate and direct forbidden PATCH requests return `403`.
+24. Check the browser console for hydration or runtime errors.
+25. Confirm mobile layout at approximately 390px width.
+26. Confirm the Product Pipeline, Team SOP Library, and PPC Dashboard cards appear separately in the reserved top bar, show white text for the active app, and each open its remembered route in a new browser tab—including the active tab—without changing or overlapping the source page.
+27. Confirm `/ppc/dashboard` renders the shared authenticated shell and centered “PPC Dashboard — Coming soon” placeholder.
+28. From a session-only Pipeline login, open each PPC card and confirm the one-time handoff is consumed without another login. Confirm persistent “Remember me,” expired-session return, external `returnTo` rejection, keyboard focus, hover, and narrow-screen horizontal scrolling.
 
 ## Authoritative persistence rollout
 
@@ -105,16 +107,16 @@ Production data cleanup is deliberately separate from code deployment. Use this 
 1. Deploy Pipeline first. Confirm `/api/library-state` authenticates through the current user table, returns revision/record versions, enforces ADMIN/USER/VIEWER permissions, records audit attribution, and can create/list a backup.
 2. Deploy Library next. Confirm `/ppc/api/library` is a thin authenticated adapter, old local administration keys are ignored, server failures make the confirmed cache read-only, and repository Markdown is not merged after initialization.
 3. With an ADMIN bearer session, POST `{ "action": "create-backup" }` to `/ppc/api/library/migration`. Record the returned checksum and Blob pathname. Optionally GET the same route to download the exact legacy JSON.
-4. Inspect the backup and confirm exactly one legacy record exists for each retained title: **Sample Document with all the elements** and **Checking Spenders with No Sales**.
-5. Only when Pipeline returns revision `0` with an empty catalog, POST `{ "action": "initialize-clean-catalog" }` to the migration route. The operation preserves retained IDs/slugs/content/rich text/images/settings and tombstones every other legacy document.
-6. Confirm the response reports two active documents. Verify those two and only those two appear for ADMIN, USER, and VIEWER; confirm tombstoned documents appear only in ADMIN recovery and do not flash after refresh.
+4. Inspect the backup and record its complete document/category counts and checksum.
+5. Only when Pipeline returns revision `0` with an empty catalog, POST `{ "action": "initialize-catalog" }` to the migration route. The operation preserves the complete validated catalog and creates no new tombstones.
+6. Confirm the response counts match the immutable backup. Verify all previously active documents appear for authorized readers and pre-existing tombstones remain only in ADMIN recovery.
 7. Test a same-record stale edit and require `409` plus current shared state before enabling routine editing.
 
 Never run initialization before the server and client protections are deployed. It is revision-zero-only and must not be used to overwrite an initialized catalog.
 
 ## Rollback
 
-Before restoring catalog data, create a Pipeline backup. Restore through the ADMIN backup API with the current `expectedRevision`; the server creates an automatic before-restore backup and tombstones records absent from the restored state. Use Vercel's deployment history to roll back code independently. Never restore catalog state from localStorage or repository Markdown.
+Before restoring catalog data, create a Pipeline backup. Restore through the ADMIN backup API with the current `expectedRevision`; the server creates an automatic before-restore backup and performs a non-destructive merge. Records absent from the backup, newer active documents, and active records represented as tombstones in an older backup remain active and unchanged. Use Vercel's deployment history to roll back code independently. Never restore catalog state from localStorage or repository Markdown.
 # Unified deployment
 
 For the authoritative persistence rollout, deploy Pipeline's database endpoint before Library, then perform the backup/initialization sequence above. For navigation-only releases, deploy PPC before enabling updated Pipeline navigation. The production build must serve the `/ppc` base path. Verify `/ppc/library`, `/ppc/dashboard`, `/ppc/_next/*`, `/ppc/api/pipeline-session`, `/ppc/api/library`, and the ADMIN-only migration route through the public PPC production alias before changing the Pipeline rewrite/cards. The PPC proxy must allow requests forwarded by `glasscopipeline.vercel.app` while redirecting direct visitors from the legacy PPC host.

@@ -50,6 +50,9 @@ The current milestone uses the existing Pipeline identity and one authoritative 
 - **LIB-ADMIN-015** — A validated confirmed cache may be shown during an outage only in read-only mode; stale browser administration data is never merged or uploaded.
 - **LIB-ADMIN-016** — Same-record stale edits receive a conflict and current server state rather than silently overwriting another account.
 - **LIB-ADMIN-017** — ADMIN exclusively controls document/category delete, restore, reorder, category management, and shared backups; VIEWER cannot mutate catalog content.
+- **LIB-ADMIN-018** — ADMIN recovery shows who or what deleted every document, with an unknown-source fallback when historical evidence is incomplete.
+- **LIB-ADMIN-019** — ADMIN may explicitly confirm one atomic recovery of all documents attributed to the Initial Library cleanup; manually deleted documents are excluded.
+- **LIB-ADMIN-020** — Legacy initialization imports the complete catalog without newly tombstoning documents, and backup restore cannot delete backup-absent or newer active records.
 
 ### Structured builder
 

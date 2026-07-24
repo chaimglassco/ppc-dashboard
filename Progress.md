@@ -6,6 +6,14 @@ Last updated: July 22, 2026
 
 The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgres-authoritative shared persistence, scoped versioned mutations, read-only outage caching, and cross-account synchronization.
 
+## 2026-07-24 — Unexpected deletion prevention and attributed recovery
+
+- Removed the two-document cleanup transformation; protected initialization now backs up and imports the complete catalog without creating tombstones.
+- Added optional ADMIN deletion attribution for direct users, the July 22 cleanup migration, backup restores, and unknown historical sources.
+- Added a confirmed, progress-aware bulk recovery control that sends one atomic revision-guarded mutation for migration-attributed documents only.
+- Updated the Pipeline restore contract to a non-destructive merge so backup-absent and newer active documents survive.
+- Passed 151 automated tests across 29 files, ESLint, TypeScript, and the Next.js production build.
+
 ## Completed
 
 ### Application shell and catalog
@@ -85,7 +93,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 1. Deploy and verify Pipeline's authoritative `/api/library-state` endpoint.
 2. Deploy the Library adapter, scoped mutation client, polling/focus sync, and read-only cache behavior.
-3. Create the protected immutable legacy Blob backup, then initialize the revision-zero Postgres catalog with the two retained production documents and all others tombstoned.
+3. Create the protected immutable legacy Blob backup, then initialize the revision-zero Postgres catalog with the complete validated legacy catalog.
 4. Complete authenticated multi-account browser verification for ADMIN, USER, VIEWER, conflict, deletion, recovery, and outage behavior.
 5. Add committed Playwright coverage and secure cookie-based page authentication.
 # Unified Glassco integration
@@ -104,6 +112,6 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Added selection-aware inline styles, bullets, numbers, editable checklists, accessible toolbar state, keyboard shortcuts, and responsive controls.
 - Preserved standalone list elements with inline-only row formatting.
 - Added validated JSON persistence, synchronized legacy fallbacks, lazy legacy Markdown conversion, and malformed-JSON recovery.
-- Expanded automated coverage to 124 tests across 22 files, including shared-state validation/cache behavior, scoped permissions and conflicts, legacy cleanup/backup safety, catalog hydration, and the existing navigation/editor coverage.
+- Expanded automated coverage for shared-state validation/cache behavior, scoped permissions and conflicts, safe complete-catalog import, attributed recovery, catalog hydration, and the existing navigation/editor coverage.
 - Completed authenticated same-origin browser verification with the production build: ADMIN edit, selection-aware toolbar state, editable checked checklist state, save, disabled/static reader rendering, full refresh persistence, edit-mode rehydration, cleanup, and zero browser warnings or errors.
 - Restored visible disc/decimal markers in both editor and reader modes, aligned task-list checkbox/text rows, and normalized Tiptap ordered-list JSON so numbered formatting survives save and reader rendering.

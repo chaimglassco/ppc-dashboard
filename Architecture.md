@@ -62,7 +62,7 @@ Existing-document metadata editing lives in the structured builder. Entering edi
 
 The creation modal retains Category Plus and Pencil controls for quick creation and full category management. The library category manager remains the boundary for rename, reorder, visibility, recoverable deletion, and recovery. Deleted categories are not rendered in the main manager list; a recovery icon opens a focused dialog containing only recoverable categories. Reader edit mode consumes the validated active category list for reassignment.
 
-The catalog toolbar keeps document creation available in both view and admin modes. Document recovery remains an admin action: deleted documents are excluded from the catalog layout, and an admin-only recovery icon opens a focused dialog containing the recoverable document list.
+The catalog toolbar keeps document creation available in both view and admin modes. Document recovery remains an admin action: deleted documents are excluded from the catalog layout, and an admin-only recovery icon opens a focused dialog containing the recoverable document list. Each row displays direct-user, system-migration, system-backup, or unknown attribution supplied by Pipeline. A confirmed bulk action sends one revision-guarded mutation containing only migration-attributed IDs; manual deletions are never included.
 
 No document cards render while shared administration state is hydrating. The document grid remains a skeleton until the authoritative response succeeds or the validated confirmed cache is selected as a read-only fallback, preventing stale or deleted records from appearing during refresh.
 
@@ -73,7 +73,7 @@ No document cards render while shared administration state is hydrating. The doc
 - Document/category changes are scoped operations. Record updates, delete, and restore use `expectedVersion`; catalog ordering and initialization use `expectedRevision`. Conflicts return `409` plus the latest full response.
 - ADMIN may perform every mutation and backup action. USER may create and update active documents. VIEWER is read-only. Pipeline checks the current active database user on every request.
 - Successful server responses replace the confirmed browser cache. If the server cannot be reached, a validated cache may render read-only; mutations are disabled and local edits are never queued for upload.
-- Deleted documents and categories retain `deletedAt` tombstones and remain inactive until explicit ADMIN recovery.
+- Deleted documents and categories retain `deletedAt` tombstones and remain inactive until explicit ADMIN recovery. Pipeline backup restore merges records without tombstoning backup-absent or newer active documents.
 - Only bookmarks, recent history, last topic, completion, session/route handoff, and the confirmed read-only catalog cache remain browser-local.
 
 ## Styling
@@ -88,7 +88,7 @@ For session-only logins, the source tab writes the versioned `glassco.authHandof
 
 Pipeline Postgres is authoritative for catalog data. Private Vercel Blob remains authoritative only for uploaded images; the old `glassco/library-state-v1.json` object and checksum-addressed copies under `glassco/library-backups/` are migration/rollback artifacts, never live writable state.
 
-The protected `/ppc/api/library/migration` route is ADMIN-only. It can download the legacy snapshot, create an immutable checksum backup, and initialize an empty Pipeline catalog with the two retained production documents while tombstoning all others. Initialization is revision-zero-only and must run after both server and client protections deploy.
+The protected `/ppc/api/library/migration` route is ADMIN-only. It can download the legacy snapshot, create an immutable checksum backup, and initialize an empty Pipeline catalog with the complete validated legacy catalog. It never creates new tombstones. Initialization is revision-zero-only and must run after the Pipeline protections deploy.
 
 ## Quality gates
 

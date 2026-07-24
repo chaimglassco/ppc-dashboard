@@ -8,7 +8,7 @@ import { extractTopics, slugifyHeading } from "../domain/headings";
 import { filterDocuments } from "../domain/search";
 import { type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories, type ManagedCategory } from "../state/category-storage";
-import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, initializeCleanLibrary, mutateSharedLibrary, SharedLibraryConflictError, type SharedLibraryMutation } from "../state/shared-library-client";
+import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, SharedLibraryConflictError, type SharedLibraryMutation } from "../state/shared-library-client";
 import { getSharedLibraryRefreshDelay } from "../state/shared-library-retry";
 import type { SharedLibraryResponse } from "../state/shared-library-state";
 import { CategoryManager } from "./category-manager";
@@ -47,6 +47,8 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [documentToDelete, setDocumentToDelete] = useState<ManagedLibraryDocument | null>(null);
   const [isDeletingDocument, setIsDeletingDocument] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [isRecoveringSystemDocuments, setIsRecoveringSystemDocuments] = useState(false);
+  const [systemRecoveryError, setSystemRecoveryError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const successTimerRef = useRef<number | null>(null);
   const lastMutationErrorRef = useRef("");
@@ -166,13 +168,13 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       const unavailableMessage = "Shared library is unavailable. Refresh the Library and try again.";
       lastMutationErrorRef.current = unavailableMessage;
       setNotice(unavailableMessage);
-      return false;
+      return null;
     }
     try {
       const saved = await mutateSharedLibrary(mutation, { summary: true });
       applySharedResponse(saved);
       setNotice(message);
-      return true;
+      return saved;
     } catch (error) {
       if (error instanceof SharedLibraryConflictError) {
         applySharedResponse(error.latest);
@@ -185,7 +187,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         lastMutationErrorRef.current = errorMessage;
         setNotice(errorMessage);
       }
-      return false;
+      return null;
     }
   };
 
@@ -216,15 +218,15 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
 
   const migrateLibrary = async () => {
     if (!canAdmin || librarySource !== "server" || shared?.initialized !== false || isMigrating) return;
-    if (!window.confirm("Back up the legacy Library and restore the approved two-document catalog? This can only initialize an empty shared Library.")) return;
+    if (!window.confirm("Back up the legacy Library and import the complete catalog? This can only initialize an empty shared Library.")) return;
     setIsMigrating(true);
     setNotice("Backing up and restoring the Library…");
     try {
-      const response = await initializeCleanLibrary();
+      const response = await initializeSharedLibrary();
       applySharedResponse(response);
       setLibrarySource("server");
       setMutationsEnabled(response.initialized);
-      setNotice("Library backup and restoration completed successfully.");
+      setNotice("Library backup and complete catalog import finished successfully.");
     } catch (error) {
       setNotice(error instanceof Error ? `Library migration failed: ${error.message}` : "Library migration failed. No changes were applied.");
     } finally {
@@ -296,6 +298,25 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     if (revision === undefined) return;
     if (await commitMutation({ operation: "documents.reorder", documentIds: order, expectedRevision: revision }, "Library document order updated.")) setShowDocumentReorder(false);
   };
+  const recoverSystemDeletedDocuments = async (documentIds: string[]) => {
+    const revision = sharedRef.current?.revision;
+    if (revision === undefined || isRecoveringSystemDocuments) return;
+    setIsRecoveringSystemDocuments(true);
+    setSystemRecoveryError("");
+    const response = await commitMutation({
+      operation: "documents.restoreSystemDeleted",
+      documentIds,
+      expectedRevision: revision,
+    }, "");
+    setIsRecoveringSystemDocuments(false);
+    if (!response) {
+      setSystemRecoveryError(lastMutationErrorRef.current || "The documents could not be recovered. Please try again.");
+      return;
+    }
+    setSystemRecoveryError("");
+    const restoredCount = response.restoredCount ?? documentIds.length;
+    announceSuccess(`${restoredCount} system-deleted ${restoredCount === 1 ? "document was" : "documents were"} recovered successfully.`);
+  };
 
   return <section className="catalog-panel" aria-label="Library documents">
     <div className="catalog-toolbar">
@@ -308,7 +329,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     </div>
     {manageMode && <div className="admin-mode-banner"><span>Admin mode</span><p>Edit documents and manage category dropdown options, visibility, order, deletion, and recovery.</p></div>}
     {notice && <p className="admin-notice" role="status">{notice}{librarySource !== "server" && isCatalogReady ? <> <button className="inline-retry-button" type="button" onClick={() => void refresh()}>Try again</button></> : null}</p>}
-    {canAdmin && librarySource === "server" && shared?.initialized === false ? <button className="primary-button" type="button" onClick={() => void migrateLibrary()} disabled={isMigrating}>{isMigrating ? "BACKING UP AND RESTORING…" : "Back up and restore Library"}</button> : null}
+    {canAdmin && librarySource === "server" && shared?.initialized === false ? <button className="primary-button" type="button" onClick={() => void migrateLibrary()} disabled={isMigrating}>{isMigrating ? "BACKING UP AND IMPORTING…" : "Back up and import complete Library"}</button> : null}
     {isCatalogReady ? <><p className="result-bar" aria-live="polite">{results.length} {results.length === 1 ? "document" : "documents"}</p>
     {results.length ? <div className="document-grid">{results.map(doc => {
       const activeIndex = activeDocuments.findIndex(document => document.id === doc.id);
@@ -323,7 +344,18 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       };
       return <DocumentCard key={doc.id} doc={doc} admin={manageMode && mutationsEnabled ? { onToggleHidden: () => updateDocument({ ...doc, hidden: !doc.hidden, updatedAt: new Date().toISOString() }, doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => requestDocumentDelete(doc), onMoveUp: () => reorder(-1), onMoveDown: () => reorder(1), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1 } : undefined}/>;
     })}</div> : <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div>}</> : <div className="skeleton-grid" aria-label="Loading library documents">{[1, 2, 3].map(item => <div className="skeleton" key={item} />)}</div>}
-    {canAdmin && showDocumentRecovery ? <DeletedDocuments documents={deleted} onClose={() => setShowDocumentRecovery(false)} onRecover={id => { const expectedVersion = sharedRef.current?.recordVersions.documents[id]; if (expectedVersion !== undefined) void commitMutation({ operation: "document.restore", documentId: id, expectedVersion }, "Document recovered."); }} /> : null}
+    {canAdmin && showDocumentRecovery ? <DeletedDocuments
+      documents={deleted}
+      deletionAudit={shared?.deletionAudit?.documents ?? {}}
+      isRecoveringSystemDocuments={isRecoveringSystemDocuments}
+      systemRecoveryError={systemRecoveryError}
+      onClose={() => { setShowDocumentRecovery(false); setSystemRecoveryError(""); }}
+      onRecover={id => {
+        const expectedVersion = sharedRef.current?.recordVersions.documents[id];
+        if (expectedVersion !== undefined) void commitMutation({ operation: "document.restore", documentId: id, expectedVersion }, "Document recovered.");
+      }}
+      onRecoverSystemDeleted={documentIds => void recoverSystemDeletedDocuments(documentIds)}
+    /> : null}
     {canEdit && editor && mutationsEnabled ? <DocumentEditor key="new" categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft} onCreateCategory={canAdmin ? createCategory : undefined} onManageCategories={canAdmin ? () => setShowCategoryManager(true) : undefined}/> : null}
     {canAdmin && showDocumentReorder ? <DocumentReorderDialog documents={activeDocuments} onCancel={() => setShowDocumentReorder(false)} onSave={saveDocumentOrder} /> : null}
     {canAdmin && showCategoryManager ? <CategoryManager categories={categories} documentCounts={documentCounts} onClose={() => setShowCategoryManager(false)} onCreate={createCategory} onRename={renameCategory} onToggleHidden={toggleCategoryHidden} onDelete={deleteCategory} onRecover={id => { const expectedVersion = sharedRef.current?.recordVersions.categories[id]; if (expectedVersion !== undefined) void commitMutation({ operation: "category.restore", categoryId: id, expectedVersion }, "Category recovered."); }} onMove={(id, direction) => { const active = categories.filter(item => !item.deletedAt); const position = active.findIndex(item => item.id === id); const target = position + direction; if (position < 0 || target < 0 || target >= active.length || !sharedRef.current) return; const ordered = [...active]; [ordered[position], ordered[target]] = [ordered[target], ordered[position]]; void commitMutation({ operation: "categories.reorder", categoryIds: ordered.map(item => item.id), expectedRevision: sharedRef.current.revision }, "Category order updated."); }} /> : null}

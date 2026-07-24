@@ -35,6 +35,9 @@ Use this checklist before merging or deploying changes.
 - [x] Deleted documents do not render as a recovery section below the catalog.
 - [x] Admin toolbar recovery icon opens the deleted-document recovery dialog.
 - [x] Recover a deleted document.
+- [x] Deleted-document rows show direct-user, migration-system, backup-system, or unknown-source attribution.
+- [x] Bulk recovery requires confirmation, shows progress/errors, and contains only migration-attributed document IDs.
+- [x] A stale catalog revision or mixed eligibility returns a conflict without partial recovery.
 - [x] Hidden/deleted documents are unavailable in normal reader mode.
 - [x] Refreshing the catalog shows skeletons until saved state resolves; deleted seed documents never flash in the active list.
 
@@ -121,6 +124,7 @@ Use this checklist before merging or deploying changes.
 - [x] Successful responses update a validated confirmed cache; outage fallback is read-only and disables mutations.
 - [x] Visible tabs poll every five seconds and refresh immediately on focus.
 - [x] Pipeline audit and backup/restore contracts are covered by automated tests.
+- [x] Complete legacy import creates no new tombstones, and backup restore preserves backup-absent/newer active records.
 - [ ] Complete production backup/restore verification after deploying Pipeline and before catalog initialization.
 - [ ] Complete authenticated multi-account browser verification with dedicated ADMIN, USER, and VIEWER accounts.
 - [ ] Move bearer authentication to secure same-origin cookies before treating returned HTML as access-controlled.

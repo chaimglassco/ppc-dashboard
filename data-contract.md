@@ -124,13 +124,23 @@ Pipeline Postgres is the only authoritative catalog store. Pipeline exposes `/ap
     categories: Array<{ id: string; name: string; hidden: boolean; deletedAt?: string }>;
   };
   revision: number;
-  recordVersions: {
-    documents: Record<string, number>;
-    categories: Record<string, number>;
-  };
-  updatedAt: string | null;
-  updatedBy: string | null;
-}
+    recordVersions: {
+      documents: Record<string, number>;
+      categories: Record<string, number>;
+    };
+    updatedAt: string | null;
+    updatedBy: string | null;
+    deletionAudit?: {
+      documents: Record<string, {
+        source: "user" | "system_migration" | "system_backup_restore" | "unknown";
+        deletedAt: string;
+        reason: string;
+        actor: { name: string; email: string; role: "ADMIN" | "USER" | "VIEWER" } | null;
+        initiatedBy: { name: string; email: string; role: "ADMIN" | "USER" | "VIEWER" } | null;
+      }>;
+    };
+    restoredCount?: number;
+  }
 ```
 
 Pipeline tables separate catalog metadata, documents, categories, backups, and audit records. Stable document/category IDs remain primary keys; `deletedAt` is a recoverable tombstone and is cleared only by an explicit restore.
@@ -143,10 +153,11 @@ Pipeline tables separate catalog metadata, documents, categories, backups, and a
 - `document.create` with `document`
 - `document.update` with `documentId`, `expectedVersion`, and `document`
 - `document.delete` / `document.restore` with `documentId` and `expectedVersion`
+- `documents.restoreSystemDeleted` with unique `documentIds` and `expectedRevision` (ADMIN only)
 - `documents.reorder` with all active `documentIds` and `expectedRevision`
 - equivalent category create/update/delete/restore/reorder operations
 
-Updates, delete, and restore compare the target record version. Reorders and initialization compare the global revision. A mismatch or unavailable target returns HTTP `409`, `conflict: true`, and the current full shared response. Successful mutations increment the global revision, update record versions as applicable, and record actor/revision audit metadata.
+Updates, delete, and restore compare the target record version. Reorders, initialization, and bulk system recovery compare the global revision. Bulk recovery succeeds only when every requested record is currently tombstoned and its latest deletion event is `system_migration`; otherwise it restores none. A mismatch or unavailable target returns HTTP `409`, `conflict: true`, and the current full shared response. Successful mutations increment the global revision, update record versions as applicable, and record actor/revision audit metadata.
 
 Pipeline reloads the caller from `launchflow_users` for every request. ADMIN may initialize, create/update/delete/restore/reorder documents, manage categories, and manage backups. USER may create documents and update active documents only. VIEWER is read-only.
 
@@ -191,9 +202,9 @@ Legacy keys `glassco-library-admin-state` and `glassco-library-category-state` a
 
 ## Legacy Blob migration and backups
 
-Private Blob object `glassco/library-state-v1.json` is the legacy source only. The ADMIN-protected `/ppc/api/library/migration` route validates it, supports authenticated download, and creates an immutable checksum-addressed copy under `glassco/library-backups/`. `initialize-clean-catalog` first ensures that backup, retains the existing IDs/slugs/content/settings for exactly **Sample Document with all the elements** and **Checking Spenders with No Sales**, tombstones every other legacy document, and submits `catalog.initialize` to an empty revision-zero Pipeline catalog.
+Private Blob object `glassco/library-state-v1.json` is the legacy source only. The ADMIN-protected `/ppc/api/library/migration` route validates it, supports authenticated download, and creates an immutable checksum-addressed copy under `glassco/library-backups/`. `initialize-catalog` first ensures that backup, preserves the complete document/category catalog exactly—including pre-existing tombstones—and submits `catalog.initialize` to an empty revision-zero Pipeline catalog. The legacy `initialize-clean-catalog` action remains accepted as a compatibility alias but now performs the same safe complete import.
 
-Pipeline backup operations use POST `/api/library-state` with `create-backup` or `restore-backup`; list/detail are ADMIN-only GET queries. Restore requires `expectedRevision` and automatically creates a before-restore backup. Private Blob continues to store authenticated uploaded images and the legacy migration artifact, not current catalog state.
+Pipeline backup operations use POST `/api/library-state` with `create-backup` or `restore-backup`; list/detail are ADMIN-only GET queries. Restore requires `expectedRevision`, automatically creates a before-restore backup, preserves records absent from the backup, preserves newer active documents, and never changes an active record into a tombstone. Private Blob continues to store authenticated uploaded images and the legacy migration artifact, not current catalog state.
 # Unified session and route contracts
 
 The PPC application reads the existing Pipeline session from local or session storage key `launchflow.authSession.v1`. Required fields are `token` and `email`; `name` and `role` are normalized after server verification. Roles normalize to `ADMIN`, `USER`, or `VIEWER`.

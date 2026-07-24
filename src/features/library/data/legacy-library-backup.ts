@@ -26,17 +26,12 @@ export type LegacyLibraryBackup = {
   created: boolean;
 };
 
-export type LegacyCleanupReport = {
-  activeDocuments: 2;
-  newlyTombstoned: number;
-  previouslyTombstoned: number;
-  keepDocuments: Array<{ id: string; slug: string; title: string }>;
+export type LegacyCatalogImportReport = {
+  documentCount: number;
+  categoryCount: number;
+  activeDocumentCount: number;
+  deletedDocumentCount: number;
 };
-
-const CLEAN_CATALOG_TITLES = Object.freeze([
-  "Sample Document with all the elements",
-  "Checking Spenders with No Sales",
-]);
 
 function assertBlobConfigured() {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
@@ -104,36 +99,16 @@ export async function ensureLegacyLibraryBackup(snapshot?: LegacyLibrarySnapshot
   };
 }
 
-export function createCleanLegacyCatalog(state: SharedLibraryState, deletedAt = new Date().toISOString()): { state: SharedLibraryState; report: LegacyCleanupReport } {
-  const parsedTimestamp = new Date(deletedAt);
-  if (Number.isNaN(parsedTimestamp.valueOf())) throw new LegacyLibraryBackupError("LEGACY_SNAPSHOT_INVALID", "The cleanup timestamp is invalid.");
-  const timestamp = parsedTimestamp.toISOString();
-  const matches = new Map(CLEAN_CATALOG_TITLES.map(title => [title, state.documents.filter(document => document.title === title)]));
-  for (const title of CLEAN_CATALOG_TITLES) {
-    const documents = matches.get(title) ?? [];
-    if (documents.length !== 1) {
-      throw new LegacyLibraryBackupError("LEGACY_SNAPSHOT_INVALID", `Expected exactly one legacy document titled "${title}", found ${documents.length}.`);
-    }
-  }
-  const keepIds = new Set([...matches.values()].flat().map(document => document.id));
-  let newlyTombstoned = 0;
-  let previouslyTombstoned = 0;
-  const documents = state.documents.map(document => {
-    if (keepIds.has(document.id)) {
-      const restored = { ...document };
-      delete restored.deletedAt;
-      return restored;
-    }
-    if (document.deletedAt) {
-      previouslyTombstoned += 1;
-      return { ...document };
-    }
-    newlyTombstoned += 1;
-    return { ...document, deletedAt: timestamp };
-  });
-  const keepDocuments = documents.filter(document => keepIds.has(document.id)).map(document => ({ id: document.id, slug: document.slug, title: document.title }));
+export function prepareLegacyCatalogImport(state: SharedLibraryState): { state: SharedLibraryState; report: LegacyCatalogImportReport } {
+  const documents = state.documents.map(document => ({ ...document }));
+  const categories = state.categories.map(category => ({ ...category }));
   return {
-    state: { ...state, documents },
-    report: { activeDocuments: 2, newlyTombstoned, previouslyTombstoned, keepDocuments },
+    state: { version: 1, documents, categories },
+    report: {
+      documentCount: documents.length,
+      categoryCount: categories.length,
+      activeDocumentCount: documents.filter(document => !document.deletedAt).length,
+      deletedDocumentCount: documents.filter(document => Boolean(document.deletedAt)).length,
+    },
   };
 }

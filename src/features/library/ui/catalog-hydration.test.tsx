@@ -6,7 +6,7 @@ import { ReadingStateProvider } from "../state/reading-state";
 import type { SharedLibraryState } from "../state/shared-library-state";
 import { Catalog } from "./catalog";
 
-const client = vi.hoisted(() => ({ fetchSharedLibraryState: vi.fn(), hydrateSharedLibraryState: vi.fn(), initializeCleanLibrary: vi.fn() }));
+const client = vi.hoisted(() => ({ fetchSharedLibraryState: vi.fn(), hydrateSharedLibraryState: vi.fn(), initializeSharedLibrary: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), usePathname: () => "/library", useSearchParams: () => new URLSearchParams() }));
 vi.mock("../state/shared-library-client", async importOriginal => {
@@ -18,7 +18,7 @@ describe("catalog hydration", () => {
   beforeEach(() => {
     client.fetchSharedLibraryState.mockReset();
     client.hydrateSharedLibraryState.mockReset();
-    client.initializeCleanLibrary.mockReset();
+    client.initializeSharedLibrary.mockReset();
     window.localStorage.clear();
   });
   afterEach(() => { vi.useRealTimers(); });
@@ -123,30 +123,30 @@ describe("catalog hydration", () => {
     };
     const restored = { ...uninitialized, initialized: true, revision: 1, state: { version: 1 as const, documents: getPublishedDocuments().slice(0, 2), categories: createDefaultCategories() } };
     client.hydrateSharedLibraryState.mockResolvedValue({ response: uninitialized, source: "server" });
-    client.initializeCleanLibrary.mockResolvedValue(restored);
+    client.initializeSharedLibrary.mockResolvedValue(restored);
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>);
     const catalog = within(view.container);
 
-    await waitFor(() => expect(catalog.getByRole("button", { name: "Back up and restore Library" })).toBeEnabled());
-    fireEvent.click(catalog.getByRole("button", { name: "Back up and restore Library" }));
+    await waitFor(() => expect(catalog.getByRole("button", { name: "Back up and import complete Library" })).toBeEnabled());
+    fireEvent.click(catalog.getByRole("button", { name: "Back up and import complete Library" }));
 
-    await waitFor(() => expect(client.initializeCleanLibrary).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(catalog.getByText("Library backup and restoration completed successfully.")).toBeVisible());
-    expect(catalog.queryByRole("button", { name: "Back up and restore Library" })).not.toBeInTheDocument();
+    await waitFor(() => expect(client.initializeSharedLibrary).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(catalog.getByText("Library backup and complete catalog import finished successfully.")).toBeVisible());
+    expect(catalog.queryByRole("button", { name: "Back up and import complete Library" })).not.toBeInTheDocument();
   });
 
   it("keeps migration pending and reports a failed ADMIN migration", async () => {
     client.hydrateSharedLibraryState.mockResolvedValue({ response: { initialized: false, state: { version: 1, documents: [], categories: [] }, revision: 0, recordVersions: { documents: {}, categories: {} }, updatedAt: null, updatedBy: null }, source: "server" });
-    client.initializeCleanLibrary.mockRejectedValue(new Error("Backup could not be created."));
+    client.initializeSharedLibrary.mockRejectedValue(new Error("Backup could not be created."));
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>);
     const catalog = within(view.container);
 
-    await waitFor(() => expect(catalog.getByRole("button", { name: "Back up and restore Library" })).toBeEnabled());
-    fireEvent.click(catalog.getByRole("button", { name: "Back up and restore Library" }));
+    await waitFor(() => expect(catalog.getByRole("button", { name: "Back up and import complete Library" })).toBeEnabled());
+    fireEvent.click(catalog.getByRole("button", { name: "Back up and import complete Library" }));
 
     await waitFor(() => expect(catalog.getByText("Library migration failed: Backup could not be created.")).toBeVisible());
-    expect(catalog.getByRole("button", { name: "Back up and restore Library" })).toBeEnabled();
+    expect(catalog.getByRole("button", { name: "Back up and import complete Library" })).toBeEnabled();
   });
 });

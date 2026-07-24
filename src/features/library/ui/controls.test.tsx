@@ -63,12 +63,48 @@ describe("accessible controls", () => {
     const onRecover = vi.fn();
     const onClose = vi.fn();
     const document = { ...getPublishedDocuments()[0], deletedAt: "2026-07-17T04:00:00.000Z" };
-    const view = render(<DeletedDocuments documents={[document]} onClose={onClose} onRecover={onRecover} />);
+    const view = render(<DeletedDocuments
+      documents={[document]}
+      deletionAudit={{}}
+      isRecoveringSystemDocuments={false}
+      systemRecoveryError=""
+      onClose={onClose}
+      onRecover={onRecover}
+      onRecoverSystemDeleted={vi.fn()}
+    />);
     const dialog = within(view.container).getByRole("dialog", { name: "Deleted documents" });
     expect(dialog).toBeVisible();
     expect(within(dialog).getByText(document.title)).toBeVisible();
     fireEvent.click(within(dialog).getByRole("button", { name: "Recover" }));
     expect(onRecover).toHaveBeenCalledWith(document.id);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+  it("attributes migration deletions and confirms atomic system recovery", () => {
+    const document = { ...getPublishedDocuments()[0], deletedAt: "2026-07-22T06:48:42.000Z" };
+    const onRecoverSystemDeleted = vi.fn();
+    const view = render(<DeletedDocuments
+      documents={[document]}
+      deletionAudit={{
+        [document.id]: {
+          source: "system_migration",
+          deletedAt: document.deletedAt,
+          reason: "Initial Library cleanup",
+          actor: null,
+          initiatedBy: { name: "Admin User", email: "admin@example.com", role: "ADMIN" },
+        },
+      }}
+      isRecoveringSystemDocuments={false}
+      systemRecoveryError=""
+      onClose={vi.fn()}
+      onRecover={vi.fn()}
+      onRecoverSystemDeleted={onRecoverSystemDeleted}
+    />);
+    const dialog = within(view.container).getByRole("dialog", { name: "Deleted documents" });
+    expect(within(dialog).getByText(/by System — Initial Library cleanup/)).toBeVisible();
+    expect(within(dialog).getByText(/Initiated by Admin User/)).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: /Recover system-deleted documents/ }));
+    expect(within(dialog).getByText(/Recover 1 system-deleted document/)).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: /Confirm recovery/ }));
+    expect(onRecoverSystemDeleted).toHaveBeenCalledWith([document.id]);
   });
 });

@@ -27,4 +27,31 @@ describe("shared library state", () => {
     expect(parseSharedLibraryResponse({ initialized: true, state, revision: -1, recordVersions: { documents: {}, categories: {} } })).toBeNull();
     expect(parseSharedLibraryResponse({ state, revision: 0, recordVersions: { documents: {}, categories: {} } })).toBeNull();
   });
+
+  it("parses optional ADMIN deletion attribution and bulk recovery results", () => {
+    const state = createSharedLibraryState(getPublishedDocuments().slice(0, 1));
+    const documentId = state.documents[0].id;
+    const response = parseSharedLibraryResponse({
+      initialized: true,
+      state,
+      revision: 8,
+      recordVersions: { documents: { [documentId]: 4 }, categories: {} },
+      updatedAt: null,
+      updatedBy: "admin@example.com",
+      restoredCount: 3,
+      deletionAudit: {
+        documents: {
+          [documentId]: {
+            source: "user",
+            deletedAt: "2026-07-24T00:00:00.000Z",
+            reason: "Manual document deletion",
+            actor: { name: "Admin User", email: "admin@example.com", role: "ADMIN" },
+            initiatedBy: null,
+          },
+        },
+      },
+    });
+    expect(response?.restoredCount).toBe(3);
+    expect(response?.deletionAudit?.documents[documentId].actor?.email).toBe("admin@example.com");
+  });
 });

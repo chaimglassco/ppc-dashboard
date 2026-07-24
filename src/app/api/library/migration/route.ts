@@ -1,4 +1,4 @@
-import { createCleanLegacyCatalog, ensureLegacyLibraryBackup, LegacyLibraryBackupError, readLegacyLibrarySnapshot } from "@/features/library/data/legacy-library-backup";
+import { ensureLegacyLibraryBackup, LegacyLibraryBackupError, prepareLegacyCatalogImport, readLegacyLibrarySnapshot } from "@/features/library/data/legacy-library-backup";
 import { verifyPipelineRequest } from "@/lib/pipeline-auth-server";
 
 export const runtime = "nodejs";
@@ -43,13 +43,13 @@ export async function POST(request: Request) {
       const backup = await ensureLegacyLibraryBackup();
       return Response.json({ backup }, { status: backup.created ? 201 : 200, headers: noStoreHeaders });
     }
-    if (action !== "initialize-clean-catalog") {
+    if (!["initialize-catalog", "initialize-clean-catalog"].includes(action)) {
       return Response.json({ error: "Unknown Library migration action." }, { status: 400, headers: noStoreHeaders });
     }
 
     const snapshot = await readLegacyLibrarySnapshot();
     const backup = await ensureLegacyLibraryBackup(snapshot);
-    const candidate = createCleanLegacyCatalog(snapshot.state);
+    const candidate = prepareLegacyCatalogImport(snapshot.state);
     const authorization = request.headers.get("authorization");
     const upstream = await fetch(new URL("/api/library-state", pipelineOrigin), {
       method: "PATCH",
@@ -59,7 +59,14 @@ export async function POST(request: Request) {
     });
     const upstreamBody: unknown = await upstream.json().catch(() => ({ error: "Pipeline returned an invalid migration response." }));
     const payload = upstreamBody && typeof upstreamBody === "object" ? upstreamBody as Record<string, unknown> : { error: "Pipeline returned an invalid migration response." };
-    return Response.json({ ...payload, migration: { legacyBackup: backup, cleanup: candidate.report } }, { status: upstream.status, headers: noStoreHeaders });
+    return Response.json({
+      ...payload,
+      migration: {
+        legacyBackup: backup,
+        mode: "complete-catalog-import",
+        ...candidate.report,
+      },
+    }, { status: upstream.status, headers: noStoreHeaders });
   } catch (error) {
     return migrationError(error);
   }
