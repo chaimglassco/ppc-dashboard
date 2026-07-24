@@ -18,7 +18,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Session-only Pipeline logins cross into a new tab through a 30-second one-use handoff; persistent “Remember me” sessions are unchanged.
 - Missing or expired sessions return to Pipeline login with a validated requested PPC destination.
 - PPC verifies the existing Pipeline session through Pipeline’s `/api/auth/session` endpoint.
-- ADMIN users have full document, category, attributed recovery, reorder, backup, and restore access, including an explicit bulk action for documents deleted by the historical system cleanup.
+- ADMIN users have full document, category, attributed recovery, reorder, backup, and restore access, including an explicit bulk action for documents deleted by the historical system cleanup and a separately confirmed permanent delete for existing tombstones.
 - USER users can create documents and edit active document content and metadata.
 - VIEWER users receive read-only Library access. Personal bookmark and completion controls remain available to every role.
 

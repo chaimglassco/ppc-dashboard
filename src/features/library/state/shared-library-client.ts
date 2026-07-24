@@ -34,7 +34,7 @@ export type SharedLibraryMutation =
   | { operation: "catalog.initialize"; state: SharedLibraryState; expectedRevision: 0 }
   | { operation: "document.create"; document: ManagedLibraryDocument }
   | { operation: "document.update"; documentId: string; expectedVersion: number; document: ManagedLibraryDocument }
-  | { operation: "document.delete" | "document.restore"; documentId: string; expectedVersion: number }
+  | { operation: "document.delete" | "document.restore" | "document.purge"; documentId: string; expectedVersion: number }
   | { operation: "documents.restoreSystemDeleted"; documentIds: string[]; expectedRevision: number }
   | { operation: "documents.reorder"; documentIds: string[]; expectedRevision: number }
   | { operation: "category.create"; category: ManagedCategory }

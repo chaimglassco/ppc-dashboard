@@ -317,6 +317,18 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     const restoredCount = response.restoredCount ?? documentIds.length;
     announceSuccess(`${restoredCount} system-deleted ${restoredCount === 1 ? "document was" : "documents were"} recovered successfully.`);
   };
+  const permanentlyDeleteDocument = async (document: ManagedLibraryDocument) => {
+    const expectedVersion = sharedRef.current?.recordVersions.documents[document.id];
+    if (expectedVersion === undefined) return "The current document version is unavailable. Close this message and try again.";
+    const response = await commitMutation({
+      operation: "document.purge",
+      documentId: document.id,
+      expectedVersion,
+    }, "");
+    if (!response) return lastMutationErrorRef.current || "The document could not be permanently deleted. Please try again.";
+    announceSuccess(`${document.title} was permanently deleted.`);
+    return null;
+  };
 
   return <section className="catalog-panel" aria-label="Library documents">
     <div className="catalog-toolbar">
@@ -355,6 +367,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         if (expectedVersion !== undefined) void commitMutation({ operation: "document.restore", documentId: id, expectedVersion }, "Document recovered.");
       }}
       onRecoverSystemDeleted={documentIds => void recoverSystemDeletedDocuments(documentIds)}
+      onPermanentlyDelete={permanentlyDeleteDocument}
     /> : null}
     {canEdit && editor && mutationsEnabled ? <DocumentEditor key="new" categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft} onCreateCategory={canAdmin ? createCategory : undefined} onManageCategories={canAdmin ? () => setShowCategoryManager(true) : undefined}/> : null}
     {canAdmin && showDocumentReorder ? <DocumentReorderDialog documents={activeDocuments} onCancel={() => setShowDocumentReorder(false)} onSave={saveDocumentOrder} /> : null}

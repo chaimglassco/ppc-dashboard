@@ -53,6 +53,7 @@ The current milestone uses the existing Pipeline identity and one authoritative 
 - **LIB-ADMIN-018** — ADMIN recovery shows who or what deleted every document, with an unknown-source fallback when historical evidence is incomplete.
 - **LIB-ADMIN-019** — ADMIN may explicitly confirm one atomic recovery of all documents attributed to the Initial Library cleanup; manually deleted documents are excluded.
 - **LIB-ADMIN-020** — Legacy initialization imports the complete catalog without newly tombstoning documents, and backup restore cannot delete backup-absent or newer active records.
+- **LIB-ADMIN-021** — ADMIN may permanently delete an already-deleted document only after a separate confirmation; the content is removed, the actor audit is retained, and backup restore cannot recreate it.
 
 ### Structured builder
 

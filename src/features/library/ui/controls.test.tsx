@@ -71,6 +71,7 @@ describe("accessible controls", () => {
       onClose={onClose}
       onRecover={onRecover}
       onRecoverSystemDeleted={vi.fn()}
+      onPermanentlyDelete={vi.fn()}
     />);
     const dialog = within(view.container).getByRole("dialog", { name: "Deleted documents" });
     expect(dialog).toBeVisible();
@@ -98,6 +99,7 @@ describe("accessible controls", () => {
       onClose={vi.fn()}
       onRecover={vi.fn()}
       onRecoverSystemDeleted={onRecoverSystemDeleted}
+      onPermanentlyDelete={vi.fn()}
     />);
     const dialog = within(view.container).getByRole("dialog", { name: "Deleted documents" });
     expect(within(dialog).getByText(/by System — Initial Library cleanup/)).toBeVisible();
@@ -106,5 +108,26 @@ describe("accessible controls", () => {
     expect(within(dialog).getByText(/Recover 1 system-deleted document/)).toBeVisible();
     fireEvent.click(within(dialog).getByRole("button", { name: /Confirm recovery/ }));
     expect(onRecoverSystemDeleted).toHaveBeenCalledWith([document.id]);
+  });
+  it("requires confirmation before permanently deleting a recoverable document", async () => {
+    const document = { ...getPublishedDocuments()[0], deletedAt: "2026-07-22T06:48:42.000Z" };
+    const onPermanentlyDelete = vi.fn().mockResolvedValue(null);
+    const view = render(<DeletedDocuments
+      documents={[document]}
+      deletionAudit={{}}
+      isRecoveringSystemDocuments={false}
+      systemRecoveryError=""
+      onClose={vi.fn()}
+      onRecover={vi.fn()}
+      onRecoverSystemDeleted={vi.fn()}
+      onPermanentlyDelete={onPermanentlyDelete}
+    />);
+    const recovery = within(view.container).getByRole("dialog", { name: "Deleted documents" });
+    fireEvent.click(within(recovery).getByRole("button", { name: `Permanently delete ${document.title}` }));
+    const confirmation = within(view.container).getByRole("alertdialog", { name: "Delete forever?" });
+    expect(within(confirmation).getByText(/cannot be recovered from this list or restored from a backup/i)).toBeVisible();
+    expect(onPermanentlyDelete).not.toHaveBeenCalled();
+    fireEvent.click(within(confirmation).getByRole("button", { name: "Permanently delete" }));
+    await waitFor(() => expect(onPermanentlyDelete).toHaveBeenCalledWith(document));
   });
 });

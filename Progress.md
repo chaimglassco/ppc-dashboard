@@ -11,6 +11,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Removed the two-document cleanup transformation; protected initialization now backs up and imports the complete catalog without creating tombstones.
 - Added optional ADMIN deletion attribution for direct users, the July 22 cleanup migration, backup restores, and unknown historical sources.
 - Added a confirmed, progress-aware bulk recovery control that sends one atomic revision-guarded mutation for migration-attributed documents only.
+- Added a separately confirmed ADMIN permanent-delete action for recovery rows. It removes only tombstoned content, retains actor audit metadata, and blocks backup restoration of purged IDs.
 - Updated the Pipeline restore contract to a non-destructive merge so backup-absent and newer active documents survive.
 - Passed 151 automated tests across 29 files, ESLint, TypeScript, and the Next.js production build.
 

@@ -153,11 +153,12 @@ Pipeline tables separate catalog metadata, documents, categories, backups, and a
 - `document.create` with `document`
 - `document.update` with `documentId`, `expectedVersion`, and `document`
 - `document.delete` / `document.restore` with `documentId` and `expectedVersion`
+- `document.purge` with `documentId` and `expectedVersion` (ADMIN only; target must already be deleted)
 - `documents.restoreSystemDeleted` with unique `documentIds` and `expectedRevision` (ADMIN only)
 - `documents.reorder` with all active `documentIds` and `expectedRevision`
 - equivalent category create/update/delete/restore/reorder operations
 
-Updates, delete, and restore compare the target record version. Reorders, initialization, and bulk system recovery compare the global revision. Bulk recovery succeeds only when every requested record is currently tombstoned and its latest deletion event is `system_migration`; otherwise it restores none. A mismatch or unavailable target returns HTTP `409`, `conflict: true`, and the current full shared response. Successful mutations increment the global revision, update record versions as applicable, and record actor/revision audit metadata.
+Updates, delete, restore, and purge compare the target record version. Purge succeeds only for a tombstoned document, physically removes its content record, retains a metadata-only `document.purge` audit event, and prevents backup restore from recreating that ID. Reorders, initialization, and bulk system recovery compare the global revision. Bulk recovery succeeds only when every requested record is currently tombstoned and its latest deletion event is `system_migration`; otherwise it restores none. A mismatch or unavailable target returns HTTP `409`, `conflict: true`, and the current full shared response. Successful mutations increment the global revision, update record versions as applicable, and record actor/revision audit metadata.
 
 Pipeline reloads the caller from `launchflow_users` for every request. ADMIN may initialize, create/update/delete/restore/reorder documents, manage categories, and manage backups. USER may create documents and update active documents only. VIEWER is read-only.
 

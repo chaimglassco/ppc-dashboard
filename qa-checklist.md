@@ -38,6 +38,7 @@ Use this checklist before merging or deploying changes.
 - [x] Deleted-document rows show direct-user, migration-system, backup-system, or unknown-source attribution.
 - [x] Bulk recovery requires confirmation, shows progress/errors, and contains only migration-attributed document IDs.
 - [x] A stale catalog revision or mixed eligibility returns a conflict without partial recovery.
+- [x] Permanent delete uses an icon-only recovery-row action, requires a second confirmation, shows progress/errors, removes only a tombstoned document, and cannot be undone by backup restore.
 - [x] Hidden/deleted documents are unavailable in normal reader mode.
 - [x] Refreshing the catalog shows skeletons until saved state resolves; deleted seed documents never flash in the active list.
 

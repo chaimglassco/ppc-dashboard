@@ -84,6 +84,7 @@ The existing `.gitignore` already excludes these paths.
 13. Confirm deleted categories are absent from the main list, then use the recovery icon to open the recovery dialog and recover one.
 14. In document recovery, confirm manual deletions show the user name/email/role, July 22 cleanup records show `System — Initial Library cleanup`, unmatched historical records show the unknown-source fallback, and backup-attributed records identify the initiating administrator when available.
 15. Confirm **Recover system-deleted documents** shows the affected count and confirmation, restores only migration-attributed documents atomically, reports progress/success, and returns `409` without partial recovery after a deliberate stale-revision change.
+16. Click a recovery-row trash icon, cancel the warning once, then confirm it; verify progress and success feedback, verify the document leaves recovery, and verify restoring an older backup does not recreate it.
 16. Add a Key Insight, click Green, Blue, and Red, and confirm each color previews immediately; save on Red, refresh, and confirm Red persists. Confirm an older insight without `insightColor` remains Green.
 17. Add a Roadmap, select Center number, and confirm its number, title, and subtext are centered and its image uses the full step width after saving.
 18. Upload a Roadmap step image, confirm its shared upload completes, and verify each subtext format edits directly inside the composer and persists in a second browser session.
