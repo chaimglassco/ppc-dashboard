@@ -325,8 +325,47 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       documentId: document.id,
       expectedVersion,
     }, "");
-    if (!response) return lastMutationErrorRef.current || "The document could not be permanently deleted. Please try again.";
+    if (!response) {
+      try {
+        const latest = await fetchSharedLibraryState(undefined, { summary: true });
+        applySharedResponse(latest);
+        setLibrarySource("server");
+        setMutationsEnabled(latest.initialized);
+        if (!latest.state.documents.some(item => item.id === document.id)) {
+          setNotice("");
+          announceSuccess(`${document.title} was permanently deleted.`);
+          return null;
+        }
+      } catch { /* keep the original mutation error */ }
+      return lastMutationErrorRef.current || "The document could not be permanently deleted. Please try again.";
+    }
     announceSuccess(`${document.title} was permanently deleted.`);
+    return null;
+  };
+  const recoverDocument = async (document: ManagedLibraryDocument) => {
+    const expectedVersion = sharedRef.current?.recordVersions.documents[document.id];
+    if (expectedVersion === undefined) return "The current document version is unavailable. Close recovery and try again.";
+    const response = await commitMutation({
+      operation: "document.restore",
+      documentId: document.id,
+      expectedVersion,
+    }, "");
+    if (!response) {
+      try {
+        const latest = await fetchSharedLibraryState(undefined, { summary: true });
+        applySharedResponse(latest);
+        setLibrarySource("server");
+        setMutationsEnabled(latest.initialized);
+        const latestDocument = latest.state.documents.find(item => item.id === document.id);
+        if (latestDocument && !latestDocument.deletedAt) {
+          setNotice("");
+          announceSuccess(`${document.title} was recovered successfully.`);
+          return null;
+        }
+      } catch { /* keep the original mutation error */ }
+      return lastMutationErrorRef.current || "The document could not be recovered. Please try again.";
+    }
+    announceSuccess(`${document.title} was recovered successfully.`);
     return null;
   };
 
@@ -362,10 +401,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       isRecoveringSystemDocuments={isRecoveringSystemDocuments}
       systemRecoveryError={systemRecoveryError}
       onClose={() => { setShowDocumentRecovery(false); setSystemRecoveryError(""); }}
-      onRecover={id => {
-        const expectedVersion = sharedRef.current?.recordVersions.documents[id];
-        if (expectedVersion !== undefined) void commitMutation({ operation: "document.restore", documentId: id, expectedVersion }, "Document recovered.");
-      }}
+      onRecover={recoverDocument}
       onRecoverSystemDeleted={documentIds => void recoverSystemDeletedDocuments(documentIds)}
       onPermanentlyDelete={permanentlyDeleteDocument}
     /> : null}

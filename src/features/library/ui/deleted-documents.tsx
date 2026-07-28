@@ -11,7 +11,7 @@ type DeletedDocumentsProps = {
   isRecoveringSystemDocuments: boolean;
   systemRecoveryError: string;
   onClose: () => void;
-  onRecover: (id: string) => void;
+  onRecover: (document: ManagedLibraryDocument) => Promise<string | null>;
   onRecoverSystemDeleted: (documentIds: string[]) => void;
   onPermanentlyDelete: (document: ManagedLibraryDocument) => Promise<string | null>;
 };
@@ -50,11 +50,13 @@ export function DeletedDocuments({
 }: DeletedDocumentsProps) {
   const [confirmSystemRecovery, setConfirmSystemRecovery] = useState(false);
   const [documentToPurge, setDocumentToPurge] = useState<ManagedLibraryDocument | null>(null);
+  const [recoveringDocumentId, setRecoveringDocumentId] = useState("");
+  const [recoverError, setRecoverError] = useState<{ documentId: string; message: string } | null>(null);
   const [isPermanentlyDeleting, setIsPermanentlyDeleting] = useState(false);
   const [permanentDeleteError, setPermanentDeleteError] = useState("");
   if (!documents.length) return null;
 
-  const isBusy = isRecoveringSystemDocuments || isPermanentlyDeleting;
+  const isBusy = isRecoveringSystemDocuments || isPermanentlyDeleting || Boolean(recoveringDocumentId);
   const systemDeletedIds = documents
     .filter(document => deletionAudit[document.id]?.source === "system_migration")
     .map(document => document.id);
@@ -70,6 +72,19 @@ export function DeletedDocuments({
       return;
     }
     setDocumentToPurge(null);
+    if (documents.length === 1) onClose();
+  };
+
+  const recoverDocument = async (document: ManagedLibraryDocument) => {
+    if (isBusy) return;
+    setRecoveringDocumentId(document.id);
+    setRecoverError(null);
+    const error = await onRecover(document);
+    setRecoveringDocumentId("");
+    if (error) {
+      setRecoverError({ documentId: document.id, message: error });
+      return;
+    }
     if (documents.length === 1) onClose();
   };
 
@@ -101,10 +116,14 @@ export function DeletedDocuments({
           <div className="document-recovery-list">{documents.map(document => {
             const audit = deletionAudit[document.id];
             const initiatedBy = initiatorLabel(audit);
+            const isRecovering = recoveringDocumentId === document.id;
+            const rowError = recoverError?.documentId === document.id ? recoverError.message : "";
             return <article className="document-recovery-row" key={document.id}>
-              <div><strong>{document.title}</strong><small>{deletionLabel(document, audit)}</small>{initiatedBy ? <small>{initiatedBy}</small> : null}</div>
+              <div><strong>{document.title}</strong><small>{deletionLabel(document, audit)}</small>{initiatedBy ? <small>{initiatedBy}</small> : null}{rowError ? <small className="document-recovery-error" role="alert">{rowError}</small> : null}</div>
               <div className="document-recovery-actions">
-                <button className="secondary-button" type="button" disabled={isBusy} onClick={() => { onRecover(document.id); if (documents.length === 1) onClose(); }}><RotateCcw /> Recover</button>
+                <button className="secondary-button" type="button" disabled={isBusy} onClick={() => void recoverDocument(document)}>
+                  {isRecovering ? <><LoaderCircle className="spinning-icon" /> Recovering…</> : <><RotateCcw /> Recover</>}
+                </button>
                 <button className="document-permanent-delete-button" type="button" disabled={isBusy} aria-label={`Permanently delete ${document.title}`} title="Permanently delete" onClick={() => { setPermanentDeleteError(""); setDocumentToPurge(document); }}><Trash2 /></button>
               </div>
             </article>;

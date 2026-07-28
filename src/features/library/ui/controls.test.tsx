@@ -59,8 +59,8 @@ describe("accessible controls", () => {
     fireEvent.click(within(recovery).getByRole("button", { name: "Recover" }));
     expect(onRecover).toHaveBeenCalledWith("deleted");
   });
-  it("shows deleted documents only inside the recovery dialog", () => {
-    const onRecover = vi.fn();
+  it("shows deleted documents only inside the recovery dialog", async () => {
+    const onRecover = vi.fn().mockResolvedValue(null);
     const onClose = vi.fn();
     const document = { ...getPublishedDocuments()[0], deletedAt: "2026-07-17T04:00:00.000Z" };
     const view = render(<DeletedDocuments
@@ -77,8 +77,8 @@ describe("accessible controls", () => {
     expect(dialog).toBeVisible();
     expect(within(dialog).getByText(document.title)).toBeVisible();
     fireEvent.click(within(dialog).getByRole("button", { name: "Recover" }));
-    expect(onRecover).toHaveBeenCalledWith(document.id);
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onRecover).toHaveBeenCalledWith(document);
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
   it("attributes migration deletions and confirms atomic system recovery", () => {
     const document = { ...getPublishedDocuments()[0], deletedAt: "2026-07-22T06:48:42.000Z" };
@@ -97,7 +97,7 @@ describe("accessible controls", () => {
       isRecoveringSystemDocuments={false}
       systemRecoveryError=""
       onClose={vi.fn()}
-      onRecover={vi.fn()}
+      onRecover={vi.fn().mockResolvedValue(null)}
       onRecoverSystemDeleted={onRecoverSystemDeleted}
       onPermanentlyDelete={vi.fn()}
     />);
@@ -118,7 +118,7 @@ describe("accessible controls", () => {
       isRecoveringSystemDocuments={false}
       systemRecoveryError=""
       onClose={vi.fn()}
-      onRecover={vi.fn()}
+      onRecover={vi.fn().mockResolvedValue(null)}
       onRecoverSystemDeleted={vi.fn()}
       onPermanentlyDelete={onPermanentlyDelete}
     />);
