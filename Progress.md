@@ -138,3 +138,4 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Clarified Reorder availability and the authoritative empty-Library state.
 - Hid the permanent-deletion history card when it has no records, while preserving protected bQool restoration when eligible history exists.
 - Extended the explicit protected restore allowlist to “Check Spend with No Sales,” using its newest trusted Pipeline backup while preserving its original identity and leaving all other purged records untouched.
+- Added read-only discovery across checksum-addressed legacy Library archives when an approved record is absent from the current snapshot and Pipeline backups.

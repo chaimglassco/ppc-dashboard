@@ -1,5 +1,6 @@
 import type { ManagedLibraryDocument } from "@/features/library/state/admin-storage";
 import { readLegacyLibrarySnapshot } from "@/features/library/data/legacy-library-backup";
+import { get, list } from "@vercel/blob";
 import {
   parseSharedLibraryResponse,
   parseSharedLibraryState,
@@ -15,6 +16,7 @@ const pipelineOrigin = (process.env.PIPELINE_AUTH_ORIGIN || "https://glasscopipe
 const BQOOL_TITLE = "Monitor Product Listing Prices Through BQool";
 const CHECK_SPEND_TITLE = "Check Spend with No Sales";
 const PROTECTED_RECOVERY_TITLES = [BQOOL_TITLE, CHECK_SPEND_TITLE] as const;
+const LEGACY_BACKUP_DIRECTORY = "glassco/library-backups";
 const MAX_BACKUPS_TO_SCAN = 20;
 
 type BackupSummary = {
@@ -141,6 +143,31 @@ async function mapWithConcurrency<T, R>(values: T[], limit: number, task: (value
   return results;
 }
 
+async function readLegacyArchiveStates() {
+  const result = await list({ prefix: `${LEGACY_BACKUP_DIRECTORY}/`, limit: 1000 });
+  const blobs = [...result.blobs].sort((left, right) => right.uploadedAt.getTime() - left.uploadedAt.getTime());
+  const snapshots = await mapWithConcurrency(blobs, 4, async blob => {
+    try {
+      const stored = await get(blob.pathname, { access: "private", useCache: false });
+      if (!stored || stored.statusCode !== 200) return null;
+      const state = parseSharedLibraryState(JSON.parse(await new Response(stored.stream).text()));
+      if (!state) return null;
+      return {
+        state,
+        source: {
+          kind: "legacy_snapshot",
+          id: blob.etag || blob.pathname,
+          label: "Protected legacy Library archive",
+          createdAt: blob.uploadedAt.toISOString(),
+        } satisfies SnapshotSource,
+      };
+    } catch {
+      return null;
+    }
+  });
+  return snapshots.filter((snapshot): snapshot is NonNullable<typeof snapshot> => Boolean(snapshot));
+}
+
 async function discoverPurgedDocuments(authorization: string): Promise<InternalPurgedCandidate[]> {
   const [legacyResult, backups] = await Promise.all([
     readLegacyLibrarySnapshot().catch(() => null),
@@ -152,7 +179,7 @@ async function discoverPurgedDocuments(authorization: string): Promise<InternalP
     document,
     status: await getDocumentStatus(document, authorization).catch(() => undefined),
   }));
-  const purged = statuses.filter((entry): entry is { document: ManagedLibraryDocument; status: SharedLibraryDocumentStatus } =>
+  const purged: Array<{ document: ManagedLibraryDocument; status: SharedLibraryDocumentStatus; source?: SnapshotSource }> = statuses.filter((entry): entry is { document: ManagedLibraryDocument; status: SharedLibraryDocumentStatus } =>
     entry.status?.status === "purged" || (isProtectedRecoveryDocument(entry.document) && entry.status?.status === "not_found"),
   );
 
@@ -169,12 +196,37 @@ async function discoverPurgedDocuments(authorization: string): Promise<InternalP
       if (!document) continue;
       const status = await getDocumentStatus(document, authorization).catch(() => undefined);
       if (isMissingDocumentStatus(status)) {
-        purged.push({ document, status: status! });
+        purged.push({
+          document,
+          status: status!,
+          source: {
+            kind: "pipeline_backup",
+            id: backup.id,
+            label: "Pipeline Library backup",
+            createdAt: backup.createdAt,
+          },
+        });
       }
     }
   }
 
-  const candidates = await Promise.all(purged.map(async ({ document, status }) => {
+  if (missingProtectedTitles().length) {
+    const archives = await readLegacyArchiveStates().catch(() => []);
+    for (const archive of archives) {
+      const titles = missingProtectedTitles();
+      if (!titles.length) break;
+      for (const title of titles) {
+        const document = archive.state.documents.find(item => normalizeTitle(item.title) === normalizeTitle(title));
+        if (!document) continue;
+        const status = await getDocumentStatus(document, authorization).catch(() => undefined);
+        if (isMissingDocumentStatus(status)) {
+          purged.push({ document, status: status!, source: archive.source });
+        }
+      }
+    }
+  }
+
+  const candidates = await Promise.all(purged.map(async ({ document, status, source }) => {
     const newerBackup = isProtectedRecoveryDocument(document)
       ? await findNewestBackupDocument(document, status.deletedAt, backups, authorization)
       : null;
@@ -184,7 +236,7 @@ async function discoverPurgedDocuments(authorization: string): Promise<InternalP
       slug: document.slug,
       title: status.title || document.title,
       deletedAt: status.deletedAt,
-      source: newerBackup?.source ?? {
+      source: newerBackup?.source ?? source ?? {
         kind: "legacy_snapshot",
         id: legacyResult?.checksum || "legacy-library-snapshot",
         label: "Protected legacy Library snapshot",

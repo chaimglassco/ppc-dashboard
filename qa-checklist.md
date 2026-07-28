@@ -173,3 +173,4 @@ Use this checklist before merging or deploying changes.
 - [ ] Store active, hidden, and deleted bookmark IDs; confirm the hero badge counts only unique active, visible, published documents and that recovered bookmarked documents count again.
 - [ ] Click Recovery with both requests delayed; confirm the modal shell appears immediately, each source shows independent loading/error state, and Try again works without closing the modal.
 - [ ] Confirm protected restore lists only the approved bQool and Check Spend records as restorable, requires confirmation, preserves each original ID/slug/content, and leaves every other intentionally purged document unchanged.
+- [ ] Confirm an approved record absent from the current snapshot can be discovered from a checksum-addressed legacy archive without exposing or restoring unapproved records.

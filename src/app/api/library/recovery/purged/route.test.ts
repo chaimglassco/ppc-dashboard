@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const dependencies = vi.hoisted(() => ({
   readLegacyLibrarySnapshot: vi.fn(),
   verifyPipelineRequest: vi.fn(),
+  list: vi.fn(),
+  get: vi.fn(),
 }));
 
 vi.mock("@/features/library/data/legacy-library-backup", () => ({
@@ -10,6 +12,10 @@ vi.mock("@/features/library/data/legacy-library-backup", () => ({
 }));
 vi.mock("@/lib/pipeline-auth-server", () => ({
   verifyPipelineRequest: dependencies.verifyPipelineRequest,
+}));
+vi.mock("@vercel/blob", () => ({
+  list: dependencies.list,
+  get: dependencies.get,
 }));
 
 import { GET, POST } from "./route";
@@ -67,6 +73,7 @@ beforeEach(() => {
     checksum: "trusted-checksum",
     state: { version: 1, documents: [document], categories: [category] },
   });
+  dependencies.list.mockResolvedValue({ blobs: [], hasMore: false });
 });
 
 afterEach(() => {
@@ -144,6 +151,60 @@ describe("protected purged-document recovery", () => {
         title: checkSpendDocument.title,
         canRestore: true,
         source: { kind: "pipeline_backup", id: "backup-with-check-spend" },
+      }],
+    });
+  });
+
+  it("finds the approved Check Spend document in an immutable legacy archive", async () => {
+    dependencies.list.mockResolvedValue({
+      blobs: [{
+        pathname: "glassco/library-backups/library-state-v1-old.json",
+        url: "https://blob.example/archive",
+        downloadUrl: "https://blob.example/archive?download=1",
+        size: 100,
+        uploadedAt: new Date("2026-07-26T00:00:00.000Z"),
+        etag: "archive-checksum",
+      }],
+      hasMore: false,
+    });
+    dependencies.get.mockResolvedValue({
+      statusCode: 200,
+      stream: new Response(JSON.stringify({
+        version: 1,
+        documents: [checkSpendDocument],
+        categories: [category],
+      })).body,
+    });
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("backups=1")) return Promise.resolve(Response.json({ backups: [] }));
+      if (url.includes(encodeURIComponent(document.slug))) {
+        return Promise.resolve(Response.json(sharedResponse({
+          documentStatus: { status: "active", slug: document.slug, documentId: document.id, title: document.title },
+        })));
+      }
+      if (url.includes(encodeURIComponent(checkSpendDocument.slug))) {
+        return Promise.resolve(Response.json(sharedResponse({
+          documentStatus: {
+            status: "not_found",
+            slug: checkSpendDocument.slug,
+            documentId: checkSpendDocument.id,
+            title: checkSpendDocument.title,
+          },
+        })));
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }));
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      documents: [{
+        documentId: checkSpendDocument.id,
+        title: checkSpendDocument.title,
+        canRestore: true,
+        source: { kind: "legacy_snapshot", id: "archive-checksum" },
       }],
     });
   });
