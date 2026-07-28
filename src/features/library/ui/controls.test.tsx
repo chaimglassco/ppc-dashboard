@@ -108,6 +108,7 @@ describe("accessible controls", () => {
     const dialog = within(view.container).getByRole("dialog", { name: "Deleted documents" });
     expect(dialog).toBeVisible();
     expect(within(dialog).getByText(document.title)).toBeVisible();
+    expect(within(dialog).queryByLabelText("Permanent deletion history")).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Recover" }));
     expect(onRecover).toHaveBeenCalledWith(document);
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));

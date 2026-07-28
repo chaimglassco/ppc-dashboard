@@ -136,3 +136,4 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Added an explicit, confirmed bQool-only repair from the newest trusted pre-purge snapshot while preserving all other permanent deletions.
 - Replaced the final-document safeguard with intentional empty-catalog support; the final document can be tombstoned and recovered like any other document.
 - Clarified Reorder availability and the authoritative empty-Library state.
+- Hid the permanent-deletion history card when it has no records, while preserving protected bQool restoration when eligible history exists.

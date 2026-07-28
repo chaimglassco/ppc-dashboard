@@ -166,7 +166,7 @@ Use this checklist before merging or deploying changes.
 - [ ] Open the deleted slug and verify deletion attribution plus ADMIN recovery; permanently purge a test tombstone and verify the slug reports that it cannot be recovered.
 - [ ] Confirm Recovery performs a fresh request and normal catalog reads do not return tombstones or deletion-audit payloads.
 - [ ] Confirm Reorder explains the difference between read-only mode and fewer than two active documents, and Recovery explains read-only mode versus no recoverable documents.
-- [ ] With zero tombstones, confirm Recovery still opens and shows permanent-deletion history.
+- [ ] With zero tombstones and no purged records, confirm Recovery opens without an empty permanent-deletion history card; when eligible bQool history exists, confirm that section appears.
 - [ ] With fewer than two active documents, confirm Reorder is disabled with a visible explanation; after restoring/creating a second document, confirm it opens and saves.
 - [ ] Confirm the final active document can be deleted after confirmation, the empty state offers Add document and Recovery, and Recovery can restore it.
 - [ ] Reorder with drag and arrow controls; confirm Save order shows a spinner, blocks duplicates, closes on success, shows a four-second success toast, and preserves the pending order for retry after failure.
