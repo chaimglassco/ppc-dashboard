@@ -132,3 +132,7 @@ Both default to `https://glasscopipeline.vercel.app`. Roll back PPC and Pipeline
 ## Rich-text deployment notes
 
 Rich-text support adds client/runtime packages and optional fields inside the existing shared Library JSON payload. It requires no environment variables, database migration, or conversion job. Existing documents are upgraded lazily when edited and remain readable through synchronized legacy fields. Verify a saved formatted document through the canonical `/ppc/library/:slug` route before promotion.
+
+## Live-state rollout
+
+Deploy the Pipeline API first because it introduces active-only snapshots, opt-in Recovery data, and structured slug status. Verify authenticated catalog, document, deleted-link, and Recovery reads before deploying Library. Then deploy the Library UI and verify cached read-only mode, Back/Forward revalidation, deleted-link recovery, purge messaging, and precise disabled-control explanations through the canonical production route. No document migration, automatic restoration, or automatic deletion is part of this rollout.

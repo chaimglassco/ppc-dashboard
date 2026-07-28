@@ -102,3 +102,11 @@ These require a separately approved milestone and must preserve the current shar
 - Standalone list-element rows retain their element-level markers and support only Normal, Bold, Italic, and Underlined formatting.
 - Pasted content is constrained by the editor schema to supported paragraphs, marks, lists, and checklists; links, images, colors, fonts, headings, and arbitrary HTML are not persisted.
 - Checklist boxes are editable in admin mode and disabled in reader mode.
+
+# Library live-state behavior
+
+- During an outage, the last confirmed document list or document remains readable with its snapshot time and revision, while every shared mutation stays disabled.
+- Returning from a document, restoring a browser-cached page, changing visibility, or focusing the app revalidates immediately.
+- A stale deleted-document link explains when and how it was deleted and offers ADMIN recovery while its tombstone exists.
+- A permanently purged link explains that recovery is unavailable.
+- Reorder and Recovery controls state whether they are blocked by connectivity, insufficient active documents, or an empty Recovery list.

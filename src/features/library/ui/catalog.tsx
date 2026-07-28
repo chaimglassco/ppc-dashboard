@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpDown, Eye, Pencil, Plus, RotateCcw, Search, Settings2, X } from "lucide-react";
+import { ArrowUpDown, Eye, LoaderCircle, Pencil, Plus, RotateCcw, Search, Settings2, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
 import type { LibraryDocument } from "../domain/types";
@@ -8,7 +8,7 @@ import { extractTopics, slugifyHeading } from "../domain/headings";
 import { filterDocuments } from "../domain/search";
 import { type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories, type ManagedCategory } from "../state/category-storage";
-import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, SharedLibraryConflictError, type SharedLibraryMutation } from "../state/shared-library-client";
+import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, SharedLibraryConflictError, type SharedLibraryMutation, type SharedLibraryReadOptions } from "../state/shared-library-client";
 import { getSharedLibraryRefreshDelay } from "../state/shared-library-retry";
 import type { SharedLibraryResponse } from "../state/shared-library-state";
 import { CategoryManager } from "./category-manager";
@@ -18,6 +18,13 @@ import { DocumentCard } from "./document-card";
 import { DocumentEditor, type DocumentDraft } from "./document-editor";
 import { DocumentReorderDialog } from "./document-reorder-dialog";
 import { useGlasscoSession } from "@/components/glassco-session";
+
+function cachedSnapshotNotice(response: SharedLibraryResponse | null) {
+  const timestamp = response?.snapshotAt || response?.updatedAt;
+  const when = timestamp ? new Date(timestamp).toLocaleString() : "an earlier session";
+  const revision = response ? ` Revision ${response.revision}.` : "";
+  return `Shared library is unavailable. Showing the last confirmed copy from ${when} in read-only mode.${revision}`;
+}
 
 export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const { canAdmin, canEdit } = useGlasscoSession();
@@ -33,6 +40,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [manageMode, setManageMode] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showDocumentRecovery, setShowDocumentRecovery] = useState(false);
+  const [isLoadingDocumentRecovery, setIsLoadingDocumentRecovery] = useState(false);
   const [showDocumentReorder, setShowDocumentReorder] = useState(false);
   const [editor, setEditor] = useState<"new" | null>(null);
   const [notice, setNotice] = useState("");
@@ -63,24 +71,44 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     successTimerRef.current = window.setTimeout(() => setSuccessMessage(""), 4_000);
   };
 
-  const applySharedResponse = useCallback((response: SharedLibraryResponse, cache = true) => {
+  const applySharedResponse = useCallback((response: SharedLibraryResponse, cache = true, reconcile = false) => {
+    const removed = reconcile
+      ? reconcileSharedLibraryDocumentCaches(sharedRef.current, response, window.localStorage)
+      : [];
     sharedRef.current = response;
     setShared(response);
     setManaged(response.state.documents);
     setCategories(response.state.categories);
     if (cache) cacheSharedLibraryResponse(response, window.localStorage, { summary: true });
+    return removed;
   }, []);
 
-  const refresh = useCallback(async (signal?: AbortSignal) => {
+  const refresh = useCallback(async (signal?: AbortSignal, requestedOptions?: SharedLibraryReadOptions) => {
     if (refreshInFlightRef.current) return false;
     refreshInFlightRef.current = true;
     try {
-      const response = await fetchSharedLibraryState(signal, { summary: true });
-      applySharedResponse(response);
+      const readOptions: SharedLibraryReadOptions = requestedOptions ?? (showDocumentRecovery
+        ? { summary: true, recovery: true }
+        : { summary: true });
+      const response = await fetchSharedLibraryState(signal, readOptions);
+      const categoryWasCleared = Boolean(category)
+        && !response.state.categories.some(item => !item.deletedAt && !item.hidden && item.name === category);
+      if (categoryWasCleared) {
+        const next = new URLSearchParams(paramsString);
+        next.delete("category");
+        router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
+      }
+      const removed = applySharedResponse(response, !readOptions.recovery, true);
       consecutiveFailuresRef.current = 0;
       setLibrarySource("server");
       setMutationsEnabled(response.initialized);
-      setNotice(response.initialized ? "" : "Library migration pending. The shared catalog is read-only until an administrator completes initialization.");
+      setNotice(!response.initialized
+        ? "Library migration pending. The shared catalog is read-only until an administrator completes initialization."
+        : categoryWasCleared
+          ? "Library updated. The selected category is no longer available, so the filter was cleared."
+        : removed.length
+          ? `Library updated. ${removed.length === 1 ? `“${removed[0].title}” is` : `${removed.length} documents are`} no longer active.`
+          : "");
       return true;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return false;
@@ -89,13 +117,13 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       const hasConfirmedCopy = sharedRef.current !== null;
       setLibrarySource(hasConfirmedCopy ? "cache" : null);
       setNotice(hasConfirmedCopy
-        ? "Shared library is unavailable. Showing the last confirmed copy in read-only mode."
+        ? cachedSnapshotNotice(sharedRef.current)
         : "Shared library is unavailable and no confirmed cached copy exists.");
       return false;
     } finally {
       refreshInFlightRef.current = false;
     }
-  }, [applySharedResponse]);
+  }, [applySharedResponse, category, paramsString, pathname, router, showDocumentRecovery]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -106,7 +134,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       consecutiveFailuresRef.current = source === "server" ? 0 : 1;
       setLibrarySource(source);
       setMutationsEnabled(source === "server" && response.initialized);
-      if (source === "cache") setNotice("Shared library is unavailable. Showing the last confirmed copy in read-only mode.");
+      if (source === "cache") setNotice(cachedSnapshotNotice(response));
       else if (!response.initialized) setNotice("Library migration pending. The shared catalog is read-only until an administrator completes initialization.");
       setIsCatalogReady(true);
     }).catch(() => {
@@ -136,14 +164,18 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       }, getSharedLibraryRefreshDelay(consecutiveFailuresRef.current));
     };
     schedule();
-    const onFocus = () => { if (document.visibilityState === "visible") void refresh(); };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
+    const onResume = () => { if (document.visibilityState === "visible") void refresh(); };
+    window.addEventListener("focus", onResume);
+    window.addEventListener("pageshow", onResume);
+    window.addEventListener("popstate", onResume);
+    document.addEventListener("visibilitychange", onResume);
     return () => {
       cancelled = true;
       if (timer !== undefined) window.clearTimeout(timer);
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onResume);
+      window.removeEventListener("pageshow", onResume);
+      window.removeEventListener("popstate", onResume);
+      document.removeEventListener("visibilitychange", onResume);
     };
   }, [isCatalogReady, refresh]);
 
@@ -162,7 +194,11 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
   };
 
-  const commitMutation = async (mutation: SharedLibraryMutation, message: string) => {
+  const commitMutation = async (
+    mutation: SharedLibraryMutation,
+    message: string,
+    readOptions: SharedLibraryReadOptions = { summary: true },
+  ) => {
     lastMutationErrorRef.current = "";
     if (!mutationsEnabled) {
       const unavailableMessage = "Shared library is unavailable. Refresh the Library and try again.";
@@ -171,8 +207,8 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       return null;
     }
     try {
-      const saved = await mutateSharedLibrary(mutation, { summary: true });
-      applySharedResponse(saved);
+      const saved = await mutateSharedLibrary(mutation, readOptions);
+      applySharedResponse(saved, !readOptions.recovery, true);
       setNotice(message);
       return saved;
     } catch (error) {
@@ -189,6 +225,32 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       }
       return null;
     }
+  };
+
+  const openDocumentRecovery = async () => {
+    if (!mutationsEnabled || isLoadingDocumentRecovery) {
+      if (!mutationsEnabled) setNotice("Reconnect to the shared Library before opening Recovery.");
+      return;
+    }
+    setIsLoadingDocumentRecovery(true);
+    try {
+      const response = await fetchSharedLibraryState(undefined, { summary: true, recovery: true });
+      applySharedResponse(response, false, true);
+      setLibrarySource("server");
+      setMutationsEnabled(response.initialized);
+      setShowDocumentRecovery(true);
+      setNotice("");
+    } catch (error) {
+      setNotice(error instanceof Error ? `Recovery could not refresh: ${error.message}` : "Recovery could not refresh. Please try again.");
+    } finally {
+      setIsLoadingDocumentRecovery(false);
+    }
+  };
+
+  const closeDocumentRecovery = () => {
+    setShowDocumentRecovery(false);
+    setSystemRecoveryError("");
+    void refresh(undefined, { summary: true });
   };
 
   const requestDocumentDelete = (document: ManagedLibraryDocument) => {
@@ -295,6 +357,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const results = filterDocuments(catalogDocuments, { q: deferred, category });
   const filtered = Boolean(q || category);
   const deleted = managed.filter(document => document.deletedAt);
+  const recoveryDocumentCount = shared?.recoveryDocumentCount ?? deleted.length;
   const documentCounts = managed.reduce<Record<string, number>>((counts, document) => { counts[document.category] = (counts[document.category] ?? 0) + 1; return counts; }, {});
   const saveDocumentOrder = async (order: string[]) => {
     const revision = sharedRef.current?.revision;
@@ -310,7 +373,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       operation: "documents.restoreSystemDeleted",
       documentIds,
       expectedRevision: revision,
-    }, "");
+    }, "", { summary: true, recovery: true });
     setIsRecoveringSystemDocuments(false);
     if (!response) {
       setSystemRecoveryError(lastMutationErrorRef.current || "The documents could not be recovered. Please try again.");
@@ -319,6 +382,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     setSystemRecoveryError("");
     const restoredCount = response.restoredCount ?? documentIds.length;
     announceSuccess(`${restoredCount} system-deleted ${restoredCount === 1 ? "document was" : "documents were"} recovered successfully.`);
+    if ((response.recoveryDocumentCount ?? 0) === 0) closeDocumentRecovery();
   };
   const permanentlyDeleteDocument = async (document: ManagedLibraryDocument) => {
     const expectedVersion = sharedRef.current?.recordVersions.documents[document.id];
@@ -327,11 +391,11 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       operation: "document.purge",
       documentId: document.id,
       expectedVersion,
-    }, "");
+    }, "", { summary: true, recovery: true });
     if (!response) {
       try {
-        const latest = await fetchSharedLibraryState(undefined, { summary: true });
-        applySharedResponse(latest);
+        const latest = await fetchSharedLibraryState(undefined, { summary: true, recovery: true });
+        applySharedResponse(latest, false, true);
         setLibrarySource("server");
         setMutationsEnabled(latest.initialized);
         if (!latest.state.documents.some(item => item.id === document.id)) {
@@ -352,11 +416,11 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       operation: "document.restore",
       documentId: document.id,
       expectedVersion,
-    }, "");
+    }, "", { summary: true, recovery: true });
     if (!response) {
       try {
-        const latest = await fetchSharedLibraryState(undefined, { summary: true });
-        applySharedResponse(latest);
+        const latest = await fetchSharedLibraryState(undefined, { summary: true, recovery: true });
+        applySharedResponse(latest, false, true);
         setLibrarySource("server");
         setMutationsEnabled(latest.initialized);
         const latestDocument = latest.state.documents.find(item => item.id === document.id);
@@ -379,7 +443,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         <label className="search-input"><span className="sr-only">Search documents</span><input value={q} onChange={event => setQ(event.target.value)} placeholder="Search documentation..."/><Search aria-hidden="true" /></label>
         {filtered && <button className="clear-button" type="button" onClick={clear} aria-label="Clear all filters"><X /></button>}
       </div>
-      {canEdit ? <div className="admin-toolbar">{canAdmin && manageMode ? <button className="document-recovery-trigger" type="button" onClick={() => setShowDocumentRecovery(true)} disabled={!mutationsEnabled || !deleted.length} aria-label={`Open document recovery${deleted.length ? ` (${deleted.length})` : ""}`} title={deleted.length ? `${deleted.length} deleted ${deleted.length === 1 ? "document" : "documents"}` : "No deleted documents"}><RotateCcw /></button> : null}{canAdmin ? <><button className="catalog-reorder-button" type="button" onClick={() => setShowDocumentReorder(true)} disabled={!mutationsEnabled || activeDocuments.length < 2}><ArrowUpDown /><span>REORDER</span></button><button className={manageMode ? "active" : ""} type="button" disabled={!mutationsEnabled} onClick={() => { if (manageMode && category && !activeCategories.some(item => item.name === category && !item.hidden)) update("category", ""); if (manageMode) setShowDocumentRecovery(false); setManageMode(value => !value); setNotice(""); }} aria-label={manageMode ? "Return to library view" : "Manage library"} aria-pressed={manageMode}>{manageMode ? <Pencil /> : <Eye />}</button></> : null}<button className="add-topic-button" type="button" disabled={!mutationsEnabled} onClick={() => setEditor("new")} aria-label="Add new topic"><Plus /></button></div> : null}
+      {canEdit ? <div className="admin-toolbar">{canAdmin && manageMode ? <button className="document-recovery-trigger" type="button" onClick={() => void openDocumentRecovery()} disabled={!mutationsEnabled || recoveryDocumentCount === 0 || isLoadingDocumentRecovery} aria-label={`Open document recovery${recoveryDocumentCount ? ` (${recoveryDocumentCount})` : ""}`} title={!mutationsEnabled ? "Reconnect to view recovery." : recoveryDocumentCount === 0 ? "No recoverable documents." : `${recoveryDocumentCount} recoverable ${recoveryDocumentCount === 1 ? "document" : "documents"}`}>{isLoadingDocumentRecovery ? <LoaderCircle className="spinning-icon" /> : <RotateCcw />}</button> : null}{canAdmin ? <><button className="catalog-reorder-button" type="button" onClick={() => setShowDocumentReorder(true)} disabled={!mutationsEnabled || activeDocuments.length < 2} title={!mutationsEnabled ? "Reconnect to reorder." : activeDocuments.length < 2 ? "At least 2 active documents are required." : "Reorder active documents."}><ArrowUpDown /><span>REORDER</span></button><button className={manageMode ? "active" : ""} type="button" disabled={!mutationsEnabled} onClick={() => { if (manageMode && category && !activeCategories.some(item => item.name === category && !item.hidden)) update("category", ""); if (manageMode) closeDocumentRecovery(); setManageMode(value => !value); setNotice(""); }} aria-label={manageMode ? "Return to library view" : "Manage library"} aria-pressed={manageMode}>{manageMode ? <Pencil /> : <Eye />}</button></> : null}<button className="add-topic-button" type="button" disabled={!mutationsEnabled} onClick={() => setEditor("new")} aria-label="Add new topic"><Plus /></button></div> : null}
     </div>
     {manageMode && <div className="admin-mode-banner"><span>Admin mode</span><p>Edit documents and manage category dropdown options, visibility, order, deletion, and recovery.</p></div>}
     {notice && <p className="admin-notice" role="status">{notice}{librarySource !== "server" && isCatalogReady ? <> <button className="inline-retry-button" type="button" onClick={() => void refresh()}>Try again</button></> : null}</p>}
@@ -403,7 +467,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       deletionAudit={shared?.deletionAudit?.documents ?? {}}
       isRecoveringSystemDocuments={isRecoveringSystemDocuments}
       systemRecoveryError={systemRecoveryError}
-      onClose={() => { setShowDocumentRecovery(false); setSystemRecoveryError(""); }}
+      onClose={closeDocumentRecovery}
       onRecover={recoverDocument}
       onRecoverSystemDeleted={documentIds => void recoverSystemDeletedDocuments(documentIds)}
       onPermanentlyDelete={permanentlyDeleteDocument}

@@ -76,4 +76,41 @@ describe("managed reader loading states", () => {
 
     await waitFor(() => expect(screen.getByTestId("reader")).toHaveTextContent(`${document.title}:editable`));
   });
+
+  it("explains a deleted stale link and lets an ADMIN recover it", async () => {
+    const document = getPublishedDocuments()[0];
+    const deletedResponse: SharedLibraryResponse = {
+      ...response([]),
+      recoveryDocumentCount: 1,
+      documentStatus: {
+        status: "deleted",
+        slug: document.slug,
+        documentId: document.id,
+        title: document.title,
+        deletedAt: "2026-07-28T01:00:00.000Z",
+        recordVersion: 4,
+        deletionAudit: {
+          source: "user",
+          deletedAt: "2026-07-28T01:00:00.000Z",
+          reason: "Manual document deletion",
+          actor: { name: "Admin User", email: "admin@example.com", role: "ADMIN" },
+          initiatedBy: null,
+        },
+      },
+    };
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: deletedResponse, source: "server" });
+    client.mutateSharedLibrary.mockResolvedValue(response([document]));
+    render(<ManagedReader slug={document.slug} />);
+
+    expect(await screen.findByRole("heading", { name: `“${document.title}” was deleted` })).toBeVisible();
+    expect(screen.getByText(/Deleted .* by Admin User/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Recover document" }));
+
+    await waitFor(() => expect(client.mutateSharedLibrary).toHaveBeenCalledWith({
+      operation: "document.restore",
+      documentId: document.id,
+      expectedVersion: 4,
+    }, { slug: document.slug }));
+    await waitFor(() => expect(screen.getByTestId("reader")).toHaveTextContent(`${document.title}:editable`));
+  });
 });

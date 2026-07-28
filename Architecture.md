@@ -115,3 +115,10 @@ Next.js is compiled with `basePath: "/ppc"`. Pipeline proxies `/ppc/:path*` to t
 `ui/rich-text.tsx` is the client-only editor boundary. It configures Tiptap with `immediatelyRender: false`, excludes unsupported nodes and marks, and emits both JSON and searchable legacy text. Reader output uses `@tiptap/static-renderer` React mappings rather than raw HTML. The same CSS typography rules are applied to editable and static content.
 
 Rich JSON fields are optional and additive. Shared/local state validation removes invalid optional rich content while retaining the surrounding document so the builder can reconstruct it from legacy strings.
+
+## Live Library state reconciliation
+
+- Normal catalog and reader requests receive active records from one Pipeline database snapshot; deleted documents and attribution are fetched only for ADMIN Recovery.
+- Confirmed catalog and per-document caches remain separate, read-only outage fallbacks. Each cache records its snapshot time and revision and is never uploaded to Pipeline.
+- Focus, visibility, `pageshow`, and browser history restoration trigger immediate authoritative refreshes. Removed or version-changed records invalidate their per-document cache.
+- Slug reads expose `active`, `deleted`, `purged`, or `not_found` status so stale routes render an explanation instead of silently reconciling to an empty reader.

@@ -7,7 +7,7 @@ import { parseSharedLibraryResponse, type SharedLibraryResponse, type SharedLibr
 export const SHARED_LIBRARY_CACHE_KEY = "glassco-library-confirmed-cache-v2";
 export const SHARED_LIBRARY_REQUEST_TIMEOUT_MS = 18_000;
 
-export type SharedLibraryReadOptions = { summary?: boolean; slug?: string };
+export type SharedLibraryReadOptions = { summary?: boolean; slug?: string; recovery?: boolean; includeDeletionAudit?: boolean };
 
 export class SharedLibraryTimeoutError extends Error {
   constructor() {
@@ -52,6 +52,8 @@ function sharedLibraryUrl(options: SharedLibraryReadOptions = {}) {
   const params = new URLSearchParams();
   if (options.summary) params.set("summary", "1");
   if (options.slug) params.set("slug", options.slug);
+  if (options.recovery) params.set("recovery", "1");
+  if (options.includeDeletionAudit) params.set("includeDeletionAudit", "1");
   const query = params.toString();
   return `${withPpcBasePath("/api/library")}${query ? `?${query}` : ""}`;
 }
@@ -141,7 +143,37 @@ export async function initializeSharedLibrary(): Promise<SharedLibraryResponse> 
 }
 
 export function cacheSharedLibraryResponse(response: SharedLibraryResponse, storage: Pick<Storage, "setItem">, options: SharedLibraryReadOptions = {}): boolean {
-  try { storage.setItem(getSharedLibraryCacheKey(options), JSON.stringify(response)); return true; } catch { return false; }
+  try {
+    storage.setItem(getSharedLibraryCacheKey(options), JSON.stringify({
+      ...response,
+      snapshotAt: response.snapshotAt || new Date().toISOString(),
+    }));
+    return true;
+  } catch { return false; }
+}
+
+export function invalidateSharedLibraryDocumentCache(storage: Pick<Storage, "removeItem">, slug: string): boolean {
+  try {
+    storage.removeItem(getSharedLibraryCacheKey({ slug }));
+    return true;
+  } catch { return false; }
+}
+
+export function reconcileSharedLibraryDocumentCaches(
+  previous: SharedLibraryResponse | null,
+  next: SharedLibraryResponse,
+  storage: Pick<Storage, "removeItem">,
+): ManagedLibraryDocument[] {
+  if (!previous) return [];
+  const nextActive = new Map(next.state.documents.filter(document => !document.deletedAt).map(document => [document.id, document]));
+  const removed: ManagedLibraryDocument[] = [];
+  for (const document of previous.state.documents.filter(item => !item.deletedAt)) {
+    const nextDocument = nextActive.get(document.id);
+    const versionChanged = next.recordVersions.documents[document.id] !== previous.recordVersions.documents[document.id];
+    if (!nextDocument) removed.push(document);
+    if (!nextDocument || versionChanged) invalidateSharedLibraryDocumentCache(storage, document.slug);
+  }
+  return removed;
 }
 
 export function readCachedSharedLibraryResponse(storage: Pick<Storage, "getItem">, options: SharedLibraryReadOptions = {}): SharedLibraryResponse | null {

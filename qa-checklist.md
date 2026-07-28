@@ -157,3 +157,12 @@ Use this checklist before merging or deploying changes.
 - [x] Existing Markdown formatting appears correctly when first opened in structured edit mode.
 - [x] Malformed rich JSON falls back to legacy text without removing the document.
 - [x] Desktop and mobile toolbars remain keyboard accessible and do not create horizontal page overflow.
+
+## Live-state and stale-link checks
+
+- [ ] Disconnect Pipeline, open the confirmed catalog and a confirmed document, and verify both remain read-only with snapshot time and revision.
+- [ ] Restore connectivity and use Back/Forward; verify an immediate refresh occurs without waiting for polling.
+- [ ] Delete a document in another ADMIN session; verify the first catalog explains that it is no longer active and removes its stale document cache.
+- [ ] Open the deleted slug and verify deletion attribution plus ADMIN recovery; permanently purge a test tombstone and verify the slug reports that it cannot be recovered.
+- [ ] Confirm Recovery performs a fresh request and normal catalog reads do not return tombstones or deletion-audit payloads.
+- [ ] Confirm Reorder explains the difference between read-only mode and fewer than two active documents, and Recovery explains read-only mode versus no recoverable documents.

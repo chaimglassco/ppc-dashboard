@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "./category-storage";
-import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryRequestError, SharedLibraryTimeoutError } from "./shared-library-client";
+import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryRequestError, SharedLibraryTimeoutError } from "./shared-library-client";
 
 const response = {
   initialized: true,
@@ -92,6 +92,25 @@ describe("shared library client", () => {
     await fetchSharedLibraryState(undefined, { slug: "checking-spend" });
 
     expect(fetchMock).toHaveBeenCalledWith("/ppc/api/library?slug=checking-spend", expect.any(Object));
+  });
+
+  it("loads tombstones and deletion attribution only for an explicit recovery request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(response), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchSharedLibraryState(undefined, { summary: true, recovery: true });
+
+    expect(fetchMock).toHaveBeenCalledWith("/ppc/api/library?summary=1&recovery=1", expect.any(Object));
+  });
+
+  it("invalidates stale document caches when an authoritative catalog removes a document", () => {
+    const removeItem = vi.fn();
+    const next = { ...response, revision: 3, state: { ...response.state, documents: [] } };
+
+    const removed = reconcileSharedLibraryDocumentCaches(response, next, { removeItem });
+
+    expect(removed.map(document => document.id)).toEqual([response.state.documents[0].id]);
+    expect(removeItem).toHaveBeenCalledWith(getSharedLibraryCacheKey({ slug: response.state.documents[0].slug }));
   });
 
   it("aborts a hung shared-state request instead of leaving hydration pending forever", async () => {

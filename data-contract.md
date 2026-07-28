@@ -229,3 +229,9 @@ Content elements now accept `richText` on supported primary bodies, `calloutRich
 Rich documents use a ProseMirror-style `{ "type": "doc", "content": [...] }` object. Allowed nodes are `doc`, `paragraph`, `text`, `hardBreak`, `bulletList`, `orderedList`, `listItem`, `taskList`, and `taskItem`. Allowed marks are `bold`, `italic`, and `underline`; persisted attributes are limited to `orderedList.start` and `taskItem.checked`.
 
 The corresponding legacy body/text fields remain required search and compatibility fallbacks and are updated with every edit. Consumers prefer valid rich JSON and reconstruct it from those fields when JSON is absent or invalid.
+
+## Library read-state metadata
+
+Shared Library responses may include `snapshotAt`, `recoveryDocumentCount`, and `documentStatus`. `documentStatus.status` is `active`, `deleted`, `purged`, or `not_found`; deleted responses may include record version and ADMIN-only deletion attribution.
+
+`GET /ppc/api/library?summary=1` returns active catalog documents and the recoverable count without tombstone content. `recovery=1` explicitly includes recoverable tombstones and ADMIN deletion audit metadata. `slug=<slug>` returns the requested active document plus its structured status. These additions are optional so older confirmed caches remain valid.

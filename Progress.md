@@ -116,3 +116,11 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Expanded automated coverage for shared-state validation/cache behavior, scoped permissions and conflicts, safe complete-catalog import, attributed recovery, catalog hydration, and the existing navigation/editor coverage.
 - Completed authenticated same-origin browser verification with the production build: ADMIN edit, selection-aware toolbar state, editable checked checklist state, save, disabled/static reader rendering, full refresh persistence, edit-mode rehydration, cleanup, and zero browser warnings or errors.
 - Restored visible disc/decimal markers in both editor and reader modes, aligned task-list checkbox/text rows, and normalized Tiptap ordered-list JSON so numbered formatting survives save and reader rendering.
+
+## Live-state stabilization
+
+- Normal Library reads now exclude tombstones and avoid deletion-audit work.
+- ADMIN Recovery performs a fresh recovery-specific read with attribution.
+- Catalog and reader caches record snapshot metadata, reconcile on browser history restoration, and invalidate stale document entries.
+- Deleted and permanently purged slug routes now render explicit states; recoverable deleted routes provide an ADMIN recovery action.
+- Added automated coverage for Recovery request scoping, stale cache invalidation, `pageshow` revalidation, and deleted-link recovery.

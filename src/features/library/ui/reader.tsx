@@ -91,7 +91,7 @@ export function Reader({ doc, categories, onSaveContentElements, onSaveVideoUrl,
 
   return <>
     <div className="reader-top">
-      <Link href="/library">← Back to Library</Link>
+      <Link prefetch={false} href="/library">← Back to Library</Link>
       <div><BookmarkButton id={doc.id} /><button className={complete ? "primary-button complete" : "secondary-button"} aria-pressed={complete} onClick={() => toggleComplete(doc.id)}>{complete ? "✓ Completed" : "Mark complete"}</button></div>
     </div>
     <DocumentBuilder

@@ -112,6 +112,27 @@ describe("catalog hydration", () => {
     expect(catalog.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
   });
 
+  it("revalidates immediately when a browser-cached catalog page is restored", async () => {
+    const documents = getPublishedDocuments().slice(0, 2);
+    const liveResponse = {
+      initialized: true,
+      state: { version: 1 as const, documents, categories: createDefaultCategories() },
+      revision: 3,
+      recordVersions: { documents: Object.fromEntries(documents.map(document => [document.id, 1])), categories: {} },
+      updatedAt: null,
+      updatedBy: null,
+      recoveryDocumentCount: 0,
+    };
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: liveResponse, source: "server" });
+    client.fetchSharedLibraryState.mockResolvedValue(liveResponse);
+    render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>);
+    await waitFor(() => expect(screen.queryByLabelText("Loading library documents")).not.toBeInTheDocument());
+
+    window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+
+    await waitFor(() => expect(client.fetchSharedLibraryState).toHaveBeenCalledWith(undefined, { summary: true }));
+  });
+
   it("lets an ADMIN confirm and run the protected migration", async () => {
     const uninitialized = {
       initialized: false,
