@@ -86,6 +86,29 @@ describe("catalog hydration", () => {
     expect(catalog.queryByText(getPublishedDocuments()[0].title)).not.toBeInTheDocument();
   });
 
+  it("shows the authoritative empty Library state and keeps Recovery available to ADMIN", async () => {
+    const emptyResponse = {
+      initialized: true,
+      state: { version: 1 as const, documents: [], categories: createDefaultCategories() },
+      revision: 9,
+      recordVersions: { documents: {}, categories: {} },
+      updatedAt: null,
+      updatedBy: null,
+      recoveryDocumentCount: 0,
+    };
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: emptyResponse, source: "server" });
+    client.fetchSharedLibraryState.mockResolvedValue(emptyResponse);
+    const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>);
+    const catalog = within(view.container);
+
+    await waitFor(() => expect(catalog.getByText("The Library has no active documents")).toBeVisible());
+    fireEvent.click(catalog.getByRole("button", { name: "Manage library" }));
+
+    expect(catalog.getByRole("button", { name: "Open document recovery" })).toBeEnabled();
+    expect(catalog.getByRole("button", { name: "REORDER" })).toBeDisabled();
+    expect(catalog.getByText("Reorder needs at least 2 active documents. Add or recover another document first.")).toBeVisible();
+  });
+
   it("keeps cached controls read-only, offers Retry, and restores admin controls after reconnecting", async () => {
     const documents = getPublishedDocuments().slice(0, 2);
     const cachedResponse = {

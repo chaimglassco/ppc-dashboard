@@ -166,3 +166,7 @@ Use this checklist before merging or deploying changes.
 - [ ] Open the deleted slug and verify deletion attribution plus ADMIN recovery; permanently purge a test tombstone and verify the slug reports that it cannot be recovered.
 - [ ] Confirm Recovery performs a fresh request and normal catalog reads do not return tombstones or deletion-audit payloads.
 - [ ] Confirm Reorder explains the difference between read-only mode and fewer than two active documents, and Recovery explains read-only mode versus no recoverable documents.
+- [ ] With zero tombstones, confirm Recovery still opens and shows permanent-deletion history.
+- [ ] With fewer than two active documents, confirm Reorder is disabled with a visible explanation; after restoring/creating a second document, confirm it opens and saves.
+- [ ] Confirm the final active document has a disabled Delete action and a direct Library API delete attempt returns `409 LAST_ACTIVE_DOCUMENT`.
+- [ ] Confirm the protected restore lists only bQool as restorable, requires confirmation, restores its original ID/slug/content, and leaves every other intentionally purged document unchanged.

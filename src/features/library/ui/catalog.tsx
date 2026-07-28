@@ -8,7 +8,7 @@ import { extractTopics, slugifyHeading } from "../domain/headings";
 import { filterDocuments } from "../domain/search";
 import { type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories, type ManagedCategory } from "../state/category-storage";
-import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, SharedLibraryConflictError, type SharedLibraryMutation, type SharedLibraryReadOptions } from "../state/shared-library-client";
+import { cacheSharedLibraryResponse, fetchPurgedLibraryDocuments, fetchSharedLibraryState, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, restorePurgedLibraryDocument, SharedLibraryConflictError, type PurgedLibraryDocument, type SharedLibraryMutation, type SharedLibraryReadOptions } from "../state/shared-library-client";
 import { getSharedLibraryRefreshDelay } from "../state/shared-library-retry";
 import type { SharedLibraryResponse } from "../state/shared-library-state";
 import { CategoryManager } from "./category-manager";
@@ -41,6 +41,8 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showDocumentRecovery, setShowDocumentRecovery] = useState(false);
   const [isLoadingDocumentRecovery, setIsLoadingDocumentRecovery] = useState(false);
+  const [purgedDocuments, setPurgedDocuments] = useState<PurgedLibraryDocument[]>([]);
+  const [purgedHistoryError, setPurgedHistoryError] = useState("");
   const [showDocumentReorder, setShowDocumentReorder] = useState(false);
   const [editor, setEditor] = useState<"new" | null>(null);
   const [notice, setNotice] = useState("");
@@ -233,9 +235,20 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       return;
     }
     setIsLoadingDocumentRecovery(true);
+    setPurgedHistoryError("");
     try {
-      const response = await fetchSharedLibraryState(undefined, { summary: true, recovery: true });
+      const [response, purgedResult] = await Promise.all([
+        fetchSharedLibraryState(undefined, { summary: true, recovery: true }),
+        fetchPurgedLibraryDocuments()
+          .then(documents => ({ documents, error: "" }))
+          .catch(error => ({
+            documents: [] as PurgedLibraryDocument[],
+            error: error instanceof Error ? error.message : "Permanent deletion history could not be loaded.",
+          })),
+      ]);
       applySharedResponse(response, false, true);
+      setPurgedDocuments(purgedResult.documents);
+      setPurgedHistoryError(purgedResult.error);
       setLibrarySource("server");
       setMutationsEnabled(response.initialized);
       setShowDocumentRecovery(true);
@@ -250,16 +263,26 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const closeDocumentRecovery = () => {
     setShowDocumentRecovery(false);
     setSystemRecoveryError("");
+    setPurgedDocuments([]);
+    setPurgedHistoryError("");
     void refresh(undefined, { summary: true });
   };
 
   const requestDocumentDelete = (document: ManagedLibraryDocument) => {
+    if (managed.filter(item => !item.deletedAt).length <= 1) {
+      setNotice("At least one active document must remain. Create or recover another document before deleting this one.");
+      return;
+    }
     setDeleteError("");
     setDocumentToDelete(document);
   };
 
   const confirmDocumentDelete = async () => {
     if (!documentToDelete || isDeletingDocument) return;
+    if (managed.filter(item => !item.deletedAt).length <= 1) {
+      setDeleteError("At least one active document must remain. Create or recover another document before deleting this one.");
+      return;
+    }
     const expectedVersion = sharedRef.current?.recordVersions.documents[documentToDelete.id];
     if (expectedVersion === undefined) {
       setDeleteError("The current document version is unavailable. Close this message and try again.");
@@ -435,6 +458,19 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     announceSuccess(`${document.title} was recovered successfully.`);
     return null;
   };
+  const restorePurgedDocument = async (document: PurgedLibraryDocument) => {
+    try {
+      const restored = await restorePurgedLibraryDocument(document.documentId);
+      applySharedResponse(restored, true, true);
+      setLibrarySource("server");
+      setMutationsEnabled(restored.initialized);
+      setNotice("");
+      announceSuccess(`${document.title} was restored from the protected snapshot.`);
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : "bQool could not be restored. Please try again.";
+    }
+  };
 
   return <section className="catalog-panel" aria-label="Library documents">
     <div className="catalog-toolbar">
@@ -443,9 +479,9 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         <label className="search-input"><span className="sr-only">Search documents</span><input value={q} onChange={event => setQ(event.target.value)} placeholder="Search documentation..."/><Search aria-hidden="true" /></label>
         {filtered && <button className="clear-button" type="button" onClick={clear} aria-label="Clear all filters"><X /></button>}
       </div>
-      {canEdit ? <div className="admin-toolbar">{canAdmin && manageMode ? <button className="document-recovery-trigger" type="button" onClick={() => void openDocumentRecovery()} disabled={!mutationsEnabled || recoveryDocumentCount === 0 || isLoadingDocumentRecovery} aria-label={`Open document recovery${recoveryDocumentCount ? ` (${recoveryDocumentCount})` : ""}`} title={!mutationsEnabled ? "Reconnect to view recovery." : recoveryDocumentCount === 0 ? "No recoverable documents." : `${recoveryDocumentCount} recoverable ${recoveryDocumentCount === 1 ? "document" : "documents"}`}>{isLoadingDocumentRecovery ? <LoaderCircle className="spinning-icon" /> : <RotateCcw />}</button> : null}{canAdmin ? <><button className="catalog-reorder-button" type="button" onClick={() => setShowDocumentReorder(true)} disabled={!mutationsEnabled || activeDocuments.length < 2} title={!mutationsEnabled ? "Reconnect to reorder." : activeDocuments.length < 2 ? "At least 2 active documents are required." : "Reorder active documents."}><ArrowUpDown /><span>REORDER</span></button><button className={manageMode ? "active" : ""} type="button" disabled={!mutationsEnabled} onClick={() => { if (manageMode && category && !activeCategories.some(item => item.name === category && !item.hidden)) update("category", ""); if (manageMode) closeDocumentRecovery(); setManageMode(value => !value); setNotice(""); }} aria-label={manageMode ? "Return to library view" : "Manage library"} aria-pressed={manageMode}>{manageMode ? <Pencil /> : <Eye />}</button></> : null}<button className="add-topic-button" type="button" disabled={!mutationsEnabled} onClick={() => setEditor("new")} aria-label="Add new topic"><Plus /></button></div> : null}
+      {canEdit ? <div className="admin-toolbar">{canAdmin && manageMode ? <button className="document-recovery-trigger" type="button" onClick={() => void openDocumentRecovery()} disabled={!mutationsEnabled || isLoadingDocumentRecovery} aria-label={`Open document recovery${recoveryDocumentCount ? ` (${recoveryDocumentCount})` : ""}`} title={!mutationsEnabled ? "Reconnect to view recovery." : recoveryDocumentCount ? `${recoveryDocumentCount} recoverable ${recoveryDocumentCount === 1 ? "document" : "documents"}` : "View recovery and permanent deletion history."}>{isLoadingDocumentRecovery ? <LoaderCircle className="spinning-icon" /> : <RotateCcw />}</button> : null}{canAdmin ? <><button className="catalog-reorder-button" type="button" onClick={() => setShowDocumentReorder(true)} disabled={!mutationsEnabled || activeDocuments.length < 2} title={!mutationsEnabled ? "Reconnect to reorder." : activeDocuments.length < 2 ? "Add or recover another document to reorder." : "Reorder active documents."}><ArrowUpDown /><span>REORDER</span></button><button className={manageMode ? "active" : ""} type="button" disabled={!mutationsEnabled} onClick={() => { if (manageMode && category && !activeCategories.some(item => item.name === category && !item.hidden)) update("category", ""); if (manageMode) closeDocumentRecovery(); setManageMode(value => !value); setNotice(""); }} aria-label={manageMode ? "Return to library view" : "Manage library"} aria-pressed={manageMode}>{manageMode ? <Pencil /> : <Eye />}</button></> : null}<button className="add-topic-button" type="button" disabled={!mutationsEnabled} onClick={() => setEditor("new")} aria-label="Add new topic"><Plus /></button></div> : null}
     </div>
-    {manageMode && <div className="admin-mode-banner"><span>Admin mode</span><p>Edit documents and manage category dropdown options, visibility, order, deletion, and recovery.</p></div>}
+    {manageMode && <div className="admin-mode-banner"><span>Admin mode</span><p>Edit documents and manage category dropdown options, visibility, order, deletion, and recovery.</p>{activeDocuments.length < 2 ? <p className="admin-mode-reorder-hint">Reorder needs at least 2 active documents. Add or recover another document first.</p> : null}</div>}
     {notice && <p className="admin-notice" role="status">{notice}{librarySource !== "server" && isCatalogReady ? <> <button className="inline-retry-button" type="button" onClick={() => void refresh()}>Try again</button></> : null}</p>}
     {canAdmin && librarySource === "server" && shared?.initialized === false ? <button className="primary-button" type="button" onClick={() => void migrateLibrary()} disabled={isMigrating}>{isMigrating ? "BACKING UP AND IMPORTING…" : "Back up and import complete Library"}</button> : null}
     {isCatalogReady ? <><p className="result-bar" aria-live="polite">{results.length} {results.length === 1 ? "document" : "documents"}</p>
@@ -460,8 +496,8 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         [next[activeIndex], next[target]] = [next[target], next[activeIndex]];
         void commitMutation({ operation: "documents.reorder", documentIds: next.map(document => document.id), expectedRevision: sharedRef.current.revision }, "Document order updated.");
       };
-      return <DocumentCard key={doc.id} doc={doc} admin={manageMode && mutationsEnabled ? { onToggleHidden: () => updateDocument({ ...doc, hidden: !doc.hidden, updatedAt: new Date().toISOString() }, doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => requestDocumentDelete(doc), onMoveUp: () => reorder(-1), onMoveDown: () => reorder(1), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1 } : undefined}/>;
-    })}</div> : <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div>}</> : <div className="skeleton-grid" aria-label="Loading library documents">{[1, 2, 3].map(item => <div className="skeleton" key={item} />)}</div>}
+      return <DocumentCard key={doc.id} doc={doc} admin={manageMode && mutationsEnabled ? { onToggleHidden: () => updateDocument({ ...doc, hidden: !doc.hidden, updatedAt: new Date().toISOString() }, doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => requestDocumentDelete(doc), onMoveUp: () => reorder(-1), onMoveDown: () => reorder(1), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1, canDelete: activeDocuments.length > 1 } : undefined}/>;
+    })}</div> : filtered ? <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div> : <div className="empty-state library-empty-state"><Search aria-hidden="true" /><h2>The Library has no active documents</h2><p>Open Recovery to review deleted documents and the protected bQool snapshot, or add a new document.</p>{canAdmin && manageMode && mutationsEnabled ? <button className="primary-button" type="button" onClick={() => void openDocumentRecovery()}>Open Recovery</button> : null}</div>}</> : <div className="skeleton-grid" aria-label="Loading library documents">{[1, 2, 3].map(item => <div className="skeleton" key={item} />)}</div>}
     {canAdmin && showDocumentRecovery ? <DeletedDocuments
       documents={deleted}
       deletionAudit={shared?.deletionAudit?.documents ?? {}}
@@ -471,6 +507,9 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       onRecover={recoverDocument}
       onRecoverSystemDeleted={documentIds => void recoverSystemDeletedDocuments(documentIds)}
       onPermanentlyDelete={permanentlyDeleteDocument}
+      purgedDocuments={purgedDocuments}
+      purgedHistoryError={purgedHistoryError}
+      onRestorePurged={restorePurgedDocument}
     /> : null}
     {canEdit && editor && mutationsEnabled ? <DocumentEditor key="new" categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft} onCreateCategory={canAdmin ? createCategory : undefined} onManageCategories={canAdmin ? () => setShowCategoryManager(true) : undefined}/> : null}
     {canAdmin && showDocumentReorder ? <DocumentReorderDialog documents={activeDocuments} onCancel={() => setShowDocumentReorder(false)} onSave={saveDocumentOrder} /> : null}

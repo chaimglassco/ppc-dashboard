@@ -8,6 +8,19 @@ export const SHARED_LIBRARY_CACHE_KEY = "glassco-library-confirmed-cache-v2";
 export const SHARED_LIBRARY_REQUEST_TIMEOUT_MS = 18_000;
 
 export type SharedLibraryReadOptions = { summary?: boolean; slug?: string; recovery?: boolean; includeDeletionAudit?: boolean };
+export type PurgedLibraryDocument = {
+  documentId: string;
+  slug: string;
+  title: string;
+  deletedAt?: string;
+  source: {
+    kind: "pipeline_backup" | "legacy_snapshot";
+    id: string;
+    label: string;
+    createdAt?: string;
+  };
+  canRestore: boolean;
+};
 
 export class SharedLibraryTimeoutError extends Error {
   constructor() {
@@ -139,6 +152,63 @@ export async function initializeSharedLibrary(): Promise<SharedLibraryResponse> 
   }));
   const parsed = parseSharedLibraryResponse(value);
   if (!parsed) throw new Error("Library migration returned invalid data.");
+  return parsed;
+}
+
+function parsePurgedLibraryDocuments(value: unknown): PurgedLibraryDocument[] | null {
+  if (!value || typeof value !== "object" || !Array.isArray((value as Record<string, unknown>).documents)) return null;
+  const parsed: PurgedLibraryDocument[] = [];
+  for (const item of (value as Record<string, unknown>).documents as unknown[]) {
+    if (!item || typeof item !== "object") return null;
+    const candidate = item as Record<string, unknown>;
+    const source = candidate.source;
+    if (typeof candidate.documentId !== "string"
+      || typeof candidate.slug !== "string"
+      || typeof candidate.title !== "string"
+      || typeof candidate.canRestore !== "boolean"
+      || !source
+      || typeof source !== "object") return null;
+    const sourceValue = source as Record<string, unknown>;
+    if (!["pipeline_backup", "legacy_snapshot"].includes(String(sourceValue.kind))
+      || typeof sourceValue.id !== "string"
+      || typeof sourceValue.label !== "string") return null;
+    if (candidate.deletedAt !== undefined && (typeof candidate.deletedAt !== "string" || !Number.isFinite(Date.parse(candidate.deletedAt)))) return null;
+    if (sourceValue.createdAt !== undefined && (typeof sourceValue.createdAt !== "string" || !Number.isFinite(Date.parse(sourceValue.createdAt)))) return null;
+    parsed.push({
+      documentId: candidate.documentId,
+      slug: candidate.slug,
+      title: candidate.title,
+      ...(typeof candidate.deletedAt === "string" ? { deletedAt: candidate.deletedAt } : {}),
+      source: {
+        kind: sourceValue.kind as PurgedLibraryDocument["source"]["kind"],
+        id: sourceValue.id,
+        label: sourceValue.label,
+        ...(typeof sourceValue.createdAt === "string" ? { createdAt: sourceValue.createdAt } : {}),
+      },
+      canRestore: candidate.canRestore,
+    });
+  }
+  return parsed;
+}
+
+export async function fetchPurgedLibraryDocuments(): Promise<PurgedLibraryDocument[]> {
+  const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library/recovery/purged"), {
+    cache: "no-store",
+    headers: getPipelineAuthorizationHeader(),
+  }));
+  const documents = parsePurgedLibraryDocuments(value);
+  if (!documents) throw new Error("Protected Library recovery returned invalid data.");
+  return documents;
+}
+
+export async function restorePurgedLibraryDocument(documentId: string): Promise<SharedLibraryResponse> {
+  const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library/recovery/purged"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
+    body: JSON.stringify({ documentId }),
+  }));
+  const parsed = parseSharedLibraryResponse(value);
+  if (!parsed) throw new Error("Protected Library recovery returned invalid catalog data.");
   return parsed;
 }
 

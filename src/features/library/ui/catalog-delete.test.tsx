@@ -14,14 +14,27 @@ vi.mock("../state/shared-library-client", async importOriginal => {
   return { ...actual, ...client };
 });
 
-const document = getPublishedDocuments()[0];
+const [document, secondDocument] = getPublishedDocuments();
 
-function response(deletedAt?: string): SharedLibraryResponse {
+function response(deletedAt?: string, singleDocument = false): SharedLibraryResponse {
   return {
     initialized: true,
-    state: { version: 1, documents: [{ ...document, ...(deletedAt ? { deletedAt } : {}) }], categories: createDefaultCategories() },
+    state: {
+      version: 1,
+      documents: [
+        { ...document, ...(deletedAt ? { deletedAt } : {}) },
+        ...(singleDocument ? [] : [secondDocument]),
+      ],
+      categories: createDefaultCategories(),
+    },
     revision: deletedAt ? 2 : 1,
-    recordVersions: { documents: { [document.id]: deletedAt ? 2 : 1 }, categories: {} },
+    recordVersions: {
+      documents: {
+        [document.id]: deletedAt ? 2 : 1,
+        ...(singleDocument ? {} : { [secondDocument.id]: 1 }),
+      },
+      categories: {},
+    },
     updatedAt: null,
     updatedBy: null,
   };
@@ -34,6 +47,12 @@ function renderCatalog() {
 async function enterAdminMode() {
   await waitFor(() => expect(screen.getByRole("button", { name: "Manage library" })).toBeEnabled());
   fireEvent.click(screen.getByRole("button", { name: "Manage library" }));
+}
+
+function deleteButtonFor(title: string) {
+  const card = screen.getByRole("heading", { name: title }).closest("article");
+  if (!card) throw new Error(`Document card for ${title} was not found.`);
+  return within(card).getByRole("button", { name: "Delete" });
 }
 
 describe("catalog document deletion", () => {
@@ -52,14 +71,14 @@ describe("catalog document deletion", () => {
     renderCatalog();
     await enterAdminMode();
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(deleteButtonFor(document.title));
     const firstDialog = screen.getByRole("dialog", { name: "Delete document?" });
     expect(within(firstDialog).getByText(document.title)).toBeVisible();
     expect(client.mutateSharedLibrary).not.toHaveBeenCalled();
     fireEvent.click(within(firstDialog).getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog", { name: "Delete document?" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(deleteButtonFor(document.title));
     const dialog = screen.getByRole("dialog", { name: "Delete document?" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
     expect(within(dialog).getByRole("button", { name: "Deleting…" })).toBeDisabled();
@@ -82,7 +101,7 @@ describe("catalog document deletion", () => {
     renderCatalog();
     await enterAdminMode();
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(deleteButtonFor(document.title));
     const dialog = screen.getByRole("dialog", { name: "Delete document?" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
@@ -94,5 +113,17 @@ describe("catalog document deletion", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Delete document?" })).not.toBeInTheDocument());
     expect(client.mutateSharedLibrary).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("heading", { name: document.title })).not.toBeInTheDocument();
+  });
+
+  it("prevents deleting the final active document", async () => {
+    client.fetchSharedLibraryState.mockResolvedValue(response(undefined, true));
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: response(undefined, true), source: "server" });
+    renderCatalog();
+    await enterAdminMode();
+
+    const deleteButton = deleteButtonFor(document.title);
+    expect(deleteButton).toBeDisabled();
+    expect(deleteButton).toHaveAttribute("title", "At least one active document must remain.");
+    expect(client.mutateSharedLibrary).not.toHaveBeenCalled();
   });
 });

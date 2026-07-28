@@ -18,7 +18,7 @@ describe("accessible controls", () => {
   });
   it("labels bookmark state", () => { render(<ReadingStateProvider><BookmarkButton id="a" compact /></ReadingStateProvider>); expect(screen.getByRole("button", { name: "Add bookmark" })).toHaveAttribute("aria-pressed", "false"); });
   it("labels catalog search and category filter", () => { render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>); expect(screen.getByRole("textbox", { name: "Search documents" })).toBeVisible(); expect(screen.getByRole("combobox", { name: "Category" })).toBeVisible(); expect(screen.getByRole("option", { name: "All categories" })).toBeVisible(); expect(screen.queryByRole("option", { name: /^Amazon PPC$/ })).not.toBeInTheDocument(); expect(screen.queryByRole("combobox", { name: "Document type" })).not.toBeInTheDocument(); });
-  it("keeps add document visible and shows recovery in admin mode", async () => { const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>); const controls = within(view.container); await waitFor(() => expect(controls.getByRole("button", { name: "Manage library" })).toBeEnabled()); expect(controls.getByRole("button", { name: "Manage library" }).querySelector(".lucide-eye")).toBeTruthy(); expect(controls.getByRole("button", { name: "Add new topic" })).toBeVisible(); expect(controls.queryByRole("button", { name: /Open document recovery/ })).not.toBeInTheDocument(); fireEvent.click(controls.getByRole("button", { name: "Manage library" })); expect(controls.getByRole("button", { name: "Return to library view" }).querySelector(".lucide-pencil")).toBeTruthy(); expect(controls.getByRole("button", { name: "Manage categories" })).toBeVisible(); expect(controls.getByRole("button", { name: "Add new topic" })).toBeVisible(); expect(controls.getByRole("button", { name: "Open document recovery" })).toBeDisabled(); expect(controls.queryByRole("button", { name: "Edit / Rename" })).not.toBeInTheDocument(); });
+  it("keeps add document visible and shows recovery in admin mode", async () => { const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>); const controls = within(view.container); await waitFor(() => expect(controls.getByRole("button", { name: "Manage library" })).toBeEnabled()); expect(controls.getByRole("button", { name: "Manage library" }).querySelector(".lucide-eye")).toBeTruthy(); expect(controls.getByRole("button", { name: "Add new topic" })).toBeVisible(); expect(controls.queryByRole("button", { name: /Open document recovery/ })).not.toBeInTheDocument(); fireEvent.click(controls.getByRole("button", { name: "Manage library" })); expect(controls.getByRole("button", { name: "Return to library view" }).querySelector(".lucide-pencil")).toBeTruthy(); expect(controls.getByRole("button", { name: "Manage categories" })).toBeVisible(); expect(controls.getByRole("button", { name: "Add new topic" })).toBeVisible(); expect(controls.getByRole("button", { name: "Open document recovery" })).toBeEnabled(); expect(controls.queryByRole("button", { name: "Edit / Rename" })).not.toBeInTheDocument(); });
   it("opens document reordering from the catalog toolbar", async () => { const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>); const controls = within(view.container); await waitFor(() => expect(controls.getByRole("button", { name: "REORDER" })).toBeEnabled()); fireEvent.click(controls.getByRole("button", { name: "REORDER" })); expect(controls.getByRole("dialog", { name: "Reorder library documents" })).toBeVisible(); });
   it("omits tags when adding a new topic", async () => { const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>); const controls = within(view.container); await waitFor(() => expect(controls.getByRole("button", { name: "Add new topic" })).toBeEnabled()); fireEvent.click(controls.getByRole("button", { name: "Manage library" })); fireEvent.click(controls.getByRole("button", { name: "Add new topic" })); expect(controls.getByRole("dialog", { name: "Add new topic" })).toBeVisible(); expect(controls.queryByRole("textbox", { name: "Tags" })).not.toBeInTheDocument(); });
   it("keeps document metadata out of the editor form", () => {
@@ -97,6 +97,9 @@ describe("accessible controls", () => {
       onRecover={onRecover}
       onRecoverSystemDeleted={vi.fn()}
       onPermanentlyDelete={vi.fn()}
+      purgedDocuments={[]}
+      purgedHistoryError=""
+      onRestorePurged={vi.fn().mockResolvedValue(null)}
     />);
     const dialog = within(view.container).getByRole("dialog", { name: "Deleted documents" });
     expect(dialog).toBeVisible();
@@ -125,6 +128,9 @@ describe("accessible controls", () => {
       onRecover={vi.fn().mockResolvedValue(null)}
       onRecoverSystemDeleted={onRecoverSystemDeleted}
       onPermanentlyDelete={vi.fn()}
+      purgedDocuments={[]}
+      purgedHistoryError=""
+      onRestorePurged={vi.fn().mockResolvedValue(null)}
     />);
     const dialog = within(view.container).getByRole("dialog", { name: "Deleted documents" });
     expect(within(dialog).getByText(/by System — Initial Library cleanup/)).toBeVisible();
@@ -146,6 +152,9 @@ describe("accessible controls", () => {
       onRecover={vi.fn().mockResolvedValue(null)}
       onRecoverSystemDeleted={vi.fn()}
       onPermanentlyDelete={onPermanentlyDelete}
+      purgedDocuments={[]}
+      purgedHistoryError=""
+      onRestorePurged={vi.fn().mockResolvedValue(null)}
     />);
     const recovery = within(view.container).getByRole("dialog", { name: "Deleted documents" });
     fireEvent.click(within(recovery).getByRole("button", { name: `Permanently delete ${document.title}` }));
@@ -154,5 +163,36 @@ describe("accessible controls", () => {
     expect(onPermanentlyDelete).not.toHaveBeenCalled();
     fireEvent.click(within(confirmation).getByRole("button", { name: "Permanently delete" }));
     await waitFor(() => expect(onPermanentlyDelete).toHaveBeenCalledWith(document));
+  });
+  it("opens permanent deletion history and confirms the protected bQool restoration", async () => {
+    const onRestorePurged = vi.fn().mockResolvedValue(null);
+    const purged = {
+      documentId: "bqool-document",
+      slug: "monitor-product-listing-prices-through-bqool",
+      title: "Monitor Product Listing Prices Through BQool",
+      deletedAt: "2026-07-28T02:52:00.000Z",
+      source: { kind: "legacy_snapshot" as const, id: "trusted-checksum", label: "Protected legacy Library snapshot" },
+      canRestore: true,
+    };
+    const view = render(<DeletedDocuments
+      documents={[]}
+      deletionAudit={{}}
+      isRecoveringSystemDocuments={false}
+      systemRecoveryError=""
+      onClose={vi.fn()}
+      onRecover={vi.fn().mockResolvedValue(null)}
+      onRecoverSystemDeleted={vi.fn()}
+      onPermanentlyDelete={vi.fn().mockResolvedValue(null)}
+      purgedDocuments={[purged]}
+      purgedHistoryError=""
+      onRestorePurged={onRestorePurged}
+    />);
+
+    const recovery = within(view.container).getByRole("dialog", { name: "Deleted documents" });
+    expect(within(recovery).getByText("Permanent deletion history")).toBeVisible();
+    fireEvent.click(within(recovery).getByRole("button", { name: "Restore bQool" }));
+    const confirmation = within(view.container).getByRole("alertdialog", { name: "Restore bQool?" });
+    fireEvent.click(within(confirmation).getByRole("button", { name: "Confirm restoration" }));
+    await waitFor(() => expect(onRestorePurged).toHaveBeenCalledWith(purged));
   });
 });

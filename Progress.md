@@ -124,3 +124,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Catalog and reader caches record snapshot metadata, reconcile on browser history restoration, and invalidate stale document entries.
 - Deleted and permanently purged slug routes now render explicit states; recoverable deleted routes provide an ADMIN recovery action.
 - Added automated coverage for Recovery request scoping, stale cache invalidation, `pageshow` revalidation, and deleted-link recovery.
+- Kept ADMIN Recovery available at zero tombstones and added a separate permanent-deletion history view.
+- Added an explicit, confirmed bQool-only repair from the newest trusted pre-purge snapshot while preserving all other permanent deletions.
+- Added UI and Library-adapter safeguards that prevent deletion of the final active document.
+- Clarified Reorder availability and the authoritative empty-Library state.

@@ -54,6 +54,10 @@ The current milestone uses the existing Pipeline identity and one authoritative 
 - **LIB-ADMIN-019** — ADMIN may explicitly confirm one atomic recovery of all documents attributed to the Initial Library cleanup; manually deleted documents are excluded.
 - **LIB-ADMIN-020** — Legacy initialization imports the complete catalog without newly tombstoning documents, and backup restore cannot delete backup-absent or newer active records.
 - **LIB-ADMIN-021** — ADMIN may permanently delete an already-deleted document only after a separate confirmation; the content is removed, the actor audit is retained, and backup restore cannot recreate it.
+- **LIB-ADMIN-022** — Recovery remains available while connected even when no ordinary tombstones exist, so ADMIN can inspect permanent-deletion history and perform the explicitly approved bQool repair.
+- **LIB-ADMIN-023** — Reorder is available only when at least two active documents exist, and the UI explains how to enable it when the catalog contains fewer.
+- **LIB-ADMIN-024** — The final active document cannot be deleted through the Library UI or its authenticated mutation adapter.
+- **LIB-ADMIN-025** — “Monitor Product Listing Prices Through BQool” may be explicitly restored with its original ID, slug, and content from the newest trusted pre-purge snapshot; no other purged document is restored automatically.
 
 ### Structured builder
 
@@ -109,4 +113,4 @@ These require a separately approved milestone and must preserve the current shar
 - Returning from a document, restoring a browser-cached page, changing visibility, or focusing the app revalidates immediately.
 - A stale deleted-document link explains when and how it was deleted and offers ADMIN recovery while its tombstone exists.
 - A permanently purged link explains that recovery is unavailable.
-- Reorder and Recovery controls state whether they are blocked by connectivity, insufficient active documents, or an empty Recovery list.
+- Reorder states whether it is blocked by connectivity or fewer than two active documents. Recovery remains enabled while connected and opens a fresh view of tombstones plus permanent-deletion history.

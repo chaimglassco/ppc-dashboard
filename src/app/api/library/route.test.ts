@@ -6,14 +6,14 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function mutationRequest() {
+function mutationRequest(operation = "document.update") {
   return new Request("http://localhost/ppc/api/library?summary=1", {
     method: "PATCH",
     headers: {
       Authorization: "Bearer test-token",
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ operation: "document.delete", documentId: "document-1", expectedVersion: 1 }),
+    body: JSON.stringify({ operation, documentId: "document-1", expectedVersion: 1 }),
   });
 }
 
@@ -50,5 +50,36 @@ describe("Library API proxy", () => {
     await expect(response.json()).resolves.toEqual({
       error: "The Library service took too long to respond. Please try again.",
     });
+  });
+
+  it("blocks deleting the final active document before forwarding the mutation", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({
+      state: { documents: [{ id: "document-1" }] },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await PATCH(mutationRequest("document.delete"));
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: "At least one active document must remain. Create or recover another document before deleting this one.",
+      code: "LAST_ACTIVE_DOCUMENT",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("forwards document deletion when another active document will remain", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({
+        state: { documents: [{ id: "document-1" }, { id: "document-2" }] },
+      }))
+      .mockResolvedValueOnce(Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await PATCH(mutationRequest("document.delete"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

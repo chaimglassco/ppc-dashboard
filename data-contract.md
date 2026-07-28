@@ -160,6 +160,8 @@ Pipeline tables separate catalog metadata, documents, categories, backups, and a
 
 Updates, delete, restore, and purge compare the target record version. Purge succeeds only for a tombstoned document, physically removes its content record, retains a metadata-only `document.purge` audit event, and prevents backup restore from recreating that ID. Reorders, initialization, and bulk system recovery compare the global revision. Bulk recovery succeeds only when every requested record is currently tombstoned and its latest deletion event is `system_migration`; otherwise it restores none. A mismatch or unavailable target returns HTTP `409`, `conflict: true`, and the current full shared response. Successful mutations increment the global revision, update record versions as applicable, and record actor/revision audit metadata.
 
+The Library-side adapter refuses `document.delete` when the authoritative active-document count is one or zero. `/ppc/api/library/recovery/purged` is an ADMIN-only repair surface: GET returns metadata-only permanent-deletion history, while POST accepts one protected document ID and recreates only the exact bQool record from a trusted snapshot through the existing `document.create` contract. It never bulk-imports or silently restores purged records.
+
 Pipeline reloads the caller from `launchflow_users` for every request. ADMIN may initialize, create/update/delete/restore/reorder documents, manage categories, and manage backups. USER may create documents and update active documents only. VIEWER is read-only.
 
 ## Browser-storage contracts
