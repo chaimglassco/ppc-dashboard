@@ -115,15 +115,26 @@ describe("catalog document deletion", () => {
     expect(screen.queryByRole("heading", { name: document.title })).not.toBeInTheDocument();
   });
 
-  it("prevents deleting the final active document", async () => {
+  it("allows deleting the final active document and offers add and Recovery actions", async () => {
     client.fetchSharedLibraryState.mockResolvedValue(response(undefined, true));
     client.hydrateSharedLibraryState.mockResolvedValue({ response: response(undefined, true), source: "server" });
+    client.mutateSharedLibrary.mockResolvedValue(response("2026-07-22T12:00:00.000Z", true));
     renderCatalog();
     await enterAdminMode();
 
     const deleteButton = deleteButtonFor(document.title);
-    expect(deleteButton).toBeDisabled();
-    expect(deleteButton).toHaveAttribute("title", "At least one active document must remain.");
-    expect(client.mutateSharedLibrary).not.toHaveBeenCalled();
+    expect(deleteButton).toBeEnabled();
+    fireEvent.click(deleteButton);
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Delete document?" })).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(screen.getByRole("heading", { name: "The Library has no active documents" })).toBeVisible());
+    const emptyState = screen.getByRole("heading", { name: "The Library has no active documents" }).closest<HTMLElement>(".library-empty-state");
+    if (!emptyState) throw new Error("Library empty state was not found.");
+    expect(within(emptyState).getByRole("button", { name: "Add document" })).toBeEnabled();
+    expect(within(emptyState).getByRole("button", { name: "Open Recovery" })).toBeEnabled();
+    expect(client.mutateSharedLibrary).toHaveBeenCalledWith(
+      { operation: "document.delete", documentId: document.id, expectedVersion: 1 },
+      { summary: true },
+    );
   });
 });

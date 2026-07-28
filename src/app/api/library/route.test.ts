@@ -52,34 +52,18 @@ describe("Library API proxy", () => {
     });
   });
 
-  it("blocks deleting the final active document before forwarding the mutation", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(Response.json({
-      state: { documents: [{ id: "document-1" }] },
-    }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const response = await PATCH(mutationRequest("document.delete"));
-
-    expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toEqual({
-      error: "At least one active document must remain. Create or recover another document before deleting this one.",
-      code: "LAST_ACTIVE_DOCUMENT",
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("forwards document deletion when another active document will remain", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(Response.json({
-        state: { documents: [{ id: "document-1" }, { id: "document-2" }] },
-      }))
-      .mockResolvedValueOnce(Response.json({ ok: true }));
+  it("forwards deletion of the final active document to the shared Library API", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ ok: true }));
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await PATCH(mutationRequest("document.delete"));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[1]).toEqual(expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify({ operation: "document.delete", documentId: "document-1", expectedVersion: 1 }),
+    }));
   });
 });

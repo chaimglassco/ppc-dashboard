@@ -8,6 +8,7 @@ import { extractTopics, slugifyHeading } from "../domain/headings";
 import { filterDocuments } from "../domain/search";
 import { type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories, type ManagedCategory } from "../state/category-storage";
+import { useReadingState } from "../state/reading-state";
 import { cacheSharedLibraryResponse, fetchPurgedLibraryDocuments, fetchSharedLibraryState, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, restorePurgedLibraryDocument, SharedLibraryConflictError, type PurgedLibraryDocument, type SharedLibraryMutation, type SharedLibraryReadOptions } from "../state/shared-library-client";
 import { getSharedLibraryRefreshDelay } from "../state/shared-library-retry";
 import type { SharedLibraryResponse } from "../state/shared-library-state";
@@ -28,6 +29,7 @@ function cachedSnapshotNotice(response: SharedLibraryResponse | null) {
 
 export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const { canAdmin, canEdit } = useGlasscoSession();
+  const { setAvailableDocumentIds } = useReadingState();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -41,6 +43,8 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showDocumentRecovery, setShowDocumentRecovery] = useState(false);
   const [isLoadingDocumentRecovery, setIsLoadingDocumentRecovery] = useState(false);
+  const [documentRecoveryError, setDocumentRecoveryError] = useState("");
+  const [isLoadingPurgedHistory, setIsLoadingPurgedHistory] = useState(false);
   const [purgedDocuments, setPurgedDocuments] = useState<PurgedLibraryDocument[]>([]);
   const [purgedHistoryError, setPurgedHistoryError] = useState("");
   const [showDocumentReorder, setShowDocumentReorder] = useState(false);
@@ -81,9 +85,12 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     setShared(response);
     setManaged(response.state.documents);
     setCategories(response.state.categories);
+    setAvailableDocumentIds(response.state.documents
+      .filter(document => !document.deletedAt && !document.hidden && document.status === "published")
+      .map(document => document.id));
     if (cache) cacheSharedLibraryResponse(response, window.localStorage, { summary: true });
     return removed;
-  }, []);
+  }, [setAvailableDocumentIds]);
 
   const refresh = useCallback(async (signal?: AbortSignal, requestedOptions?: SharedLibraryReadOptions) => {
     if (refreshInFlightRef.current) return false;
@@ -229,60 +236,61 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     }
   };
 
-  const openDocumentRecovery = async () => {
-    if (!mutationsEnabled || isLoadingDocumentRecovery) {
-      if (!mutationsEnabled) setNotice("Reconnect to the shared Library before opening Recovery.");
+  const refreshDocumentRecovery = async () => {
+    if (!mutationsEnabled || isLoadingDocumentRecovery || isLoadingPurgedHistory) {
+      if (!mutationsEnabled) setDocumentRecoveryError("Reconnect to the shared Library before refreshing Recovery.");
       return;
     }
-    setIsLoadingDocumentRecovery(true);
+    setDocumentRecoveryError("");
     setPurgedHistoryError("");
-    try {
-      const [response, purgedResult] = await Promise.all([
-        fetchSharedLibraryState(undefined, { summary: true, recovery: true }),
-        fetchPurgedLibraryDocuments()
-          .then(documents => ({ documents, error: "" }))
-          .catch(error => ({
-            documents: [] as PurgedLibraryDocument[],
-            error: error instanceof Error ? error.message : "Permanent deletion history could not be loaded.",
-          })),
-      ]);
-      applySharedResponse(response, false, true);
-      setPurgedDocuments(purgedResult.documents);
-      setPurgedHistoryError(purgedResult.error);
-      setLibrarySource("server");
-      setMutationsEnabled(response.initialized);
-      setShowDocumentRecovery(true);
-      setNotice("");
-    } catch (error) {
-      setNotice(error instanceof Error ? `Recovery could not refresh: ${error.message}` : "Recovery could not refresh. Please try again.");
-    } finally {
-      setIsLoadingDocumentRecovery(false);
+    setIsLoadingDocumentRecovery(true);
+    setIsLoadingPurgedHistory(true);
+    const recoveryRequest = fetchSharedLibraryState(undefined, { summary: true, recovery: true })
+      .then(response => {
+        applySharedResponse(response, false, true);
+        setLibrarySource("server");
+        setMutationsEnabled(response.initialized);
+        setNotice("");
+      })
+      .catch(error => {
+        setDocumentRecoveryError(error instanceof Error ? error.message : "Recoverable documents could not be loaded.");
+      })
+      .finally(() => setIsLoadingDocumentRecovery(false));
+    const historyRequest = fetchPurgedLibraryDocuments()
+      .then(setPurgedDocuments)
+      .catch(error => {
+        setPurgedHistoryError(error instanceof Error ? error.message : "Permanent deletion history could not be loaded.");
+      })
+      .finally(() => setIsLoadingPurgedHistory(false));
+    await Promise.allSettled([recoveryRequest, historyRequest]);
+  };
+
+  const openDocumentRecovery = () => {
+    if (!mutationsEnabled) {
+      setNotice("Reconnect to the shared Library before opening Recovery.");
+      return;
     }
+    setShowDocumentRecovery(true);
+    setPurgedDocuments([]);
+    void refreshDocumentRecovery();
   };
 
   const closeDocumentRecovery = () => {
     setShowDocumentRecovery(false);
     setSystemRecoveryError("");
+    setDocumentRecoveryError("");
     setPurgedDocuments([]);
     setPurgedHistoryError("");
     void refresh(undefined, { summary: true });
   };
 
   const requestDocumentDelete = (document: ManagedLibraryDocument) => {
-    if (managed.filter(item => !item.deletedAt).length <= 1) {
-      setNotice("At least one active document must remain. Create or recover another document before deleting this one.");
-      return;
-    }
     setDeleteError("");
     setDocumentToDelete(document);
   };
 
   const confirmDocumentDelete = async () => {
     if (!documentToDelete || isDeletingDocument) return;
-    if (managed.filter(item => !item.deletedAt).length <= 1) {
-      setDeleteError("At least one active document must remain. Create or recover another document before deleting this one.");
-      return;
-    }
     const expectedVersion = sharedRef.current?.recordVersions.documents[documentToDelete.id];
     if (expectedVersion === undefined) {
       setDeleteError("The current document version is unavailable. Close this message and try again.");
@@ -384,8 +392,16 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const documentCounts = managed.reduce<Record<string, number>>((counts, document) => { counts[document.category] = (counts[document.category] ?? 0) + 1; return counts; }, {});
   const saveDocumentOrder = async (order: string[]) => {
     const revision = sharedRef.current?.revision;
-    if (revision === undefined) return;
-    if (await commitMutation({ operation: "documents.reorder", documentIds: order, expectedRevision: revision }, "Library document order updated.")) setShowDocumentReorder(false);
+    if (revision === undefined) return "The current Library revision is unavailable. Close this window and try again.";
+    const response = await commitMutation(
+      { operation: "documents.reorder", documentIds: order, expectedRevision: revision },
+      "",
+    );
+    if (!response) return lastMutationErrorRef.current || "The document order could not be saved. Please try again.";
+    setNotice("");
+    setShowDocumentReorder(false);
+    announceSuccess("Library document order saved successfully.");
+    return null;
   };
   const recoverSystemDeletedDocuments = async (documentIds: string[]) => {
     const revision = sharedRef.current?.revision;
@@ -496,8 +512,8 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         [next[activeIndex], next[target]] = [next[target], next[activeIndex]];
         void commitMutation({ operation: "documents.reorder", documentIds: next.map(document => document.id), expectedRevision: sharedRef.current.revision }, "Document order updated.");
       };
-      return <DocumentCard key={doc.id} doc={doc} admin={manageMode && mutationsEnabled ? { onToggleHidden: () => updateDocument({ ...doc, hidden: !doc.hidden, updatedAt: new Date().toISOString() }, doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => requestDocumentDelete(doc), onMoveUp: () => reorder(-1), onMoveDown: () => reorder(1), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1, canDelete: activeDocuments.length > 1 } : undefined}/>;
-    })}</div> : filtered ? <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div> : <div className="empty-state library-empty-state"><Search aria-hidden="true" /><h2>The Library has no active documents</h2><p>Open Recovery to review deleted documents and the protected bQool snapshot, or add a new document.</p>{canAdmin && manageMode && mutationsEnabled ? <button className="primary-button" type="button" onClick={() => void openDocumentRecovery()}>Open Recovery</button> : null}</div>}</> : <div className="skeleton-grid" aria-label="Loading library documents">{[1, 2, 3].map(item => <div className="skeleton" key={item} />)}</div>}
+      return <DocumentCard key={doc.id} doc={doc} admin={manageMode && mutationsEnabled ? { onToggleHidden: () => updateDocument({ ...doc, hidden: !doc.hidden, updatedAt: new Date().toISOString() }, doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => requestDocumentDelete(doc), onMoveUp: () => reorder(-1), onMoveDown: () => reorder(1), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1 } : undefined}/>;
+    })}</div> : filtered ? <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div> : <div className="empty-state library-empty-state"><Search aria-hidden="true" /><h2>The Library has no active documents</h2><p>Add a new document, or open Recovery to restore a deleted document or the protected bQool snapshot.</p>{canAdmin && mutationsEnabled ? <div className="library-empty-actions"><button className="primary-button" type="button" onClick={() => setEditor("new")}><Plus /> Add document</button><button className="secondary-button" type="button" onClick={openDocumentRecovery}><RotateCcw /> Open Recovery</button></div> : null}</div>}</> : <div className="skeleton-grid" aria-label="Loading library documents">{[1, 2, 3].map(item => <div className="skeleton" key={item} />)}</div>}
     {canAdmin && showDocumentRecovery ? <DeletedDocuments
       documents={deleted}
       deletionAudit={shared?.deletionAudit?.documents ?? {}}
@@ -509,6 +525,10 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       onPermanentlyDelete={permanentlyDeleteDocument}
       purgedDocuments={purgedDocuments}
       purgedHistoryError={purgedHistoryError}
+      isLoadingDocuments={isLoadingDocumentRecovery}
+      documentLoadError={documentRecoveryError}
+      isLoadingPurgedHistory={isLoadingPurgedHistory}
+      onRetry={() => void refreshDocumentRecovery()}
       onRestorePurged={restorePurgedDocument}
     /> : null}
     {canEdit && editor && mutationsEnabled ? <DocumentEditor key="new" categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft} onCreateCategory={canAdmin ? createCategory : undefined} onManageCategories={canAdmin ? () => setShowCategoryManager(true) : undefined}/> : null}

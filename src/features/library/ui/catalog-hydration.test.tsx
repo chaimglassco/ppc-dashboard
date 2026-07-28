@@ -6,7 +6,7 @@ import { ReadingStateProvider } from "../state/reading-state";
 import type { SharedLibraryState } from "../state/shared-library-state";
 import { Catalog } from "./catalog";
 
-const client = vi.hoisted(() => ({ fetchSharedLibraryState: vi.fn(), hydrateSharedLibraryState: vi.fn(), initializeSharedLibrary: vi.fn() }));
+const client = vi.hoisted(() => ({ fetchSharedLibraryState: vi.fn(), fetchPurgedLibraryDocuments: vi.fn(), hydrateSharedLibraryState: vi.fn(), initializeSharedLibrary: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), usePathname: () => "/library", useSearchParams: () => new URLSearchParams() }));
 vi.mock("../state/shared-library-client", async importOriginal => {
@@ -17,8 +17,10 @@ vi.mock("../state/shared-library-client", async importOriginal => {
 describe("catalog hydration", () => {
   beforeEach(() => {
     client.fetchSharedLibraryState.mockReset();
+    client.fetchPurgedLibraryDocuments.mockReset();
     client.hydrateSharedLibraryState.mockReset();
     client.initializeSharedLibrary.mockReset();
+    client.fetchPurgedLibraryDocuments.mockResolvedValue([]);
     window.localStorage.clear();
   });
   afterEach(() => { vi.useRealTimers(); });
@@ -107,6 +109,41 @@ describe("catalog hydration", () => {
     expect(catalog.getByRole("button", { name: "Open document recovery" })).toBeEnabled();
     expect(catalog.getByRole("button", { name: "REORDER" })).toBeDisabled();
     expect(catalog.getByText("Reorder needs at least 2 active documents. Add or recover another document first.")).toBeVisible();
+  });
+
+  it("opens Recovery immediately while its two data sources load independently", async () => {
+    const documents = getPublishedDocuments().slice(0, 2);
+    const liveResponse = {
+      initialized: true,
+      state: { version: 1 as const, documents, categories: createDefaultCategories() },
+      revision: 3,
+      recordVersions: { documents: Object.fromEntries(documents.map(document => [document.id, 1])), categories: {} },
+      updatedAt: null,
+      updatedBy: null,
+      recoveryDocumentCount: 0,
+    };
+    let finishRecovery!: (value: typeof liveResponse) => void;
+    let finishHistory!: (value: []) => void;
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: liveResponse, source: "server" });
+    client.fetchSharedLibraryState.mockReturnValue(new Promise(resolve => { finishRecovery = resolve; }));
+    client.fetchPurgedLibraryDocuments.mockReturnValue(new Promise(resolve => { finishHistory = resolve; }));
+    const view = render(<ReadingStateProvider><Catalog documents={documents} /></ReadingStateProvider>);
+    const catalog = within(view.container);
+
+    await waitFor(() => expect(catalog.getByRole("button", { name: "Manage library" })).toBeEnabled());
+    fireEvent.click(catalog.getByRole("button", { name: "Manage library" }));
+    fireEvent.click(catalog.getByRole("button", { name: "Open document recovery" }));
+
+    expect(catalog.getByRole("dialog", { name: "Deleted documents" })).toBeVisible();
+    expect(catalog.getByText("Loading recoverable documents...")).toBeVisible();
+    expect(catalog.getByText("Loading permanent deletion history...")).toBeVisible();
+
+    await act(async () => {
+      finishRecovery(liveResponse);
+      finishHistory([]);
+    });
+    await waitFor(() => expect(catalog.queryByText("Loading recoverable documents...")).not.toBeInTheDocument());
+    expect(catalog.getByText("No recoverable or known permanently deleted documents were found.")).toBeVisible();
   });
 
   it("keeps cached controls read-only, offers Retry, and restores admin controls after reconnecting", async () => {

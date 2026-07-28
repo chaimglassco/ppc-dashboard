@@ -1,18 +1,19 @@
 "use client";
 
-import { ChevronDown, ChevronUp, GripVertical, X } from "lucide-react";
+import { ChevronDown, ChevronUp, GripVertical, LoaderCircle, X } from "lucide-react";
 import { useState, type DragEvent } from "react";
 import type { ManagedLibraryDocument } from "../state/admin-storage";
 
 export function DocumentReorderDialog({ documents, onCancel, onSave }: {
   documents: ManagedLibraryDocument[];
   onCancel: () => void;
-  onSave: (order: string[]) => Promise<void> | void;
+  onSave: (order: string[]) => Promise<string | null>;
 }) {
   const [order, setOrder] = useState(() => documents.map(document => document.id));
   const [draggedId, setDraggedId] = useState("");
   const [dropTargetId, setDropTargetId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const documentsById = new Map(documents.map(document => [document.id, document]));
   const orderedDocuments = order.map(id => documentsById.get(id)).filter((document): document is ManagedLibraryDocument => Boolean(document));
 
@@ -54,8 +55,17 @@ export function DocumentReorderDialog({ documents, onCancel, onSave }: {
   };
 
   const save = async () => {
+    if (isSaving) return;
     setIsSaving(true);
-    try { await onSave(order); } finally { setIsSaving(false); }
+    setSaveError("");
+    try {
+      const error = await onSave(order);
+      if (error) setSaveError(error);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "The document order could not be saved. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return <div className="admin-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !isSaving) onCancel(); }}>
@@ -81,7 +91,8 @@ export function DocumentReorderDialog({ documents, onCancel, onSave }: {
           </div>
         </li>)}
       </ol>
-      <footer><button className="secondary-button" type="button" onClick={onCancel} disabled={isSaving}>Cancel</button><button className="primary-button" type="button" onClick={() => void save()} disabled={isSaving}>{isSaving ? "Saving..." : "Save order"}</button></footer>
+      {saveError ? <p className="document-reorder-error" role="alert">{saveError}</p> : null}
+      <footer><button className="secondary-button" type="button" onClick={onCancel} disabled={isSaving}>Cancel</button><button className="primary-button" type="button" onClick={() => void save()} disabled={isSaving}>{isSaving ? <><LoaderCircle className="spinning-icon" /> Saving order...</> : "Save order"}</button></footer>
     </section>
   </div>;
 }

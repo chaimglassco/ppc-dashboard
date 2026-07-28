@@ -99,6 +99,10 @@ describe("accessible controls", () => {
       onPermanentlyDelete={vi.fn()}
       purgedDocuments={[]}
       purgedHistoryError=""
+      isLoadingDocuments={false}
+      documentLoadError=""
+      isLoadingPurgedHistory={false}
+      onRetry={vi.fn()}
       onRestorePurged={vi.fn().mockResolvedValue(null)}
     />);
     const dialog = within(view.container).getByRole("dialog", { name: "Deleted documents" });
@@ -130,6 +134,10 @@ describe("accessible controls", () => {
       onPermanentlyDelete={vi.fn()}
       purgedDocuments={[]}
       purgedHistoryError=""
+      isLoadingDocuments={false}
+      documentLoadError=""
+      isLoadingPurgedHistory={false}
+      onRetry={vi.fn()}
       onRestorePurged={vi.fn().mockResolvedValue(null)}
     />);
     const dialog = within(view.container).getByRole("dialog", { name: "Deleted documents" });
@@ -154,6 +162,10 @@ describe("accessible controls", () => {
       onPermanentlyDelete={onPermanentlyDelete}
       purgedDocuments={[]}
       purgedHistoryError=""
+      isLoadingDocuments={false}
+      documentLoadError=""
+      isLoadingPurgedHistory={false}
+      onRetry={vi.fn()}
       onRestorePurged={vi.fn().mockResolvedValue(null)}
     />);
     const recovery = within(view.container).getByRole("dialog", { name: "Deleted documents" });
@@ -185,6 +197,10 @@ describe("accessible controls", () => {
       onPermanentlyDelete={vi.fn().mockResolvedValue(null)}
       purgedDocuments={[purged]}
       purgedHistoryError=""
+      isLoadingDocuments={false}
+      documentLoadError=""
+      isLoadingPurgedHistory={false}
+      onRetry={vi.fn()}
       onRestorePurged={onRestorePurged}
     />);
 
@@ -194,5 +210,31 @@ describe("accessible controls", () => {
     const confirmation = within(view.container).getByRole("alertdialog", { name: "Restore bQool?" });
     fireEvent.click(within(confirmation).getByRole("button", { name: "Confirm restoration" }));
     await waitFor(() => expect(onRestorePurged).toHaveBeenCalledWith(purged));
+  });
+  it("keeps Recovery open and offers retry actions when either data source fails", () => {
+    const onRetry = vi.fn();
+    const view = render(<DeletedDocuments
+      documents={[]}
+      deletionAudit={{}}
+      isRecoveringSystemDocuments={false}
+      systemRecoveryError=""
+      onClose={vi.fn()}
+      onRecover={vi.fn().mockResolvedValue(null)}
+      onRecoverSystemDeleted={vi.fn()}
+      onPermanentlyDelete={vi.fn().mockResolvedValue(null)}
+      purgedDocuments={[]}
+      purgedHistoryError="Permanent deletion history is unavailable."
+      isLoadingDocuments={false}
+      documentLoadError="Recoverable documents are unavailable."
+      isLoadingPurgedHistory={false}
+      onRetry={onRetry}
+      onRestorePurged={vi.fn().mockResolvedValue(null)}
+    />);
+
+    const dialog = within(view.container).getByRole("dialog", { name: "Deleted documents" });
+    expect(dialog).toBeVisible();
+    expect(within(dialog).getAllByRole("alert")).toHaveLength(2);
+    fireEvent.click(within(dialog).getAllByRole("button", { name: "Try again" })[0]);
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });

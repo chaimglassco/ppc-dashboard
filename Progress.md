@@ -1,10 +1,18 @@
 # Project Progress
 
-Last updated: July 22, 2026
+Last updated: July 28, 2026
 
 ## Overall status
 
 The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgres-authoritative shared persistence, scoped versioned mutations, read-only outage caching, and cross-account synchronization.
+
+## 2026-07-28 — Library control reliability
+
+- Replaced the reorder query's JSON-scalar expansion with delimiter-safe scalar encoding and ordered PostgreSQL expansion.
+- Added reorder save progress, duplicate-submit protection, success close/toast behavior, and retryable inline errors that preserve the selected order.
+- Reconciled the bookmark badge against unique active, visible, published documents without deleting stale browser-local bookmark IDs.
+- Made Recovery open immediately and load normal Recovery and permanent-deletion history independently with progress and retry states.
+- Allowed ADMIN to delete the final active document into a recoverable empty-Library state with Add document and Recovery actions.
 
 ## 2026-07-24 — Unexpected deletion prevention and attributed recovery
 
@@ -126,5 +134,5 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Added automated coverage for Recovery request scoping, stale cache invalidation, `pageshow` revalidation, and deleted-link recovery.
 - Kept ADMIN Recovery available at zero tombstones and added a separate permanent-deletion history view.
 - Added an explicit, confirmed bQool-only repair from the newest trusted pre-purge snapshot while preserving all other permanent deletions.
-- Added UI and Library-adapter safeguards that prevent deletion of the final active document.
+- Replaced the final-document safeguard with intentional empty-catalog support; the final document can be tombstoned and recovered like any other document.
 - Clarified Reorder availability and the authoritative empty-Library state.

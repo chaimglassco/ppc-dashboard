@@ -17,6 +17,10 @@ type DeletedDocumentsProps = {
   onPermanentlyDelete: (document: ManagedLibraryDocument) => Promise<string | null>;
   purgedDocuments: PurgedLibraryDocument[];
   purgedHistoryError: string;
+  isLoadingDocuments: boolean;
+  documentLoadError: string;
+  isLoadingPurgedHistory: boolean;
+  onRetry: () => void;
   onRestorePurged: (document: PurgedLibraryDocument) => Promise<string | null>;
 };
 
@@ -53,6 +57,10 @@ export function DeletedDocuments({
   onPermanentlyDelete,
   purgedDocuments,
   purgedHistoryError,
+  isLoadingDocuments,
+  documentLoadError,
+  isLoadingPurgedHistory,
+  onRetry,
   onRestorePurged,
 }: DeletedDocumentsProps) {
   const [confirmSystemRecovery, setConfirmSystemRecovery] = useState(false);
@@ -121,6 +129,8 @@ export function DeletedDocuments({
           <button type="button" onClick={onClose} disabled={isBusy} aria-label="Close document recovery"><X /></button>
         </header>
         <div className="document-recovery-content">
+          {isLoadingDocuments ? <div className="document-recovery-load-state" role="status"><LoaderCircle className="spinning-icon" /><strong>Loading recoverable documents...</strong></div> : null}
+          {documentLoadError ? <div className="document-recovery-load-error" role="alert"><p>{documentLoadError}</p><button className="secondary-button" type="button" disabled={isLoadingDocuments || isLoadingPurgedHistory} onClick={onRetry}><RotateCcw /> Try again</button></div> : null}
           {systemDeletedIds.length ? <section className="system-recovery-panel" aria-label="System-deleted document recovery">
             {!confirmSystemRecovery ? <>
               <div><strong>{systemDeletedIds.length} {systemDeletedIds.length === 1 ? "document was" : "documents were"} deleted by the Initial Library cleanup.</strong><p>This will not recover documents deleted manually by a user.</p></div>
@@ -136,7 +146,7 @@ export function DeletedDocuments({
               </div>
             </>}
           </section> : null}
-          {documents.length ? <div className="document-recovery-list">{documents.map(document => {
+          {!isLoadingDocuments && documents.length ? <div className="document-recovery-list">{documents.map(document => {
             const audit = deletionAudit[document.id];
             const initiatedBy = initiatorLabel(audit);
             const isRecovering = recoveringDocumentId === document.id;
@@ -156,8 +166,9 @@ export function DeletedDocuments({
               <strong>Permanent deletion history</strong>
               <p>These documents are no longer in normal Recovery. Restoring from a protected snapshot is available only for the approved bQool repair.</p>
             </div>
-            {purgedHistoryError ? <p className="document-recovery-error" role="alert">{purgedHistoryError}</p> : null}
-            {purgedDocuments.length ? <div className="document-recovery-list">{purgedDocuments.map(document => <article className="document-recovery-row" key={document.documentId}>
+            {isLoadingPurgedHistory ? <div className="document-recovery-load-state" role="status"><LoaderCircle className="spinning-icon" /><strong>Loading permanent deletion history...</strong></div> : null}
+            {purgedHistoryError ? <div className="document-recovery-load-error" role="alert"><p>{purgedHistoryError}</p><button className="secondary-button" type="button" disabled={isLoadingDocuments || isLoadingPurgedHistory} onClick={onRetry}><RotateCcw /> Try again</button></div> : null}
+            {!isLoadingPurgedHistory && purgedDocuments.length ? <div className="document-recovery-list">{purgedDocuments.map(document => <article className="document-recovery-row" key={document.documentId}>
               <div>
                 <strong>{document.title}</strong>
                 <small>{document.deletedAt ? `Permanently deleted ${new Date(document.deletedAt).toLocaleString()}` : "Permanently deleted"}</small>
@@ -166,7 +177,7 @@ export function DeletedDocuments({
               <div className="document-recovery-actions">
                 {document.canRestore ? <button className="secondary-button" type="button" disabled={isBusy} onClick={() => { setPurgedRestoreError(""); setPurgedToRestore(document); }}><RotateCcw /> Restore bQool</button> : <span className="permanent-deletion-history__status">History only</span>}
               </div>
-            </article>)}</div> : !purgedHistoryError ? <p className="document-recovery-empty">No recoverable or known permanently deleted documents were found.</p> : null}
+            </article>)}</div> : !isLoadingDocuments && !isLoadingPurgedHistory && !documentLoadError && !purgedHistoryError && !documents.length ? <p className="document-recovery-empty">No recoverable or known permanently deleted documents were found.</p> : null}
           </section>
         </div>
       </section>
