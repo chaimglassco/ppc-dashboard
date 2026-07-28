@@ -251,13 +251,16 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     void commitMutation({ operation: "category.update", categoryId: id, expectedVersion, category: { ...current, name } }, "Category renamed and assigned documents updated.");
     if (category === current.name) update("category", name);
   };
-  const deleteCategory = (id: string) => {
+  const deleteCategory = async (id: string) => {
     const current = categories.find(item => item.id === id);
-    if (!current) return;
+    if (!current) return "The category is no longer available. Refresh the Library and try again.";
     const expectedVersion = sharedRef.current?.recordVersions.categories[id];
-    if (expectedVersion === undefined) return;
-    void commitMutation({ operation: "category.delete", categoryId: id, expectedVersion }, "Category moved to recovery.");
+    if (expectedVersion === undefined) return "The current category version is unavailable. Close this window and try again.";
+    const response = await commitMutation({ operation: "category.delete", categoryId: id, expectedVersion }, "");
+    if (!response) return lastMutationErrorRef.current || "The category could not be deleted. Please try again.";
     if (category === current.name) update("category", "");
+    setNotice("");
+    return null;
   };
   const toggleCategoryHidden = (id: string) => {
     const current = categories.find(item => item.id === id);

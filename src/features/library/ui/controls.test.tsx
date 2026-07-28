@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReadingStateProvider } from "../state/reading-state";
 import { BookmarkButton } from "./bookmark-button";
@@ -58,6 +58,24 @@ describe("accessible controls", () => {
     expect(recovery).toBeVisible();
     fireEvent.click(within(recovery).getByRole("button", { name: "Recover" }));
     expect(onRecover).toHaveBeenCalledWith("deleted");
+  });
+  it("shows category deletion progress and success only after the server confirms it", async () => {
+    let finishDelete: (result: string | null) => void = () => undefined;
+    const onDelete = vi.fn(() => new Promise<string | null>(resolve => { finishDelete = resolve; }));
+    const view = render(<CategoryManager categories={[{ id: "active", name: "Active category", hidden: false }]} documentCounts={{}} onClose={vi.fn()} onCreate={vi.fn()} onRename={vi.fn()} onToggleHidden={vi.fn()} onDelete={onDelete} onRecover={vi.fn()} onMove={vi.fn()} />);
+    const controls = within(view.container);
+    fireEvent.click(controls.getByRole("button", { name: "Delete Active category" }));
+    expect(onDelete).toHaveBeenCalledWith("active");
+    expect(controls.getByRole("button", { name: "Deleting Active category" }).querySelector(".category-delete-spinner")).toBeTruthy();
+    await act(async () => finishDelete(null));
+    expect(await controls.findByRole("status")).toHaveTextContent("Active category was deleted successfully.");
+  });
+  it("keeps category deletion errors visible in the category manager", async () => {
+    const onDelete = vi.fn().mockResolvedValue("The category could not be deleted.");
+    const view = render(<CategoryManager categories={[{ id: "active", name: "Active category", hidden: false }]} documentCounts={{}} onClose={vi.fn()} onCreate={vi.fn()} onRename={vi.fn()} onToggleHidden={vi.fn()} onDelete={onDelete} onRecover={vi.fn()} onMove={vi.fn()} />);
+    const controls = within(view.container);
+    fireEvent.click(controls.getByRole("button", { name: "Delete Active category" }));
+    expect(await controls.findByRole("alert")).toHaveTextContent("The category could not be deleted.");
   });
   it("shows deleted documents only inside the recovery dialog", async () => {
     const onRecover = vi.fn().mockResolvedValue(null);
