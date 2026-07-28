@@ -62,7 +62,7 @@ describe("accessible controls", () => {
   it("shows category deletion progress and success only after the server confirms it", async () => {
     let finishDelete: (result: string | null) => void = () => undefined;
     const onDelete = vi.fn(() => new Promise<string | null>(resolve => { finishDelete = resolve; }));
-    const view = render(<CategoryManager categories={[{ id: "active", name: "Active category", hidden: false }]} documentCounts={{}} onClose={vi.fn()} onCreate={vi.fn()} onRename={vi.fn()} onToggleHidden={vi.fn()} onDelete={onDelete} onRecover={vi.fn()} onMove={vi.fn()} />);
+    const view = render(<CategoryManager categories={[{ id: "active", name: "Active category", hidden: false }, { id: "keep", name: "Keep category", hidden: false }]} documentCounts={{}} onClose={vi.fn()} onCreate={vi.fn()} onRename={vi.fn()} onToggleHidden={vi.fn()} onDelete={onDelete} onRecover={vi.fn()} onMove={vi.fn()} />);
     const controls = within(view.container);
     fireEvent.click(controls.getByRole("button", { name: "Delete Active category" }));
     expect(onDelete).toHaveBeenCalledWith("active");
@@ -72,10 +72,17 @@ describe("accessible controls", () => {
   });
   it("keeps category deletion errors visible in the category manager", async () => {
     const onDelete = vi.fn().mockResolvedValue("The category could not be deleted.");
-    const view = render(<CategoryManager categories={[{ id: "active", name: "Active category", hidden: false }]} documentCounts={{}} onClose={vi.fn()} onCreate={vi.fn()} onRename={vi.fn()} onToggleHidden={vi.fn()} onDelete={onDelete} onRecover={vi.fn()} onMove={vi.fn()} />);
+    const view = render(<CategoryManager categories={[{ id: "active", name: "Active category", hidden: false }, { id: "keep", name: "Keep category", hidden: false }]} documentCounts={{}} onClose={vi.fn()} onCreate={vi.fn()} onRename={vi.fn()} onToggleHidden={vi.fn()} onDelete={onDelete} onRecover={vi.fn()} onMove={vi.fn()} />);
     const controls = within(view.container);
     fireEvent.click(controls.getByRole("button", { name: "Delete Active category" }));
     expect(await controls.findByRole("alert")).toHaveTextContent("The category could not be deleted.");
+  });
+  it("prevents deleting the final active category", () => {
+    const onDelete = vi.fn();
+    const view = render(<CategoryManager categories={[{ id: "last", name: "Last category", hidden: false }]} documentCounts={{}} onClose={vi.fn()} onCreate={vi.fn()} onRename={vi.fn()} onToggleHidden={vi.fn()} onDelete={onDelete} onRecover={vi.fn()} onMove={vi.fn()} />);
+    const controls = within(view.container);
+    expect(controls.getByText(/At least one active category must remain/)).toBeVisible();
+    expect(controls.getByRole("button", { name: "Delete Last category" })).toBeDisabled();
   });
   it("shows deleted documents only inside the recovery dialog", async () => {
     const onRecover = vi.fn().mockResolvedValue(null);

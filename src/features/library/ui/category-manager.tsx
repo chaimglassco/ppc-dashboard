@@ -25,6 +25,7 @@ export function CategoryManager({ categories, documentCounts, onClose, onCreate,
   const [deleteFeedback, setDeleteFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const active = categories.filter(category => !category.deletedAt);
   const deleted = categories.filter(category => category.deletedAt);
+  const isLastActiveCategory = active.length <= 1;
 
   const startRename = (category: ManagedCategory) => {
     setEditingId(category.id);
@@ -67,10 +68,11 @@ export function CategoryManager({ categories, documentCounts, onClose, onCreate,
 
         <section className="category-list" aria-labelledby="active-categories-heading">
           <header><div><span className="eyebrow">ACTIVE</span><h3 id="active-categories-heading">Dropdown categories</h3></div><span>{active.length}</span></header>
+          {isLastActiveCategory ? <p className="category-delete-safeguard">At least one active category must remain. Create or recover another category before deleting this one.</p> : null}
           {active.map((category, index) => <article className={category.hidden ? "category-row hidden" : "category-row"} key={category.id}>
             <div className="category-order"><button type="button" onClick={() => onMove(category.id, -1)} disabled={index === 0} aria-label={`Move ${category.name} up`}><ChevronUp /></button><button type="button" onClick={() => onMove(category.id, 1)} disabled={index === active.length - 1} aria-label={`Move ${category.name} down`}><ChevronDown /></button></div>
             <div className="category-copy">{editingId === category.id ? <form onSubmit={event => { event.preventDefault(); submitRename(category.id); }}><input value={editingName} onChange={event => setEditingName(event.target.value)} aria-label={`Rename ${category.name}`} autoFocus /><button type="submit" aria-label={`Save ${category.name} name`}><Save /></button><button type="button" onClick={() => setEditingId("")} aria-label="Cancel rename"><X /></button></form> : <><strong>{category.name}</strong><small>{documentCounts[category.name] ?? 0} {(documentCounts[category.name] ?? 0) === 1 ? "document" : "documents"}{category.hidden ? " · Hidden from dropdown" : ""}</small></>}</div>
-            <div className="category-actions"><button type="button" onClick={() => startRename(category)} disabled={Boolean(deletingCategoryId)} aria-label={`Rename ${category.name}`}><Pencil /></button><button type="button" onClick={() => onToggleHidden(category.id)} disabled={Boolean(deletingCategoryId)} aria-label={category.hidden ? `Show ${category.name}` : `Hide ${category.name}`}>{category.hidden ? <Eye /> : <EyeOff />}</button><button className="danger" type="button" onClick={() => void deleteCategory(category)} disabled={Boolean(deletingCategoryId)} aria-label={deletingCategoryId === category.id ? `Deleting ${category.name}` : `Delete ${category.name}`}>{deletingCategoryId === category.id ? <LoaderCircle className="category-delete-spinner" /> : <Trash2 />}</button></div>
+            <div className="category-actions"><button type="button" onClick={() => startRename(category)} disabled={Boolean(deletingCategoryId)} aria-label={`Rename ${category.name}`}><Pencil /></button><button type="button" onClick={() => onToggleHidden(category.id)} disabled={Boolean(deletingCategoryId)} aria-label={category.hidden ? `Show ${category.name}` : `Hide ${category.name}`}>{category.hidden ? <Eye /> : <EyeOff />}</button><button className="danger" type="button" onClick={() => void deleteCategory(category)} disabled={Boolean(deletingCategoryId) || isLastActiveCategory} title={isLastActiveCategory ? "At least one active category must remain." : undefined} aria-label={deletingCategoryId === category.id ? `Deleting ${category.name}` : `Delete ${category.name}`}>{deletingCategoryId === category.id ? <LoaderCircle className="category-delete-spinner" /> : <Trash2 />}</button></div>
           </article>)}
         </section>
 
