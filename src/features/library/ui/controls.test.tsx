@@ -212,6 +212,36 @@ describe("accessible controls", () => {
     fireEvent.click(within(confirmation).getByRole("button", { name: "Confirm restoration" }));
     await waitFor(() => expect(onRestorePurged).toHaveBeenCalledWith(purged));
   });
+  it("labels the approved Check Spend protected recovery explicitly", () => {
+    const purged = {
+      documentId: "check-spend-no-sales",
+      slug: "check-spend-with-no-sales",
+      title: "Check Spend with No Sales",
+      source: { kind: "pipeline_backup" as const, id: "backup-1", label: "Pipeline Library backup" },
+      canRestore: true,
+    };
+    const view = render(<DeletedDocuments
+      documents={[]}
+      deletionAudit={{}}
+      isRecoveringSystemDocuments={false}
+      systemRecoveryError=""
+      onClose={vi.fn()}
+      onRecover={vi.fn().mockResolvedValue(null)}
+      onRecoverSystemDeleted={vi.fn()}
+      onPermanentlyDelete={vi.fn().mockResolvedValue(null)}
+      purgedDocuments={[purged]}
+      purgedHistoryError=""
+      isLoadingDocuments={false}
+      documentLoadError=""
+      isLoadingPurgedHistory={false}
+      onRetry={vi.fn()}
+      onRestorePurged={vi.fn().mockResolvedValue(null)}
+    />);
+
+    const recovery = within(view.container).getByRole("dialog", { name: "Deleted documents" });
+    fireEvent.click(within(recovery).getByRole("button", { name: "Restore Check Spend with No Sales" }));
+    expect(within(view.container).getByRole("alertdialog", { name: "Restore Check Spend with No Sales?" })).toBeVisible();
+  });
   it("keeps Recovery open and offers retry actions when either data source fails", () => {
     const onRetry = vi.fn();
     const view = render(<DeletedDocuments

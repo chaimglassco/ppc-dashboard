@@ -172,4 +172,4 @@ Use this checklist before merging or deploying changes.
 - [ ] Reorder with drag and arrow controls; confirm Save order shows a spinner, blocks duplicates, closes on success, shows a four-second success toast, and preserves the pending order for retry after failure.
 - [ ] Store active, hidden, and deleted bookmark IDs; confirm the hero badge counts only unique active, visible, published documents and that recovered bookmarked documents count again.
 - [ ] Click Recovery with both requests delayed; confirm the modal shell appears immediately, each source shows independent loading/error state, and Try again works without closing the modal.
-- [ ] Confirm the protected restore lists only bQool as restorable, requires confirmation, restores its original ID/slug/content, and leaves every other intentionally purged document unchanged.
+- [ ] Confirm protected restore lists only the approved bQool and Check Spend records as restorable, requires confirmation, preserves each original ID/slug/content, and leaves every other intentionally purged document unchanged.

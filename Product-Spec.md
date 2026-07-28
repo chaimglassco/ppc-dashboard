@@ -57,7 +57,7 @@ The current milestone uses the existing Pipeline identity and one authoritative 
 - **LIB-ADMIN-022** — Recovery remains available while connected even when no ordinary tombstones exist, so ADMIN can inspect permanent-deletion history and perform the explicitly approved bQool repair.
 - **LIB-ADMIN-023** — Reorder is available only when at least two active documents exist, and the UI explains how to enable it when the catalog contains fewer.
 - **LIB-ADMIN-024** — ADMIN may delete the final active document after confirmation; the resulting empty Library offers Add document and Recovery actions, and the tombstone remains recoverable.
-- **LIB-ADMIN-025** — “Monitor Product Listing Prices Through BQool” may be explicitly restored with its original ID, slug, and content from the newest trusted pre-purge snapshot; no other purged document is restored automatically.
+- **LIB-ADMIN-025** — “Monitor Product Listing Prices Through BQool” and “Check Spend with No Sales” may be explicitly restored with their original IDs, slugs, and content from the newest trusted snapshots; no other purged document is restored automatically.
 - **LIB-ADMIN-026** — Reorder shows immediate save progress, prevents duplicate submissions, closes after confirmed success, and preserves the selected order with a retryable error after failure.
 - **LIB-ADMIN-027** — Recovery opens immediately and loads recoverable documents and permanent-deletion history independently with visible progress and retry actions.
 - **LIB-READ-007** — The bookmark badge counts only unique bookmarked documents that are currently active, visible, and published while retaining stale bookmark IDs for future recovery.

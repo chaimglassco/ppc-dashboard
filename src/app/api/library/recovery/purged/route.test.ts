@@ -29,6 +29,15 @@ const document = {
   body: "## Monitor prices",
   topics: [{ id: "monitor-prices", title: "Monitor prices", level: 2 }],
 };
+const checkSpendDocument = {
+  ...document,
+  id: "check-spend-no-sales",
+  slug: "check-spend-with-no-sales",
+  title: "Check Spend with No Sales",
+  description: "Find spend without attributed sales.",
+  body: "## Check spend without sales",
+  topics: [{ id: "check-spend", title: "Check spend", level: 2 }],
+};
 const category = { id: "product-research", name: "Product Research", hidden: false };
 
 function sharedResponse(overrides: Record<string, unknown> = {}) {
@@ -91,6 +100,50 @@ describe("protected purged-document recovery", () => {
         title: document.title,
         canRestore: true,
         source: { kind: "legacy_snapshot", id: "trusted-checksum" },
+      }],
+    });
+  });
+
+  it("finds the approved Check Spend document in a backup when its live record is missing", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("backups=1")) {
+        return Promise.resolve(Response.json({
+          backups: [{ id: "backup-with-check-spend", createdAt: "2026-07-27T00:00:00.000Z" }],
+        }));
+      }
+      if (url.includes("backupId=backup-with-check-spend")) {
+        return Promise.resolve(Response.json({
+          state: { version: 1, documents: [checkSpendDocument], categories: [category] },
+        }));
+      }
+      if (url.includes(encodeURIComponent(document.slug))) {
+        return Promise.resolve(Response.json(sharedResponse({
+          documentStatus: { status: "active", slug: document.slug, documentId: document.id, title: document.title },
+        })));
+      }
+      if (url.includes(encodeURIComponent(checkSpendDocument.slug))) {
+        return Promise.resolve(Response.json(sharedResponse({
+          documentStatus: {
+            status: "not_found",
+            slug: checkSpendDocument.slug,
+            documentId: checkSpendDocument.id,
+            title: checkSpendDocument.title,
+          },
+        })));
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }));
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      documents: [{
+        documentId: checkSpendDocument.id,
+        title: checkSpendDocument.title,
+        canRestore: true,
+        source: { kind: "pipeline_backup", id: "backup-with-check-spend" },
       }],
     });
   });

@@ -484,7 +484,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       announceSuccess(`${document.title} was restored from the protected snapshot.`);
       return null;
     } catch (error) {
-      return error instanceof Error ? error.message : "bQool could not be restored. Please try again.";
+      return error instanceof Error ? error.message : "The document could not be restored. Please try again.";
     }
   };
 

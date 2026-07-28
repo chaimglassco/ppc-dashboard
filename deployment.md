@@ -137,7 +137,7 @@ Rich-text support adds client/runtime packages and optional fields inside the ex
 
 Deploy the Pipeline API first because it introduces active-only snapshots, opt-in Recovery data, and structured slug status. Verify authenticated catalog, document, deleted-link, and Recovery reads before deploying Library. Then deploy the Library UI and verify cached read-only mode, Back/Forward revalidation, deleted-link recovery, purge messaging, and precise disabled-control explanations through the canonical production route. No document migration, automatic restoration, or automatic deletion is part of this rollout.
 
-For the Library-only bQool repair release, deploy only this repository. Open ADMIN Recovery after deployment, verify the permanent-deletion history, confirm **Restore bQool**, and then verify the original bQool title and reader route are active. This is a deliberate one-document repair; do not initialize, merge, or restore the remaining purged catalog.
+For an approved protected-document repair, deploy only this repository. Open ADMIN Recovery after deployment, verify the permanent-deletion history, confirm the requested restore action, and then verify the original title and reader route are active. Protected repair is limited to the approved bQool and Check Spend records; do not initialize, merge, or restore the remaining purged catalog.
 
 ## Reorder, Recovery, bookmark, and empty-catalog rollout
 

@@ -13,6 +13,8 @@ export const dynamic = "force-dynamic";
 const noStoreHeaders = { "Cache-Control": "private, no-store, max-age=0" };
 const pipelineOrigin = (process.env.PIPELINE_AUTH_ORIGIN || "https://glasscopipeline.vercel.app").replace(/\/$/, "");
 const BQOOL_TITLE = "Monitor Product Listing Prices Through BQool";
+const CHECK_SPEND_TITLE = "Check Spend with No Sales";
+const PROTECTED_RECOVERY_TITLES = [BQOOL_TITLE, CHECK_SPEND_TITLE] as const;
 const MAX_BACKUPS_TO_SCAN = 20;
 
 type BackupSummary = {
@@ -43,8 +45,12 @@ function normalizeTitle(value: string) {
   return value.trim().toLocaleLowerCase();
 }
 
-function isBqoolDocument(document: ManagedLibraryDocument) {
-  return normalizeTitle(document.title) === normalizeTitle(BQOOL_TITLE);
+function isProtectedRecoveryDocument(document: ManagedLibraryDocument) {
+  return PROTECTED_RECOVERY_TITLES.some(title => normalizeTitle(document.title) === normalizeTitle(title));
+}
+
+function isMissingDocumentStatus(status?: SharedLibraryDocumentStatus) {
+  return status?.status === "purged" || status?.status === "not_found";
 }
 
 function authorizationHeader(request: Request) {
@@ -146,23 +152,30 @@ async function discoverPurgedDocuments(authorization: string): Promise<InternalP
     document,
     status: await getDocumentStatus(document, authorization).catch(() => undefined),
   }));
-  const purged = statuses.filter((entry): entry is { document: ManagedLibraryDocument; status: SharedLibraryDocumentStatus } => entry.status?.status === "purged");
+  const purged = statuses.filter((entry): entry is { document: ManagedLibraryDocument; status: SharedLibraryDocumentStatus } =>
+    entry.status?.status === "purged" || (isProtectedRecoveryDocument(entry.document) && entry.status?.status === "not_found"),
+  );
 
-  if (!purged.some(entry => isBqoolDocument(entry.document))) {
-    for (const backup of backups) {
-      const state = await readBackupState(backup.id, authorization).catch(() => null);
-      const bqool = state?.documents.find(isBqoolDocument);
-      if (!bqool) continue;
-      const status = await getDocumentStatus(bqool, authorization).catch(() => undefined);
-      if (status?.status === "purged") {
-        purged.push({ document: bqool, status });
-        break;
+  const missingProtectedTitles = () => PROTECTED_RECOVERY_TITLES.filter(title =>
+    !purged.some(entry => normalizeTitle(entry.document.title) === normalizeTitle(title)),
+  );
+  for (const backup of backups) {
+    const titles = missingProtectedTitles();
+    if (!titles.length) break;
+    const state = await readBackupState(backup.id, authorization).catch(() => null);
+    if (!state) continue;
+    for (const title of titles) {
+      const document = state.documents.find(item => normalizeTitle(item.title) === normalizeTitle(title));
+      if (!document) continue;
+      const status = await getDocumentStatus(document, authorization).catch(() => undefined);
+      if (isMissingDocumentStatus(status)) {
+        purged.push({ document, status: status! });
       }
     }
   }
 
   const candidates = await Promise.all(purged.map(async ({ document, status }) => {
-    const newerBackup = isBqoolDocument(document)
+    const newerBackup = isProtectedRecoveryDocument(document)
       ? await findNewestBackupDocument(document, status.deletedAt, backups, authorization)
       : null;
     return {
@@ -180,10 +193,12 @@ async function discoverPurgedDocuments(authorization: string): Promise<InternalP
     } satisfies InternalPurgedCandidate;
   }));
 
-  const bqoolCandidate = candidates
-    .filter(candidate => isBqoolDocument(candidate.document))
-    .sort((left, right) => Date.parse(right.deletedAt || "1970-01-01") - Date.parse(left.deletedAt || "1970-01-01"))[0];
-  if (bqoolCandidate) bqoolCandidate.canRestore = true;
+  for (const title of PROTECTED_RECOVERY_TITLES) {
+    const candidate = candidates
+      .filter(item => normalizeTitle(item.document.title) === normalizeTitle(title))
+      .sort((left, right) => Date.parse(right.deletedAt || "1970-01-01") - Date.parse(left.deletedAt || "1970-01-01"))[0];
+    if (candidate) candidate.canRestore = true;
+  }
   return candidates.sort((left, right) => Date.parse(right.deletedAt || "1970-01-01") - Date.parse(left.deletedAt || "1970-01-01"));
 }
 
@@ -226,9 +241,9 @@ export async function POST(request: Request) {
     const documentId = typeof body.documentId === "string" ? body.documentId : "";
     const authorization = authorizationHeader(request);
     const candidates = await discoverPurgedDocuments(authorization);
-    const candidate = candidates.find(item => item.documentId === documentId && item.canRestore && isBqoolDocument(item.document));
+    const candidate = candidates.find(item => item.documentId === documentId && item.canRestore && isProtectedRecoveryDocument(item.document));
     if (!candidate) {
-      return Response.json({ error: "The protected bQool recovery candidate is no longer available." }, { status: 409, headers: noStoreHeaders });
+      return Response.json({ error: "The protected Library recovery candidate is no longer available." }, { status: 409, headers: noStoreHeaders });
     }
 
     const currentResponse = await upstream("/api/library-state?summary=1", authorization);
@@ -242,7 +257,7 @@ export async function POST(request: Request) {
     const originalCategoryIsActive = activeCategories.some(category => category.name === candidate.document.category);
     const category = originalCategoryIsActive ? candidate.document.category : activeCategories[0]?.name;
     if (!category) {
-      return Response.json({ error: "Create or recover an active Library category before restoring bQool." }, { status: 409, headers: noStoreHeaders });
+      return Response.json({ error: "Create or recover an active Library category before restoring this document." }, { status: 409, headers: noStoreHeaders });
     }
 
     const restoredDocument: ManagedLibraryDocument = {
