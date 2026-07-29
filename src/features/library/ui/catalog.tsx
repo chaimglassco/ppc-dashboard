@@ -9,7 +9,24 @@ import { filterDocuments } from "../domain/search";
 import { type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories, type ManagedCategory } from "../state/category-storage";
 import { useReadingState } from "../state/reading-state";
-import { cacheSharedLibraryResponse, fetchPurgedLibraryDocuments, fetchSharedLibraryState, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, restorePurgedLibraryDocument, SharedLibraryConflictError, type PurgedLibraryDocument, type SharedLibraryMutation, type SharedLibraryReadOptions } from "../state/shared-library-client";
+import {
+  cacheSharedLibraryResponse,
+  createLibraryBackup,
+  fetchLibraryBackups,
+  fetchLibraryIntegrityIncidents,
+  fetchLibrarySnapshot,
+  fetchSharedLibraryState,
+  hydrateSharedLibraryState,
+  initializeSharedLibrary,
+  mutateSharedLibrary,
+  reconcileSharedLibraryDocumentCaches,
+  SharedLibraryConflictError,
+  type LibraryBackup,
+  type LibraryIntegrityIncident,
+  type LibraryVersion,
+  type SharedLibraryMutation,
+  type SharedLibraryReadOptions,
+} from "../state/shared-library-client";
 import { getSharedLibraryRefreshDelay } from "../state/shared-library-retry";
 import type { SharedLibraryResponse } from "../state/shared-library-state";
 import { CategoryManager } from "./category-manager";
@@ -45,7 +62,10 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [isLoadingDocumentRecovery, setIsLoadingDocumentRecovery] = useState(false);
   const [documentRecoveryError, setDocumentRecoveryError] = useState("");
   const [isLoadingPurgedHistory, setIsLoadingPurgedHistory] = useState(false);
-  const [purgedDocuments, setPurgedDocuments] = useState<PurgedLibraryDocument[]>([]);
+  const [archivedDocuments, setArchivedDocuments] = useState<ManagedLibraryDocument[]>([]);
+  const [archiveRecordVersions, setArchiveRecordVersions] = useState<Record<string, number>>({});
+  const [libraryBackups, setLibraryBackups] = useState<LibraryBackup[]>([]);
+  const [integrityIncidents, setIntegrityIncidents] = useState<LibraryIntegrityIncident[]>([]);
   const [purgedHistoryError, setPurgedHistoryError] = useState("");
   const [showDocumentReorder, setShowDocumentReorder] = useState(false);
   const [editor, setEditor] = useState<"new" | null>(null);
@@ -93,6 +113,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   }, [setAvailableDocumentIds]);
 
   const refresh = useCallback(async (signal?: AbortSignal, requestedOptions?: SharedLibraryReadOptions) => {
+    if (!requestedOptions && (showDocumentRecovery || showDocumentReorder)) return false;
     if (refreshInFlightRef.current) return false;
     refreshInFlightRef.current = true;
     try {
@@ -132,7 +153,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     } finally {
       refreshInFlightRef.current = false;
     }
-  }, [applySharedResponse, category, paramsString, pathname, router, showDocumentRecovery]);
+  }, [applySharedResponse, category, paramsString, pathname, router, showDocumentRecovery, showDocumentReorder]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -256,13 +277,22 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         setDocumentRecoveryError(error instanceof Error ? error.message : "Recoverable documents could not be loaded.");
       })
       .finally(() => setIsLoadingDocumentRecovery(false));
-    const historyRequest = fetchPurgedLibraryDocuments()
-      .then(setPurgedDocuments)
+    const archiveRequest = fetchSharedLibraryState(undefined, { summary: true, archive: true, includeDeletionAudit: true })
+      .then(response => {
+        setArchivedDocuments(response.state.documents);
+        setArchiveRecordVersions(response.recordVersions.documents);
+      })
       .catch(error => {
-        setPurgedHistoryError(error instanceof Error ? error.message : "Permanent deletion history could not be loaded.");
+        setPurgedHistoryError(error instanceof Error ? error.message : "Protected archive could not be loaded.");
       })
       .finally(() => setIsLoadingPurgedHistory(false));
-    await Promise.allSettled([recoveryRequest, historyRequest]);
+    const backupsRequest = fetchLibraryBackups().then(setLibraryBackups).catch(error => {
+      setPurgedHistoryError(error instanceof Error ? error.message : "Library snapshots could not be loaded.");
+    });
+    const incidentsRequest = fetchLibraryIntegrityIncidents().then(setIntegrityIncidents).catch(error => {
+      setPurgedHistoryError(error instanceof Error ? error.message : "Library integrity incidents could not be loaded.");
+    });
+    await Promise.allSettled([recoveryRequest, archiveRequest, backupsRequest, incidentsRequest]);
   };
 
   const openDocumentRecovery = () => {
@@ -271,7 +301,9 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       return;
     }
     setShowDocumentRecovery(true);
-    setPurgedDocuments([]);
+    setArchivedDocuments([]);
+    setLibraryBackups([]);
+    setIntegrityIncidents([]);
     void refreshDocumentRecovery();
   };
 
@@ -279,7 +311,9 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     setShowDocumentRecovery(false);
     setSystemRecoveryError("");
     setDocumentRecoveryError("");
-    setPurgedDocuments([]);
+    setArchivedDocuments([]);
+    setLibraryBackups([]);
+    setIntegrityIncidents([]);
     setPurgedHistoryError("");
     void refresh(undefined, { summary: true });
   };
@@ -391,12 +425,22 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const recoveryDocumentCount = shared?.recoveryDocumentCount ?? deleted.length;
   const documentCounts = managed.reduce<Record<string, number>>((counts, document) => { counts[document.category] = (counts[document.category] ?? 0) + 1; return counts; }, {});
   const saveDocumentOrder = async (order: string[]) => {
-    const revision = sharedRef.current?.revision;
-    if (revision === undefined) return "The current Library revision is unavailable. Close this window and try again.";
-    const response = await commitMutation(
-      { operation: "documents.reorder", documentIds: order, expectedRevision: revision },
+    const initialRevision = sharedRef.current?.revision;
+    if (initialRevision === undefined) return "The current Library revision is unavailable. Close this window and try again.";
+    let response = await commitMutation(
+      { operation: "documents.reorder", documentIds: order, expectedRevision: initialRevision },
       "",
     );
+    const refreshedRevision = sharedRef.current?.revision;
+    if (!response
+      && refreshedRevision !== undefined
+      && refreshedRevision !== initialRevision
+      && lastMutationErrorRef.current.includes("changed in another session")) {
+      response = await commitMutation(
+        { operation: "documents.reorder", documentIds: order, expectedRevision: refreshedRevision },
+        "",
+      );
+    }
     if (!response) return lastMutationErrorRef.current || "The document order could not be saved. Please try again.";
     setNotice("");
     setShowDocumentReorder(false);
@@ -427,25 +471,13 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     const expectedVersion = sharedRef.current?.recordVersions.documents[document.id];
     if (expectedVersion === undefined) return "The current document version is unavailable. Close this message and try again.";
     const response = await commitMutation({
-      operation: "document.purge",
+      operation: "document.archive",
       documentId: document.id,
       expectedVersion,
     }, "", { summary: true, recovery: true });
-    if (!response) {
-      try {
-        const latest = await fetchSharedLibraryState(undefined, { summary: true, recovery: true });
-        applySharedResponse(latest, false, true);
-        setLibrarySource("server");
-        setMutationsEnabled(latest.initialized);
-        if (!latest.state.documents.some(item => item.id === document.id)) {
-          setNotice("");
-          announceSuccess(`${document.title} was permanently deleted.`);
-          return null;
-        }
-      } catch { /* keep the original mutation error */ }
-      return lastMutationErrorRef.current || "The document could not be permanently deleted. Please try again.";
-    }
-    announceSuccess(`${document.title} was permanently deleted.`);
+    if (!response) return lastMutationErrorRef.current || "The document could not be moved to the protected archive. Please try again.";
+    announceSuccess(`${document.title} was moved to the protected archive.`);
+    void refreshDocumentRecovery();
     return null;
   };
   const recoverDocument = async (document: ManagedLibraryDocument) => {
@@ -474,18 +506,82 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     announceSuccess(`${document.title} was recovered successfully.`);
     return null;
   };
-  const restorePurgedDocument = async (document: PurgedLibraryDocument) => {
+  const restoreArchivedDocument = async (document: ManagedLibraryDocument) => {
+    const expectedVersion = archiveRecordVersions[document.id];
+    if (expectedVersion === undefined) return "The protected archive version is unavailable. Refresh Recovery and try again.";
+    const response = await commitMutation({
+      operation: "document.restoreArchived",
+      documentId: document.id,
+      expectedVersion,
+    }, "", { summary: true });
+    if (!response) return lastMutationErrorRef.current || "The archived document could not be restored.";
+    announceSuccess(`${document.title} was restored from the protected archive.`);
+    await refreshDocumentRecovery();
+    return null;
+  };
+  const restoreVersion = async (version: LibraryVersion) => {
+    const expectedVersion = sharedRef.current?.recordVersions.documents[version.recordId]
+      ?? archiveRecordVersions[version.recordId];
+    if (expectedVersion === undefined) return "The current document version is unavailable.";
+    const response = await commitMutation({
+      operation: "record.restoreVersion",
+      recordType: "document",
+      recordId: version.recordId,
+      versionId: version.id,
+      expectedVersion,
+    }, "", { summary: true });
+    if (!response) return lastMutationErrorRef.current || "The selected version could not be restored.";
+    announceSuccess("The selected document version was restored successfully.");
+    await refreshDocumentRecovery();
+    return null;
+  };
+  const createRecoverySnapshot = async () => {
     try {
-      const restored = await restorePurgedLibraryDocument(document.documentId);
-      applySharedResponse(restored, true, true);
-      setLibrarySource("server");
-      setMutationsEnabled(restored.initialized);
-      setNotice("");
-      announceSuccess(`${document.title} was restored from the protected snapshot.`);
+      const backup = await createLibraryBackup();
+      setLibraryBackups(current => [backup, ...current.filter(item => item.id !== backup.id)]);
+      announceSuccess("A protected Library snapshot was created successfully.");
       return null;
     } catch (error) {
-      return error instanceof Error ? error.message : "The document could not be restored. Please try again.";
+      return error instanceof Error ? error.message : "The Library snapshot could not be created.";
     }
+  };
+  const restoreSnapshotRecords = async (backup: LibraryBackup, recordIds: string[]) => {
+    const revision = sharedRef.current?.revision;
+    if (revision === undefined) return "The current Library revision is unavailable.";
+    try {
+      const snapshot = await fetchLibrarySnapshot(backup.id);
+      const available = new Set(snapshot.state.documents.map(document => document.id));
+      const selected = recordIds.filter(id => available.has(id));
+      if (!selected.length) return "Select at least one document from this snapshot.";
+      const response = await commitMutation({
+        operation: "records.restoreFromSnapshot",
+        snapshotId: backup.id,
+        recordType: "document",
+        recordIds: selected,
+        expectedRevision: revision,
+      }, "", { summary: true });
+      if (!response) return lastMutationErrorRef.current || "The selected snapshot records could not be restored.";
+      announceSuccess(`${selected.length} snapshot ${selected.length === 1 ? "document was" : "documents were"} restored successfully.`);
+      await refreshDocumentRecovery();
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : "The selected snapshot records could not be restored.";
+    }
+  };
+  const acknowledgeIncident = async (incident: LibraryIntegrityIncident) => {
+    const revision = sharedRef.current?.revision;
+    if (revision === undefined) return "The current Library revision is unavailable.";
+    const response = await commitMutation({
+      operation: "integrity.acknowledge",
+      incidentId: incident.id,
+      expectedRevision: revision,
+    }, "", { summary: true });
+    if (!response) return lastMutationErrorRef.current || "The integrity incident could not be acknowledged.";
+    setIntegrityIncidents(current => current.map(item => item.id === incident.id
+      ? { ...item, acknowledgedAt: new Date().toISOString(), acknowledgedBy: "Current administrator" }
+      : item));
+    announceSuccess("Integrity incident acknowledged.");
+    return null;
   };
 
   return <section className="catalog-panel" aria-label="Library documents">
@@ -498,6 +594,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       {canEdit ? <div className="admin-toolbar">{canAdmin && manageMode ? <button className="document-recovery-trigger" type="button" onClick={() => void openDocumentRecovery()} disabled={!mutationsEnabled || isLoadingDocumentRecovery} aria-label={`Open document recovery${recoveryDocumentCount ? ` (${recoveryDocumentCount})` : ""}`} title={!mutationsEnabled ? "Reconnect to view recovery." : recoveryDocumentCount ? `${recoveryDocumentCount} recoverable ${recoveryDocumentCount === 1 ? "document" : "documents"}` : "View recovery and permanent deletion history."}>{isLoadingDocumentRecovery ? <LoaderCircle className="spinning-icon" /> : <RotateCcw />}</button> : null}{canAdmin ? <><button className="catalog-reorder-button" type="button" onClick={() => setShowDocumentReorder(true)} disabled={!mutationsEnabled || activeDocuments.length < 2} title={!mutationsEnabled ? "Reconnect to reorder." : activeDocuments.length < 2 ? "Add or recover another document to reorder." : "Reorder active documents."}><ArrowUpDown /><span>REORDER</span></button><button className={manageMode ? "active" : ""} type="button" disabled={!mutationsEnabled} onClick={() => { if (manageMode && category && !activeCategories.some(item => item.name === category && !item.hidden)) update("category", ""); if (manageMode) closeDocumentRecovery(); setManageMode(value => !value); setNotice(""); }} aria-label={manageMode ? "Return to library view" : "Manage library"} aria-pressed={manageMode}>{manageMode ? <Pencil /> : <Eye />}</button></> : null}<button className="add-topic-button" type="button" disabled={!mutationsEnabled} onClick={() => setEditor("new")} aria-label="Add new topic"><Plus /></button></div> : null}
     </div>
     {manageMode && <div className="admin-mode-banner"><span>Admin mode</span><p>Edit documents and manage category dropdown options, visibility, order, deletion, and recovery.</p>{activeDocuments.length < 2 ? <p className="admin-mode-reorder-hint">Reorder needs at least 2 active documents. Add or recover another document first.</p> : null}</div>}
+    {canAdmin && (shared?.integrityStatus?.unacknowledgedIncidentCount ?? 0) > 0 ? <p className="admin-notice library-integrity-notice" role="alert">Library Protection automatically repaired {shared?.integrityStatus?.unacknowledgedIncidentCount} unexpected {shared?.integrityStatus?.unacknowledgedIncidentCount === 1 ? "change" : "changes"}. Open Recovery → Incidents to review and acknowledge.</p> : null}
     {notice && <p className="admin-notice" role="status">{notice}{librarySource !== "server" && isCatalogReady ? <> <button className="inline-retry-button" type="button" onClick={() => void refresh()}>Try again</button></> : null}</p>}
     {canAdmin && librarySource === "server" && shared?.initialized === false ? <button className="primary-button" type="button" onClick={() => void migrateLibrary()} disabled={isMigrating}>{isMigrating ? "BACKING UP AND IMPORTING…" : "Back up and import complete Library"}</button> : null}
     {isCatalogReady ? <><p className="result-bar" aria-live="polite">{results.length} {results.length === 1 ? "document" : "documents"}</p>
@@ -523,13 +620,20 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       onRecover={recoverDocument}
       onRecoverSystemDeleted={documentIds => void recoverSystemDeletedDocuments(documentIds)}
       onPermanentlyDelete={permanentlyDeleteDocument}
-      purgedDocuments={purgedDocuments}
+      archivedDocuments={archivedDocuments}
+      backups={libraryBackups}
+      incidents={integrityIncidents}
+      activeDocuments={activeDocuments}
       purgedHistoryError={purgedHistoryError}
       isLoadingDocuments={isLoadingDocumentRecovery}
       documentLoadError={documentRecoveryError}
       isLoadingPurgedHistory={isLoadingPurgedHistory}
       onRetry={() => void refreshDocumentRecovery()}
-      onRestorePurged={restorePurgedDocument}
+      onRestoreArchived={restoreArchivedDocument}
+      onRestoreVersion={restoreVersion}
+      onCreateSnapshot={createRecoverySnapshot}
+      onRestoreSnapshotRecords={restoreSnapshotRecords}
+      onAcknowledgeIncident={acknowledgeIncident}
     /> : null}
     {canEdit && editor && mutationsEnabled ? <DocumentEditor key="new" categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft} onCreateCategory={canAdmin ? createCategory : undefined} onManageCategories={canAdmin ? () => setShowCategoryManager(true) : undefined}/> : null}
     {canAdmin && showDocumentReorder ? <DocumentReorderDialog documents={activeDocuments} onCancel={() => setShowDocumentReorder(false)} onSave={saveDocumentOrder} /> : null}

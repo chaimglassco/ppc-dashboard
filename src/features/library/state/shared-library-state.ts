@@ -34,14 +34,21 @@ export type SharedLibraryDeletionAudit = {
 };
 
 export type SharedLibraryDocumentStatus = {
-  status: "active" | "deleted" | "purged" | "not_found";
+  status: "active" | "deleted" | "archived" | "purged" | "not_found";
   slug: string;
   documentId?: string;
   title?: string;
   deletedAt?: string;
+  archivedAt?: string;
   hidden?: boolean;
   recordVersion?: number;
   deletionAudit?: LibraryDocumentDeletionAudit;
+};
+
+export type SharedLibraryIntegrityStatus = {
+  status: "healthy" | "repaired" | "blocked";
+  checksum: string;
+  unacknowledgedIncidentCount: number;
 };
 
 export type SharedLibraryResponse = {
@@ -53,6 +60,8 @@ export type SharedLibraryResponse = {
   updatedBy: string | null;
   snapshotAt?: string;
   recoveryDocumentCount?: number;
+  archivedDocumentCount?: number;
+  integrityStatus?: SharedLibraryIntegrityStatus;
   documentStatus?: SharedLibraryDocumentStatus;
   deletionAudit?: SharedLibraryDeletionAudit;
   restoredCount?: number;
@@ -117,10 +126,11 @@ function parseDeletionAudit(value: unknown): SharedLibraryDeletionAudit | null {
 function parseDocumentStatus(value: unknown): SharedLibraryDocumentStatus | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const entry = value as Record<string, unknown>;
-  if (!["active", "deleted", "purged", "not_found"].includes(String(entry.status)) || typeof entry.slug !== "string") return null;
+  if (!["active", "deleted", "archived", "purged", "not_found"].includes(String(entry.status)) || typeof entry.slug !== "string") return null;
   if (entry.documentId !== undefined && typeof entry.documentId !== "string") return null;
   if (entry.title !== undefined && typeof entry.title !== "string") return null;
   if (entry.deletedAt !== undefined && (typeof entry.deletedAt !== "string" || !Number.isFinite(Date.parse(entry.deletedAt)))) return null;
+  if (entry.archivedAt !== undefined && (typeof entry.archivedAt !== "string" || !Number.isFinite(Date.parse(entry.archivedAt)))) return null;
   if (entry.hidden !== undefined && typeof entry.hidden !== "boolean") return null;
   if (entry.recordVersion !== undefined && (!Number.isInteger(entry.recordVersion) || Number(entry.recordVersion) < 0)) return null;
   let deletionAudit: LibraryDocumentDeletionAudit | undefined;
@@ -135,6 +145,7 @@ function parseDocumentStatus(value: unknown): SharedLibraryDocumentStatus | null
     ...(typeof entry.documentId === "string" ? { documentId: entry.documentId } : {}),
     ...(typeof entry.title === "string" ? { title: entry.title } : {}),
     ...(typeof entry.deletedAt === "string" ? { deletedAt: entry.deletedAt } : {}),
+    ...(typeof entry.archivedAt === "string" ? { archivedAt: entry.archivedAt } : {}),
     ...(typeof entry.hidden === "boolean" ? { hidden: entry.hidden } : {}),
     ...(entry.recordVersion === undefined ? {} : { recordVersion: Number(entry.recordVersion) }),
     ...(deletionAudit ? { deletionAudit } : {}),
@@ -153,6 +164,21 @@ export function parseSharedLibraryResponse(value: unknown): SharedLibraryRespons
   if (candidate.updatedBy !== null && candidate.updatedBy !== undefined && typeof candidate.updatedBy !== "string") return null;
   if (candidate.snapshotAt !== undefined && (typeof candidate.snapshotAt !== "string" || !Number.isFinite(Date.parse(candidate.snapshotAt)))) return null;
   if (candidate.recoveryDocumentCount !== undefined && (!Number.isInteger(candidate.recoveryDocumentCount) || Number(candidate.recoveryDocumentCount) < 0)) return null;
+  if (candidate.archivedDocumentCount !== undefined && (!Number.isInteger(candidate.archivedDocumentCount) || Number(candidate.archivedDocumentCount) < 0)) return null;
+  let integrityStatus: SharedLibraryIntegrityStatus | undefined;
+  if (candidate.integrityStatus !== undefined) {
+    if (!candidate.integrityStatus || typeof candidate.integrityStatus !== "object" || Array.isArray(candidate.integrityStatus)) return null;
+    const integrity = candidate.integrityStatus as Record<string, unknown>;
+    if (!["healthy", "repaired", "blocked"].includes(String(integrity.status))
+      || typeof integrity.checksum !== "string"
+      || !Number.isInteger(integrity.unacknowledgedIncidentCount)
+      || Number(integrity.unacknowledgedIncidentCount) < 0) return null;
+    integrityStatus = {
+      status: integrity.status as SharedLibraryIntegrityStatus["status"],
+      checksum: integrity.checksum,
+      unacknowledgedIncidentCount: Number(integrity.unacknowledgedIncidentCount),
+    };
+  }
   const documentStatus = candidate.documentStatus === undefined ? undefined : parseDocumentStatus(candidate.documentStatus);
   if (candidate.documentStatus !== undefined && !documentStatus) return null;
   const deletionAudit = candidate.deletionAudit === undefined ? undefined : parseDeletionAudit(candidate.deletionAudit);
@@ -169,6 +195,10 @@ export function parseSharedLibraryResponse(value: unknown): SharedLibraryRespons
     recoveryDocumentCount: candidate.recoveryDocumentCount === undefined
       ? state.documents.filter(document => document.deletedAt).length
       : Number(candidate.recoveryDocumentCount),
+    archivedDocumentCount: candidate.archivedDocumentCount === undefined
+      ? state.documents.filter(document => document.archivedAt).length
+      : Number(candidate.archivedDocumentCount),
+    ...(integrityStatus ? { integrityStatus } : {}),
     ...(documentStatus ? { documentStatus } : {}),
     ...(deletionAudit ? { deletionAudit } : {}),
     ...(candidate.restoredCount === undefined ? {} : { restoredCount: Number(candidate.restoredCount) }),

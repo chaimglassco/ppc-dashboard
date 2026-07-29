@@ -1,0 +1,56 @@
+import { fireEvent, render, waitFor, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { getPublishedDocuments } from "../data/repository";
+import { DeletedDocuments } from "./deleted-documents";
+
+function props() {
+  return {
+    documents: [],
+    archivedDocuments: [],
+    activeDocuments: getPublishedDocuments(),
+    backups: [],
+    incidents: [],
+    deletionAudit: {},
+    isRecoveringSystemDocuments: false,
+    systemRecoveryError: "",
+    onClose: vi.fn(),
+    onRecover: vi.fn().mockResolvedValue(null),
+    onRecoverSystemDeleted: vi.fn(),
+    onPermanentlyDelete: vi.fn().mockResolvedValue(null),
+    onRestoreArchived: vi.fn().mockResolvedValue(null),
+    onRestoreVersion: vi.fn().mockResolvedValue(null),
+    onCreateSnapshot: vi.fn().mockResolvedValue(null),
+    onRestoreSnapshotRecords: vi.fn().mockResolvedValue(null),
+    onAcknowledgeIncident: vi.fn().mockResolvedValue(null),
+    purgedHistoryError: "",
+    isLoadingDocuments: false,
+    documentLoadError: "",
+    isLoadingPurgedHistory: false,
+    onRetry: vi.fn(),
+  };
+}
+
+describe("Library Recovery Center", () => {
+  it("shows all five recovery sections", () => {
+    const view = render(<DeletedDocuments {...props()} />);
+    const dialog = within(view.container).getByRole("dialog", { name: "Recovery Center" });
+    expect(dialog).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Deleted" })).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Protected archive" })).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Version history" })).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Snapshots" })).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Incidents" })).toBeVisible();
+  });
+
+  it("requires confirmation and explains indefinite protection before archiving", async () => {
+    const document = { ...getPublishedDocuments()[0], deletedAt: "2026-07-22T06:48:42.000Z" };
+    const callbacks = props();
+    const view = render(<DeletedDocuments {...callbacks} documents={[document]} />);
+    const dialog = within(view.container).getByRole("dialog", { name: "Recovery Center" });
+    fireEvent.click(within(dialog).getByRole("button", { name: `Move ${document.title} to protected archive` }));
+    const confirmation = within(view.container).getByRole("alertdialog", { name: "Move out of normal Recovery?" });
+    expect(within(confirmation).getByText(/full content and history will remain protected indefinitely/i)).toBeVisible();
+    fireEvent.click(within(confirmation).getByRole("button", { name: "Move to protected archive" }));
+    await waitFor(() => expect(callbacks.onPermanentlyDelete).toHaveBeenCalledWith(document));
+  });
+});

@@ -18,7 +18,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Session-only Pipeline logins cross into a new tab through a 30-second one-use handoff; persistent “Remember me” sessions are unchanged.
 - Missing or expired sessions return to Pipeline login with a validated requested PPC destination.
 - PPC verifies the existing Pipeline session through Pipeline’s `/api/auth/session` endpoint.
-- ADMIN users have full document, category, attributed recovery, reorder, backup, and restore access, including an explicit bulk action for documents deleted by the historical system cleanup and a separately confirmed permanent delete for existing tombstones.
+- ADMIN users have full document, category, attributed recovery, reorder, snapshot, version, protected-archive, and integrity-incident access. Document content is never physically deleted through the application.
 - USER users can create documents and edit active document content and metadata.
 - VIEWER users receive read-only Library access. Personal bookmark and completion controls remain available to every role.
 
@@ -29,6 +29,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Read responsive documents with numbered, scroll-synchronized topic navigation.
 - Bookmark documents, track recent views, and mark documents complete.
 - Create and update active documents as ADMIN or USER; document/category lifecycle, ordering, recovery, and backup controls remain ADMIN-only.
+- Use the ADMIN Recovery Center tabs for Deleted, Protected archive, Version history, Snapshots, and Incidents. Moving a tombstone out of normal Recovery keeps its full content protected indefinitely.
 - Keep the catalog list hidden behind a loading skeleton until saved shared state is resolved, preventing deleted documents from flashing during refresh.
 - Create, rename, hide, reorder, delete, and recover category options as an ADMIN.
 - Attach YouTube, Google Drive, direct-file, or other HTTPS video links; supported providers render in a large responsive player inside the blue document header’s right column. Google Drive playback is centered in the visible frame and keeps a compact new-tab icon without a redundant text button.
@@ -57,12 +58,13 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Pipeline's Postgres-backed `/api/library-state` endpoint is the only authoritative document and category store. Repository Markdown under `content/library` is bootstrap/compatibility input and is never merged into an initialized catalog.
 - `/ppc/api/library` is an authenticated adapter for scoped Pipeline mutations. It never maintains a second writable snapshot.
 - Successful shared responses are cached in browser storage only as a validated read-only outage fallback. Old browser administration snapshots are never uploaded or merged.
-- Private Vercel Blob remains the image store and retains the immutable legacy snapshot/backup used by the protected one-time migration route; it is not the live catalog store.
+- Private Vercel Blob remains the image store and also receives immutable daily offsite Library snapshots. Pipeline Postgres remains the only live catalog store.
 - Bookmarks, recent history, completion, last-read position, and remembered application routes remain browser-local.
 - Pipeline authorizes every request against the current active user row: ADMIN has full access, USER may create/update active documents, and VIEWER is read-only.
 - Catalog responses include a global revision and per-record versions. ADMIN responses also include user/system/unknown deletion attribution. Stale mutations return `409` with current shared state rather than overwriting another account's work.
 - Legacy initialization imports the complete validated catalog after making its immutable backup; it no longer creates new tombstones. Pipeline backup restore is a non-destructive merge.
 - Visible Library tabs poll every five seconds and refresh immediately on focus. Failed server access leaves a validated cache visible in read-only mode.
+- The `/ppc/api/library/maintenance` cron runs daily at 16:30 UTC, asks Pipeline to verify/repair integrity and create a database snapshot, then stores the same state under `glassco/library-snapshots-v2/` in private Vercel Blob. `LIBRARY_BACKUP_SECRET` must match in both Vercel projects.
 
 The current browser-stored Pipeline bearer token is not the final page-security boundary. A future authentication milestone should move the session to secure same-origin cookies so authenticated access can be enforced before page HTML is returned.
 

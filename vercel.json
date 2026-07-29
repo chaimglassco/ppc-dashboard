@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/ppc/api/library/maintenance",
+      "schedule": "30 16 * * *"
+    }
+  ]
+}

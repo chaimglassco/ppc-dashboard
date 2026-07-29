@@ -5,6 +5,7 @@ export type ManagedCategory = {
   name: string;
   hidden: boolean;
   deletedAt?: string;
+  archivedAt?: string;
 };
 
 type CategoryState = { version: 1; categories: ManagedCategory[] };
@@ -25,7 +26,9 @@ export function parseCategoryState(raw: string | null): CategoryState | null {
     const categories = state.categories.filter((item): item is ManagedCategory => {
       if (!item || typeof item !== "object") return false;
       const category = item as Record<string, unknown>;
-      return typeof category.id === "string" && typeof category.name === "string" && typeof category.hidden === "boolean" && (category.deletedAt === undefined || typeof category.deletedAt === "string");
+      return typeof category.id === "string" && typeof category.name === "string" && typeof category.hidden === "boolean"
+        && (category.deletedAt === undefined || typeof category.deletedAt === "string")
+        && (category.archivedAt === undefined || typeof category.archivedAt === "string");
     });
     return { version: 1, categories };
   } catch {

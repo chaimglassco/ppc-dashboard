@@ -1,7 +1,7 @@
 import { DOCUMENT_TYPES, type LibraryContentElement, type LibraryDocument } from "../domain/types";
 import { isRichTextDocument } from "../domain/rich-text";
 
-export type ManagedLibraryDocument = LibraryDocument & { deletedAt?: string };
+export type ManagedLibraryDocument = LibraryDocument & { deletedAt?: string; archivedAt?: string };
 export type AdminLibraryState = { version: 1; documents: ManagedLibraryDocument[] };
 
 function isStringArray(value: unknown): value is string[] { return Array.isArray(value) && value.every(item => typeof item === "string"); }
@@ -39,6 +39,8 @@ function isDocument(value: unknown): value is ManagedLibraryDocument {
     typeof doc.description === "string" && typeof doc.body === "string" && typeof doc.updatedAt === "string" &&
     typeof doc.category === "string" && DOCUMENT_TYPES.includes(doc.type as never) &&
     Array.isArray(doc.tags) && Array.isArray(doc.topics) && typeof doc.hidden === "boolean" &&
+    (doc.deletedAt === undefined || typeof doc.deletedAt === "string") &&
+    (doc.archivedAt === undefined || typeof doc.archivedAt === "string") &&
     (doc.videoUrl === undefined || typeof doc.videoUrl === "string") &&
     (doc.contentElements === undefined || (Array.isArray(doc.contentElements) && doc.contentElements.every(isContentElement)));
 }

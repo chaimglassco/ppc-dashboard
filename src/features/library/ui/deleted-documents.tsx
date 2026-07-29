@@ -1,13 +1,25 @@
 "use client";
 
-import { AlertTriangle, LoaderCircle, RotateCcw, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { AlertTriangle, Archive, Clock3, DatabaseBackup, History, LoaderCircle, RotateCcw, ShieldAlert, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import type { ManagedLibraryDocument } from "../state/admin-storage";
-import type { PurgedLibraryDocument } from "../state/shared-library-client";
+import {
+  fetchLibrarySnapshot,
+  fetchLibraryVersions,
+  type LibraryBackup,
+  type LibraryIntegrityIncident,
+  type LibraryVersion,
+} from "../state/shared-library-client";
 import type { LibraryDocumentDeletionAudit } from "../state/shared-library-state";
+
+type RecoveryTab = "deleted" | "archive" | "versions" | "snapshots" | "incidents";
 
 type DeletedDocumentsProps = {
   documents: ManagedLibraryDocument[];
+  archivedDocuments?: ManagedLibraryDocument[];
+  activeDocuments?: ManagedLibraryDocument[];
+  backups?: LibraryBackup[];
+  incidents?: LibraryIntegrityIncident[];
   deletionAudit: Record<string, LibraryDocumentDeletionAudit>;
   isRecoveringSystemDocuments: boolean;
   systemRecoveryError: string;
@@ -15,21 +27,23 @@ type DeletedDocumentsProps = {
   onRecover: (document: ManagedLibraryDocument) => Promise<string | null>;
   onRecoverSystemDeleted: (documentIds: string[]) => void;
   onPermanentlyDelete: (document: ManagedLibraryDocument) => Promise<string | null>;
-  purgedDocuments: PurgedLibraryDocument[];
+  onRestoreArchived?: (document: ManagedLibraryDocument) => Promise<string | null>;
+  onRestoreVersion?: (version: LibraryVersion) => Promise<string | null>;
+  onCreateSnapshot?: () => Promise<string | null>;
+  onRestoreSnapshotRecords?: (backup: LibraryBackup, recordIds: string[]) => Promise<string | null>;
+  onAcknowledgeIncident?: (incident: LibraryIntegrityIncident) => Promise<string | null>;
+  purgedDocuments?: unknown[];
+  onRestorePurged?: (document: unknown) => Promise<string | null>;
   purgedHistoryError: string;
   isLoadingDocuments: boolean;
   documentLoadError: string;
   isLoadingPurgedHistory: boolean;
   onRetry: () => void;
-  onRestorePurged: (document: PurgedLibraryDocument) => Promise<string | null>;
 };
 
 function actorLabel(actor: LibraryDocumentDeletionAudit["actor"]) {
   if (!actor) return "";
-  const identity = actor.name || actor.email;
-  if (!identity) return "";
-  const email = actor.email && actor.email !== identity ? ` (${actor.email})` : "";
-  return `${identity}${email} · ${actor.role}`;
+  return `${actor.name || actor.email}${actor.email && actor.email !== actor.name ? ` (${actor.email})` : ""} · ${actor.role}`;
 }
 
 function deletionLabel(document: ManagedLibraryDocument, audit?: LibraryDocumentDeletionAudit) {
@@ -41,193 +55,171 @@ function deletionLabel(document: ManagedLibraryDocument, audit?: LibraryDocument
   return `Deleted ${date} by System — Backup restore`;
 }
 
-function initiatorLabel(audit?: LibraryDocumentDeletionAudit) {
-  if (!audit?.initiatedBy) return "";
-  return `Initiated by ${actorLabel(audit.initiatedBy)}`;
+function tabLabel(tab: RecoveryTab, count: number) {
+  const labels: Record<RecoveryTab, string> = {
+    deleted: "Deleted",
+    archive: "Protected archive",
+    versions: "Version history",
+    snapshots: "Snapshots",
+    incidents: "Incidents",
+  };
+  return `${labels[tab]}${count ? ` (${count})` : ""}`;
 }
 
-function protectedRestoreLabel(document: PurgedLibraryDocument) {
-  return /bqool/i.test(document.title) ? "bQool" : document.title;
-}
+export function DeletedDocuments(props: DeletedDocumentsProps) {
+  const {
+    documents,
+    archivedDocuments = [],
+    activeDocuments = [],
+    backups = [],
+    incidents = [],
+    deletionAudit,
+    isRecoveringSystemDocuments,
+    systemRecoveryError,
+    onClose,
+    onRecover,
+    onRecoverSystemDeleted,
+    onPermanentlyDelete,
+    onRestoreArchived = async () => "Protected archive recovery is unavailable.",
+    onRestoreVersion = async () => "Version recovery is unavailable.",
+    onCreateSnapshot = async () => "Snapshot creation is unavailable.",
+    onRestoreSnapshotRecords = async () => "Snapshot recovery is unavailable.",
+    onAcknowledgeIncident = async () => "Incident acknowledgement is unavailable.",
+    purgedHistoryError,
+    isLoadingDocuments,
+    documentLoadError,
+    isLoadingPurgedHistory,
+    onRetry,
+  } = props;
+  const [tab, setTab] = useState<RecoveryTab>("deleted");
+  const [busyId, setBusyId] = useState("");
+  const [rowError, setRowError] = useState("");
+  const [archiveTarget, setArchiveTarget] = useState<ManagedLibraryDocument | null>(null);
+  const [versionRecordId, setVersionRecordId] = useState("");
+  const [versions, setVersions] = useState<LibraryVersion[]>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [snapshotTarget, setSnapshotTarget] = useState<LibraryBackup | null>(null);
+  const [snapshotDocuments, setSnapshotDocuments] = useState<ManagedLibraryDocument[]>([]);
+  const [selectedSnapshotIds, setSelectedSnapshotIds] = useState<string[]>([]);
+  const [loadingSnapshot, setLoadingSnapshot] = useState(false);
+  const allDocuments = useMemo(() => {
+    const map = new Map<string, ManagedLibraryDocument>();
+    [...activeDocuments, ...documents, ...archivedDocuments].forEach(document => map.set(document.id, document));
+    return [...map.values()].sort((a, b) => a.title.localeCompare(b.title));
+  }, [activeDocuments, archivedDocuments, documents]);
+  const systemDeletedIds = documents.filter(document => deletionAudit[document.id]?.source === "system_migration").map(document => document.id);
+  const unacknowledged = incidents.filter(incident => !incident.acknowledgedAt).length;
+  const isBusy = Boolean(busyId) || isRecoveringSystemDocuments || loadingVersions || loadingSnapshot;
 
-export function DeletedDocuments({
-  documents,
-  deletionAudit,
-  isRecoveringSystemDocuments,
-  systemRecoveryError,
-  onClose,
-  onRecover,
-  onRecoverSystemDeleted,
-  onPermanentlyDelete,
-  purgedDocuments,
-  purgedHistoryError,
-  isLoadingDocuments,
-  documentLoadError,
-  isLoadingPurgedHistory,
-  onRetry,
-  onRestorePurged,
-}: DeletedDocumentsProps) {
-  const [confirmSystemRecovery, setConfirmSystemRecovery] = useState(false);
-  const [documentToPurge, setDocumentToPurge] = useState<ManagedLibraryDocument | null>(null);
-  const [purgedToRestore, setPurgedToRestore] = useState<PurgedLibraryDocument | null>(null);
-  const [recoveringDocumentId, setRecoveringDocumentId] = useState("");
-  const [recoverError, setRecoverError] = useState<{ documentId: string; message: string } | null>(null);
-  const [isPermanentlyDeleting, setIsPermanentlyDeleting] = useState(false);
-  const [isRestoringPurged, setIsRestoringPurged] = useState(false);
-  const [permanentDeleteError, setPermanentDeleteError] = useState("");
-  const [purgedRestoreError, setPurgedRestoreError] = useState("");
-
-  const isBusy = isRecoveringSystemDocuments || isPermanentlyDeleting || isRestoringPurged || Boolean(recoveringDocumentId);
-  const systemDeletedIds = documents
-    .filter(document => deletionAudit[document.id]?.source === "system_migration")
-    .map(document => document.id);
-
-  const confirmPermanentDelete = async () => {
-    if (!documentToPurge || isPermanentlyDeleting) return;
-    setIsPermanentlyDeleting(true);
-    setPermanentDeleteError("");
-    const error = await onPermanentlyDelete(documentToPurge);
-    setIsPermanentlyDeleting(false);
+  const run = async (id: string, action: () => Promise<string | null>) => {
+    if (isBusy) return false;
+    setBusyId(id);
+    setRowError("");
+    const error = await action();
+    setBusyId("");
     if (error) {
-      setPermanentDeleteError(error);
-      return;
+      setRowError(error);
+      return false;
     }
-    setDocumentToPurge(null);
-    if (documents.length === 1) onClose();
+    return true;
   };
 
-  const recoverDocument = async (document: ManagedLibraryDocument) => {
-    if (isBusy) return;
-    setRecoveringDocumentId(document.id);
-    setRecoverError(null);
-    const error = await onRecover(document);
-    setRecoveringDocumentId("");
-    if (error) {
-      setRecoverError({ documentId: document.id, message: error });
-      return;
+  const loadVersions = async (recordId: string) => {
+    setVersionRecordId(recordId);
+    setVersions([]);
+    setRowError("");
+    if (!recordId) return;
+    setLoadingVersions(true);
+    try {
+      setVersions(await fetchLibraryVersions("document", recordId));
+    } catch (error) {
+      setRowError(error instanceof Error ? error.message : "Version history could not be loaded.");
+    } finally {
+      setLoadingVersions(false);
     }
-    if (documents.length === 1) onClose();
   };
 
-  const restorePurgedDocument = async () => {
-    if (!purgedToRestore || isBusy) return;
-    setIsRestoringPurged(true);
-    setPurgedRestoreError("");
-    const error = await onRestorePurged(purgedToRestore);
-    setIsRestoringPurged(false);
-    if (error) {
-      setPurgedRestoreError(error);
-      return;
+  const loadSnapshot = async (backup: LibraryBackup) => {
+    setSnapshotTarget(backup);
+    setSnapshotDocuments([]);
+    setSelectedSnapshotIds([]);
+    setRowError("");
+    setLoadingSnapshot(true);
+    try {
+      const snapshot = await fetchLibrarySnapshot(backup.id);
+      setSnapshotDocuments(snapshot.state.documents);
+    } catch (error) {
+      setRowError(error instanceof Error ? error.message : "Snapshot contents could not be loaded.");
+    } finally {
+      setLoadingSnapshot(false);
     }
-    setPurgedToRestore(null);
-    onClose();
   };
 
-  return <>
-    <div className="admin-modal-backdrop document-recovery-backdrop" role="presentation" onMouseDown={event => {
-      if (event.target === event.currentTarget && !isBusy) onClose();
-    }}>
-      <section className="admin-modal document-recovery-modal" role="dialog" aria-modal="true" aria-labelledby="deleted-documents-heading">
-        <header>
-          <div><span className="eyebrow">RECOVERY</span><h2 id="deleted-documents-heading">Deleted documents</h2><p>See what deleted each document before deciding what to recover or permanently delete.</p></div>
-          <button type="button" onClick={onClose} disabled={isBusy} aria-label="Close document recovery"><X /></button>
-        </header>
-        <div className="document-recovery-content">
-          {isLoadingDocuments ? <div className="document-recovery-load-state" role="status"><LoaderCircle className="spinning-icon" /><strong>Loading recoverable documents...</strong></div> : null}
-          {documentLoadError ? <div className="document-recovery-load-error" role="alert"><p>{documentLoadError}</p><button className="secondary-button" type="button" disabled={isLoadingDocuments || isLoadingPurgedHistory} onClick={onRetry}><RotateCcw /> Try again</button></div> : null}
-          {systemDeletedIds.length ? <section className="system-recovery-panel" aria-label="System-deleted document recovery">
-            {!confirmSystemRecovery ? <>
-              <div><strong>{systemDeletedIds.length} {systemDeletedIds.length === 1 ? "document was" : "documents were"} deleted by the Initial Library cleanup.</strong><p>This will not recover documents deleted manually by a user.</p></div>
-              <button className="primary-button" type="button" disabled={isBusy} onClick={() => setConfirmSystemRecovery(true)}><RotateCcw /> Recover system-deleted documents</button>
-            </> : <>
-              <AlertTriangle aria-hidden="true" />
-              <div><strong>Recover {systemDeletedIds.length} system-deleted {systemDeletedIds.length === 1 ? "document" : "documents"}?</strong><p>The recovery is atomic: either every eligible document is restored, or none are.</p>{systemRecoveryError ? <p className="system-recovery-error" role="alert">{systemRecoveryError}</p> : null}</div>
-              <div className="system-recovery-actions">
-                <button className="secondary-button" type="button" disabled={isBusy} onClick={() => setConfirmSystemRecovery(false)}>Cancel</button>
-                <button className="primary-button" type="button" disabled={isBusy} onClick={() => onRecoverSystemDeleted(systemDeletedIds)}>
-                  {isRecoveringSystemDocuments ? <><LoaderCircle className="spinning-icon" /> Recovering…</> : <><RotateCcw /> Confirm recovery</>}
-                </button>
-              </div>
-            </>}
-          </section> : null}
-          {!isLoadingDocuments && documents.length ? <div className="document-recovery-list">{documents.map(document => {
-            const audit = deletionAudit[document.id];
-            const initiatedBy = initiatorLabel(audit);
-            const isRecovering = recoveringDocumentId === document.id;
-            const rowError = recoverError?.documentId === document.id ? recoverError.message : "";
-            return <article className="document-recovery-row" key={document.id}>
-              <div><strong>{document.title}</strong><small>{deletionLabel(document, audit)}</small>{initiatedBy ? <small>{initiatedBy}</small> : null}{rowError ? <small className="document-recovery-error" role="alert">{rowError}</small> : null}</div>
-              <div className="document-recovery-actions">
-                <button className="secondary-button" type="button" disabled={isBusy} onClick={() => void recoverDocument(document)}>
-                  {isRecovering ? <><LoaderCircle className="spinning-icon" /> Recovering…</> : <><RotateCcw /> Recover</>}
-                </button>
-                <button className="document-permanent-delete-button" type="button" disabled={isBusy} aria-label={`Permanently delete ${document.title}`} title="Permanently delete" onClick={() => { setPermanentDeleteError(""); setDocumentToPurge(document); }}><Trash2 /></button>
-              </div>
-            </article>;
-          })}</div> : null}
-          {isLoadingPurgedHistory ? <div className="document-recovery-load-state" role="status"><LoaderCircle className="spinning-icon" /><strong>Loading permanent deletion history...</strong></div> : null}
-          {purgedHistoryError ? <div className="document-recovery-load-error" role="alert"><p>{purgedHistoryError}</p><button className="secondary-button" type="button" disabled={isLoadingDocuments || isLoadingPurgedHistory} onClick={onRetry}><RotateCcw /> Try again</button></div> : null}
-          {!isLoadingPurgedHistory && purgedDocuments.length ? <section className="permanent-deletion-history" aria-label="Permanent deletion history">
-            <div className="permanent-deletion-history__heading">
-              <strong>Permanent deletion history</strong>
-              <p>These documents are no longer in normal Recovery. Restoring is available only for explicitly approved protected records.</p>
+  return <div className="admin-modal-backdrop document-recovery-backdrop" role="presentation" onMouseDown={event => {
+    if (event.target === event.currentTarget && !isBusy) onClose();
+  }}>
+    <section className="admin-modal document-recovery-modal recovery-center-modal" role="dialog" aria-modal="true" aria-labelledby="deleted-documents-heading">
+      <header>
+        <div><span className="eyebrow">LIBRARY PROTECTION</span><h2 id="deleted-documents-heading">Recovery Center</h2><p>Recover deleted content, protected archives, prior versions, snapshots, and integrity repairs.</p></div>
+        <button type="button" onClick={onClose} disabled={isBusy} aria-label="Close document recovery"><X /></button>
+      </header>
+      <nav className="recovery-center-tabs" aria-label="Recovery Center sections">
+        {([
+          ["deleted", documents.length],
+          ["archive", archivedDocuments.length],
+          ["versions", 0],
+          ["snapshots", backups.length],
+          ["incidents", unacknowledged],
+        ] as Array<[RecoveryTab, number]>).map(([name, count]) => <button key={name} type="button" className={tab === name ? "active" : ""} onClick={() => setTab(name)}>{tabLabel(name, count)}</button>)}
+      </nav>
+      <div className="document-recovery-content">
+        {(isLoadingDocuments || isLoadingPurgedHistory) ? <div className="document-recovery-load-state" role="status"><LoaderCircle className="spinning-icon" /><strong>Loading Recovery Center…</strong></div> : null}
+        {(documentLoadError || purgedHistoryError) ? <div className="document-recovery-load-error" role="alert"><p>{documentLoadError || purgedHistoryError}</p><button className="secondary-button" type="button" onClick={onRetry}><RotateCcw /> Try again</button></div> : null}
+        {rowError ? <div className="document-recovery-load-error" role="alert"><p>{rowError}</p></div> : null}
+
+        {tab === "deleted" && !isLoadingDocuments ? <>
+          {systemDeletedIds.length ? <section className="system-recovery-panel"><ShieldAlert /><div><strong>{systemDeletedIds.length} system-deleted {systemDeletedIds.length === 1 ? "document" : "documents"} detected</strong><p>This restores only records attributed to the Initial Library cleanup.</p>{systemRecoveryError ? <p role="alert">{systemRecoveryError}</p> : null}</div><button className="primary-button" type="button" disabled={isBusy} onClick={() => onRecoverSystemDeleted(systemDeletedIds)}>{isRecoveringSystemDocuments ? <><LoaderCircle className="spinning-icon" /> Recovering…</> : <><RotateCcw /> Recover system-deleted</>}</button></section> : null}
+          <div className="document-recovery-list">{documents.map(document => <article className="document-recovery-row" key={document.id}>
+            <div><strong>{document.title}</strong><small>{deletionLabel(document, deletionAudit[document.id])}</small></div>
+            <div className="document-recovery-actions">
+              <button className="secondary-button" type="button" disabled={isBusy} onClick={() => void run(`recover-${document.id}`, () => onRecover(document))}>{busyId === `recover-${document.id}` ? <LoaderCircle className="spinning-icon" /> : <RotateCcw />} Recover</button>
+              <button className="document-permanent-delete-button" type="button" disabled={isBusy} aria-label={`Move ${document.title} to protected archive`} title="Move to protected archive" onClick={() => setArchiveTarget(document)}><Archive /></button>
             </div>
-            <div className="document-recovery-list">{purgedDocuments.map(document => <article className="document-recovery-row" key={document.documentId}>
-              <div>
-                <strong>{document.title}</strong>
-                <small>{document.deletedAt ? `Permanently deleted ${new Date(document.deletedAt).toLocaleString()}` : "Permanently deleted"}</small>
-                <small>Protected copy: {document.source.label}{document.source.createdAt ? ` · ${new Date(document.source.createdAt).toLocaleString()}` : ""}</small>
-              </div>
-              <div className="document-recovery-actions">
-                {document.canRestore ? <button className="secondary-button" type="button" disabled={isBusy} onClick={() => { setPurgedRestoreError(""); setPurgedToRestore(document); }}><RotateCcw /> Restore {protectedRestoreLabel(document)}</button> : <span className="permanent-deletion-history__status">History only</span>}
-              </div>
-            </article>)}</div>
-          </section> : null}
-          {!isLoadingDocuments && !isLoadingPurgedHistory && !documentLoadError && !purgedHistoryError && !documents.length && !purgedDocuments.length ? <p className="document-recovery-empty">No recoverable or known permanently deleted documents were found.</p> : null}
-        </div>
-      </section>
-    </div>
-    {documentToPurge ? <div className="admin-modal-backdrop permanent-delete-backdrop" role="presentation" onMouseDown={event => {
-      if (event.target === event.currentTarget && !isPermanentlyDeleting) setDocumentToPurge(null);
-    }}>
-      <section className="admin-modal permanent-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="permanent-delete-heading" aria-describedby="permanent-delete-description">
-        <header>
-          <div><span className="eyebrow">PERMANENT DELETION</span><h2 id="permanent-delete-heading">Delete forever?</h2></div>
-          <button type="button" disabled={isPermanentlyDeleting} onClick={() => setDocumentToPurge(null)} aria-label="Close permanent delete confirmation"><X /></button>
-        </header>
-        <div className="permanent-delete-dialog__body">
-          <AlertTriangle aria-hidden="true" />
-          <p id="permanent-delete-description">Permanently delete <strong>“{documentToPurge.title}”</strong>? Its content will be removed forever and cannot be recovered from this list or restored from a backup.</p>
-          {permanentDeleteError ? <p className="permanent-delete-dialog__error" role="alert">{permanentDeleteError}</p> : null}
-        </div>
-        <footer>
-          <button className="secondary-button" type="button" disabled={isPermanentlyDeleting} onClick={() => setDocumentToPurge(null)}>Cancel</button>
-          <button className="permanent-delete-dialog__confirm" type="button" disabled={isPermanentlyDeleting} onClick={() => void confirmPermanentDelete()}>
-            {isPermanentlyDeleting ? <><LoaderCircle className="spinning-icon" /> Deleting forever…</> : <><Trash2 /> Permanently delete</>}
-          </button>
-        </footer>
-      </section>
-    </div> : null}
-    {purgedToRestore ? <div className="admin-modal-backdrop permanent-delete-backdrop" role="presentation" onMouseDown={event => {
-      if (event.target === event.currentTarget && !isRestoringPurged) setPurgedToRestore(null);
-    }}>
-      <section className="admin-modal permanent-delete-dialog protected-restore-dialog" role="alertdialog" aria-modal="true" aria-labelledby="protected-restore-heading" aria-describedby="protected-restore-description">
-        <header>
-          <div><span className="eyebrow">PROTECTED SNAPSHOT</span><h2 id="protected-restore-heading">Restore {protectedRestoreLabel(purgedToRestore)}?</h2></div>
-          <button type="button" disabled={isRestoringPurged} onClick={() => setPurgedToRestore(null)} aria-label="Close protected restore confirmation"><X /></button>
-        </header>
-        <div className="permanent-delete-dialog__body">
-          <RotateCcw aria-hidden="true" />
-          <p id="protected-restore-description">Restore <strong>“{purgedToRestore.title}”</strong> from {purgedToRestore.source.label}? Its original document link and content will be put back into the active Library.</p>
-          {purgedRestoreError ? <p className="permanent-delete-dialog__error" role="alert">{purgedRestoreError}</p> : null}
-        </div>
-        <footer>
-          <button className="secondary-button" type="button" disabled={isRestoringPurged} onClick={() => setPurgedToRestore(null)}>Cancel</button>
-          <button className="primary-button" type="button" disabled={isRestoringPurged} onClick={() => void restorePurgedDocument()}>
-            {isRestoringPurged ? <><LoaderCircle className="spinning-icon" /> Restoring…</> : <><RotateCcw /> Confirm restoration</>}
-          </button>
-        </footer>
+          </article>)}</div>
+          {!documents.length ? <p className="document-recovery-empty">There are no deleted documents.</p> : null}
+        </> : null}
+
+        {tab === "archive" ? <div className="document-recovery-list">{archivedDocuments.map(document => <article className="document-recovery-row" key={document.id}>
+          <div><strong>{document.title}</strong><small>Protected indefinitely{document.archivedAt ? ` · Archived ${new Date(document.archivedAt).toLocaleString()}` : ""}</small></div>
+          <button className="secondary-button" type="button" disabled={isBusy} onClick={() => void run(`archive-${document.id}`, () => onRestoreArchived(document))}>{busyId === `archive-${document.id}` ? <LoaderCircle className="spinning-icon" /> : <RotateCcw />} Restore</button>
+        </article>)}
+        {!archivedDocuments.length ? <p className="document-recovery-empty">The protected archive is empty.</p> : null}</div> : null}
+
+        {tab === "versions" ? <section className="recovery-center-section">
+          <label>Document<select value={versionRecordId} onChange={event => void loadVersions(event.target.value)}><option value="">Choose a document</option>{allDocuments.map(document => <option key={document.id} value={document.id}>{document.title}</option>)}</select></label>
+          {loadingVersions ? <div className="document-recovery-load-state"><LoaderCircle className="spinning-icon" /> Loading versions…</div> : null}
+          <div className="document-recovery-list">{versions.map(version => <article className="document-recovery-row" key={version.id}><div><strong>{String((version.data as ManagedLibraryDocument).title || "Untitled document")}</strong><small>{new Date(version.createdAt).toLocaleString()} · Version {version.recordVersion} · {version.operationType} · {version.actorEmail || "System"}</small><small>{version.lifecycleState} · Revision {version.catalogRevision}</small></div><button className="secondary-button" type="button" disabled={isBusy || !version.trusted} onClick={() => void run(`version-${version.id}`, () => onRestoreVersion(version))}>{busyId === `version-${version.id}` ? <LoaderCircle className="spinning-icon" /> : <History />} Restore version</button></article>)}</div>
+          {versionRecordId && !loadingVersions && !versions.length ? <p className="document-recovery-empty">No retained versions were found.</p> : null}
+        </section> : null}
+
+        {tab === "snapshots" ? <section className="recovery-center-section">
+          <div className="recovery-center-heading"><div><strong>Protected snapshots</strong><p>Snapshots are retained indefinitely and restore only the records you select.</p></div><button className="primary-button" type="button" disabled={isBusy} onClick={() => void run("create-snapshot", onCreateSnapshot)}>{busyId === "create-snapshot" ? <LoaderCircle className="spinning-icon" /> : <DatabaseBackup />} Create snapshot now</button></div>
+          <div className="document-recovery-list">{backups.map(backup => <article className="document-recovery-row" key={backup.id}><div><strong>{backup.reason}</strong><small>{new Date(backup.createdAt).toLocaleString()} · Revision {backup.revision} · {backup.snapshotType}</small><small>{backup.createdBy} · {Math.ceil(backup.stateSize / 1024)} KB</small></div><button className="secondary-button" type="button" disabled={isBusy} onClick={() => void loadSnapshot(backup)}><Clock3 /> Browse</button></article>)}</div>
+          {!backups.length ? <p className="document-recovery-empty">No snapshots have been created yet.</p> : null}
+          {snapshotTarget ? <div className="snapshot-record-picker"><div><strong>{snapshotTarget.reason}</strong><button type="button" onClick={() => setSnapshotTarget(null)} aria-label="Close snapshot contents"><X /></button></div>{loadingSnapshot ? <LoaderCircle className="spinning-icon" /> : snapshotDocuments.map(document => <label key={document.id}><input type="checkbox" checked={selectedSnapshotIds.includes(document.id)} onChange={event => setSelectedSnapshotIds(current => event.target.checked ? [...current, document.id] : current.filter(id => id !== document.id))} /> {document.title}</label>)}<button className="primary-button" type="button" disabled={isBusy || !selectedSnapshotIds.length} onClick={() => void run(`snapshot-${snapshotTarget.id}`, () => onRestoreSnapshotRecords(snapshotTarget, selectedSnapshotIds))}>{busyId === `snapshot-${snapshotTarget.id}` ? <LoaderCircle className="spinning-icon" /> : <RotateCcw />} Restore selected</button></div> : null}
+        </section> : null}
+
+        {tab === "incidents" ? <div className="document-recovery-list">{incidents.map(incident => <article className="document-recovery-row" key={incident.id}><div><strong>{incident.incidentType.replaceAll("_", " ")}</strong><small>{new Date(incident.createdAt).toLocaleString()} · {incident.recordType} {incident.recordId}</small><small>{incident.acknowledgedAt ? `Acknowledged by ${incident.acknowledgedBy}` : "Automatically repaired · Review required"}</small></div>{!incident.acknowledgedAt ? <button className="secondary-button" type="button" disabled={isBusy} onClick={() => void run(`incident-${incident.id}`, () => onAcknowledgeIncident(incident))}>{busyId === `incident-${incident.id}` ? <LoaderCircle className="spinning-icon" /> : <ShieldAlert />} Acknowledge</button> : null}</article>)}
+        {!incidents.length ? <p className="document-recovery-empty">No integrity incidents have been recorded.</p> : null}</div> : null}
+      </div>
+    </section>
+
+    {archiveTarget ? <div className="admin-modal-backdrop permanent-delete-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !isBusy) setArchiveTarget(null); }}>
+      <section className="admin-modal permanent-delete-dialog protected-restore-dialog" role="alertdialog" aria-modal="true" aria-labelledby="archive-document-heading">
+        <header><div><span className="eyebrow">PROTECTED ARCHIVE</span><h2 id="archive-document-heading">Move out of normal Recovery?</h2></div><button type="button" disabled={isBusy} onClick={() => setArchiveTarget(null)} aria-label="Close archive confirmation"><X /></button></header>
+        <div className="permanent-delete-dialog__body"><AlertTriangle /><p><strong>“{archiveTarget.title}”</strong> will disappear from the Deleted tab, but its full content and history will remain protected indefinitely and can be restored from the Protected archive tab.</p></div>
+        <footer><button className="secondary-button" type="button" disabled={isBusy} onClick={() => setArchiveTarget(null)}>Cancel</button><button className="primary-button" type="button" disabled={isBusy} onClick={() => void run(`archive-confirm-${archiveTarget.id}`, () => onPermanentlyDelete(archiveTarget)).then(success => { if (success) { setArchiveTarget(null); setTab("archive"); } })}>{busyId === `archive-confirm-${archiveTarget.id}` ? <><LoaderCircle className="spinning-icon" /> Archiving…</> : <><Archive /> Move to protected archive</>}</button></footer>
       </section>
     </div> : null}
-  </>;
+  </div>;
 }

@@ -44,13 +44,15 @@ The PPC Dashboard checkout contains an unreleased video-header placement update.
 - Each application card opens its last validated route from the backward-compatible `glassco.appRoutes.v1` record in a new browser tab, including the active app, while leaving the source page unchanged.
 - PPC uses `basePath: "/ppc"`; pages, assets, client API calls, and nested routes respect it.
 - PPC reads the existing Pipeline session from `launchflow.authSession.v1` and verifies it through Pipeline `/api/auth/session` before showing the application. A session-only source tab uses a 30-second target-scoped one-use `glassco.authHandoff.v1`; missing/expired sessions return through validated `returnTo` login behavior.
-- ADMIN users receive document, category, recovery, reorder, backup, restore, and builder controls.
+- ADMIN users receive document, category, Recovery Center, reorder, snapshot, version, protected-archive, integrity-incident, and builder controls.
 - USER users can create documents and edit active document content/metadata. VIEWER users are read-only; bookmarks and completion controls remain available to all roles.
 - `/ppc/api/library` requires a verified Pipeline session and proxies scoped requests to Pipeline's authoritative Postgres `/api/library-state` endpoint. Pipeline enforces permissions against the current active user record.
 - Direct visitors to the old PPC domain are redirected to the canonical Pipeline domain.
-- Shared PPC documents, categories, record versions, audit attribution, and backups live in Pipeline Postgres. Private Blob is retained for authenticated images and the immutable legacy migration backup only.
+- Shared PPC documents, categories, append-only full-content versions, audit attribution, integrity incidents, and snapshots live in Pipeline Postgres. Private Blob stores authenticated images plus immutable daily offsite Library snapshots.
 - Bookmarks, recent history, completion, and remembered app routes remain browser-local on the unified Pipeline origin.
 - The Library refreshes shared state every five seconds while visible and on tab focus. A validated confirmed cache is read-only during outages and cannot be uploaded back to the server.
+- Normal deletion creates a recoverable tombstone. “Delete forever” was replaced by protected archival: content is removed from normal Recovery but remains retained indefinitely. The Recovery Center can restore tombstones, archived documents, prior versions, selected snapshot records, and acknowledge automatic repair incidents.
+- The Library Vercel cron runs `/ppc/api/library/maintenance` at 16:30 UTC daily. Set the same `LIBRARY_BACKUP_SECRET` in Pipeline and Library and keep the private Blob connection available.
 
 ## Important boundaries
 

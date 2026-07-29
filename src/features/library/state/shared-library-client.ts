@@ -7,7 +7,51 @@ import { parseSharedLibraryResponse, type SharedLibraryResponse, type SharedLibr
 export const SHARED_LIBRARY_CACHE_KEY = "glassco-library-confirmed-cache-v2";
 export const SHARED_LIBRARY_REQUEST_TIMEOUT_MS = 18_000;
 
-export type SharedLibraryReadOptions = { summary?: boolean; slug?: string; recovery?: boolean; includeDeletionAudit?: boolean };
+export type SharedLibraryReadOptions = { summary?: boolean; slug?: string; recovery?: boolean; archive?: boolean; includeDeletionAudit?: boolean };
+export type LibraryBackup = {
+  id: string;
+  revision: number;
+  reason: string;
+  createdBy: string;
+  createdAt: string;
+  stateSize: number;
+  isManual: boolean;
+  checksum: string;
+  snapshotType: string;
+  status: string;
+};
+export type LibraryVersion = {
+  id: string;
+  recordType: "document" | "category";
+  recordId: string;
+  recordVersion: number;
+  catalogRevision: number;
+  lifecycleState: "active" | "deleted" | "archived";
+  data: ManagedLibraryDocument | ManagedCategory;
+  sortOrder: number;
+  deletedAt?: string;
+  archivedAt?: string;
+  operationType: string;
+  operationSource: string;
+  actorEmail: string;
+  actorRole: string;
+  requestId: string;
+  checksum: string;
+  trusted: boolean;
+  createdAt: string;
+};
+export type LibraryIntegrityIncident = {
+  id: string;
+  incidentType: string;
+  recordType: "document" | "category";
+  recordId: string;
+  detectedChecksum: string;
+  restoredVersionId: string;
+  details: Record<string, unknown>;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
+  createdAt: string;
+};
 export type PurgedLibraryDocument = {
   documentId: string;
   slug: string;
@@ -47,7 +91,10 @@ export type SharedLibraryMutation =
   | { operation: "catalog.initialize"; state: SharedLibraryState; expectedRevision: 0 }
   | { operation: "document.create"; document: ManagedLibraryDocument }
   | { operation: "document.update"; documentId: string; expectedVersion: number; document: ManagedLibraryDocument }
-  | { operation: "document.delete" | "document.restore" | "document.purge"; documentId: string; expectedVersion: number }
+  | { operation: "document.delete" | "document.restore" | "document.archive" | "document.restoreArchived" | "document.purge"; documentId: string; expectedVersion: number }
+  | { operation: "record.restoreVersion"; recordType: "document" | "category"; recordId: string; versionId: string; expectedVersion: number }
+  | { operation: "records.restoreFromSnapshot"; snapshotId: string; recordType: "document" | "category"; recordIds: string[]; expectedRevision: number }
+  | { operation: "integrity.acknowledge"; incidentId: string; expectedRevision: number }
   | { operation: "documents.restoreSystemDeleted"; documentIds: string[]; expectedRevision: number }
   | { operation: "documents.reorder"; documentIds: string[]; expectedRevision: number }
   | { operation: "category.create"; category: ManagedCategory }
@@ -66,6 +113,7 @@ function sharedLibraryUrl(options: SharedLibraryReadOptions = {}) {
   if (options.summary) params.set("summary", "1");
   if (options.slug) params.set("slug", options.slug);
   if (options.recovery) params.set("recovery", "1");
+  if (options.archive) params.set("archive", "1");
   if (options.includeDeletionAudit) params.set("includeDeletionAudit", "1");
   const query = params.toString();
   return `${withPpcBasePath("/api/library")}${query ? `?${query}` : ""}`;
@@ -153,6 +201,103 @@ export async function initializeSharedLibrary(): Promise<SharedLibraryResponse> 
   const parsed = parseSharedLibraryResponse(value);
   if (!parsed) throw new Error("Library migration returned invalid data.");
   return parsed;
+}
+
+function requiredString(value: unknown) {
+  return typeof value === "string" ? value : null;
+}
+
+function parseLibraryBackup(value: unknown): LibraryBackup | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const item = value as Record<string, unknown>;
+  if (!requiredString(item.id) || !Number.isInteger(item.revision) || Number(item.revision) < 0
+    || !requiredString(item.reason) || !requiredString(item.createdBy) || !requiredString(item.createdAt)
+    || !Number.isFinite(Date.parse(String(item.createdAt))) || !Number.isInteger(item.stateSize)
+    || typeof item.isManual !== "boolean" || !requiredString(item.checksum)
+    || !requiredString(item.snapshotType) || !requiredString(item.status)) return null;
+  return {
+    id: String(item.id),
+    revision: Number(item.revision),
+    reason: String(item.reason),
+    createdBy: String(item.createdBy),
+    createdAt: String(item.createdAt),
+    stateSize: Number(item.stateSize),
+    isManual: item.isManual,
+    checksum: String(item.checksum),
+    snapshotType: String(item.snapshotType),
+    status: String(item.status),
+  };
+}
+
+export async function fetchLibraryBackups(): Promise<LibraryBackup[]> {
+  const value = await readJson(await fetchWithTimeout(`${withPpcBasePath("/api/library")}?backups=1`, {
+    cache: "no-store",
+    headers: getPipelineAuthorizationHeader(),
+  }));
+  const items = value && typeof value === "object" ? (value as Record<string, unknown>).backups : null;
+  if (!Array.isArray(items)) throw new Error("Library snapshots returned invalid data.");
+  const backups = items.map(parseLibraryBackup);
+  if (backups.some(item => !item)) throw new Error("Library snapshots returned invalid data.");
+  return backups as LibraryBackup[];
+}
+
+export async function createLibraryBackup(reason = "manual-recovery-center-snapshot"): Promise<LibraryBackup> {
+  const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
+    body: JSON.stringify({ action: "create-backup", reason }),
+  }));
+  const backup = value && typeof value === "object" ? parseLibraryBackup((value as Record<string, unknown>).backup) : null;
+  if (!backup) throw new Error("Library snapshot returned invalid data.");
+  return backup;
+}
+
+export async function fetchLibrarySnapshot(backupId: string): Promise<{ backup: LibraryBackup; state: SharedLibraryState }> {
+  const value = await readJson(await fetchWithTimeout(`${withPpcBasePath("/api/library")}?backupId=${encodeURIComponent(backupId)}`, {
+    cache: "no-store",
+    headers: getPipelineAuthorizationHeader(),
+  }));
+  if (!value || typeof value !== "object") throw new Error("Library snapshot returned invalid data.");
+  const candidate = value as Record<string, unknown>;
+  const backup = parseLibraryBackup(candidate.backup);
+  const state = candidate.state && typeof candidate.state === "object"
+    ? parseSharedLibraryResponse({
+      initialized: true,
+      state: candidate.state,
+      revision: backup?.revision ?? 0,
+      recordVersions: { documents: {}, categories: {} },
+      updatedAt: null,
+      updatedBy: null,
+    })?.state
+    : null;
+  if (!backup || !state) throw new Error("Library snapshot returned invalid data.");
+  return { backup, state };
+}
+
+export async function fetchLibraryVersions(recordType: "document" | "category", recordId: string): Promise<LibraryVersion[]> {
+  const params = new URLSearchParams({ versions: "1", recordType, recordId });
+  const value = await readJson(await fetchWithTimeout(`${withPpcBasePath("/api/library")}?${params}`, {
+    cache: "no-store",
+    headers: getPipelineAuthorizationHeader(),
+  }));
+  const items = value && typeof value === "object" ? (value as Record<string, unknown>).versions : null;
+  if (!Array.isArray(items)) throw new Error("Library version history returned invalid data.");
+  return items.filter((item): item is LibraryVersion => Boolean(item && typeof item === "object"
+    && typeof (item as Record<string, unknown>).id === "string"
+    && typeof (item as Record<string, unknown>).recordId === "string"
+    && ["document", "category"].includes(String((item as Record<string, unknown>).recordType))));
+}
+
+export async function fetchLibraryIntegrityIncidents(): Promise<LibraryIntegrityIncident[]> {
+  const value = await readJson(await fetchWithTimeout(`${withPpcBasePath("/api/library")}?incidents=1`, {
+    cache: "no-store",
+    headers: getPipelineAuthorizationHeader(),
+  }));
+  const items = value && typeof value === "object" ? (value as Record<string, unknown>).incidents : null;
+  if (!Array.isArray(items)) throw new Error("Library integrity incidents returned invalid data.");
+  return items.filter((item): item is LibraryIntegrityIncident => Boolean(item && typeof item === "object"
+    && typeof (item as Record<string, unknown>).id === "string"
+    && typeof (item as Record<string, unknown>).recordId === "string"));
 }
 
 function parsePurgedLibraryDocuments(value: unknown): PurgedLibraryDocument[] | null {
