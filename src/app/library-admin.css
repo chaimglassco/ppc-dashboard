@@ -43,12 +43,13 @@
 @keyframes category-delete-spin{to{transform:rotate(360deg)}}
 .category-recovery-backdrop{z-index:110}
 .category-recovery-modal{width:min(620px,100%)}
-.category-recovery-body{padding:20px 24px}
+.category-recovery-body{display:grid;gap:12px;padding:20px 24px}
 .category-recovery-list{border-color:#ead6d5}
 .category-recovery-list .category-row{grid-template-columns:minmax(0,1fr) auto}
 .category-recovery-list .category-row:first-child{border-top:0}
 .category-recovery-list .secondary-button{min-height:34px;padding:0 12px}
 .category-recovery-list .secondary-button svg{width:14px}
+.category-recovery-actions{display:flex;align-items:center;gap:8px}.category-permanent-delete-button{display:grid;width:34px;height:34px;place-items:center;padding:0;border:1px solid #ffc5c5;border-radius:50%;background:#fff5f5;color:#c83232;cursor:pointer}.category-permanent-delete-button:hover{border-color:#e48282;background:#ffe6e6}.category-permanent-delete-button:disabled{cursor:not-allowed;opacity:.45}.category-permanent-delete-button svg{width:15px;height:15px}.category-recovery-empty{margin:0;padding:18px 16px;color:#68758a;font-size:11px}
 .document-recovery-backdrop{z-index:110}
 .document-recovery-modal{display:grid;width:min(680px,100%);grid-template-rows:auto minmax(0,1fr);overflow:hidden}
 .recovery-center-modal{width:min(920px,100%);grid-template-rows:auto auto minmax(0,1fr)}

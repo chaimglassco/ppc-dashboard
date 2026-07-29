@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Eye, EyeOff, LoaderCircle, Pencil, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Eye, EyeOff, LoaderCircle, Pencil, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import type { ManagedCategory } from "../state/category-storage";
 
@@ -12,19 +12,24 @@ type CategoryManagerProps = {
   onRename: (id: string, name: string) => void;
   onToggleHidden: (id: string) => void;
   onDelete: (id: string) => Promise<string | null>;
+  onPermanentlyDelete: (id: string) => Promise<string | null>;
   onRecover: (id: string) => void;
   onMove: (id: string, direction: -1 | 1) => void;
 };
 
-export function CategoryManager({ categories, documentCounts, onClose, onCreate, onRename, onToggleHidden, onDelete, onRecover, onMove }: CategoryManagerProps) {
+export function CategoryManager({ categories, documentCounts, onClose, onCreate, onRename, onToggleHidden, onDelete, onPermanentlyDelete, onRecover, onMove }: CategoryManagerProps) {
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState("");
   const [editingName, setEditingName] = useState("");
   const [showRecovery, setShowRecovery] = useState(false);
   const [deletingCategoryId, setDeletingCategoryId] = useState("");
   const [deleteFeedback, setDeleteFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
-  const active = categories.filter(category => !category.deletedAt);
-  const deleted = categories.filter(category => category.deletedAt);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<ManagedCategory | null>(null);
+  const [permanentlyDeletingCategoryId, setPermanentlyDeletingCategoryId] = useState("");
+  const [permanentDeleteError, setPermanentDeleteError] = useState("");
+  const [recoveryFeedback, setRecoveryFeedback] = useState("");
+  const active = categories.filter(category => !category.deletedAt && !category.archivedAt);
+  const deleted = categories.filter(category => category.deletedAt && !category.archivedAt);
   const isLastActiveCategory = active.length <= 1;
 
   const startRename = (category: ManagedCategory) => {
@@ -56,6 +61,27 @@ export function CategoryManager({ categories, documentCounts, onClose, onCreate,
     }
   };
 
+  const permanentlyDeleteCategory = async () => {
+    const category = permanentDeleteTarget;
+    if (!category || permanentlyDeletingCategoryId) return;
+    setPermanentlyDeletingCategoryId(category.id);
+    setPermanentDeleteError("");
+    setRecoveryFeedback("");
+    try {
+      const error = await onPermanentlyDelete(category.id);
+      if (error) {
+        setPermanentDeleteError(error);
+        return;
+      }
+      setPermanentDeleteTarget(null);
+      setRecoveryFeedback(`${category.name} was permanently deleted successfully.`);
+    } catch {
+      setPermanentDeleteError("The category could not be permanently deleted. Please try again.");
+    } finally {
+      setPermanentlyDeletingCategoryId("");
+    }
+  };
+
   return <><div className="admin-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="admin-modal category-manager" role="dialog" aria-modal="true" aria-labelledby="category-manager-title">
       <header><div><span className="eyebrow">LIBRARY ADMIN</span><h2 id="category-manager-title">Manage categories</h2></div><button type="button" onClick={onClose} aria-label="Close category manager"><X /></button></header>
@@ -82,7 +108,33 @@ export function CategoryManager({ categories, documentCounts, onClose, onCreate,
   {showRecovery ? <div className="admin-modal-backdrop category-recovery-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setShowRecovery(false); }}>
     <section className="admin-modal category-recovery-modal" role="dialog" aria-modal="true" aria-labelledby="deleted-categories-heading">
       <header><div><span className="eyebrow">RECOVERY</span><h2 id="deleted-categories-heading">Deleted categories</h2></div><button type="button" onClick={() => setShowRecovery(false)} aria-label="Close category recovery"><X /></button></header>
-      <div className="category-recovery-body"><section className="category-list category-recovery-list">{deleted.map(category => <article className="category-row" key={category.id}><div className="category-copy"><strong>{category.name}</strong><small>{documentCounts[category.name] ?? 0} {(documentCounts[category.name] ?? 0) === 1 ? "document" : "documents"}</small></div><button className="secondary-button" type="button" onClick={() => { onRecover(category.id); if (deleted.length === 1) setShowRecovery(false); }}><RotateCcw /> Recover</button></article>)}</section></div>
+      <div className="category-recovery-body">
+        {recoveryFeedback ? <p className="category-delete-feedback success" role="status">{recoveryFeedback}</p> : null}
+        <section className="category-list category-recovery-list">
+          {deleted.map(category => {
+            const documentCount = documentCounts[category.name] ?? 0;
+            return <article className="category-row" key={category.id}>
+              <div className="category-copy"><strong>{category.name}</strong><small>{documentCount} {documentCount === 1 ? "document" : "documents"}</small></div>
+              <div className="category-recovery-actions">
+                <button className="secondary-button" type="button" disabled={Boolean(permanentlyDeletingCategoryId)} onClick={() => { onRecover(category.id); if (deleted.length === 1) setShowRecovery(false); }}><RotateCcw /> Recover</button>
+                <button className="category-permanent-delete-button" type="button" disabled={Boolean(permanentlyDeletingCategoryId) || documentCount > 0} aria-label={`Permanently delete ${category.name}`} title={documentCount > 0 ? "Move all documents out of this category before permanently deleting it." : "Permanently delete category"} onClick={() => { setPermanentDeleteError(""); setPermanentDeleteTarget(category); }}><Trash2 /></button>
+              </div>
+            </article>;
+          })}
+          {!deleted.length ? <p className="category-recovery-empty">There are no deleted categories.</p> : null}
+        </section>
+      </div>
+    </section>
+  </div> : null}
+  {permanentDeleteTarget ? <div className="admin-modal-backdrop permanent-delete-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !permanentlyDeletingCategoryId) setPermanentDeleteTarget(null); }}>
+    <section className="admin-modal permanent-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="permanent-category-delete-heading" aria-describedby="permanent-category-delete-description">
+      <header><div><span className="eyebrow">PERMANENT CATEGORY DELETION</span><h2 id="permanent-category-delete-heading">Delete category forever?</h2></div><button type="button" disabled={Boolean(permanentlyDeletingCategoryId)} onClick={() => setPermanentDeleteTarget(null)} aria-label="Close permanent category deletion"><X /></button></header>
+      <div className="permanent-delete-dialog__body">
+        <AlertTriangle />
+        <p id="permanent-category-delete-description">Permanently delete <strong>“{permanentDeleteTarget.name}”</strong>? It will be removed from category Recovery and cannot be recovered there. A protected audit and version record will remain for disaster recovery.</p>
+        {permanentDeleteError ? <p className="permanent-delete-dialog__error" role="alert">{permanentDeleteError}</p> : null}
+      </div>
+      <footer><button className="secondary-button" type="button" disabled={Boolean(permanentlyDeletingCategoryId)} onClick={() => setPermanentDeleteTarget(null)}>Cancel</button><button className="permanent-delete-dialog__confirm" type="button" disabled={Boolean(permanentlyDeletingCategoryId)} onClick={() => void permanentlyDeleteCategory()}>{permanentlyDeletingCategoryId ? <><LoaderCircle className="spinning-icon" /> Deleting…</> : <><Trash2 /> Permanently delete</>}</button></footer>
     </section>
   </div> : null}</>;
 }

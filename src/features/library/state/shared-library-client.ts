@@ -99,7 +99,7 @@ export type SharedLibraryMutation =
   | { operation: "documents.reorder"; documentIds: string[]; expectedRevision: number }
   | { operation: "category.create"; category: ManagedCategory }
   | { operation: "category.update"; categoryId: string; expectedVersion: number; category: ManagedCategory }
-  | { operation: "category.delete" | "category.restore"; categoryId: string; expectedVersion: number }
+  | { operation: "category.delete" | "category.restore" | "category.archive"; categoryId: string; expectedVersion: number }
   | { operation: "categories.reorder"; categoryIds: string[]; expectedRevision: number };
 
 export class SharedLibraryConflictError extends Error {

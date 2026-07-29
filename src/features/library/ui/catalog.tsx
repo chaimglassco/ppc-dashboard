@@ -389,6 +389,16 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     setNotice("");
     return null;
   };
+  const permanentlyDeleteCategory = async (id: string) => {
+    const current = categories.find(item => item.id === id);
+    if (!current?.deletedAt) return "The deleted category is no longer available. Refresh Recovery and try again.";
+    const expectedVersion = sharedRef.current?.recordVersions.categories[id];
+    if (expectedVersion === undefined) return "The current category version is unavailable. Close this window and try again.";
+    const response = await commitMutation({ operation: "category.archive", categoryId: id, expectedVersion }, "");
+    if (!response) return lastMutationErrorRef.current || "The category could not be permanently deleted. Please try again.";
+    setNotice("");
+    return null;
+  };
   const toggleCategoryHidden = (id: string) => {
     const current = categories.find(item => item.id === id);
     if (!current) return;
@@ -413,7 +423,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     });
   };
 
-  const activeCategories = categories.filter(item => !item.deletedAt);
+  const activeCategories = categories.filter(item => !item.deletedAt && !item.archivedAt);
   const filterCategories = activeCategories.filter(item => manageMode || !item.hidden);
   const editorCategories = activeCategories.map(item => item.name);
   const activeDocuments = managed.filter(document => !document.deletedAt);
@@ -637,7 +647,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     /> : null}
     {canEdit && editor && mutationsEnabled ? <DocumentEditor key="new" categories={editorCategories} onCancel={() => setEditor(null)} onSave={saveDraft} onCreateCategory={canAdmin ? createCategory : undefined} onManageCategories={canAdmin ? () => setShowCategoryManager(true) : undefined}/> : null}
     {canAdmin && showDocumentReorder ? <DocumentReorderDialog documents={activeDocuments} onCancel={() => setShowDocumentReorder(false)} onSave={saveDocumentOrder} /> : null}
-    {canAdmin && showCategoryManager ? <CategoryManager categories={categories} documentCounts={documentCounts} onClose={() => setShowCategoryManager(false)} onCreate={createCategory} onRename={renameCategory} onToggleHidden={toggleCategoryHidden} onDelete={deleteCategory} onRecover={id => { const expectedVersion = sharedRef.current?.recordVersions.categories[id]; if (expectedVersion !== undefined) void commitMutation({ operation: "category.restore", categoryId: id, expectedVersion }, "Category recovered."); }} onMove={(id, direction) => { const active = categories.filter(item => !item.deletedAt); const position = active.findIndex(item => item.id === id); const target = position + direction; if (position < 0 || target < 0 || target >= active.length || !sharedRef.current) return; const ordered = [...active]; [ordered[position], ordered[target]] = [ordered[target], ordered[position]]; void commitMutation({ operation: "categories.reorder", categoryIds: ordered.map(item => item.id), expectedRevision: sharedRef.current.revision }, "Category order updated."); }} /> : null}
+    {canAdmin && showCategoryManager ? <CategoryManager categories={categories} documentCounts={documentCounts} onClose={() => setShowCategoryManager(false)} onCreate={createCategory} onRename={renameCategory} onToggleHidden={toggleCategoryHidden} onDelete={deleteCategory} onPermanentlyDelete={permanentlyDeleteCategory} onRecover={id => { const expectedVersion = sharedRef.current?.recordVersions.categories[id]; if (expectedVersion !== undefined) void commitMutation({ operation: "category.restore", categoryId: id, expectedVersion }, "Category recovered."); }} onMove={(id, direction) => { const active = categories.filter(item => !item.deletedAt); const position = active.findIndex(item => item.id === id); const target = position + direction; if (position < 0 || target < 0 || target >= active.length || !sharedRef.current) return; const ordered = [...active]; [ordered[position], ordered[target]] = [ordered[target], ordered[position]]; void commitMutation({ operation: "categories.reorder", categoryIds: ordered.map(item => item.id), expectedRevision: sharedRef.current.revision }, "Category order updated."); }} /> : null}
     {documentToDelete ? <DeleteDocumentDialog document={documentToDelete} isDeleting={isDeletingDocument} error={deleteError} onCancel={() => { if (isDeletingDocument) return; setDocumentToDelete(null); setDeleteError(""); }} onConfirm={() => void confirmDocumentDelete()} /> : null}
     {successMessage ? <div className="catalog-success-toast" role="status" aria-live="polite">{successMessage}</div> : null}
   </section>;
