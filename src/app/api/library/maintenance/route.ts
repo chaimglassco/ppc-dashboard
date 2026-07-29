@@ -8,15 +8,19 @@ export const maxDuration = 60;
 const noStoreHeaders = { "Cache-Control": "no-store, max-age=0" };
 const pipelineOrigin = (process.env.PIPELINE_AUTH_ORIGIN || "https://glasscopipeline.vercel.app").replace(/\/$/, "");
 
+function matchesSecret(supplied: string, expected: string | undefined) {
+  if (!expected || !supplied) return false;
+  const expectedBuffer = Buffer.from(expected);
+  const actualBuffer = Buffer.from(supplied);
+  return expectedBuffer.length === actualBuffer.length && timingSafeEqual(expectedBuffer, actualBuffer);
+}
+
 function authorized(request: Request) {
-  const secret = process.env.LIBRARY_BACKUP_SECRET;
   const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
     || request.headers.get("x-library-backup-secret")
     || "";
-  if (!secret || !supplied) return false;
-  const expected = Buffer.from(secret);
-  const actual = Buffer.from(supplied);
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
+  return matchesSecret(supplied, process.env.LIBRARY_BACKUP_SECRET)
+    || matchesSecret(supplied, process.env.CRON_SECRET);
 }
 
 function snapshotPath(date: Date, revision: number, checksum: string) {
@@ -28,7 +32,10 @@ export async function GET(request: Request) {
   if (!authorized(request)) {
     return Response.json({ error: "Unauthorized Library maintenance request." }, { status: 401, headers: noStoreHeaders });
   }
-  const secret = process.env.LIBRARY_BACKUP_SECRET!;
+  const secret = process.env.LIBRARY_BACKUP_SECRET;
+  if (!secret) {
+    return Response.json({ error: "Library backup service is not configured." }, { status: 503, headers: noStoreHeaders });
+  }
   const upstream = await fetch(`${pipelineOrigin}/api/library-state?maintenance=1`, {
     cache: "no-store",
     headers: { "X-Library-Backup-Secret": secret },

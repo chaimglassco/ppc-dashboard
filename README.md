@@ -64,7 +64,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Catalog responses include a global revision and per-record versions. ADMIN responses also include user/system/unknown deletion attribution. Stale mutations return `409` with current shared state rather than overwriting another account's work.
 - Legacy initialization imports the complete validated catalog after making its immutable backup; it no longer creates new tombstones. Pipeline backup restore is a non-destructive merge.
 - Visible Library tabs poll every five seconds and refresh immediately on focus. Failed server access leaves a validated cache visible in read-only mode.
-- The `/ppc/api/library/maintenance` cron runs daily at 16:30 UTC, asks Pipeline to verify/repair integrity and create a database snapshot, then stores the same state under `glassco/library-snapshots-v2/` in private Vercel Blob. `LIBRARY_BACKUP_SECRET` must match in both Vercel projects.
+- The `/ppc/api/library/maintenance` cron runs daily at 16:30 UTC, asks Pipeline to verify/repair integrity and create a database snapshot, then stores the same state under `glassco/library-snapshots-v2/` in private Vercel Blob. `LIBRARY_BACKUP_SECRET` must match in both Vercel projects, and Library's Vercel `CRON_SECRET` must use that same value so scheduled requests are authenticated.
 
 The current browser-stored Pipeline bearer token is not the final page-security boundary. A future authentication milestone should move the session to secure same-origin cookies so authenticated access can be enforced before page HTML is returned.
 
