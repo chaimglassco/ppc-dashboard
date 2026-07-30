@@ -69,7 +69,9 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Editable tables with add-row, add-column, row-height, and column-width controls.
 - One unified Bullets element with Bullets, Checklist, and Numbers tabs; previously saved standalone list types remain compatible.
 - Diagnostic Flow steps support independent multiline rich-text descriptions while preserving connector labels and legacy saved nodes.
-- Headline and Description elements provide Left, Center, and Right alignment; Headline is inline-format only and Description exposes the full composer toolbar.
+- Replaced word-based rich-text controls with a compact icon-only toolbar grouped by text styles, Left/Center/Right alignment, lists, and links; the same controls follow highlighted text in a floating selection menu.
+- Headline and Description alignment now lives inside the shared formatting toolbar while legacy element-level alignment remains dual-written for compatibility; Headline continues to omit list controls.
+- Added safe link creation, editing, removal, Markdown/paste preservation, new-tab reader rendering, and rejection of unsafe URL schemes.
 - Highlighted text opens a matching viewport-aware selection toolbar, and all fixed/floating toolbar controls retain compact typography inside large-text elements.
 - Editable Tables provide exact row and column deletion with one-row/one-column minimum safeguards and synchronized column widths.
 - Centered statements, callouts, lists, color-configurable Key Insights, feature cards, text blocks, roadmaps, and diagnostic flows. Key Insights retain the existing Green default and provide persistent Green/Blue/Red tabs in edit mode.

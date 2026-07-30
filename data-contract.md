@@ -228,9 +228,11 @@ This integration does not change library document, category, topic, content-elem
 
 Content elements now accept `richText` on supported primary bodies, `calloutRichText` on topics, `itemRichText[]` aligned with standalone `items[]`, and `richText` on roadmap steps and dropdown entries.
 
-Rich documents use a ProseMirror-style `{ "type": "doc", "content": [...] }` object. Allowed nodes are `doc`, `paragraph`, `text`, `hardBreak`, `bulletList`, `orderedList`, `listItem`, `taskList`, and `taskItem`. Allowed marks are `bold`, `italic`, and `underline`; persisted attributes are limited to `orderedList.start` and `taskItem.checked`.
+Rich documents use a ProseMirror-style `{ "type": "doc", "content": [...] }` object. Allowed nodes are `doc`, `paragraph`, `text`, `hardBreak`, `bulletList`, `orderedList`, `listItem`, `taskList`, and `taskItem`. Allowed marks are `bold`, `italic`, `underline`, and `link`.
 
-The corresponding legacy body/text fields remain required search and compatibility fallbacks and are updated with every edit. Consumers prefer valid rich JSON and reconstruct it from those fields when JSON is absent or invalid.
+Persisted attributes are limited to `orderedList.start`, `taskItem.checked`, `paragraph.textAlign` (`left`, `center`, or `right`), and `link.href`. Link values accept validated HTTP(S), `mailto:`, or app-relative destinations; bare domains normalize to HTTPS and unsafe schemes are rejected. Reader links always render with `_blank` plus `noopener noreferrer`.
+
+The corresponding legacy body/text fields remain required search and compatibility fallbacks and are updated with every edit. Legacy Headline and Description `textAlignment` remains accepted and is dual-written when alignment changes. Consumers prefer valid rich JSON and reconstruct it from fallback fields when JSON is absent or invalid.
 
 ## Library read-state metadata
 

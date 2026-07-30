@@ -1,7 +1,10 @@
 import type { RichTextDocument, RichTextMark, RichTextNode, RoadmapTextStyle } from "./types";
 
 const allowedNodeTypes = new Set(["doc", "paragraph", "text", "hardBreak", "bulletList", "orderedList", "listItem", "taskList", "taskItem"]);
-const allowedMarkTypes = new Set(["bold", "italic", "underline"]);
+const allowedTextAlignments = new Set(["left", "center", "right"]);
+const allowedSimpleMarkTypes = new Set(["bold", "italic", "underline"]);
+const bareDomainPattern = /^(?:localhost(?::\d+)?|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:[/?#][^\s]*)?$/i;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const EMPTY_RICH_TEXT: RichTextDocument = { type: "doc", content: [{ type: "paragraph" }] };
 
@@ -9,8 +12,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+export function normalizeRichTextHref(value: string): string | null {
+  const candidate = value.trim();
+  if (!candidate || /[\u0000-\u001f\u007f]/.test(candidate)) return null;
+  if (candidate.startsWith("/") && !candidate.startsWith("//")) return candidate;
+  if (/^mailto:/i.test(candidate)) {
+    const address = candidate.slice(candidate.indexOf(":") + 1).split("?")[0];
+    return emailPattern.test(address) ? `mailto:${candidate.slice(candidate.indexOf(":") + 1)}` : null;
+  }
+  if (emailPattern.test(candidate)) return `mailto:${candidate}`;
+  const normalized = bareDomainPattern.test(candidate) ? `https://${candidate}` : candidate;
+  try {
+    const url = new URL(normalized);
+    return ["http:", "https:"].includes(url.protocol) ? normalized : null;
+  } catch {
+    return null;
+  }
+}
+
 function isRichTextMark(value: unknown): value is RichTextMark {
-  return isRecord(value) && typeof value.type === "string" && allowedMarkTypes.has(value.type) && Object.keys(value).every(key => key === "type");
+  if (!isRecord(value) || typeof value.type !== "string") return false;
+  if (allowedSimpleMarkTypes.has(value.type)) return Object.keys(value).every(key => key === "type");
+  if (value.type !== "link" || !isRecord(value.attrs) || typeof value.attrs.href !== "string") return false;
+  return Object.keys(value).every(key => ["type", "attrs"].includes(key))
+    && Object.keys(value.attrs).every(key => key === "href")
+    && normalizeRichTextHref(value.attrs.href) !== null;
 }
 
 function isRichTextNode(value: unknown, isRoot = false): value is RichTextNode {
@@ -31,6 +57,9 @@ function isRichTextNode(value: unknown, isRoot = false): value is RichTextNode {
     } else if (value.type === "orderedList") {
       if (value.attrs.start !== undefined && (!Number.isInteger(value.attrs.start) || Number(value.attrs.start) < 1)) return false;
       if (Object.keys(value.attrs).some(key => key !== "start")) return false;
+    } else if (value.type === "paragraph") {
+      if (value.attrs.textAlign !== undefined && !allowedTextAlignments.has(String(value.attrs.textAlign))) return false;
+      if (Object.keys(value.attrs).some(key => key !== "textAlign")) return false;
     } else if (Object.keys(value.attrs).length) return false;
   }
   const children = Array.isArray(value.content) ? value.content : [];
@@ -54,7 +83,7 @@ function textNode(text: string, marks: RichTextMark[] = []): RichTextNode {
 
 function parseInlineMarkdown(value: string): RichTextNode[] {
   const nodes: RichTextNode[] = [];
-  const pattern = /(\*\*|__)(.+?)\1|(?<!\*)\*([^*\n]+?)\*|(?<!_)_([^_\n]+?)_|<u>(.*?)<\/u>|\[([^\]]+)\]\([^)]*\)|`([^`]+)`/gi;
+  const pattern = /(\*\*|__)(.+?)\1|(?<!\*)\*([^*\n]+?)\*|(?<!_)_([^_\n]+?)_|<u>(.*?)<\/u>|\[([^\]]+)\]\(([^)\s]+)\)|`([^`]+)`/gi;
   let cursor = 0;
   for (const match of value.matchAll(pattern)) {
     const index = match.index ?? 0;
@@ -62,7 +91,10 @@ function parseInlineMarkdown(value: string): RichTextNode[] {
     if (match[2] !== undefined) nodes.push(textNode(match[2], [{ type: "bold" }]));
     else if (match[3] !== undefined || match[4] !== undefined) nodes.push(textNode(match[3] ?? match[4], [{ type: "italic" }]));
     else if (match[5] !== undefined) nodes.push(textNode(match[5], [{ type: "underline" }]));
-    else nodes.push(textNode(match[6] ?? match[7] ?? ""));
+    else if (match[6] !== undefined) {
+      const href = normalizeRichTextHref(match[7] ?? "");
+      nodes.push(textNode(match[6], href ? [{ type: "link", attrs: { href } }] : []));
+    } else nodes.push(textNode(match[8] ?? ""));
     cursor = index + match[0].length;
   }
   if (cursor < value.length) nodes.push(textNode(value.slice(cursor)));

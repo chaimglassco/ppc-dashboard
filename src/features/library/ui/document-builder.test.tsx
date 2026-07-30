@@ -188,8 +188,8 @@ describe("DocumentBuilder aligned text elements", () => {
     expect(within(controls.getByRole("toolbar", { name: "Description formatting" })).getByRole("button", { name: "Bullets" })).toBeInTheDocument();
     pastePlainText(headlineTextbox, "Aligned headline");
     pastePlainText(descriptionTextbox, "Aligned description");
-    fireEvent.click(within(headlineEditor as HTMLElement).getByRole("button", { name: "Center" }));
-    fireEvent.click(within(descriptionEditor as HTMLElement).getByRole("button", { name: "Right" }));
+    fireEvent.click(within(headlineEditor as HTMLElement).getByRole("button", { name: "Align center" }));
+    fireEvent.click(within(descriptionEditor as HTMLElement).getByRole("button", { name: "Align right" }));
     fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));

@@ -7,7 +7,7 @@ import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import { createBlankContentElement, getInitialContentElements, getTopicsFromContentElements } from "../domain/document-elements";
 import { resolveRichText, richTextToParagraphs, richTextToRoadmapStyle } from "../domain/rich-text";
-import type { ButtonAlignment, ButtonWidth, Category, InsightColor, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, TextAlignment, Topic } from "../domain/types";
+import type { ButtonAlignment, ButtonWidth, Category, InsightColor, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, Topic } from "../domain/types";
 import { getVideoPresentation, normalizeVideoUrl } from "../domain/video-links";
 import { Markdown } from "./markdown";
 import { RichTextEditor, RichTextRenderer } from "./rich-text";
@@ -590,16 +590,8 @@ function TextElementEditor({ element, onUpdate }: { element: LibraryContentEleme
   const alignment = element.textAlignment ?? "left";
   const isHeadline = element.type === "headline";
   return <section className={`${styles.textElementEditor} ${isHeadline ? styles.headlineEditor : styles.descriptionEditor}`} data-text-alignment={alignment}>
-    <TextAlignmentTabs value={alignment} onChange={textAlignment => onUpdate({ textAlignment })} />
-    <RichTextEditor ariaLabel={isHeadline ? "Headline" : "Description"} allowLists={!isHeadline} value={resolveRichText(element.richText, element.text)} onChange={(richText, text) => onUpdate({ richText, text })} placeholder={isHeadline ? "Headline text..." : "Description text..."} />
+    <RichTextEditor ariaLabel={isHeadline ? "Headline" : "Description"} allowLists={!isHeadline} value={resolveRichText(element.richText, element.text)} onChange={(richText, text) => onUpdate({ richText, text })} defaultTextAlignment={alignment} onTextAlignmentChange={textAlignment => onUpdate({ textAlignment })} placeholder={isHeadline ? "Headline text..." : "Description text..."} />
   </section>;
-}
-
-function TextAlignmentTabs({ value, onChange }: { value: TextAlignment; onChange: (alignment: TextAlignment) => void }) {
-  const alignments: Array<{ value: TextAlignment; label: string }> = [{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }];
-  return <div className={styles.textAlignmentTabs} role="group" aria-label="Text alignment">
-    {alignments.map(option => <button key={option.value} type="button" aria-pressed={value === option.value} onClick={() => onChange(option.value)}>{option.label}</button>)}
-  </div>;
 }
 
 function BulletsStyleTabs({ value, onChange }: { value: BulletsStyle; onChange: (style: BulletsStyle) => void }) {

@@ -34,6 +34,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Create, rename, hide, reorder, delete, and recover category options as an ADMIN.
 - Attach YouTube, Google Drive, direct-file, or other HTTPS video links; supported providers render in a large responsive player inside the blue document header’s right column. Google Drive playback is centered in the visible frame and keeps a compact new-tab icon without a redundant text button.
 - Reorder content elements by dragging or insert new elements between existing blocks.
+- Format document copy with a compact icon-only toolbar for text styles, Left/Center/Right alignment, lists, and safe new-tab links; highlighting text exposes the same controls beside the selection.
 - Build documents from reusable elements:
   - Topics
   - Centered statements

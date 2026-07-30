@@ -105,9 +105,11 @@ These require a separately approved milestone and must preserve the current shar
 # Rich-text composer behavior
 
 - Supported element body fields provide selection-aware Normal, Bold, Italic, Underlined, Bullets, Checklist, and Numbers controls with a live WYSIWYG editing surface.
+- The formatting toolbar is icon-only and separated into Text styles, Left/Center/Right alignment, Lists, and Link groups. A matching viewport-aware selection toolbar appears beside highlighted text.
+- Highlighted text can receive a validated HTTP(S), email, or Library-relative link through a compact URL editor; saved links open in a protected new tab and can be edited or removed from the same control.
 - Titles, labels, metadata, button text, tables, code blocks, and diagnostic-flow nodes remain plain-text controls.
-- Standalone list-element rows retain their element-level markers and support only Normal, Bold, Italic, and Underlined formatting.
-- Pasted content is constrained by the editor schema to supported paragraphs, marks, lists, and checklists; links, images, colors, fonts, headings, and arbitrary HTML are not persisted.
+- Standalone list-element rows retain their element-level markers and omit nested-list controls while keeping text styles, alignment, and links.
+- Pasted content is constrained by the editor schema to supported paragraphs, marks, safe links, lists, and checklists; images, colors, fonts, headings, unsafe URLs, and arbitrary HTML are not persisted.
 - Checklist boxes are editable in admin mode and disabled in reader mode.
 
 # Library live-state behavior
