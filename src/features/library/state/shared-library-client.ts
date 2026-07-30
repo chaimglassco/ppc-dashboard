@@ -6,6 +6,7 @@ import { parseSharedLibraryResponse, type SharedLibraryResponse, type SharedLibr
 
 export const SHARED_LIBRARY_CACHE_KEY = "glassco-library-confirmed-cache-v2";
 export const SHARED_LIBRARY_REQUEST_TIMEOUT_MS = 18_000;
+export const PROTECTED_LIBRARY_RECOVERY_TIMEOUT_MS = 120_000;
 
 export type SharedLibraryReadOptions = { summary?: boolean; slug?: string; recovery?: boolean; archive?: boolean; includeDeletionAudit?: boolean };
 export type LibraryBackup = {
@@ -148,7 +149,11 @@ async function readJson(response: Response): Promise<unknown> {
   return value;
 }
 
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = SHARED_LIBRARY_REQUEST_TIMEOUT_MS,
+): Promise<Response> {
   const controller = new AbortController();
   const parentSignal = init.signal;
   let timedOut = false;
@@ -158,7 +163,7 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
   const timer = window.setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, SHARED_LIBRARY_REQUEST_TIMEOUT_MS);
+  }, timeoutMs);
   try {
     return await fetch(input, { ...init, signal: controller.signal });
   } catch (error) {
@@ -340,7 +345,7 @@ export async function fetchPurgedLibraryDocuments(): Promise<PurgedLibraryDocume
   const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library/recovery/purged"), {
     cache: "no-store",
     headers: getPipelineAuthorizationHeader(),
-  }));
+  }, PROTECTED_LIBRARY_RECOVERY_TIMEOUT_MS));
   const documents = parsePurgedLibraryDocuments(value);
   if (!documents) throw new Error("Protected Library recovery returned invalid data.");
   return documents;
@@ -351,7 +356,7 @@ export async function restorePurgedLibraryDocument(documentId: string): Promise<
     method: "POST",
     headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
     body: JSON.stringify({ documentId }),
-  }));
+  }, PROTECTED_LIBRARY_RECOVERY_TIMEOUT_MS));
   const parsed = parseSharedLibraryResponse(value);
   if (!parsed) throw new Error("Protected Library recovery returned invalid catalog data.");
   return parsed;
