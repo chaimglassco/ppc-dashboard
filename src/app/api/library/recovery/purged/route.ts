@@ -17,7 +17,7 @@ const BQOOL_TITLE = "Monitor Product Listing Prices Through BQool";
 const CHECK_SPEND_TITLE = "Check Spend with No Sales";
 const PROTECTED_RECOVERY_TITLES = [BQOOL_TITLE, CHECK_SPEND_TITLE] as const;
 const LEGACY_BACKUP_DIRECTORY = "glassco/library-backups";
-const MAX_BACKUPS_TO_SCAN = 20;
+const MAX_BACKUPS_TO_SCAN = 100;
 
 type BackupSummary = {
   id: string;
