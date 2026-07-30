@@ -94,6 +94,8 @@ The existing `.gitignore` already excludes these paths.
 20. Add Buttons for internal and HTTPS links; verify every width/alignment option, invalid-link feedback, secure new-tab attributes, and mobile full-width behavior.
 21. Add a shared Google Drive video link and confirm a large 16:9 Drive preview player appears inside the blue document header’s right column. Confirm the play icon and playing video content are centered, the compact new-tab icon works, and no separate OPEN VIDEO text button appears.
 22. Edit a long document and confirm the compact icon toolbar groups text styles, alignment, lists, and links with separators. Highlight text near the viewport bottom, add/edit/remove a link in the floating toolbar, save, refresh, and confirm alignment plus secure new-tab navigation persist.
+   For each formatting type (Bold, Italic, Underline, alignment, bullets, checklist, numbers, and link), confirm the same document remains active after save, its record version advances, and it reopens from the catalog.
+   Simulate an incomplete or malformed formatting-save response and confirm edit mode stays open with unsaved changes. A genuine concurrent delete must be displayed only from an explicit `deleted` status.
 22. Open a second authenticated account and confirm the temporary document appears within five seconds, then edit it and confirm the ADMIN tab updates within five seconds or immediately after focus.
 23. Verify USER can create/edit active documents but cannot delete, recover, reorder, or manage categories; verify VIEWER cannot mutate and direct forbidden PATCH requests return `403`.
 24. Check the browser console for hydration or runtime errors.

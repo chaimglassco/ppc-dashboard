@@ -54,4 +54,40 @@ describe("shared library state", () => {
     expect(response?.restoredCount).toBe(3);
     expect(response?.deletionAudit?.documents[documentId].actor?.email).toBe("admin@example.com");
   });
+
+  it("parses an authoritative active document update result", () => {
+    const state = createSharedLibraryState(getPublishedDocuments().slice(0, 1));
+    const document = state.documents[0];
+    const response = parseSharedLibraryResponse({
+      initialized: true,
+      state,
+      revision: 9,
+      recordVersions: { documents: { [document.id]: 5 }, categories: {} },
+      updatedAt: "2026-07-30T00:00:00.000Z",
+      updatedBy: "admin@example.com",
+      documentStatus: { status: "active", slug: document.slug, documentId: document.id, recordVersion: 5 },
+      mutationResult: {
+        operation: "document.update",
+        documentId: document.id,
+        document,
+        recordVersion: 5,
+        lifecycleState: "active",
+      },
+    });
+
+    expect(response?.mutationResult).toMatchObject({
+      documentId: document.id,
+      recordVersion: 5,
+      lifecycleState: "active",
+    });
+    expect(parseSharedLibraryResponse({
+      initialized: true,
+      state,
+      revision: 9,
+      recordVersions: { documents: { [document.id]: 5 }, categories: {} },
+      updatedAt: null,
+      updatedBy: null,
+      mutationResult: { operation: "document.update", documentId: document.id, document, recordVersion: 5, lifecycleState: "missing" },
+    })).toBeNull();
+  });
 });

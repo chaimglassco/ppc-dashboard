@@ -51,6 +51,14 @@ export type SharedLibraryIntegrityStatus = {
   unacknowledgedIncidentCount: number;
 };
 
+export type SharedLibraryMutationResult = {
+  operation: "document.update";
+  documentId: string;
+  document: ManagedLibraryDocument;
+  recordVersion: number;
+  lifecycleState: "active" | "deleted" | "archived";
+};
+
 export type SharedLibraryResponse = {
   initialized: boolean;
   state: SharedLibraryState;
@@ -65,6 +73,7 @@ export type SharedLibraryResponse = {
   documentStatus?: SharedLibraryDocumentStatus;
   deletionAudit?: SharedLibraryDeletionAudit;
   restoredCount?: number;
+  mutationResult?: SharedLibraryMutationResult;
 };
 
 export function parseSharedLibraryState(value: unknown): SharedLibraryState | null {
@@ -152,6 +161,26 @@ function parseDocumentStatus(value: unknown): SharedLibraryDocumentStatus | null
   };
 }
 
+function parseMutationResult(value: unknown): SharedLibraryMutationResult | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const entry = value as Record<string, unknown>;
+  if (entry.operation !== "document.update"
+    || typeof entry.documentId !== "string"
+    || !Number.isInteger(entry.recordVersion)
+    || Number(entry.recordVersion) < 1
+    || !["active", "deleted", "archived"].includes(String(entry.lifecycleState))) return null;
+  const parsed = parseAdminLibraryState(JSON.stringify({ version: 1, documents: [entry.document] }));
+  const document = parsed?.documents[0];
+  if (!document || parsed?.documents.length !== 1 || document.id !== entry.documentId) return null;
+  return {
+    operation: "document.update",
+    documentId: entry.documentId,
+    document,
+    recordVersion: Number(entry.recordVersion),
+    lifecycleState: entry.lifecycleState as SharedLibraryMutationResult["lifecycleState"],
+  };
+}
+
 export function parseSharedLibraryResponse(value: unknown): SharedLibraryResponse | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Record<string, unknown>;
@@ -183,6 +212,8 @@ export function parseSharedLibraryResponse(value: unknown): SharedLibraryRespons
   if (candidate.documentStatus !== undefined && !documentStatus) return null;
   const deletionAudit = candidate.deletionAudit === undefined ? undefined : parseDeletionAudit(candidate.deletionAudit);
   if (candidate.deletionAudit !== undefined && !deletionAudit) return null;
+  const mutationResult = candidate.mutationResult === undefined ? undefined : parseMutationResult(candidate.mutationResult);
+  if (candidate.mutationResult !== undefined && !mutationResult) return null;
   if (candidate.restoredCount !== undefined && (!Number.isInteger(candidate.restoredCount) || Number(candidate.restoredCount) < 0)) return null;
   return {
     initialized: candidate.initialized,
@@ -202,5 +233,6 @@ export function parseSharedLibraryResponse(value: unknown): SharedLibraryRespons
     ...(documentStatus ? { documentStatus } : {}),
     ...(deletionAudit ? { deletionAudit } : {}),
     ...(candidate.restoredCount === undefined ? {} : { restoredCount: Number(candidate.restoredCount) }),
+    ...(mutationResult ? { mutationResult } : {}),
   };
 }

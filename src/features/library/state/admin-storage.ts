@@ -1,5 +1,5 @@
 import { DOCUMENT_TYPES, type LibraryContentElement, type LibraryDocument } from "../domain/types";
-import { isRichTextDocument } from "../domain/rich-text";
+import { normalizeRichTextDocument } from "../domain/rich-text";
 
 export type ManagedLibraryDocument = LibraryDocument & { deletedAt?: string; archivedAt?: string };
 export type AdminLibraryState = { version: 1; documents: ManagedLibraryDocument[] };
@@ -51,29 +51,39 @@ function sanitizeRichText(document: ManagedLibraryDocument): ManagedLibraryDocum
     ...document,
     contentElements: document.contentElements.map(element => {
       const next = { ...element };
-      if (!isRichTextDocument(next.richText)) delete next.richText;
-      if (!isRichTextDocument(next.calloutRichText)) delete next.calloutRichText;
-      if (!next.itemRichText?.every(isRichTextDocument)) delete next.itemRichText;
+      const richText = normalizeRichTextDocument(next.richText);
+      const calloutRichText = normalizeRichTextDocument(next.calloutRichText);
+      if (richText) next.richText = richText;
+      else delete next.richText;
+      if (calloutRichText) next.calloutRichText = calloutRichText;
+      else delete next.calloutRichText;
+      const itemRichText = next.itemRichText?.map(normalizeRichTextDocument);
+      if (itemRichText?.every((item): item is NonNullable<typeof item> => Boolean(item))) next.itemRichText = itemRichText;
+      else delete next.itemRichText;
       next.steps = next.steps.map(step => {
-        const richText = isRichTextDocument(step.richText) ? step.richText : undefined;
-        return { ...step, richText };
+        const stepRichText = normalizeRichTextDocument(step.richText) ?? undefined;
+        return { ...step, richText: stepRichText };
       });
       next.nodes = next.nodes.map(node => {
-        const descriptionRichText = isRichTextDocument(node.descriptionRichText) ? node.descriptionRichText : undefined;
+        const descriptionRichText = normalizeRichTextDocument(node.descriptionRichText) ?? undefined;
         return { ...node, description: node.description ?? "", descriptionRichText };
       });
       next.dropdowns = next.dropdowns?.map(dropdown => {
-        const richText = isRichTextDocument(dropdown.richText) ? dropdown.richText : undefined;
-        return { ...dropdown, richText };
+        const dropdownRichText = normalizeRichTextDocument(dropdown.richText) ?? undefined;
+        return { ...dropdown, richText: dropdownRichText };
       });
       return next;
     }),
   };
 }
 
+export function normalizeManagedLibraryDocument(document: ManagedLibraryDocument): ManagedLibraryDocument | null {
+  return isDocument(document) ? sanitizeRichText(document) : null;
+}
+
 export function parseAdminLibraryState(raw: string | null): AdminLibraryState | null {
   if (!raw) return null;
-  try { const value: unknown = JSON.parse(raw); if (!value || typeof value !== "object") return null; const state = value as Record<string, unknown>; if (state.version !== 1 || !Array.isArray(state.documents)) return null; return { version: 1, documents: state.documents.filter(isDocument).map(sanitizeRichText) }; } catch { return null; }
+  try { const value: unknown = JSON.parse(raw); if (!value || typeof value !== "object") return null; const state = value as Record<string, unknown>; if (state.version !== 1 || !Array.isArray(state.documents)) return null; return { version: 1, documents: state.documents.map(item => normalizeManagedLibraryDocument(item as ManagedLibraryDocument)).filter((item): item is ManagedLibraryDocument => Boolean(item)) }; } catch { return null; }
 }
 
 export function moveDocument(documents: ManagedLibraryDocument[], id: string, direction: -1 | 1) {

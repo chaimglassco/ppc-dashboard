@@ -90,7 +90,7 @@ export class SharedLibraryRequestError extends Error {
 export type SharedLibraryMutation =
   | { operation: "catalog.initialize"; state: SharedLibraryState; expectedRevision: 0 }
   | { operation: "document.create"; document: ManagedLibraryDocument }
-  | { operation: "document.update"; documentId: string; expectedVersion: number; document: ManagedLibraryDocument }
+  | { operation: "document.update"; documentId: string; expectedVersion: number; document: ManagedLibraryDocument; updateScope?: "content" }
   | { operation: "document.delete" | "document.restore" | "document.archive" | "document.restoreArchived" | "document.purge"; documentId: string; expectedVersion: number }
   | { operation: "record.restoreVersion"; recordType: "document" | "category"; recordId: string; versionId: string; expectedVersion: number }
   | { operation: "records.restoreFromSnapshot"; snapshotId: string; recordType: "document" | "category"; recordIds: string[]; expectedRevision: number }

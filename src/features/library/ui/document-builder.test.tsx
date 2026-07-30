@@ -222,6 +222,22 @@ describe("DocumentBuilder mode controls", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onModeTransition).toHaveBeenLastCalledWith(activeTopicId);
   });
+
+  it("keeps the editor and unsaved formatting open when save verification fails", async () => {
+    const document = getPublishedDocuments()[0];
+    const onSave = vi.fn().mockRejectedValue(new Error("The document save could not be verified. Your changes remain open."));
+    const view = render(<DocumentBuilder canEdit doc={document} activeTopicId="" onTopicChange={vi.fn()} onSave={onSave} onSaveVideoUrl={vi.fn()} />);
+    const controls = within(view.container);
+
+    fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
+    expect(controls.getAllByRole("button", { name: "Save changes and switch to view mode" }).length).toBeGreaterThan(0);
+
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(controls.getAllByText("The document save could not be verified. Your changes remain open.").length).toBeGreaterThan(0);
+    expect(controls.getAllByRole("button", { name: "Save changes and switch to view mode" }).length).toBeGreaterThan(0);
+  });
 });
 
 describe("DocumentBuilder editable tables", () => {

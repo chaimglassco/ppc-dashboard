@@ -161,6 +161,9 @@ Use this checklist before merging or deploying changes.
 - [x] Existing Markdown formatting appears correctly when first opened in structured edit mode.
 - [x] Malformed rich JSON falls back to legacy text without removing the document.
 - [x] Desktop and mobile toolbars remain keyboard accessible and do not create horizontal page overflow.
+- [x] Formatting-save responses are verified for matching ID/slug, active lifecycle, advanced record version, and parseable matching content before edit mode closes.
+- [x] Missing or malformed save responses keep the editor, unsaved formatting, and cached document visible; they never synthesize a deleted-document state.
+- [x] Content updates cannot change hidden/status/deleted/archived fields, and unsafe links fail validation without losing the document.
 
 ## Live-state and stale-link checks
 

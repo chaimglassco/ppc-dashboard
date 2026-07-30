@@ -10,7 +10,7 @@ import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { BubbleMenu, type BubbleMenuProps } from "@tiptap/react/menus";
 import { renderJSONContentToReactElement } from "@tiptap/static-renderer/json/react";
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
-import { isRichTextDocument, normalizeRichTextHref, richTextToPlainText } from "../domain/rich-text";
+import { normalizeRichTextDocument, normalizeRichTextHref, richTextToPlainText } from "../domain/rich-text";
 import type { RichTextDocument, RichTextMark, RichTextNode, TextAlignment } from "../domain/types";
 import styles from "./rich-text.module.css";
 
@@ -57,41 +57,6 @@ const inlineExtensions = [
   }),
   TextAlign.configure({ types: ["paragraph"], alignments: ["left", "center", "right"], defaultAlignment: null }),
 ];
-
-function normalizeEditorRichText(value: unknown): RichTextDocument | null {
-  const normalizeNode = (node: unknown): unknown => {
-    if (!node || typeof node !== "object" || Array.isArray(node)) return node;
-    const normalized = { ...(node as Record<string, unknown>) };
-    if (normalized.type === "orderedList" && normalized.attrs && typeof normalized.attrs === "object" && !Array.isArray(normalized.attrs)) {
-      const start = (normalized.attrs as Record<string, unknown>).start;
-      normalized.attrs = start === undefined ? {} : { start };
-    }
-    if (normalized.type === "paragraph" && normalized.attrs && typeof normalized.attrs === "object" && !Array.isArray(normalized.attrs)) {
-      const textAlign = (normalized.attrs as Record<string, unknown>).textAlign;
-      if (["left", "center", "right"].includes(String(textAlign))) normalized.attrs = { textAlign };
-      else delete normalized.attrs;
-    }
-    if (Array.isArray(normalized.marks)) {
-      const normalizedMarks = normalized.marks.flatMap(mark => {
-        if (!mark || typeof mark !== "object" || Array.isArray(mark)) return [];
-        const type = String((mark as Record<string, unknown>).type ?? "");
-        if (["bold", "italic", "underline"].includes(type)) return [{ type }];
-        if (type !== "link") return [];
-        const attrs = (mark as Record<string, unknown>).attrs;
-        const href = attrs && typeof attrs === "object" && !Array.isArray(attrs)
-          ? normalizeRichTextHref(String((attrs as Record<string, unknown>).href ?? ""))
-          : null;
-        return href ? [{ type: "link", attrs: { href } }] : [];
-      });
-      if (normalizedMarks.length) normalized.marks = normalizedMarks;
-      else delete normalized.marks;
-    }
-    if (Array.isArray(normalized.content)) normalized.content = normalized.content.map(normalizeNode);
-    return normalized;
-  };
-  const normalized = normalizeNode(value);
-  return isRichTextDocument(normalized) ? normalized : null;
-}
 
 const renderRichText = renderJSONContentToReactElement<RichTextMark, RichTextNode>({
   nodeMapping: {
@@ -215,14 +180,14 @@ export function RichTextEditor({
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
-      const next = normalizeEditorRichText(currentEditor.getJSON());
+      const next = normalizeRichTextDocument(currentEditor.getJSON());
       if (next) onChangeRef.current(next, richTextToPlainText(next));
     },
   }, [allowLists]);
 
   useEffect(() => {
     if (!editor) return;
-    const current = normalizeEditorRichText(editor.getJSON());
+    const current = normalizeRichTextDocument(editor.getJSON());
     if (JSON.stringify(current) !== JSON.stringify(value)) editor.commands.setContent(value, { emitUpdate: false });
   }, [editor, value]);
 

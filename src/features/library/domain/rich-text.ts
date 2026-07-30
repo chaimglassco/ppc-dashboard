@@ -77,6 +77,41 @@ export function isRichTextDocument(value: unknown): value is RichTextDocument {
   return isRichTextNode(value, true) && Array.isArray(value.content);
 }
 
+export function normalizeRichTextDocument(value: unknown): RichTextDocument | null {
+  const normalizeNode = (node: unknown): unknown => {
+    if (!node || typeof node !== "object" || Array.isArray(node)) return node;
+    const normalized = { ...(node as Record<string, unknown>) };
+    if (normalized.type === "orderedList" && normalized.attrs && typeof normalized.attrs === "object" && !Array.isArray(normalized.attrs)) {
+      const start = (normalized.attrs as Record<string, unknown>).start;
+      normalized.attrs = start === undefined ? {} : { start };
+    }
+    if (normalized.type === "paragraph" && normalized.attrs && typeof normalized.attrs === "object" && !Array.isArray(normalized.attrs)) {
+      const textAlign = (normalized.attrs as Record<string, unknown>).textAlign;
+      if (["left", "center", "right"].includes(String(textAlign))) normalized.attrs = { textAlign };
+      else delete normalized.attrs;
+    }
+    if (Array.isArray(normalized.marks)) {
+      const normalizedMarks = normalized.marks.flatMap(mark => {
+        if (!mark || typeof mark !== "object" || Array.isArray(mark)) return [];
+        const type = String((mark as Record<string, unknown>).type ?? "");
+        if (["bold", "italic", "underline"].includes(type)) return [{ type }];
+        if (type !== "link") return [];
+        const attrs = (mark as Record<string, unknown>).attrs;
+        const href = attrs && typeof attrs === "object" && !Array.isArray(attrs)
+          ? normalizeRichTextHref(String((attrs as Record<string, unknown>).href ?? ""))
+          : null;
+        return href ? [{ type: "link", attrs: { href } }] : [];
+      });
+      if (normalizedMarks.length) normalized.marks = normalizedMarks;
+      else delete normalized.marks;
+    }
+    if (Array.isArray(normalized.content)) normalized.content = normalized.content.map(normalizeNode);
+    return normalized;
+  };
+  const normalized = normalizeNode(value);
+  return isRichTextDocument(normalized) ? normalized : null;
+}
+
 function textNode(text: string, marks: RichTextMark[] = []): RichTextNode {
   return marks.length ? { type: "text", text, marks } : { type: "text", text };
 }

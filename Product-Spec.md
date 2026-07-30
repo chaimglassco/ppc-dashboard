@@ -111,6 +111,8 @@ These require a separately approved milestone and must preserve the current shar
 - Standalone list-element rows retain their element-level markers and omit nested-list controls while keeping text styles, alignment, and links.
 - Pasted content is constrained by the editor schema to supported paragraphs, marks, safe links, lists, and checklists; images, colors, fonts, headings, unsafe URLs, and arbitrary HTML are not persisted.
 - Checklist boxes are editable in admin mode and disabled in reader mode.
+- **LIB-BUILDER-012** — A formatting save is accepted only when Pipeline returns the same active document ID and slug, a newer record version, and parseable matching content. Verification failure keeps edit mode and unsaved formatting open.
+- **LIB-BUILDER-013** — Content formatting cannot alter visibility, publication status, deletion, archive state, identity, or slug. Only explicit lifecycle actions may remove a document from the active catalog.
 
 # Library live-state behavior
 

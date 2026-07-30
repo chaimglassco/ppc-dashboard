@@ -151,7 +151,7 @@ Pipeline tables separate catalog metadata, documents, categories, backups, and a
 
 - `catalog.initialize` with `state` and `expectedRevision: 0`
 - `document.create` with `document`
-- `document.update` with `documentId`, `expectedVersion`, and `document`
+- `document.update` with `documentId`, `expectedVersion`, `document`, and optional `updateScope: "content"`
 - `document.delete` / `document.restore` with `documentId` and `expectedVersion`
 - `document.purge` with `documentId` and `expectedVersion` (ADMIN only; target must already be deleted)
 - `documents.restoreSystemDeleted` with unique `documentIds` and `expectedRevision` (ADMIN only)
@@ -159,6 +159,20 @@ Pipeline tables separate catalog metadata, documents, categories, backups, and a
 - equivalent category create/update/delete/restore/reorder operations
 
 Updates, delete, restore, and purge compare the target record version. Purge succeeds only for a tombstoned document, physically removes its content record, retains a metadata-only `document.purge` audit event, and prevents backup restore from recreating that ID. Reorders, initialization, and bulk system recovery compare the global revision. Bulk recovery succeeds only when every requested record is currently tombstoned and its latest deletion event is `system_migration`; otherwise it restores none. A mismatch or unavailable target returns HTTP `409`, `conflict: true`, and the current full shared response. Successful mutations increment the global revision, update record versions as applicable, and record actor/revision audit metadata.
+
+`updateScope: "content"` is used for editor and formatting saves. Pipeline removes lifecycle timestamps, preserves the stored ID, slug, visibility, and publication status, validates/canonicalizes supported rich-text nodes and marks, and returns:
+
+```ts
+mutationResult: {
+  operation: "document.update";
+  documentId: string;
+  document: ManagedLibraryDocument;
+  recordVersion: number;
+  lifecycleState: "active";
+}
+```
+
+The returned document and lifecycle metadata come from the same successful database write as the version increment. Library must not apply or evict caches for a content save until this result matches the submitted ID/slug, remains active, advances the expected version, and contains parseable matching content.
 
 The Library-side adapter forwards authenticated `document.delete` mutations even when the target is the final active document. An empty active catalog is valid, and the resulting tombstone remains available through normal Recovery. `/ppc/api/library/recovery/purged` is an ADMIN-only repair surface: GET returns metadata-only permanent-deletion history, while POST accepts one protected document ID and recreates only the exact approved bQool or Check Spend record from a trusted snapshot through the existing `document.create` contract. It never bulk-imports or silently restores purged records.
 

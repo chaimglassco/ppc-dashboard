@@ -27,6 +27,29 @@ describe("admin library storage", () => {
     expect(parsed?.text).toBe("Legacy fallback");
     expect(parsed?.richText).toBeUndefined();
   });
+  it("canonicalizes editor-only link attributes without dropping the document", () => {
+    const statement = {
+      ...createBlankContentElement("statement", 1),
+      text: "Open guide",
+      richText: {
+        type: "doc",
+        content: [{
+          type: "paragraph",
+          attrs: { textAlign: null },
+          content: [{
+            type: "text",
+            text: "Open guide",
+            marks: [{ type: "link", attrs: { href: "example.com/guide", target: "_blank", rel: "noopener noreferrer", class: null } }],
+          }],
+        }],
+      },
+    };
+    const value = JSON.stringify({ version: 1, documents: [{ ...seed[0], contentElements: [statement] }] });
+    const parsed = parseAdminLibraryState(value)?.documents[0].contentElements?.[0].richText;
+    expect(parsed).toMatchObject({
+      content: [{ content: [{ marks: [{ type: "link", attrs: { href: "https://example.com/guide" } }] }] }],
+    });
+  });
   it("accepts aligned text elements and sanitizes diagnostic-flow description rich text", () => {
     const headline = { ...createBlankContentElement("headline", 1), text: "Headline", textAlignment: "right" as const };
     const flow = { ...createBlankContentElement("flowchart", 1), nodes: [{ title: "Step", text: "Next", description: "Legacy description", descriptionRichText: { type: "doc", content: [{ type: "script", text: "bad" }] } }] };

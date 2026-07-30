@@ -113,6 +113,23 @@ describe("shared library client", () => {
     expect(removeItem).toHaveBeenCalledWith(getSharedLibraryCacheKey({ slug: response.state.documents[0].slug }));
   });
 
+  it("invalidates a reader cache when the authoritative record version changes", () => {
+    const removeItem = vi.fn();
+    const document = response.state.documents[0];
+    const next = {
+      ...response,
+      revision: 3,
+      recordVersions: {
+        ...response.recordVersions,
+        documents: { ...response.recordVersions.documents, [document.id]: 2 },
+      },
+    };
+
+    reconcileSharedLibraryDocumentCaches(response, next, { removeItem });
+
+    expect(removeItem).toHaveBeenCalledWith(getSharedLibraryCacheKey({ slug: response.state.documents[0].slug }));
+  });
+
   it("aborts a hung shared-state request instead of leaving hydration pending forever", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {

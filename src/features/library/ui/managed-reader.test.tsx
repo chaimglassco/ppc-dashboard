@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
+import { createBlankContentElement } from "../domain/document-elements";
 import { createDefaultCategories } from "../state/category-storage";
 import type { SharedLibraryResponse } from "../state/shared-library-state";
 import { ManagedReader } from "./managed-reader";
@@ -17,8 +18,21 @@ vi.mock("../state/shared-library-client", async importOriginal => {
 });
 
 vi.mock("./reader", () => ({
-  Reader: ({ doc, mutationsEnabled }: { doc: { title: string }; mutationsEnabled: boolean }) =>
-    <div data-testid="reader">{doc.title}:{mutationsEnabled ? "editable" : "read-only"}</div>,
+  Reader: ({ doc, mutationsEnabled, onSaveContentElements }: {
+    doc: { title: string; description: string; category: string; contentElements?: unknown[] };
+    mutationsEnabled: boolean;
+    onSaveContentElements: (elements: unknown[], metadata: { title: string; description: string; category: string }) => Promise<void>;
+  }) =>
+    <div data-testid="reader">
+      {doc.title}:{mutationsEnabled ? "editable" : "read-only"}
+      <button type="button" onClick={() => {
+        void onSaveContentElements(doc.contentElements ?? [], {
+          title: doc.title,
+          description: doc.description,
+          category: doc.category,
+        }).catch(() => undefined);
+      }}>Save formatted document</button>
+    </div>,
 }));
 
 function response(documents = getPublishedDocuments().slice(0, 1)): SharedLibraryResponse {
@@ -112,5 +126,72 @@ describe("managed reader loading states", () => {
       expectedVersion: 4,
     }, { slug: document.slug }));
     await waitFor(() => expect(screen.getByTestId("reader")).toHaveTextContent(`${document.title}:editable`));
+  });
+
+  it("keeps an active document visible after a verified formatted-content save", async () => {
+    const base = getPublishedDocuments()[0];
+    const statement = {
+      ...createBlankContentElement("statement", 1),
+      text: "Open guide",
+      richText: {
+        type: "doc" as const,
+        content: [{
+          type: "paragraph" as const,
+          content: [{
+            type: "text" as const,
+            text: "Open guide",
+            marks: [{ type: "link" as const, attrs: { href: "https://example.com/guide" } }],
+          }],
+        }],
+      },
+    };
+    const document = { ...base, contentElements: [statement] };
+    const initial = response([document]);
+    const saved: SharedLibraryResponse = {
+      ...initial,
+      revision: 3,
+      recordVersions: { ...initial.recordVersions, documents: { [document.id]: 2 } },
+      documentStatus: { status: "active", slug: document.slug, documentId: document.id, recordVersion: 2 },
+      mutationResult: {
+        operation: "document.update",
+        documentId: document.id,
+        document,
+        recordVersion: 2,
+        lifecycleState: "active",
+      },
+    };
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: initial, source: "server" });
+    client.mutateSharedLibrary.mockResolvedValue(saved);
+    render(<ManagedReader slug={document.slug} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Save formatted document" }));
+
+    await waitFor(() => expect(client.mutateSharedLibrary).toHaveBeenCalledWith(expect.objectContaining({
+      operation: "document.update",
+      documentId: document.id,
+      expectedVersion: 1,
+      updateScope: "content",
+      document: expect.objectContaining({ id: document.id, contentElements: [expect.objectContaining({ richText: statement.richText })] }),
+    }), { slug: document.slug }));
+    expect(screen.getByTestId("reader")).toHaveTextContent(`${document.title}:editable`);
+    expect(screen.queryByRole("heading", { name: "Document unavailable" })).not.toBeInTheDocument();
+  });
+
+  it("preserves the current document when a save response cannot prove it stayed active", async () => {
+    const document = { ...getPublishedDocuments()[0], contentElements: [createBlankContentElement("statement", 1)] };
+    const initial = response([document]);
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: initial, source: "server" });
+    client.mutateSharedLibrary.mockResolvedValue({
+      ...response([]),
+      revision: 3,
+      documentStatus: { status: "active", slug: document.slug, documentId: document.id, recordVersion: 2 },
+    });
+    render(<ManagedReader slug={document.slug} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Save formatted document" }));
+
+    expect(await screen.findByText(/save could not be verified/i)).toBeVisible();
+    expect(screen.getByTestId("reader")).toHaveTextContent(`${document.title}:editable`);
+    expect(screen.queryByRole("heading", { name: "Document unavailable" })).not.toBeInTheDocument();
   });
 });

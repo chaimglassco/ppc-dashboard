@@ -121,9 +121,11 @@ Next.js is compiled with `basePath: "/ppc"`. Pipeline proxies `/ppc/:path*` to t
 
 Rich JSON fields are optional and additive. Shared/local state validation removes invalid optional rich content while retaining the surrounding document so the builder can reconstruct it from legacy strings.
 
+Formatting writes use `document.update` with `updateScope: "content"`. The Pipeline contract canonicalizes supported nodes, marks, links, alignment, and lists, strips editor-only link attributes, and preserves identity plus lifecycle fields. Its mutation response includes the authoritative saved document, active lifecycle state, and advanced record version from the same database write. `ManagedReader` verifies all of those values before applying the response. Missing or malformed save data leaves the current document/editor intact; only an explicit structured `deleted`, `purged`, or `archived` status can replace the reader with a lifecycle screen.
+
 ## Live Library state reconciliation
 
 - Normal catalog and reader requests receive active records from one Pipeline database snapshot; deleted documents and attribution are fetched only for ADMIN Recovery.
 - Confirmed catalog and per-document caches remain separate, read-only outage fallbacks. Each cache records its snapshot time and revision and is never uploaded to Pipeline.
-- Focus, visibility, `pageshow`, and browser history restoration trigger immediate authoritative refreshes. Removed or version-changed records invalidate their per-document cache.
+- Focus, visibility, `pageshow`, and browser history restoration trigger immediate authoritative refreshes. Removed or version-changed records invalidate their per-document cache. Formatting-save responses are handled separately and never evict a cache unless they explicitly report a lifecycle transition.
 - Slug reads expose `active`, `deleted`, `purged`, or `not_found` status so stale routes render an explanation instead of silently reconciling to an empty reader.

@@ -5,13 +5,65 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useGlasscoSession } from "@/components/glassco-session";
 import { getTopicsFromContentElements } from "../domain/document-elements";
 import type { LibraryContentElement } from "../domain/types";
-import { type ManagedLibraryDocument } from "../state/admin-storage";
+import { normalizeManagedLibraryDocument, type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories } from "../state/category-storage";
 import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, invalidateSharedLibraryDocumentCache, mutateSharedLibrary, SharedLibraryConflictError } from "../state/shared-library-client";
 import { getSharedLibraryRefreshDelay } from "../state/shared-library-retry";
 import type { LibraryDocumentDeletionAudit, SharedLibraryDocumentStatus, SharedLibraryResponse } from "../state/shared-library-state";
 import type { DocumentMetadataDraft } from "./document-builder";
 import { Reader } from "./reader";
+
+export class DocumentSaveVerificationError extends Error {
+  constructor(message = "The document save could not be verified. Your changes remain open; please try saving again.") {
+    super(message);
+    this.name = "DocumentSaveVerificationError";
+  }
+}
+
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.keys(value as Record<string, unknown>).sort().map(key => [
+    key,
+    stableValue((value as Record<string, unknown>)[key]),
+  ]));
+}
+
+function sameStructuredContent(left: unknown, right: unknown) {
+  return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+}
+
+export function verifyDocumentSaveResponse(response: SharedLibraryResponse, submitted: ManagedLibraryDocument, expectedVersion: number): ManagedLibraryDocument {
+  const result = response.mutationResult;
+  const returned = response.state.documents.find(document => document.id === submitted.id);
+  const returnedVersion = response.recordVersions.documents[submitted.id];
+  if (!result
+    || result.operation !== "document.update"
+    || result.documentId !== submitted.id
+    || result.document.id !== submitted.id
+    || result.document.slug !== submitted.slug
+    || result.lifecycleState !== "active"
+    || result.recordVersion <= expectedVersion
+    || returnedVersion !== result.recordVersion
+    || response.documentStatus?.status !== "active"
+    || response.documentStatus.documentId !== submitted.id
+    || !returned
+    || returned.slug !== submitted.slug
+    || returned.deletedAt
+    || returned.archivedAt
+    || result.document.deletedAt
+    || result.document.archivedAt
+    || returned.hidden !== submitted.hidden
+    || returned.status !== submitted.status
+    || returned.title !== submitted.title
+    || returned.description !== submitted.description
+    || returned.category !== submitted.category
+    || !sameStructuredContent(returned.contentElements, submitted.contentElements)
+    || !sameStructuredContent(result.document.contentElements, submitted.contentElements)) {
+    throw new DocumentSaveVerificationError();
+  }
+  return returned;
+}
 
 export function ManagedReader({ slug }: { slug: string }) {
   const { canAdmin } = useGlasscoSession();
@@ -30,11 +82,16 @@ export function ManagedReader({ slug }: { slug: string }) {
   const documentRef = useRef<ManagedLibraryDocument | null | undefined>(undefined);
   const consecutiveFailuresRef = useRef(0);
 
-  const applyResponse = useCallback((response: SharedLibraryResponse, cache = true) => {
-    sharedRef.current = response;
-    setDocumentSlug(slug);
+  const applyResponse = useCallback((response: SharedLibraryResponse, cache = true, preserveOnMissing = false) => {
     const nextDocument = response.state.documents.find(item => item.slug === slug && !item.deletedAt && !item.hidden) ?? null;
     const nextStatus = response.documentStatus ?? (nextDocument ? { status: "active" as const, slug } : null);
+    const explicitlyUnavailable = nextStatus?.status === "deleted" || nextStatus?.status === "purged" || nextStatus?.status === "archived";
+    if (!nextDocument && preserveOnMissing && !explicitlyUnavailable) {
+      setNotice("The latest Library response did not include this active document. The current editor copy was preserved.");
+      return false;
+    }
+    sharedRef.current = response;
+    setDocumentSlug(slug);
     setDocumentStatus(nextStatus);
     documentRef.current = nextDocument;
     setDocument(nextDocument);
@@ -42,6 +99,7 @@ export function ManagedReader({ slug }: { slug: string }) {
     setCategories(response.state.categories.filter(category => !category.deletedAt).map(category => category.name));
     if (nextStatus && nextStatus.status !== "active") invalidateSharedLibraryDocumentCache(window.localStorage, slug);
     else if (cache && nextDocument) cacheSharedLibraryResponse(response, window.localStorage, { slug });
+    return true;
   }, [slug]);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
@@ -172,16 +230,27 @@ export function ManagedReader({ slug }: { slug: string }) {
   const saveDocument = async (updated: ManagedLibraryDocument) => {
     const expectedVersion = sharedRef.current?.recordVersions.documents[updated.id];
     if (!mutationsEnabled || expectedVersion === undefined) throw new Error("Shared library editing is unavailable.");
+    const normalized = normalizeManagedLibraryDocument(updated);
+    if (!normalized) throw new DocumentSaveVerificationError("The formatted document contains invalid data. Your changes remain open and were not submitted.");
     try {
-      const saved = await mutateSharedLibrary({ operation: "document.update", documentId: updated.id, expectedVersion, document: updated }, { slug });
+      const saved = await mutateSharedLibrary({
+        operation: "document.update",
+        documentId: normalized.id,
+        expectedVersion,
+        updateScope: "content",
+        document: normalized,
+      }, { slug });
+      verifyDocumentSaveResponse(saved, normalized, expectedVersion);
       applyResponse(saved);
     } catch (error) {
       if (error instanceof SharedLibraryConflictError) {
-        applyResponse(error.latest);
+        applyResponse(error.latest, true, true);
+        setNotice(error.message);
+      } else if (error instanceof DocumentSaveVerificationError) {
         setNotice(error.message);
       } else {
         setMutationsEnabled(false);
-        setNotice("Unable to save to the shared library. No local-only change was kept.");
+        setNotice("Unable to verify the shared Library save. Your editor changes remain open; reconnect, then try saving again.");
       }
       throw error;
     }
