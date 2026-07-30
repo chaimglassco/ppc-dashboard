@@ -15,14 +15,17 @@ import {
   fetchLibraryBackups,
   fetchLibraryIntegrityIncidents,
   fetchLibrarySnapshot,
+  fetchPurgedLibraryDocuments,
   fetchSharedLibraryState,
   hydrateSharedLibraryState,
   initializeSharedLibrary,
   mutateSharedLibrary,
   reconcileSharedLibraryDocumentCaches,
+  restorePurgedLibraryDocument,
   SharedLibraryConflictError,
   type LibraryBackup,
   type LibraryIntegrityIncident,
+  type PurgedLibraryDocument,
   type LibraryVersion,
   type SharedLibraryMutation,
   type SharedLibraryReadOptions,
@@ -66,6 +69,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [archiveRecordVersions, setArchiveRecordVersions] = useState<Record<string, number>>({});
   const [libraryBackups, setLibraryBackups] = useState<LibraryBackup[]>([]);
   const [integrityIncidents, setIntegrityIncidents] = useState<LibraryIntegrityIncident[]>([]);
+  const [purgedDocuments, setPurgedDocuments] = useState<PurgedLibraryDocument[]>([]);
   const [purgedHistoryError, setPurgedHistoryError] = useState("");
   const [showDocumentReorder, setShowDocumentReorder] = useState(false);
   const [editor, setEditor] = useState<"new" | null>(null);
@@ -284,15 +288,20 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       })
       .catch(error => {
         setPurgedHistoryError(error instanceof Error ? error.message : "Protected archive could not be loaded.");
-      })
-      .finally(() => setIsLoadingPurgedHistory(false));
+      });
+    const protectedRecoveryRequest = fetchPurgedLibraryDocuments()
+      .then(setPurgedDocuments)
+      .catch(error => {
+        setPurgedHistoryError(error instanceof Error ? error.message : "Protected legacy recovery could not be loaded.");
+      });
     const backupsRequest = fetchLibraryBackups().then(setLibraryBackups).catch(error => {
       setPurgedHistoryError(error instanceof Error ? error.message : "Library snapshots could not be loaded.");
     });
     const incidentsRequest = fetchLibraryIntegrityIncidents().then(setIntegrityIncidents).catch(error => {
       setPurgedHistoryError(error instanceof Error ? error.message : "Library integrity incidents could not be loaded.");
     });
-    await Promise.allSettled([recoveryRequest, archiveRequest, backupsRequest, incidentsRequest]);
+    await Promise.allSettled([recoveryRequest, archiveRequest, protectedRecoveryRequest, backupsRequest, incidentsRequest]);
+    setIsLoadingPurgedHistory(false);
   };
 
   const openDocumentRecovery = () => {
@@ -302,6 +311,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     }
     setShowDocumentRecovery(true);
     setArchivedDocuments([]);
+    setPurgedDocuments([]);
     setLibraryBackups([]);
     setIntegrityIncidents([]);
     void refreshDocumentRecovery();
@@ -312,6 +322,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     setSystemRecoveryError("");
     setDocumentRecoveryError("");
     setArchivedDocuments([]);
+    setPurgedDocuments([]);
     setLibraryBackups([]);
     setIntegrityIncidents([]);
     setPurgedHistoryError("");
@@ -529,6 +540,18 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     await refreshDocumentRecovery();
     return null;
   };
+  const restorePurgedDocument = async (document: PurgedLibraryDocument) => {
+    try {
+      const response = await restorePurgedLibraryDocument(document.documentId);
+      applySharedResponse(response, true, true);
+      setPurgedDocuments(current => current.filter(item => item.documentId !== document.documentId));
+      announceSuccess(`${document.title} was restored from its protected recovery copy.`);
+      await refreshDocumentRecovery();
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : "The protected document could not be restored.";
+    }
+  };
   const restoreVersion = async (version: LibraryVersion) => {
     const expectedVersion = sharedRef.current?.recordVersions.documents[version.recordId]
       ?? archiveRecordVersions[version.recordId];
@@ -634,6 +657,8 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       backups={libraryBackups}
       incidents={integrityIncidents}
       activeDocuments={activeDocuments}
+      purgedDocuments={purgedDocuments}
+      onRestorePurged={restorePurgedDocument}
       purgedHistoryError={purgedHistoryError}
       isLoadingDocuments={isLoadingDocumentRecovery}
       documentLoadError={documentRecoveryError}

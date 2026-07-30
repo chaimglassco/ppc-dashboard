@@ -8,6 +8,7 @@ import {
   fetchLibraryVersions,
   type LibraryBackup,
   type LibraryIntegrityIncident,
+  type PurgedLibraryDocument,
   type LibraryVersion,
 } from "../state/shared-library-client";
 import type { LibraryDocumentDeletionAudit } from "../state/shared-library-state";
@@ -32,8 +33,8 @@ type DeletedDocumentsProps = {
   onCreateSnapshot?: () => Promise<string | null>;
   onRestoreSnapshotRecords?: (backup: LibraryBackup, recordIds: string[]) => Promise<string | null>;
   onAcknowledgeIncident?: (incident: LibraryIntegrityIncident) => Promise<string | null>;
-  purgedDocuments?: unknown[];
-  onRestorePurged?: (document: unknown) => Promise<string | null>;
+  purgedDocuments?: PurgedLibraryDocument[];
+  onRestorePurged?: (document: PurgedLibraryDocument) => Promise<string | null>;
   purgedHistoryError: string;
   isLoadingDocuments: boolean;
   documentLoadError: string;
@@ -85,6 +86,8 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
     onCreateSnapshot = async () => "Snapshot creation is unavailable.",
     onRestoreSnapshotRecords = async () => "Snapshot recovery is unavailable.",
     onAcknowledgeIncident = async () => "Incident acknowledgement is unavailable.",
+    purgedDocuments = [],
+    onRestorePurged = async () => "Protected legacy recovery is unavailable.",
     purgedHistoryError,
     isLoadingDocuments,
     documentLoadError,
@@ -166,7 +169,7 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
       <nav className="recovery-center-tabs" aria-label="Recovery Center sections">
         {([
           ["deleted", documents.length],
-          ["archive", archivedDocuments.length],
+          ["archive", archivedDocuments.length + purgedDocuments.length],
           ["versions", 0],
           ["snapshots", backups.length],
           ["incidents", unacknowledged],
@@ -193,7 +196,11 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
           <div><strong>{document.title}</strong><small>Protected indefinitely{document.archivedAt ? ` · Archived ${new Date(document.archivedAt).toLocaleString()}` : ""}</small></div>
           <button className="secondary-button" type="button" disabled={isBusy} onClick={() => void run(`archive-${document.id}`, () => onRestoreArchived(document))}>{busyId === `archive-${document.id}` ? <LoaderCircle className="spinning-icon" /> : <RotateCcw />} Restore</button>
         </article>)}
-        {!archivedDocuments.length ? <p className="document-recovery-empty">The protected archive is empty.</p> : null}</div> : null}
+        {purgedDocuments.filter(document => document.canRestore).map(document => <article className="document-recovery-row" key={`legacy-${document.documentId}`}>
+          <div><strong>{document.title}</strong><small>{document.source.label} · Protected recovery copy</small></div>
+          <button className="secondary-button" type="button" disabled={isBusy} aria-label={`Restore ${document.title}`} onClick={() => void run(`legacy-${document.documentId}`, () => onRestorePurged(document))}>{busyId === `legacy-${document.documentId}` ? <LoaderCircle className="spinning-icon" /> : <RotateCcw />} Restore</button>
+        </article>)}
+        {!archivedDocuments.length && !purgedDocuments.some(document => document.canRestore) ? <p className="document-recovery-empty">The protected archive is empty.</p> : null}</div> : null}
 
         {tab === "versions" ? <section className="recovery-center-section">
           <label>Document<select value={versionRecordId} onChange={event => void loadVersions(event.target.value)}><option value="">Choose a document</option>{allDocuments.map(document => <option key={document.id} value={document.id}>{document.title}</option>)}</select></label>
