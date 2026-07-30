@@ -17,6 +17,7 @@ const BQOOL_TITLE = "Monitor Product Listing Prices Through BQool";
 const CHECK_SPEND_TITLE = "Check Spend with No Sales";
 const PROTECTED_RECOVERY_TITLES = [BQOOL_TITLE, CHECK_SPEND_TITLE] as const;
 const LEGACY_BACKUP_DIRECTORY = "glassco/library-backups";
+const PROTECTED_SNAPSHOT_DIRECTORY = "glassco/library-snapshots-v2";
 const MAX_BACKUPS_TO_SCAN = 100;
 
 type BackupSummary = {
@@ -143,21 +144,26 @@ async function mapWithConcurrency<T, R>(values: T[], limit: number, task: (value
   return results;
 }
 
-async function readLegacyArchiveStates() {
-  const result = await list({ prefix: `${LEGACY_BACKUP_DIRECTORY}/`, limit: 1000 });
+async function readBlobArchiveStates(directory: string, label: string) {
+  const result = await list({ prefix: `${directory}/`, limit: 1000 });
   const blobs = [...result.blobs].sort((left, right) => right.uploadedAt.getTime() - left.uploadedAt.getTime());
   const snapshots = await mapWithConcurrency(blobs, 4, async blob => {
     try {
       const stored = await get(blob.pathname, { access: "private", useCache: false });
       if (!stored || stored.statusCode !== 200) return null;
-      const state = parseSharedLibraryState(JSON.parse(await new Response(stored.stream).text()));
+      const payload: unknown = JSON.parse(await new Response(stored.stream).text());
+      const state = parseSharedLibraryState(
+        payload && typeof payload === "object" && "state" in payload
+          ? (payload as { state: unknown }).state
+          : payload,
+      );
       if (!state) return null;
       return {
         state,
         source: {
           kind: "legacy_snapshot",
           id: blob.etag || blob.pathname,
-          label: "Protected legacy Library archive",
+          label,
           createdAt: blob.uploadedAt.toISOString(),
         } satisfies SnapshotSource,
       };
@@ -166,6 +172,16 @@ async function readLegacyArchiveStates() {
     }
   });
   return snapshots.filter((snapshot): snapshot is NonNullable<typeof snapshot> => Boolean(snapshot));
+}
+
+async function readProtectedArchiveStates() {
+  const archives = await Promise.all([
+    readBlobArchiveStates(LEGACY_BACKUP_DIRECTORY, "Protected legacy Library archive").catch(() => []),
+    readBlobArchiveStates(PROTECTED_SNAPSHOT_DIRECTORY, "Protected Library snapshot").catch(() => []),
+  ]);
+  return archives.flat().sort((left, right) =>
+    Date.parse(right.source.createdAt || "1970-01-01") - Date.parse(left.source.createdAt || "1970-01-01"),
+  );
 }
 
 async function discoverPurgedDocuments(authorization: string): Promise<InternalPurgedCandidate[]> {
@@ -211,7 +227,7 @@ async function discoverPurgedDocuments(authorization: string): Promise<InternalP
   }
 
   if (missingProtectedTitles().length) {
-    const archives = await readLegacyArchiveStates().catch(() => []);
+    const archives = await readProtectedArchiveStates().catch(() => []);
     for (const archive of archives) {
       const titles = missingProtectedTitles();
       if (!titles.length) break;
