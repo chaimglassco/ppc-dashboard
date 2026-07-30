@@ -130,6 +130,27 @@ Pipeline Postgres is the only authoritative catalog store. Pipeline exposes `/ap
     };
     updatedAt: string | null;
     updatedBy: string | null;
+    recordManifest: {
+      documents: Array<{
+        id: string;
+        slug: string;
+        recordVersion: number;
+        lifecycleState: "active" | "deleted" | "archived";
+        hidden: boolean;
+        status: "published" | "draft";
+      }>;
+    };
+    catalogCompleteness: {
+      complete: true;
+      scope: "catalog" | "document" | "recovery" | "archive" | "state";
+      expectedDocumentCount: number;
+      returnedDocumentCount: number;
+      expectedCategoryCount: number;
+      returnedCategoryCount: number;
+      activeDocumentCount: number;
+      manifestDocumentCount: number;
+      checksum: string;
+    };
     deletionAudit?: {
       documents: Record<string, {
         source: "user" | "system_migration" | "system_backup_restore" | "unknown";
@@ -158,7 +179,7 @@ Pipeline tables separate catalog metadata, documents, categories, backups, and a
 - `documents.reorder` with all active `documentIds` and `expectedRevision`
 - equivalent category create/update/delete/restore/reorder operations
 
-Updates, delete, restore, and purge compare the target record version. Purge succeeds only for a tombstoned document, physically removes its content record, retains a metadata-only `document.purge` audit event, and prevents backup restore from recreating that ID. Reorders, initialization, and bulk system recovery compare the global revision. Bulk recovery succeeds only when every requested record is currently tombstoned and its latest deletion event is `system_migration`; otherwise it restores none. A mismatch or unavailable target returns HTTP `409`, `conflict: true`, and the current full shared response. Successful mutations increment the global revision, update record versions as applicable, and record actor/revision audit metadata.
+Updates and lifecycle operations compare the target record version. Permanent deletion succeeds only for a tombstoned document and moves it into Pipeline's protected archive; physical table deletion is blocked. Reorders, initialization, and bulk system recovery compare the global revision. Bulk recovery succeeds only when every requested record is currently tombstoned and its latest deletion event is `system_migration`; otherwise it restores none. A mismatch or unavailable target returns HTTP `409`, `conflict: true`, and the current full shared response. Successful mutations increment the global revision, update record versions as applicable, and record actor/revision audit metadata.
 
 `updateScope: "content"` is used for editor and formatting saves. Pipeline removes lifecycle timestamps, preserves the stored ID, slug, visibility, and publication status, validates/canonicalizes supported rich-text nodes and marks, and returns:
 
@@ -200,7 +221,7 @@ Schema version: `1`
 
 Key: `glassco-library-confirmed-cache-v2`
 
-The value is the last schema-valid full shared response. A successful server fetch replaces it. If the server is unavailable, it may be rendered only with mutations disabled. It is never treated as pending work and is never uploaded to Pipeline.
+The value is the last schema-valid full shared response. A successful authoritative server fetch replaces it. Live fetches and mutations require a complete lifecycle manifest and matching response counts; malformed or incomplete HTTP 200 responses never replace this cache. If the server is unavailable or validation fails, the cache may be rendered only with mutations disabled. It is never treated as pending work and is never uploaded to Pipeline.
 
 Legacy keys `glassco-library-admin-state` and `glassco-library-category-state` are ignored for shared hydration/migration. Their contents cannot merge with repository seeds or authoritative state.
 
@@ -250,6 +271,6 @@ The corresponding legacy body/text fields remain required search and compatibili
 
 ## Library read-state metadata
 
-Shared Library responses may include `snapshotAt`, `recoveryDocumentCount`, and `documentStatus`. `documentStatus.status` is `active`, `deleted`, `purged`, or `not_found`; deleted responses may include record version and ADMIN-only deletion attribution.
+Shared Library responses may include `snapshotAt`, `recoveryDocumentCount`, and `documentStatus`. `documentStatus.status` is `active`, `deleted`, `archived`, `purged`, or `not_found`; deleted responses may include record version and ADMIN-only deletion attribution.
 
-`GET /ppc/api/library?summary=1` returns active catalog documents and the recoverable count without tombstone content. `recovery=1` explicitly includes recoverable tombstones and ADMIN deletion audit metadata. `slug=<slug>` returns the requested active document plus its structured status. These additions are optional so older confirmed caches remain valid.
+`GET /ppc/api/library?summary=1` returns active catalog documents and the recoverable count without tombstone content. `recovery=1` explicitly includes recoverable tombstones and ADMIN deletion audit metadata. `slug=<slug>` returns the requested active document plus its structured status. `recordManifest` and `catalogCompleteness` are mandatory for live reads and mutation confirmations but optional when parsing an older confirmed cache. A missing record without an explicit deleted/archived/purged lifecycle is never interpreted as deletion.

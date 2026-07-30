@@ -1,15 +1,41 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "./category-storage";
-import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryRequestError, SharedLibraryTimeoutError } from "./shared-library-client";
+import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryIncompleteResponseError, SharedLibraryRequestError, SharedLibraryTimeoutError } from "./shared-library-client";
 
+const documents = getPublishedDocuments().slice(0, 1);
+const categories = createDefaultCategories();
 const response = {
   initialized: true,
-  state: { version: 1 as const, documents: getPublishedDocuments().slice(0, 1), categories: createDefaultCategories() },
+  state: { version: 1 as const, documents, categories },
   revision: 2,
-  recordVersions: { documents: {}, categories: {} },
+  recordVersions: {
+    documents: { [documents[0].id]: 1 },
+    categories: Object.fromEntries(categories.map(category => [category.id, 1])),
+  },
   updatedAt: null,
   updatedBy: null,
+  recordManifest: {
+    documents: [{
+      id: documents[0].id,
+      slug: documents[0].slug,
+      recordVersion: 1,
+      lifecycleState: "active" as const,
+      hidden: documents[0].hidden,
+      status: documents[0].status,
+    }],
+  },
+  catalogCompleteness: {
+    complete: true as const,
+    scope: "catalog" as const,
+    expectedDocumentCount: 1,
+    returnedDocumentCount: 1,
+    expectedCategoryCount: categories.length,
+    returnedCategoryCount: categories.length,
+    activeDocumentCount: 1,
+    manifestDocumentCount: 1,
+    checksum: "catalog-checksum",
+  },
 };
 
 describe("shared library client", () => {
@@ -75,6 +101,19 @@ describe("shared library client", () => {
     await expect(fetchSharedLibraryState()).resolves.toMatchObject({ revision: 2 });
   });
 
+  it("rejects an incomplete successful response so hydration preserves the confirmed cache", async () => {
+    window.localStorage.setItem(SHARED_LIBRARY_CACHE_KEY, JSON.stringify(response));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      ...response,
+      state: { ...response.state, documents: [] },
+    }), { status: 200 })));
+
+    await expect(fetchSharedLibraryState()).rejects.toBeInstanceOf(SharedLibraryIncompleteResponseError);
+    const hydrated = await hydrateSharedLibraryState(window.localStorage);
+    expect(hydrated.source).toBe("cache");
+    expect(hydrated.response.state.documents[0].id).toBe(response.state.documents[0].id);
+  });
+
   it("requests compact catalog summaries without mixing them with document caches", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(response), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
@@ -103,14 +142,44 @@ describe("shared library client", () => {
     expect(fetchMock).toHaveBeenCalledWith("/ppc/api/library?summary=1&recovery=1", expect.any(Object));
   });
 
-  it("invalidates stale document caches when an authoritative catalog removes a document", () => {
+  it("invalidates stale document caches only when the lifecycle manifest explicitly removes a document", () => {
     const removeItem = vi.fn();
-    const next = { ...response, revision: 3, state: { ...response.state, documents: [] } };
+    const next = {
+      ...response,
+      revision: 3,
+      state: { ...response.state, documents: [] },
+      recordVersions: { ...response.recordVersions, documents: {} },
+      recordManifest: {
+        documents: [{ ...response.recordManifest.documents[0], lifecycleState: "deleted" as const, recordVersion: 2 }],
+      },
+      catalogCompleteness: {
+        ...response.catalogCompleteness,
+        expectedDocumentCount: 0,
+        returnedDocumentCount: 0,
+        activeDocumentCount: 0,
+      },
+    };
 
     const removed = reconcileSharedLibraryDocumentCaches(response, next, { removeItem });
 
     expect(removed.map(document => document.id)).toEqual([response.state.documents[0].id]);
     expect(removeItem).toHaveBeenCalledWith(getSharedLibraryCacheKey({ slug: response.state.documents[0].slug }));
+  });
+
+  it("preserves reader caches when a partial response merely omits an active document", () => {
+    const removeItem = vi.fn();
+    const incomplete = {
+      ...response,
+      revision: 3,
+      state: { ...response.state, documents: [] },
+      recordVersions: { ...response.recordVersions, documents: {} },
+      recordManifest: { documents: [] },
+    };
+
+    const removed = reconcileSharedLibraryDocumentCaches(response, incomplete, { removeItem });
+
+    expect(removed).toEqual([]);
+    expect(removeItem).not.toHaveBeenCalled();
   });
 
   it("invalidates a reader cache when the authoritative record version changes", () => {
@@ -122,6 +191,9 @@ describe("shared library client", () => {
       recordVersions: {
         ...response.recordVersions,
         documents: { ...response.recordVersions.documents, [document.id]: 2 },
+      },
+      recordManifest: {
+        documents: [{ ...response.recordManifest.documents[0], recordVersion: 2 }],
       },
     };
 

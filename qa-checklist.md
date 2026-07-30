@@ -164,6 +164,9 @@ Use this checklist before merging or deploying changes.
 - [x] Formatting-save responses are verified for matching ID/slug, active lifecycle, advanced record version, and parseable matching content before edit mode closes.
 - [x] Missing or malformed save responses keep the editor, unsaved formatting, and cached document visible; they never synthesize a deleted-document state.
 - [x] Content updates cannot change hidden/status/deleted/archived fields, and unsafe links fail validation without losing the document.
+- [x] A successful HTTP response with a malformed document/category or mismatched completeness count is rejected as a whole and cannot replace the confirmed cache.
+- [x] A refresh that omits an active document without explicit deleted/archived/purged lifecycle metadata keeps the confirmed reader visible in read-only mode.
+- [x] Cache reconciliation removes a document only for an explicit lifecycle transition and invalidates an active cache only after a verified version change.
 
 ## Live-state and stale-link checks
 

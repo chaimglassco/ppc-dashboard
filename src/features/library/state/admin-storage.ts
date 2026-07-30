@@ -83,7 +83,17 @@ export function normalizeManagedLibraryDocument(document: ManagedLibraryDocument
 
 export function parseAdminLibraryState(raw: string | null): AdminLibraryState | null {
   if (!raw) return null;
-  try { const value: unknown = JSON.parse(raw); if (!value || typeof value !== "object") return null; const state = value as Record<string, unknown>; if (state.version !== 1 || !Array.isArray(state.documents)) return null; return { version: 1, documents: state.documents.map(item => normalizeManagedLibraryDocument(item as ManagedLibraryDocument)).filter((item): item is ManagedLibraryDocument => Boolean(item)) }; } catch { return null; }
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (!value || typeof value !== "object") return null;
+    const state = value as Record<string, unknown>;
+    if (state.version !== 1 || !Array.isArray(state.documents)) return null;
+    const documents = state.documents.map(item => normalizeManagedLibraryDocument(item as ManagedLibraryDocument));
+    if (documents.some(document => !document)) return null;
+    return { version: 1, documents: documents as ManagedLibraryDocument[] };
+  } catch {
+    return null;
+  }
 }
 
 export function moveDocument(documents: ManagedLibraryDocument[], id: string, direction: -1 | 1) {

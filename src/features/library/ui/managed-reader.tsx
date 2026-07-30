@@ -86,8 +86,10 @@ export function ManagedReader({ slug }: { slug: string }) {
     const nextDocument = response.state.documents.find(item => item.slug === slug && !item.deletedAt && !item.hidden) ?? null;
     const nextStatus = response.documentStatus ?? (nextDocument ? { status: "active" as const, slug } : null);
     const explicitlyUnavailable = nextStatus?.status === "deleted" || nextStatus?.status === "purged" || nextStatus?.status === "archived";
-    if (!nextDocument && preserveOnMissing && !explicitlyUnavailable) {
+    const hasConfirmedDocument = Boolean(documentRef.current);
+    if (!nextDocument && (preserveOnMissing || hasConfirmedDocument) && !explicitlyUnavailable) {
       setNotice("The latest Library response did not include this active document. The current editor copy was preserved.");
+      setMutationsEnabled(false);
       return false;
     }
     sharedRef.current = response;
@@ -107,7 +109,8 @@ export function ManagedReader({ slug }: { slug: string }) {
     refreshInFlightRef.current = true;
     try {
       const response = await fetchSharedLibraryState(signal, { slug });
-      applyResponse(response);
+      const applied = applyResponse(response);
+      if (!applied) return false;
       consecutiveFailuresRef.current = 0;
       setMigrationPending(!response.initialized);
       setMutationsEnabled(response.initialized);
@@ -240,8 +243,10 @@ export function ManagedReader({ slug }: { slug: string }) {
         updateScope: "content",
         document: normalized,
       }, { slug });
-      verifyDocumentSaveResponse(saved, normalized, expectedVersion);
-      applyResponse(saved);
+      const verified = verifyDocumentSaveResponse(saved, normalized, expectedVersion);
+      if (!applyResponse(saved, true, true) || verified.id !== normalized.id) {
+        throw new DocumentSaveVerificationError();
+      }
     } catch (error) {
       if (error instanceof SharedLibraryConflictError) {
         applyResponse(error.latest, true, true);

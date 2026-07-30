@@ -194,4 +194,22 @@ describe("managed reader loading states", () => {
     expect(screen.getByTestId("reader")).toHaveTextContent(`${document.title}:editable`);
     expect(screen.queryByRole("heading", { name: "Document unavailable" })).not.toBeInTheDocument();
   });
+
+  it("keeps the last confirmed document read-only when a refresh omits it without an explicit lifecycle", async () => {
+    const document = getPublishedDocuments()[0];
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: response([document]), source: "server" });
+    client.fetchSharedLibraryState.mockResolvedValue({
+      ...response([]),
+      revision: 3,
+      documentStatus: { status: "not_found", slug: document.slug },
+    });
+    render(<ManagedReader slug={document.slug} />);
+
+    expect(await screen.findByTestId("reader")).toHaveTextContent(`${document.title}:editable`);
+    window.dispatchEvent(new Event("focus"));
+
+    await waitFor(() => expect(screen.getByText(/current editor copy was preserved/i)).toBeVisible());
+    expect(screen.getByTestId("reader")).toHaveTextContent(`${document.title}:read-only`);
+    expect(screen.queryByRole("heading", { name: "Document unavailable" })).not.toBeInTheDocument();
+  });
 });

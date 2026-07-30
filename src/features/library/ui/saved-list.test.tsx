@@ -4,6 +4,7 @@ import { getPublishedDocuments } from "../data/repository";
 import { ReadingStateProvider } from "../state/reading-state";
 import { SHARED_LIBRARY_CACHE_KEY } from "../state/shared-library-client";
 import { createDefaultCategories } from "../state/category-storage";
+import { createAuthoritativeTestResponse } from "../state/shared-library-test-fixtures";
 import { STORAGE_KEY } from "../state/storage";
 import { SavedList } from "./saved-list";
 
@@ -14,21 +15,11 @@ const sharedDocument = {
   slug: "shared-bookmarked-document",
   title: "Shared bookmarked document",
 };
-const sharedResponse = {
-  initialized: true,
-  state: {
-    version: 1 as const,
-    documents: [sharedDocument],
-    categories: createDefaultCategories(),
-  },
+const sharedResponse = createAuthoritativeTestResponse({
+  documents: [sharedDocument],
+  categories: createDefaultCategories(),
   revision: 3,
-  recordVersions: {
-    documents: { [sharedDocument.id]: 1 },
-    categories: {},
-  },
-  updatedAt: null,
-  updatedBy: null,
-};
+});
 
 describe("saved Library lists", () => {
   beforeEach(() => {

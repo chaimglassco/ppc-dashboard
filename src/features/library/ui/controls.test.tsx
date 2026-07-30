@@ -8,12 +8,13 @@ import { DocumentEditor } from "./document-editor";
 import { CategoryManager } from "./category-manager";
 import { DeletedDocuments } from "./deleted-documents";
 import { createDefaultCategories } from "../state/category-storage";
+import { createAuthoritativeTestResponse } from "../state/shared-library-test-fixtures";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), usePathname: () => "/library", useSearchParams: () => new URLSearchParams() }));
 describe("accessible controls", () => {
   beforeEach(() => {
     const documents = getPublishedDocuments();
-    const body = { initialized: true, state: { version: 1, documents, categories: createDefaultCategories() }, revision: 1, recordVersions: { documents: Object.fromEntries(documents.map(document => [document.id, 1])), categories: {} }, updatedAt: null, updatedBy: null };
+    const body = createAuthoritativeTestResponse({ documents, categories: createDefaultCategories() });
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })));
   });
   it("labels bookmark state", () => { render(<ReadingStateProvider><BookmarkButton id="a" compact /></ReadingStateProvider>); expect(screen.getByRole("button", { name: "Add bookmark" })).toHaveAttribute("aria-pressed", "false"); });

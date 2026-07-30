@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "../state/category-storage";
 import { ReadingStateProvider } from "../state/reading-state";
+import { createAuthoritativeTestResponse } from "../state/shared-library-test-fixtures";
 import { Catalog } from "./catalog";
 
 const session = vi.hoisted(() => ({ role: "USER" as "ADMIN" | "USER" | "VIEWER" }));
@@ -19,7 +20,7 @@ describe("catalog permissions", () => {
   beforeEach(() => {
     window.localStorage.clear();
     const documents = getPublishedDocuments();
-    const payload = { initialized: true, state: { version: 1, documents, categories: createDefaultCategories() }, revision: 1, recordVersions: { documents: {}, categories: {} }, updatedAt: null, updatedBy: null };
+    const payload = createAuthoritativeTestResponse({ documents, categories: createDefaultCategories() });
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), { status: 200 })));
   });
 
@@ -42,7 +43,7 @@ describe("catalog permissions", () => {
 
   it.each(["USER", "VIEWER"] as const)("does not expose migration to %s", async role => {
     session.role = role;
-    const payload = { initialized: false, state: { version: 1, documents: [], categories: [] }, revision: 0, recordVersions: { documents: {}, categories: {} }, updatedAt: null, updatedBy: null };
+    const payload = createAuthoritativeTestResponse({ documents: [], categories: [], initialized: false });
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), { status: 200 })));
     const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>);
     const controls = within(view.container);

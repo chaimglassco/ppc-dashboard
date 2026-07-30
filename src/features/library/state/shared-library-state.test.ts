@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "./category-storage";
-import { createSharedLibraryState, parseSharedLibraryResponse, parseSharedLibraryState } from "./shared-library-state";
+import { createSharedLibraryState, isAuthoritativeSharedLibraryResponse, parseSharedLibraryResponse, parseSharedLibraryState } from "./shared-library-state";
 
 describe("shared library state", () => {
   it("rejects malformed snapshots without adding repository seeds", () => {
@@ -88,6 +88,51 @@ describe("shared library state", () => {
       updatedAt: null,
       updatedBy: null,
       mutationResult: { operation: "document.update", documentId: document.id, document, recordVersion: 5, lifecycleState: "missing" },
+    })).toBeNull();
+  });
+
+  it("accepts only internally complete authoritative catalog metadata", () => {
+    const state = createSharedLibraryState(getPublishedDocuments().slice(0, 1));
+    const document = state.documents[0];
+    const categoryVersions = Object.fromEntries(state.categories.map(category => [category.id, 1]));
+    const envelope = {
+      initialized: true,
+      state,
+      revision: 10,
+      recordVersions: { documents: { [document.id]: 6 }, categories: categoryVersions },
+      updatedAt: null,
+      updatedBy: null,
+      recordManifest: {
+        documents: [{
+          id: document.id,
+          slug: document.slug,
+          recordVersion: 6,
+          lifecycleState: "active",
+          hidden: document.hidden,
+          status: document.status,
+        }],
+      },
+      catalogCompleteness: {
+        complete: true,
+        scope: "catalog",
+        expectedDocumentCount: 1,
+        returnedDocumentCount: 1,
+        expectedCategoryCount: state.categories.length,
+        returnedCategoryCount: state.categories.length,
+        activeDocumentCount: 1,
+        manifestDocumentCount: 1,
+        checksum: "catalog-checksum",
+      },
+    };
+    const parsed = parseSharedLibraryResponse(envelope);
+    expect(parsed && isAuthoritativeSharedLibraryResponse(parsed)).toBe(true);
+    expect(parseSharedLibraryResponse({
+      ...envelope,
+      state: { ...state, documents: [] },
+    })).toBeNull();
+    expect(parseSharedLibraryResponse({
+      ...envelope,
+      recordManifest: { documents: [{ ...envelope.recordManifest.documents[0], recordVersion: 5 }] },
     })).toBeNull();
   });
 });

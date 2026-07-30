@@ -18,7 +18,7 @@ describe("admin library storage", () => {
     const valid = JSON.stringify({ version: 1, documents: [{ ...seed[0], contentElements: [insight] }] });
     const invalid = JSON.stringify({ version: 1, documents: [{ ...seed[0], contentElements: [{ ...insight, insightColor: "purple" }] }] });
     expect(parseAdminLibraryState(valid)?.documents[0].contentElements?.[0].insightColor).toBe("red");
-    expect(parseAdminLibraryState(invalid)?.documents).toHaveLength(0);
+    expect(parseAdminLibraryState(invalid)).toBeNull();
   });
   it("keeps a valid document but drops malformed rich text so legacy text can be used", () => {
     const statement = { ...createBlankContentElement("statement", 1), text: "Legacy fallback", richText: { type: "doc", content: [{ type: "script", text: "bad" }] } };
@@ -59,6 +59,11 @@ describe("admin library storage", () => {
     expect(parsed?.[1].nodes[0]).toMatchObject({ description: "Legacy description", descriptionRichText: undefined });
 
     const invalid = JSON.stringify({ version: 1, documents: [{ ...seed[0], contentElements: [{ ...headline, textAlignment: "justify" }] }] });
-    expect(parseAdminLibraryState(invalid)?.documents).toHaveLength(0);
+    expect(parseAdminLibraryState(invalid)).toBeNull();
+  });
+
+  it("rejects the entire catalog instead of silently dropping one malformed document", () => {
+    const invalid = { ...seed[1], hidden: "false" };
+    expect(parseAdminLibraryState(JSON.stringify({ version: 1, documents: [seed[0], invalid] }))).toBeNull();
   });
 });

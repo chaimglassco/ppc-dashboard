@@ -13,6 +13,31 @@ export type SharedLibraryRecordVersions = {
   categories: Record<string, number>;
 };
 
+export type SharedLibraryDocumentManifestEntry = {
+  id: string;
+  slug: string;
+  recordVersion: number;
+  lifecycleState: "active" | "deleted" | "archived";
+  hidden: boolean;
+  status: "published" | "draft";
+};
+
+export type SharedLibraryRecordManifest = {
+  documents: SharedLibraryDocumentManifestEntry[];
+};
+
+export type SharedLibraryCatalogCompleteness = {
+  complete: true;
+  scope: "catalog" | "document" | "recovery" | "archive" | "state";
+  expectedDocumentCount: number;
+  returnedDocumentCount: number;
+  expectedCategoryCount: number;
+  returnedCategoryCount: number;
+  activeDocumentCount: number;
+  manifestDocumentCount: number;
+  checksum: string;
+};
+
 export type LibraryDeletionSource = "user" | "system_migration" | "system_backup_restore" | "unknown";
 
 export type LibraryAuditActor = {
@@ -67,6 +92,8 @@ export type SharedLibraryResponse = {
   updatedAt: string | null;
   updatedBy: string | null;
   snapshotAt?: string;
+  recordManifest?: SharedLibraryRecordManifest;
+  catalogCompleteness?: SharedLibraryCatalogCompleteness;
   recoveryDocumentCount?: number;
   archivedDocumentCount?: number;
   integrityStatus?: SharedLibraryIntegrityStatus;
@@ -83,6 +110,8 @@ export function parseSharedLibraryState(value: unknown): SharedLibraryState | nu
   const documents = parseAdminLibraryState(JSON.stringify({ version: 1, documents: candidate.documents }));
   const categories = parseCategoryState(JSON.stringify({ version: 1, categories: candidate.categories }));
   if (!documents || !categories) return null;
+  if (new Set(documents.documents.map(document => document.id)).size !== documents.documents.length
+    || new Set(categories.categories.map(category => category.id)).size !== categories.categories.length) return null;
   return { version: 1, documents: documents.documents, categories: categories.categories };
 }
 
@@ -95,6 +124,116 @@ function parseVersionMap(value: unknown): Record<string, number> | null {
   const entries = Object.entries(value as Record<string, unknown>);
   if (!entries.every(([, version]) => Number.isInteger(version) && Number(version) >= 0)) return null;
   return Object.fromEntries(entries.map(([id, version]) => [id, Number(version)]));
+}
+
+function parseDocumentManifest(value: unknown): SharedLibraryRecordManifest | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const documentsValue = (value as Record<string, unknown>).documents;
+  if (!Array.isArray(documentsValue)) return null;
+  const documents: SharedLibraryDocumentManifestEntry[] = [];
+  const ids = new Set<string>();
+  for (const item of documentsValue) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+    const candidate = item as Record<string, unknown>;
+    if (typeof candidate.id !== "string" || !candidate.id
+      || typeof candidate.slug !== "string" || !candidate.slug
+      || !Number.isInteger(candidate.recordVersion) || Number(candidate.recordVersion) < 1
+      || !["active", "deleted", "archived"].includes(String(candidate.lifecycleState))
+      || typeof candidate.hidden !== "boolean"
+      || !["published", "draft"].includes(String(candidate.status))
+      || ids.has(candidate.id)) return null;
+    ids.add(candidate.id);
+    documents.push({
+      id: candidate.id,
+      slug: candidate.slug,
+      recordVersion: Number(candidate.recordVersion),
+      lifecycleState: candidate.lifecycleState as SharedLibraryDocumentManifestEntry["lifecycleState"],
+      hidden: candidate.hidden,
+      status: candidate.status as SharedLibraryDocumentManifestEntry["status"],
+    });
+  }
+  return { documents };
+}
+
+function parseCatalogCompleteness(value: unknown): SharedLibraryCatalogCompleteness | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const candidate = value as Record<string, unknown>;
+  const countFields = [
+    "expectedDocumentCount",
+    "returnedDocumentCount",
+    "expectedCategoryCount",
+    "returnedCategoryCount",
+    "activeDocumentCount",
+    "manifestDocumentCount",
+  ] as const;
+  if (candidate.complete !== true
+    || !["catalog", "document", "recovery", "archive", "state"].includes(String(candidate.scope))
+    || typeof candidate.checksum !== "string"
+    || !countFields.every(field => Number.isInteger(candidate[field]) && Number(candidate[field]) >= 0)) return null;
+  return {
+    complete: true,
+    scope: candidate.scope as SharedLibraryCatalogCompleteness["scope"],
+    expectedDocumentCount: Number(candidate.expectedDocumentCount),
+    returnedDocumentCount: Number(candidate.returnedDocumentCount),
+    expectedCategoryCount: Number(candidate.expectedCategoryCount),
+    returnedCategoryCount: Number(candidate.returnedCategoryCount),
+    activeDocumentCount: Number(candidate.activeDocumentCount),
+    manifestDocumentCount: Number(candidate.manifestDocumentCount),
+    checksum: candidate.checksum,
+  };
+}
+
+export function isAuthoritativeSharedLibraryResponse(response: SharedLibraryResponse): boolean {
+  const manifest = response.recordManifest;
+  const completeness = response.catalogCompleteness;
+  if (!manifest || !completeness || completeness.complete !== true) return false;
+  if (completeness.returnedDocumentCount !== response.state.documents.length
+    || completeness.expectedDocumentCount !== completeness.returnedDocumentCount
+    || completeness.returnedCategoryCount !== response.state.categories.length
+    || completeness.expectedCategoryCount !== completeness.returnedCategoryCount
+    || completeness.manifestDocumentCount !== manifest.documents.length) return false;
+  const manifestById = new Map(manifest.documents.map(entry => [entry.id, entry]));
+  if (manifestById.size !== manifest.documents.length) return false;
+  const activeManifest = manifest.documents.filter(entry => entry.lifecycleState === "active");
+  if (activeManifest.length !== completeness.activeDocumentCount
+    || new Set(activeManifest.map(entry => entry.slug)).size !== activeManifest.length) return false;
+  for (const document of response.state.documents) {
+    const entry = manifestById.get(document.id);
+    if (!entry
+      || entry.slug !== document.slug
+      || entry.recordVersion !== response.recordVersions.documents[document.id]
+      || entry.hidden !== document.hidden
+      || entry.status !== document.status
+      || (entry.lifecycleState === "active" && Boolean(document.deletedAt || document.archivedAt))
+      || (entry.lifecycleState === "deleted" && !document.deletedAt)
+      || (entry.lifecycleState === "archived" && !document.archivedAt)) return false;
+    if (completeness.scope === "catalog" && entry.lifecycleState !== "active") return false;
+    if (completeness.scope === "document"
+      && response.documentStatus?.status === "active"
+      && entry.lifecycleState !== "active") return false;
+    if (completeness.scope === "archive" && entry.lifecycleState !== "archived") return false;
+  }
+  if (completeness.scope === "catalog" && completeness.activeDocumentCount !== response.state.documents.length) return false;
+  if (!response.state.categories.every(category => Number.isInteger(response.recordVersions.categories[category.id])
+    && response.recordVersions.categories[category.id] >= 1)) return false;
+  if (response.documentStatus) {
+    const status = response.documentStatus;
+    const manifestEntry = status.documentId ? manifestById.get(status.documentId) : undefined;
+    if (status.status === "not_found" && manifest.documents.some(entry => entry.slug === status.slug)) return false;
+    if (status.status === "active" && (!manifestEntry || manifestEntry.lifecycleState !== "active" || manifestEntry.slug !== status.slug)) return false;
+    if (status.status === "deleted" && (!manifestEntry || manifestEntry.lifecycleState !== "deleted" || manifestEntry.slug !== status.slug)) return false;
+    if (status.status === "archived" && (!manifestEntry || manifestEntry.lifecycleState !== "archived" || manifestEntry.slug !== status.slug)) return false;
+    if (status.recordVersion !== undefined && (!manifestEntry || status.recordVersion !== manifestEntry.recordVersion)) return false;
+  }
+  if (response.mutationResult) {
+    const result = response.mutationResult;
+    const manifestEntry = manifestById.get(result.documentId);
+    if (!manifestEntry
+      || manifestEntry.recordVersion !== result.recordVersion
+      || manifestEntry.lifecycleState !== result.lifecycleState
+      || manifestEntry.slug !== result.document.slug) return false;
+  }
+  return true;
 }
 
 function parseAuditActor(value: unknown): LibraryAuditActor | null | undefined {
@@ -215,7 +354,12 @@ export function parseSharedLibraryResponse(value: unknown): SharedLibraryRespons
   const mutationResult = candidate.mutationResult === undefined ? undefined : parseMutationResult(candidate.mutationResult);
   if (candidate.mutationResult !== undefined && !mutationResult) return null;
   if (candidate.restoredCount !== undefined && (!Number.isInteger(candidate.restoredCount) || Number(candidate.restoredCount) < 0)) return null;
-  return {
+  const recordManifest = candidate.recordManifest === undefined ? undefined : parseDocumentManifest(candidate.recordManifest);
+  const catalogCompleteness = candidate.catalogCompleteness === undefined ? undefined : parseCatalogCompleteness(candidate.catalogCompleteness);
+  if ((candidate.recordManifest !== undefined && !recordManifest)
+    || (candidate.catalogCompleteness !== undefined && !catalogCompleteness)
+    || Boolean(recordManifest) !== Boolean(catalogCompleteness)) return null;
+  const response: SharedLibraryResponse = {
     initialized: candidate.initialized,
     state,
     revision: Number(candidate.revision),
@@ -223,6 +367,8 @@ export function parseSharedLibraryResponse(value: unknown): SharedLibraryRespons
     updatedAt: typeof candidate.updatedAt === "string" ? candidate.updatedAt : null,
     updatedBy: typeof candidate.updatedBy === "string" ? candidate.updatedBy : null,
     ...(typeof candidate.snapshotAt === "string" ? { snapshotAt: candidate.snapshotAt } : {}),
+    ...(recordManifest ? { recordManifest } : {}),
+    ...(catalogCompleteness ? { catalogCompleteness } : {}),
     recoveryDocumentCount: candidate.recoveryDocumentCount === undefined
       ? state.documents.filter(document => document.deletedAt).length
       : Number(candidate.recoveryDocumentCount),
@@ -235,4 +381,6 @@ export function parseSharedLibraryResponse(value: unknown): SharedLibraryRespons
     ...(candidate.restoredCount === undefined ? {} : { restoredCount: Number(candidate.restoredCount) }),
     ...(mutationResult ? { mutationResult } : {}),
   };
+  if (recordManifest && catalogCompleteness && !isAuthoritativeSharedLibraryResponse(response)) return null;
+  return response;
 }

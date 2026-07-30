@@ -23,14 +23,16 @@ export function parseCategoryState(raw: string | null): CategoryState | null {
     if (!value || typeof value !== "object") return null;
     const state = value as Record<string, unknown>;
     if (state.version !== 1 || !Array.isArray(state.categories)) return null;
-    const categories = state.categories.filter((item): item is ManagedCategory => {
-      if (!item || typeof item !== "object") return false;
+    const categories = state.categories.map((item): ManagedCategory | null => {
+      if (!item || typeof item !== "object") return null;
       const category = item as Record<string, unknown>;
-      return typeof category.id === "string" && typeof category.name === "string" && typeof category.hidden === "boolean"
+      const valid = typeof category.id === "string" && typeof category.name === "string" && typeof category.hidden === "boolean"
         && (category.deletedAt === undefined || typeof category.deletedAt === "string")
         && (category.archivedAt === undefined || typeof category.archivedAt === "string");
+      return valid ? category as ManagedCategory : null;
     });
-    return { version: 1, categories };
+    if (categories.some(category => !category)) return null;
+    return { version: 1, categories: categories as ManagedCategory[] };
   } catch {
     return null;
   }

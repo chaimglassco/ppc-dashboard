@@ -2,7 +2,7 @@ import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import type { ManagedLibraryDocument } from "./admin-storage";
 import type { ManagedCategory } from "./category-storage";
-import { parseSharedLibraryResponse, type SharedLibraryResponse, type SharedLibraryState } from "./shared-library-state";
+import { isAuthoritativeSharedLibraryResponse, parseSharedLibraryResponse, type SharedLibraryResponse, type SharedLibraryState } from "./shared-library-state";
 
 export const SHARED_LIBRARY_CACHE_KEY = "glassco-library-confirmed-cache-v2";
 export const SHARED_LIBRARY_REQUEST_TIMEOUT_MS = 18_000;
@@ -88,6 +88,13 @@ export class SharedLibraryRequestError extends Error {
   }
 }
 
+export class SharedLibraryIncompleteResponseError extends Error {
+  constructor(message = "The shared Library returned an incomplete catalog. The last confirmed copy was preserved.") {
+    super(message);
+    this.name = "SharedLibraryIncompleteResponseError";
+  }
+}
+
 export type SharedLibraryMutation =
   | { operation: "catalog.initialize"; state: SharedLibraryState; expectedRevision: 0 }
   | { operation: "document.create"; document: ManagedLibraryDocument }
@@ -129,7 +136,9 @@ async function readJson(response: Response): Promise<unknown> {
   try { value = await response.json(); } catch { /* handled below */ }
   if (!response.ok) {
     const parsed = parseSharedLibraryResponse(value);
-    if (response.status === 409 && parsed) throw new SharedLibraryConflictError(parsed);
+    if (response.status === 409 && parsed && isAuthoritativeSharedLibraryResponse(parsed)) {
+      throw new SharedLibraryConflictError(parsed);
+    }
     const details = value && typeof value === "object" ? value as Record<string, unknown> : {};
     const requestId = response.headers.get("x-request-id") || (
       typeof details.requestId === "string" ? details.requestId : undefined
@@ -175,15 +184,21 @@ async function fetchWithTimeout(
   }
 }
 
+function requireAuthoritativeResponse(value: unknown, message: string): SharedLibraryResponse {
+  const parsed = parseSharedLibraryResponse(value);
+  if (!parsed || !isAuthoritativeSharedLibraryResponse(parsed)) {
+    throw new SharedLibraryIncompleteResponseError(message);
+  }
+  return parsed;
+}
+
 export async function fetchSharedLibraryState(signal?: AbortSignal, options: SharedLibraryReadOptions = {}): Promise<SharedLibraryResponse> {
   const value = await readJson(await fetchWithTimeout(sharedLibraryUrl(options), {
     cache: "no-store",
     headers: getPipelineAuthorizationHeader(),
     signal,
   }));
-  const parsed = parseSharedLibraryResponse(value);
-  if (!parsed) throw new Error("Shared library returned invalid data.");
-  return parsed;
+  return requireAuthoritativeResponse(value, "The shared Library returned an incomplete catalog. The last confirmed copy was preserved.");
 }
 
 export async function mutateSharedLibrary(mutation: SharedLibraryMutation, options: SharedLibraryReadOptions = {}): Promise<SharedLibraryResponse> {
@@ -192,9 +207,7 @@ export async function mutateSharedLibrary(mutation: SharedLibraryMutation, optio
     headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
     body: JSON.stringify(mutation),
   }));
-  const parsed = parseSharedLibraryResponse(value);
-  if (!parsed) throw new Error("Shared library returned invalid data.");
-  return parsed;
+  return requireAuthoritativeResponse(value, "The shared Library mutation returned incomplete confirmation. Your last confirmed copy was preserved.");
 }
 
 export async function initializeSharedLibrary(): Promise<SharedLibraryResponse> {
@@ -203,9 +216,7 @@ export async function initializeSharedLibrary(): Promise<SharedLibraryResponse> 
     headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
     body: JSON.stringify({ action: "initialize-catalog" }),
   }));
-  const parsed = parseSharedLibraryResponse(value);
-  if (!parsed) throw new Error("Library migration returned invalid data.");
-  return parsed;
+  return requireAuthoritativeResponse(value, "Library migration returned an incomplete catalog.");
 }
 
 function requiredString(value: unknown) {
@@ -357,9 +368,7 @@ export async function restorePurgedLibraryDocument(documentId: string): Promise<
     headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
     body: JSON.stringify({ documentId }),
   }, PROTECTED_LIBRARY_RECOVERY_TIMEOUT_MS));
-  const parsed = parseSharedLibraryResponse(value);
-  if (!parsed) throw new Error("Protected Library recovery returned invalid catalog data.");
-  return parsed;
+  return requireAuthoritativeResponse(value, "Protected Library recovery returned an incomplete catalog.");
 }
 
 export function cacheSharedLibraryResponse(response: SharedLibraryResponse, storage: Pick<Storage, "setItem">, options: SharedLibraryReadOptions = {}): boolean {
@@ -386,12 +395,17 @@ export function reconcileSharedLibraryDocumentCaches(
 ): ManagedLibraryDocument[] {
   if (!previous) return [];
   const nextActive = new Map(next.state.documents.filter(document => !document.deletedAt).map(document => [document.id, document]));
+  const manifest = new Map(next.recordManifest?.documents.map(entry => [entry.id, entry]) ?? []);
   const removed: ManagedLibraryDocument[] = [];
   for (const document of previous.state.documents.filter(item => !item.deletedAt)) {
     const nextDocument = nextActive.get(document.id);
+    const lifecycle = manifest.get(document.id)?.lifecycleState;
     const versionChanged = next.recordVersions.documents[document.id] !== previous.recordVersions.documents[document.id];
-    if (!nextDocument) removed.push(document);
-    if (!nextDocument || versionChanged) invalidateSharedLibraryDocumentCache(storage, document.slug);
+    const explicitlyRemoved = lifecycle === "deleted" || lifecycle === "archived";
+    if (explicitlyRemoved) removed.push(document);
+    if (explicitlyRemoved || (nextDocument && versionChanged)) {
+      invalidateSharedLibraryDocumentCache(storage, document.slug);
+    }
   }
   return removed;
 }
