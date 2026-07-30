@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "./category-storage";
-import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryIncompleteResponseError, SharedLibraryRequestError, SharedLibraryTimeoutError } from "./shared-library-client";
+import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryIncompleteResponseError, SharedLibraryRequestError, SharedLibraryTimeoutError, verifyRestoredLibraryDocument } from "./shared-library-client";
 
 const documents = getPublishedDocuments().slice(0, 1);
 const categories = createDefaultCategories();
@@ -131,6 +131,32 @@ describe("shared library client", () => {
     await fetchSharedLibraryState(undefined, { slug: "checking-spend" });
 
     expect(fetchMock).toHaveBeenCalledWith("/ppc/api/library?slug=checking-spend", expect.any(Object));
+  });
+
+  it("confirms a restored version only from a newer document-scoped active response", () => {
+    const document = response.state.documents[0];
+    const restored = {
+      ...response,
+      revision: 3,
+      recordVersions: { ...response.recordVersions, documents: { [document.id]: 2 } },
+      recordManifest: {
+        documents: [{ ...response.recordManifest.documents[0], recordVersion: 2 }],
+      },
+      catalogCompleteness: {
+        ...response.catalogCompleteness,
+        scope: "document" as const,
+      },
+      documentStatus: {
+        status: "active" as const,
+        slug: document.slug,
+        documentId: document.id,
+        recordVersion: 2,
+      },
+    };
+
+    expect(verifyRestoredLibraryDocument(restored, document.id, document.slug, 1)?.id).toBe(document.id);
+    expect(verifyRestoredLibraryDocument({ ...restored, catalogCompleteness: { ...restored.catalogCompleteness, scope: "catalog" } }, document.id, document.slug, 1)).toBeNull();
+    expect(verifyRestoredLibraryDocument(restored, document.id, document.slug, 2)).toBeNull();
   });
 
   it("loads tombstones and deletion attribution only for an explicit recovery request", async () => {

@@ -23,6 +23,7 @@ import {
   reconcileSharedLibraryDocumentCaches,
   restorePurgedLibraryDocument,
   SharedLibraryConflictError,
+  verifyRestoredLibraryDocument,
   type LibraryBackup,
   type LibraryIntegrityIncident,
   type PurgedLibraryDocument,
@@ -556,17 +557,28 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     const expectedVersion = sharedRef.current?.recordVersions.documents[version.recordId]
       ?? archiveRecordVersions[version.recordId];
     if (expectedVersion === undefined) return "The current document version is unavailable.";
-    const response = await commitMutation({
-      operation: "record.restoreVersion",
-      recordType: "document",
-      recordId: version.recordId,
-      versionId: version.id,
-      expectedVersion,
-    }, "", { summary: true });
-    if (!response) return lastMutationErrorRef.current || "The selected version could not be restored.";
-    announceSuccess("The selected document version was restored successfully.");
-    await refreshDocumentRecovery();
-    return null;
+    const versionDocument = version.data as Partial<ManagedLibraryDocument>;
+    const versionSlug = typeof versionDocument.slug === "string" ? versionDocument.slug.trim() : "";
+    if (!versionSlug) return "The selected version does not contain a valid document slug.";
+    try {
+      const response = await mutateSharedLibrary({
+        operation: "record.restoreVersion",
+        recordType: "document",
+        recordId: version.recordId,
+        versionId: version.id,
+        expectedVersion,
+      }, { slug: versionSlug });
+      if (!verifyRestoredLibraryDocument(response, version.recordId, versionSlug, expectedVersion)) {
+        return "The selected version was not confirmed by the shared Library.";
+      }
+      cacheSharedLibraryResponse(response, window.localStorage, { slug: versionSlug });
+      announceSuccess("The selected document version was restored successfully.");
+      await refreshDocumentRecovery();
+      return null;
+    } catch (error) {
+      if (error instanceof SharedLibraryConflictError) applySharedResponse(error.latest);
+      return error instanceof Error ? error.message : "The selected version could not be restored.";
+    }
   };
   const createRecoverySnapshot = async () => {
     try {

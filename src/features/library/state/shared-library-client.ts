@@ -210,6 +210,24 @@ export async function mutateSharedLibrary(mutation: SharedLibraryMutation, optio
   return requireAuthoritativeResponse(value, "The shared Library mutation returned incomplete confirmation. Your last confirmed copy was preserved.");
 }
 
+export function verifyRestoredLibraryDocument(
+  response: SharedLibraryResponse,
+  documentId: string,
+  slug: string,
+  expectedVersion: number,
+): ManagedLibraryDocument | null {
+  const restored = response.state.documents.find(document => document.id === documentId);
+  const restoredVersion = response.recordVersions.documents[documentId];
+  return response.catalogCompleteness?.scope === "document"
+    && response.documentStatus?.status === "active"
+    && response.documentStatus.documentId === documentId
+    && restored?.slug === slug
+    && Number.isSafeInteger(restoredVersion)
+    && restoredVersion > expectedVersion
+    ? restored
+    : null;
+}
+
 export async function initializeSharedLibrary(): Promise<SharedLibraryResponse> {
   const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library/migration"), {
     method: "POST",

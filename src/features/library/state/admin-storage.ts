@@ -81,6 +81,11 @@ export function normalizeManagedLibraryDocument(document: ManagedLibraryDocument
   return isDocument(document) ? sanitizeRichText(document) : null;
 }
 
+export function normalizeManagedLibraryContentUpdate(document: ManagedLibraryDocument): ManagedLibraryDocument | null {
+  const normalized = normalizeManagedLibraryDocument(document);
+  return normalized && Array.isArray(normalized.contentElements) ? normalized : null;
+}
+
 export function parseAdminLibraryState(raw: string | null): AdminLibraryState | null {
   if (!raw) return null;
   try {

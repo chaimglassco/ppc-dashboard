@@ -36,6 +36,14 @@ vi.mock("./reader", () => ({
 }));
 
 function response(documents = getPublishedDocuments().slice(0, 1)): SharedLibraryResponse {
+  const manifest = documents.map(document => ({
+    id: document.id,
+    slug: document.slug,
+    recordVersion: 1,
+    lifecycleState: "active" as const,
+    hidden: document.hidden,
+    status: document.status,
+  }));
   return {
     initialized: true,
     state: { version: 1, documents, categories: createDefaultCategories() },
@@ -43,6 +51,26 @@ function response(documents = getPublishedDocuments().slice(0, 1)): SharedLibrar
     recordVersions: { documents: Object.fromEntries(documents.map(document => [document.id, 1])), categories: {} },
     updatedAt: null,
     updatedBy: null,
+    recordManifest: { documents: manifest },
+    catalogCompleteness: {
+      complete: true,
+      scope: "document",
+      expectedDocumentCount: documents.length,
+      returnedDocumentCount: documents.length,
+      expectedCategoryCount: createDefaultCategories().length,
+      returnedCategoryCount: createDefaultCategories().length,
+      activeDocumentCount: documents.length,
+      manifestDocumentCount: manifest.length,
+      checksum: "reader-test",
+    },
+    ...(documents[0] ? {
+      documentStatus: {
+        status: "active" as const,
+        slug: documents[0].slug,
+        documentId: documents[0].id,
+        recordVersion: 1,
+      },
+    } : {}),
   };
 }
 
@@ -193,6 +221,31 @@ describe("managed reader loading states", () => {
     expect(await screen.findByText(/save could not be verified/i)).toBeVisible();
     expect(screen.getByTestId("reader")).toHaveTextContent(`${document.title}:editable`);
     expect(screen.queryByRole("heading", { name: "Document unavailable" })).not.toBeInTheDocument();
+  });
+
+  it("rejects a catalog summary placeholder before submitting a formatted-content update", async () => {
+    const full = { ...getPublishedDocuments()[0], contentElements: [createBlankContentElement("statement", 1)] };
+    const summary = {
+      ...full,
+      body: "",
+      topics: [],
+      contentElements: undefined,
+    };
+    const initial = {
+      ...response([summary]),
+      catalogCompleteness: {
+        ...response([summary]).catalogCompleteness!,
+        scope: "catalog" as const,
+      },
+    };
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: initial, source: "server" });
+    render(<ManagedReader slug={full.slug} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Save formatted document" }));
+
+    expect(await screen.findByText(/full document is not confirmed/i)).toBeVisible();
+    expect(client.mutateSharedLibrary).not.toHaveBeenCalled();
+    expect(screen.getByTestId("reader")).toHaveTextContent(`${full.title}:editable`);
   });
 
   it("keeps the last confirmed document read-only when a refresh omits it without an explicit lifecycle", async () => {

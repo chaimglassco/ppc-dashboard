@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useGlasscoSession } from "@/components/glassco-session";
 import { getTopicsFromContentElements } from "../domain/document-elements";
 import type { LibraryContentElement } from "../domain/types";
-import { normalizeManagedLibraryDocument, type ManagedLibraryDocument } from "../state/admin-storage";
+import { normalizeManagedLibraryContentUpdate, type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories } from "../state/category-storage";
 import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, invalidateSharedLibraryDocumentCache, mutateSharedLibrary, SharedLibraryConflictError } from "../state/shared-library-client";
 import { getSharedLibraryRefreshDelay } from "../state/shared-library-retry";
@@ -231,10 +231,24 @@ export function ManagedReader({ slug }: { slug: string }) {
   }
   if (currentDocument === null) return <div className="empty-state managed-not-found"><h1>{migrationPending ? "Library migration pending" : "Document unavailable"}</h1><p>{migrationPending ? "The shared catalog is read-only until an administrator completes initialization." : "This topic may be hidden or unavailable in the shared library."}</p><Link className="primary-button" prefetch={false} href="/library">Return to Library</Link></div>;
   const saveDocument = async (updated: ManagedLibraryDocument) => {
-    const expectedVersion = sharedRef.current?.recordVersions.documents[updated.id];
+    const authoritative = sharedRef.current;
+    const expectedVersion = authoritative?.recordVersions.documents[updated.id];
     if (!mutationsEnabled || expectedVersion === undefined) throw new Error("Shared library editing is unavailable.");
-    const normalized = normalizeManagedLibraryDocument(updated);
-    if (!normalized) throw new DocumentSaveVerificationError("The formatted document contains invalid data. Your changes remain open and were not submitted.");
+    if (!authoritative
+      || authoritative.catalogCompleteness?.scope !== "document"
+      || authoritative.state.documents.length !== 1
+      || authoritative.state.documents[0]?.id !== updated.id
+      || authoritative.documentStatus?.status !== "active") {
+      const error = new DocumentSaveVerificationError("The full document is not confirmed. Your changes remain open and were not submitted.");
+      setNotice(error.message);
+      throw error;
+    }
+    const normalized = normalizeManagedLibraryContentUpdate(updated);
+    if (!normalized) {
+      const error = new DocumentSaveVerificationError("The formatted document is incomplete or contains invalid data. Your changes remain open and were not submitted.");
+      setNotice(error.message);
+      throw error;
+    }
     try {
       const saved = await mutateSharedLibrary({
         operation: "document.update",
