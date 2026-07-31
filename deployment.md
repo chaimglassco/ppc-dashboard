@@ -77,7 +77,7 @@ The existing `.gitignore` already excludes these paths.
 7. Delete a temporary document in admin mode; confirm no recovery list appears below the catalog, then use the toolbar recovery icon to open the dialog and recover it.
    Before recovering it, refresh the page and confirm the deleted card never appears while the shared catalog is loading.
 8. Confirm catalog admin cards do not show an Edit / Rename action.
-9. Open a document, enter edit mode, and change its title, description, and category in the blue header; save and refresh to confirm persistence.
+9. Open a document and confirm the sidebar shows an Eye in view mode. Enter edit mode and confirm it changes to a Pencil and reveals a separate `Save changes` button without issuing a save. Change the title, description, and category in the blue header, click `Save changes`, then refresh to confirm persistence and the return of the Eye control.
 10. Open the new-document form and confirm it does not show Document Type, Tags, or Content Markdown.
 11. Use the Category Plus control to create and select a temporary category.
 12. Use the Category Pencil control to open the category manager; verify rename, reorder, and recoverable deletion controls.

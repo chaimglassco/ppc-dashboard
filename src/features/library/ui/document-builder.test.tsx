@@ -32,7 +32,7 @@ describe("DocumentBuilder metadata editing", () => {
     fireEvent.change(controls.getByRole("textbox", { name: "Document title" }), { target: { value: "Updated document title" } });
     fireEvent.change(controls.getByRole("textbox", { name: "Document description" }), { target: { value: "Updated document description" } });
     fireEvent.change(controls.getByRole("combobox", { name: "Document category" }), { target: { value: "Online Arbitrage" } });
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0][1]).toEqual({ title: "Updated document title", description: "Updated document description", category: "Online Arbitrage" });
@@ -101,7 +101,7 @@ describe("DocumentBuilder element insertion", () => {
     expect(view.container.querySelectorAll('button[aria-label^="Add element after "]')).toHaveLength(initialElements.length);
     fireEvent.click(controls.getByRole("button", { name: `Add element after ${initialElements[0].title}` }));
     fireEvent.click(controls.getByRole("button", { name: "Centered Statement" }));
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const savedElements = onSave.mock.calls[0][0];
@@ -132,7 +132,7 @@ describe("DocumentBuilder element insertion", () => {
     expect(within(styleTabs).getByRole("button", { name: "Numbers" })).toHaveAttribute("aria-pressed", "true");
     expect(controls.getByText("1.")).toBeInTheDocument();
 
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0][0][0]).toMatchObject({ type: "numbered", items: ["Keep this item"] });
   });
@@ -152,7 +152,7 @@ describe("DocumentBuilder diagnostic flows", () => {
     pastePlainText(description, "Flow description line one\nFlow description line two");
     await waitFor(() => expect(description).toHaveTextContent("Flow description line one"));
     expect(controls.getByDisplayValue("If inefficient")).toHaveAttribute("placeholder", "Connector text");
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0][0][0].nodes[0]).toMatchObject({ title: "Check performance", text: "If inefficient", description: expect.stringContaining("Flow description line one"), descriptionRichText: { type: "doc" } });
@@ -190,7 +190,7 @@ describe("DocumentBuilder aligned text elements", () => {
     pastePlainText(descriptionTextbox, "Aligned description");
     fireEvent.click(within(headlineEditor as HTMLElement).getByRole("button", { name: "Align center" }));
     fireEvent.click(within(descriptionEditor as HTMLElement).getByRole("button", { name: "Align right" }));
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0][0][0]).toMatchObject({ type: "headline", text: "Aligned headline", textAlignment: "center", richText: { type: "doc" } });
@@ -201,7 +201,7 @@ describe("DocumentBuilder aligned text elements", () => {
 });
 
 describe("DocumentBuilder mode controls", () => {
-  it("keeps one Eye control, removes the adjacent global add control, and preserves the active topic", async () => {
+  it("shows Eye in view mode, Pencil plus an explicit save action in edit mode, and preserves the active topic", async () => {
     const document = getPublishedDocuments()[0];
     const activeTopicId = document.topics.find(topic => topic.level === 2)?.id ?? "";
     const onModeTransition = vi.fn();
@@ -215,12 +215,17 @@ describe("DocumentBuilder mode controls", () => {
     fireEvent.click(enterEdit);
 
     expect(onModeTransition).toHaveBeenLastCalledWith(activeTopicId);
-    expect(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0].querySelector(".lucide-eye")).not.toBeNull();
+    const editModeIndicator = controls.getAllByRole("button", { name: "Edit mode active" })[0];
+    expect(editModeIndicator.querySelector(".lucide-pencil")).not.toBeNull();
+    expect(editModeIndicator).toBeDisabled();
+    expect(onSave).not.toHaveBeenCalled();
+    expect(controls.getAllByRole("button", { name: "Save changes" }).length).toBeGreaterThan(0);
     expect(controls.getAllByRole("button", { name: /Add element after/ }).length).toBeGreaterThan(0);
 
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onModeTransition).toHaveBeenLastCalledWith(activeTopicId);
+    expect(controls.getAllByRole("button", { name: "Switch to edit mode" })[0].querySelector(".lucide-eye")).not.toBeNull();
   });
 
   it("keeps the editor and unsaved formatting open when save verification fails", async () => {
@@ -230,13 +235,13 @@ describe("DocumentBuilder mode controls", () => {
     const controls = within(view.container);
 
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
-    expect(controls.getAllByRole("button", { name: "Save changes and switch to view mode" }).length).toBeGreaterThan(0);
+    expect(controls.getAllByRole("button", { name: "Save changes" }).length).toBeGreaterThan(0);
 
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(controls.getAllByText("The document save could not be verified. Your changes remain open.").length).toBeGreaterThan(0);
-    expect(controls.getAllByRole("button", { name: "Save changes and switch to view mode" }).length).toBeGreaterThan(0);
+    expect(controls.getAllByRole("button", { name: "Save changes" }).length).toBeGreaterThan(0);
   });
 });
 
@@ -256,7 +261,7 @@ describe("DocumentBuilder editable tables", () => {
     expect(controls.queryByDisplayValue("B1")).not.toBeInTheDocument();
     expect(controls.getByRole("button", { name: "Delete column 1" })).toBeDisabled();
     expect(controls.getByRole("button", { name: "Delete row 1" })).toBeDisabled();
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0][0][0]).toMatchObject({ columns: ["First"], rows: [["A1"]], columnWidths: [180] });
@@ -322,7 +327,7 @@ describe("DocumentBuilder key insights", () => {
 
     fireEvent.click(within(colors).getByRole("button", { name: "Red" }));
     expect(view.container.querySelector('[data-insight-color="red"]')).toBeInTheDocument();
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0][0][0].insightColor).toBe("red");
@@ -351,7 +356,7 @@ describe("DocumentBuilder roadmaps", () => {
     fireEvent.click(controls.getByRole("button", { name: "Center number" }));
     expect(controls.getByRole("textbox", { name: "Step 1 subtext" }).querySelector("ul")).toBeInTheDocument();
     await waitFor(() => expect(controls.getByRole("button", { name: "Preview step 1 image" })).toBeInTheDocument());
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const savedRoadmap = onSave.mock.calls[0][0][0];
@@ -400,7 +405,7 @@ describe("DocumentBuilder image galleries", () => {
     expect(controls.getByRole("textbox", { name: "Gallery image 3 description" })).toBeInTheDocument();
     fireEvent.change(controls.getByLabelText("Upload gallery image 1"), { target: { files: [new File(["gallery"], "gallery.png", { type: "image/png" })] } });
     await waitFor(() => expect(controls.getByRole("button", { name: "Preview gallery image 1" })).toBeInTheDocument());
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const savedGallery = onSave.mock.calls[0][0][0];
@@ -446,7 +451,7 @@ describe("DocumentBuilder shared feature images and buttons", () => {
     await waitFor(() => expect(controls.getByRole("button", { name: "Preview feature card image" })).toBeInTheDocument());
     await waitFor(() => expect(controls.getByRole("img", { name: "feature card image preview" })).toHaveAttribute("src", "blob:shared-image"));
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/library/images?"), expect.objectContaining({ headers: { Authorization: "Bearer test-token" } }));
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(onSave.mock.calls[0][0][0].imageUrl).toContain("/ppc/api/library/images");
     fireEvent.click(controls.getAllByRole("button", { name: "Switch to edit mode" })[0]);
@@ -480,7 +485,7 @@ describe("DocumentBuilder shared feature images and buttons", () => {
     fireEvent.change(controls.getByRole("textbox", { name: "Link" }), { target: { value: "https://example.com/guide" } });
     fireEvent.click(controls.getByRole("button", { name: "Large" }));
     fireEvent.click(controls.getByRole("button", { name: "Right" }));
-    fireEvent.click(controls.getAllByRole("button", { name: "Save changes and switch to view mode" })[0]);
+    fireEvent.click(controls.getAllByRole("button", { name: "Save changes" })[0]);
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     const saved = onSave.mock.calls[0][0][0];
     expect(saved).toMatchObject({ type: "button", buttonText: "Open guide", buttonUrl: "https://example.com/guide", buttonWidth: "large", buttonAlignment: "right" });

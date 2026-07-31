@@ -62,7 +62,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 ### Structured document builder
 
-- View and edit modes.
+- View and edit modes now expose their Eye/Pencil state explicitly, with a separate manual `Save changes` button in edit mode so the mode indicator cannot accidentally submit a document.
 - Responsive element picker that flips to available viewport space.
 - Topic numbering and sidebar synchronization.
 - Repeatable dropdown entries with multiline preservation.

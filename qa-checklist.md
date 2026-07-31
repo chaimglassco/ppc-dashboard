@@ -83,7 +83,7 @@ Use this checklist before merging or deploying changes.
 - [x] Gallery tiles remain square in edit and view modes, show square/portrait/landscape sources without cropping, and open the full-image modal from the tile’s resolved source without issuing a second authenticated image request.
 - [x] Standalone Buttons validate internal and HTTP(S) links, persist width/alignment, open safely in a new tab, and become full-width on mobile.
 - [x] Center number layout centers the number, title, and subtext and uses the full available width for the image.
-- [x] Save changes and return to view mode.
+- [x] View mode shows the Eye control; entering edit mode changes it to a Pencil without saving, reveals a separate `Save changes` button, and only that button persists changes and returns to view mode.
 
 ## Video tutorial
 

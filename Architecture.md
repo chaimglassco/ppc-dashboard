@@ -59,7 +59,7 @@ The builder owns:
 
 The catalog modal is now a creation-only boundary. It accepts title, description, and category while assigning the existing defaults for document type, tags, and legacy Markdown. Existing catalog cards no longer expose an Edit / Rename action.
 
-Existing-document metadata editing lives in the structured builder. Entering edit mode replaces the blue header copy with controlled title, description, and category fields. Saving edit mode sends those metadata values and the current structured elements through one shared document update, while retaining the stable document ID and slug and preserving type, tags, and legacy Markdown.
+Existing-document metadata editing lives in the structured builder. Entering edit mode replaces the blue header copy with controlled title, description, and category fields without issuing a mutation. The sidebar and mobile mode control changes from an Eye to a Pencil indicator, while a separate `Save changes` action sends the metadata values and current structured elements through one shared document update and returns to view mode. Stable document ID and slug are retained, while type, tags, and legacy Markdown are preserved.
 
 The creation modal retains Category Plus and Pencil controls for quick creation and full category management. The library category manager remains the boundary for rename, reorder, visibility, recoverable deletion, and recovery. Deleted categories are not rendered in the main manager list; a recovery icon opens a focused dialog containing only recoverable categories. Reader edit mode consumes the validated active category list for reassignment.
 

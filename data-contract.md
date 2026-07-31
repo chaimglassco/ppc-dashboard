@@ -30,7 +30,7 @@ The global application tabs continue to use `glassco.appRoutes.v1` as their new-
 
 The catalog document editor is creation-only and exposes `title`, `description`, and `category`. New documents receive the existing defaults for `type`, `tags`, and legacy `body`, then are authored further in the structured builder.
 
-For existing documents, builder edit mode accepts a metadata draft containing only `title`, `description`, and `category`. It merges that draft with the existing document and current `contentElements`; stable `id` and `slug` values plus `type`, `tags`, and legacy `body` remain unchanged. Metadata and element changes are persisted in the same shared document update.
+For existing documents, builder edit mode accepts a metadata draft containing only `title`, `description`, and `category`. Entering edit mode and displaying the Pencil indicator are local UI transitions and do not mutate shared state. The explicit `Save changes` action merges the draft with the existing document and current `contentElements`; stable `id` and `slug` values plus `type`, `tags`, and legacy `body` remain unchanged. Metadata and element changes are persisted in the same shared document update.
 
 ## Topic
 

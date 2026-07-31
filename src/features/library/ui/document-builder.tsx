@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { ArrowDown, ArrowUp, ExternalLink, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Trash2, Video, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, Eye, GripVertical, List as ListIcon, LoaderCircle, Pencil, Play, Plus, Save, Trash2, Video, X } from "lucide-react";
 import { useEffect, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
@@ -130,13 +130,13 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
     }
   };
 
-  const toggleEditMode = async () => {
-    if (!isEditMode) {
-      setNotice("");
-      setIsEditMode(true);
-      onModeTransition(activeTopicId);
-      return;
-    }
+  const enterEditMode = () => {
+    setNotice("");
+    setIsEditMode(true);
+    onModeTransition(activeTopicId);
+  };
+
+  const saveChanges = async () => {
     setIsSaving(true);
     try {
       const nextMetadata = normalizedMetadata();
@@ -167,7 +167,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
           <strong>ON THIS PAGE</strong>
           <TopicLinks topics={topics} active={activeTopicId} onSelect={onTopicChange} onDelete={isEditMode ? deleteElement : undefined} />
         </div>
-        {canEdit ? <BuilderControls isEditMode={isEditMode} isSaving={isSaving} notice={notice} onToggle={toggleEditMode} /> : null}
+        {canEdit ? <BuilderControls isEditMode={isEditMode} isSaving={isSaving} notice={notice} onEnterEditMode={enterEditMode} onSaveChanges={() => void saveChanges()} /> : null}
       </aside>
       <article className={`prose ${styles.document}`}>
         <DocumentHeader doc={doc} metadata={metadata} categories={categoryOptions} isEditMode={isEditMode} onMetadataChange={updates => setMetadata(current => ({ ...current, ...updates }))} onSaveVideoUrl={onSaveVideoUrl} />
@@ -200,7 +200,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
           : <Markdown body={doc.body} topics={doc.topics} onTopic={onTopicChange} />}
       </article>
     </div>
-    {canEdit ? <div className={styles.mobileControls}><BuilderControls isEditMode={isEditMode} isSaving={isSaving} notice={notice} onToggle={toggleEditMode} /></div> : null}
+    {canEdit ? <div className={styles.mobileControls}><BuilderControls isEditMode={isEditMode} isSaving={isSaving} notice={notice} onEnterEditMode={enterEditMode} onSaveChanges={() => void saveChanges()} /></div> : null}
     {previewImage ? <div className={styles.imageModal} role="dialog" aria-modal="true" aria-label="Image preview">
       <div><button type="button" onClick={() => setPreviewImage("")} aria-label="Close image preview"><X /></button><AuthenticatedImage url={previewImage} alt="Document feature preview" /></div>
     </div> : null}
@@ -320,13 +320,14 @@ function ElementAddMenu({ isOpen, onToggle, onAdd, ariaLabel, inline = false }: 
   </div>;
 }
 
-function BuilderControls({ isEditMode, isSaving, notice, onToggle }: { isEditMode: boolean; isSaving: boolean; notice: string; onToggle: () => void }) {
+function BuilderControls({ isEditMode, isSaving, notice, onEnterEditMode, onSaveChanges }: { isEditMode: boolean; isSaving: boolean; notice: string; onEnterEditMode: () => void; onSaveChanges: () => void }) {
   return <div className={styles.controls}>
     {notice ? <p role="status">{notice}</p> : null}
     <div>
-      <button className={`${styles.modeButton} ${isEditMode ? styles.editing : ""}`} type="button" onClick={onToggle} disabled={isSaving} aria-pressed={isEditMode} aria-label={isEditMode ? "Save changes and switch to view mode" : "Switch to edit mode"}>
-        {isSaving ? <LoaderCircle className={styles.spinner} /> : <Eye />}
+      <button className={`${styles.modeButton} ${isEditMode ? styles.editing : ""}`} type="button" onClick={isEditMode ? undefined : onEnterEditMode} disabled={isEditMode || isSaving} aria-pressed={isEditMode} aria-label={isEditMode ? "Edit mode active" : "Switch to edit mode"}>
+        {isEditMode ? <Pencil /> : <Eye />}
       </button>
+      {isEditMode ? <button className={styles.saveButton} type="button" onClick={onSaveChanges} disabled={isSaving}>{isSaving ? <LoaderCircle className={styles.spinner} /> : <Save />}<span>{isSaving ? "Saving..." : "Save changes"}</span></button> : null}
     </div>
   </div>;
 }

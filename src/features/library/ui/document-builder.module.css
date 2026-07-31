@@ -11,9 +11,14 @@
 .controls>div{display:flex;align-items:center;gap:10px}
 .sidebar .modeButton,.sidebar .addButton,.mobileControls .modeButton,.mobileControls .addButton{display:grid;width:46px;height:46px;grid-template-columns:1fr;place-items:center;gap:0;padding:0;border:1px solid #dce3ef;border-radius:50%;background:#fff;color:#0759d4;text-align:center;box-shadow:0 8px 20px rgba(7,89,212,.15);cursor:pointer}
 .sidebar .modeButton.editing,.mobileControls .modeButton.editing{border-color:#0b1c30;background:#0b1c30;color:#fff}
+.sidebar .modeButton.editing:disabled,.mobileControls .modeButton.editing:disabled{cursor:default;opacity:1}
 .sidebar .addButton,.mobileControls .addButton{border-color:#0759d4;background:#0759d4;color:#fff}
 .modeButton svg,.addButton svg{display:block;width:20px;height:20px;margin:auto}
 .modeButton:disabled{cursor:wait;opacity:.65}
+.sidebar .saveButton,.mobileControls .saveButton{display:inline-flex;min-height:46px;align-items:center;justify-content:center;gap:8px;padding:0 18px;border:0;border-radius:23px;background:#0759d4;color:#fff;font-size:11px;font-weight:800;box-shadow:0 8px 20px rgba(7,89,212,.2);cursor:pointer}
+.sidebar .saveButton:hover,.mobileControls .saveButton:hover{background:#0649ad}
+.sidebar .saveButton:disabled,.mobileControls .saveButton:disabled{cursor:wait;opacity:.65}
+.saveButton svg{width:17px;height:17px}
 .spinner{animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .addWrap{position:relative}

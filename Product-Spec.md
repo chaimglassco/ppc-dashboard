@@ -64,7 +64,7 @@ The current milestone uses the existing Pipeline identity and one authoritative 
 
 ### Structured builder
 
-- **LIB-BUILDER-001** — Documents support separate view and edit modes.
+- **LIB-BUILDER-001** — Documents support separate view and edit modes. The reader control shows an Eye in view mode and a Pencil in edit mode; entering edit mode never saves, and an explicit `Save changes` action is the only main builder control that persists the draft and returns to view mode.
 - **LIB-BUILDER-002** — The element menu remains inside the viewport and scrolls when necessary.
 - **LIB-BUILDER-003** — Topics, statements, callouts, lists, checklists, insights, tables, dropdowns, feature cards, text blocks, roadmaps, galleries, buttons, and flows can be added. A single Key Insight element supports persistent Green, Blue, and Red presentation choices through segmented color tabs.
 - **LIB-BUILDER-004** — Tables support rows, columns, row height, and saved column width.
