@@ -7,7 +7,7 @@ import { getTopicsFromContentElements } from "../domain/document-elements";
 import type { LibraryContentElement } from "../domain/types";
 import { normalizeManagedLibraryContentUpdate, type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories } from "../state/category-storage";
-import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, invalidateSharedLibraryDocumentCache, mutateSharedLibrary, SharedLibraryConflictError } from "../state/shared-library-client";
+import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, invalidateSharedLibraryDocumentCache, mutateSharedLibrary, SharedLibraryConflictError, SharedLibraryIncompleteResponseError, SharedLibraryRequestError } from "../state/shared-library-client";
 import { getSharedLibraryRefreshDelay } from "../state/shared-library-retry";
 import type { LibraryDocumentDeletionAudit, SharedLibraryDocumentStatus, SharedLibraryResponse } from "../state/shared-library-state";
 import type { DocumentMetadataDraft } from "./document-builder";
@@ -76,7 +76,7 @@ export function ManagedReader({ slug }: { slug: string }) {
   const [documentStatus, setDocumentStatus] = useState<SharedLibraryDocumentStatus | null>(null);
   const [isRecovering, setIsRecovering] = useState(false);
   const [recoveryError, setRecoveryError] = useState("");
-  const [loadError, setLoadError] = useState<{ slug: string; message: string } | null>(null);
+  const [loadError, setLoadError] = useState<{ slug: string; message: string; kind: "connection" | "integrity" } | null>(null);
   const sharedRef = useRef<SharedLibraryResponse | null>(null);
   const refreshInFlightRef = useRef(false);
   const documentRef = useRef<ManagedLibraryDocument | null | undefined>(undefined);
@@ -121,7 +121,15 @@ export function ManagedReader({ slug }: { slug: string }) {
       consecutiveFailuresRef.current += 1;
       setMutationsEnabled(false);
       if (documentRef.current === undefined) {
-        setLoadError({ slug, message: "The shared Library could not load this document." });
+        const integrityFailure = error instanceof SharedLibraryIncompleteResponseError
+          || (error instanceof SharedLibraryRequestError && error.code === "LIBRARY_CATALOG_INCOMPLETE");
+        setLoadError({
+          slug,
+          kind: integrityFailure ? "integrity" : "connection",
+          message: integrityFailure
+            ? "This document has an incomplete historical record. Its prior versions remain protected in Recovery."
+            : "The shared Library could not load this document.",
+        });
       } else {
         const timestamp = sharedRef.current?.snapshotAt || sharedRef.current?.updatedAt;
         const when = timestamp ? new Date(timestamp).toLocaleString() : "an earlier session";
@@ -149,11 +157,19 @@ export function ManagedReader({ slug }: { slug: string }) {
         setNotice(`Shared library is unavailable. This confirmed copy is read-only. Snapshot from ${when}; revision ${response.revision}.`);
       }
       else if (!response.initialized) setNotice("Library migration pending. This document is read-only until an administrator completes initialization.");
-    }).catch(() => {
+    }).catch((error) => {
       if (!controller.signal.aborted) {
         documentRef.current = undefined;
         setDocument(undefined);
-        setLoadError({ slug, message: "The shared Library could not load this document." });
+        const integrityFailure = error instanceof SharedLibraryIncompleteResponseError
+          || (error instanceof SharedLibraryRequestError && error.code === "LIBRARY_CATALOG_INCOMPLETE");
+        setLoadError({
+          slug,
+          kind: integrityFailure ? "integrity" : "connection",
+          message: integrityFailure
+            ? "This document has an incomplete historical record. Its prior versions remain protected in Recovery."
+            : "The shared Library could not load this document.",
+        });
         consecutiveFailuresRef.current = 1;
         setMutationsEnabled(false);
       }
@@ -200,7 +216,7 @@ export function ManagedReader({ slug }: { slug: string }) {
     : document === null && documentSlug === slug
       ? null
       : undefined;
-  const currentLoadError = loadError?.slug === slug ? loadError.message : "";
+  const currentLoadError = loadError?.slug === slug ? loadError : null;
   const recoverDeletedDocument = async () => {
     if (!canAdmin || !mutationsEnabled || documentStatus?.status !== "deleted" || !documentStatus.documentId || documentStatus.recordVersion === undefined || isRecovering) return;
     setIsRecovering(true);
@@ -221,7 +237,14 @@ export function ManagedReader({ slug }: { slug: string }) {
       setIsRecovering(false);
     }
   };
-  if (currentDocument === undefined && currentLoadError) return <div className="empty-state managed-not-found"><h1>Library connection unavailable</h1><p>{currentLoadError} Check the connection and try again.</p><button className="primary-button" type="button" onClick={() => { setLoadError(null); void refresh(); }}>Try again</button><Link className="secondary-button" prefetch={false} href="/library">Return to Library</Link></div>;
+  if (currentDocument === undefined && currentLoadError) return <div className="empty-state managed-not-found">
+    <h1>{currentLoadError.kind === "integrity" ? "Document recovery required" : "Library connection unavailable"}</h1>
+    <p>{currentLoadError.message}{currentLoadError.kind === "connection" ? " Check the connection and try again." : ""}</p>
+    {currentLoadError.kind === "connection"
+      ? <button className="primary-button" type="button" onClick={() => { setLoadError(null); void refresh(); }}>Try again</button>
+      : null}
+    <Link className={currentLoadError.kind === "connection" ? "secondary-button" : "primary-button"} prefetch={false} href="/library">Return to Library</Link>
+  </div>;
   if (currentDocument === undefined) return <div className="reader-loading" aria-label="Loading document"><div className="skeleton wide"/></div>;
   if (currentDocument === null && documentStatus?.status === "deleted") {
     return <DeletedDocumentState status={documentStatus} canRecover={canAdmin && mutationsEnabled && documentStatus.recordVersion !== undefined} isRecovering={isRecovering} error={recoveryError} onRecover={() => void recoverDeletedDocument()} />;

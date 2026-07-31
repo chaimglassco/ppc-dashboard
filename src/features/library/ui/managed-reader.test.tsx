@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createBlankContentElement } from "../domain/document-elements";
 import { createDefaultCategories } from "../state/category-storage";
+import { SharedLibraryRequestError } from "../state/shared-library-client";
 import type { SharedLibraryResponse } from "../state/shared-library-state";
 import { ManagedReader } from "./managed-reader";
 
@@ -89,6 +90,21 @@ describe("managed reader loading states", () => {
     expect(await screen.findByRole("heading", { name: "Library connection unavailable" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Document unavailable" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
+  });
+
+  it("identifies a malformed historical record as requiring recovery instead of a connection outage", async () => {
+    client.hydrateSharedLibraryState.mockRejectedValue(new SharedLibraryRequestError(
+      "The Library contains a malformed record.",
+      503,
+      "LIBRARY_CATALOG_INCOMPLETE",
+      "read-library-state-document-snapshot",
+    ));
+    render(<ManagedReader slug="checking-spend" />);
+
+    expect(await screen.findByRole("heading", { name: "Document recovery required" })).toBeVisible();
+    expect(screen.getByText(/prior versions remain protected in Recovery/i)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Return to Library" })).toBeVisible();
   });
 
   it("shows Document unavailable only after an authoritative response has no matching document", async () => {
