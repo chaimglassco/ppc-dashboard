@@ -30,10 +30,13 @@ const incompleteDocuments: SharedLibraryDocumentIntegrity[] = [
   },
 ];
 
-function renderRecovery(onRecoverIncomplete = vi.fn().mockResolvedValue(null)) {
+function renderRecovery(
+  onRecoverIncomplete = vi.fn().mockResolvedValue(null),
+  documents = incompleteDocuments,
+) {
   render(<DeletedDocuments
     documents={[]}
-    incompleteDocuments={incompleteDocuments}
+    incompleteDocuments={documents}
     deletionAudit={{}}
     isRecoveringSystemDocuments={false}
     systemRecoveryError=""
@@ -73,5 +76,25 @@ describe("incomplete active document recovery", () => {
 
     await waitFor(() => expect(recover).toHaveBeenCalledWith(incompleteDocuments));
     await waitFor(() => expect(dialog).not.toBeInTheDocument());
+  });
+
+  it("bulk-recovers only documents with a currently valid protected version", async () => {
+    const unavailable: SharedLibraryDocumentIntegrity = {
+      ...incompleteDocuments[1],
+      documentId: "doc-3",
+      slug: "unavailable-document",
+      title: "Unavailable document",
+      hasRecoveryCandidate: false,
+      recoveryCandidateVersionId: undefined,
+      recoveryCandidateRecordVersion: undefined,
+      recoveryCandidateCreatedAt: undefined,
+    };
+    const recover = renderRecovery(undefined, [incompleteDocuments[0], incompleteDocuments[1], unavailable]);
+
+    expect(screen.getByText("2 can be restored from their newest versions that pass the current validator.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Recover all valid versions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recover all" }));
+
+    await waitFor(() => expect(recover).toHaveBeenCalledWith(incompleteDocuments));
   });
 });

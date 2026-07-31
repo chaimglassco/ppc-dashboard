@@ -119,6 +119,7 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
     return [...map.values()].sort((a, b) => a.title.localeCompare(b.title));
   }, [activeDocuments, archivedDocuments, documents]);
   const systemDeletedIds = documents.filter(document => deletionAudit[document.id]?.source === "system_migration").map(document => document.id);
+  const recoverableIncompleteDocuments = incompleteDocuments.filter(document => document.hasRecoveryCandidate);
   const unacknowledged = incidents.filter(incident => !incident.acknowledgedAt).length;
   const isBusy = Boolean(busyId) || isRecoveringSystemDocuments || loadingVersions || loadingSnapshot;
 
@@ -192,7 +193,7 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
         {rowError ? <div className="document-recovery-load-error" role="alert"><p>{rowError}</p></div> : null}
 
         {tab === "incomplete" ? <section className="recovery-center-section">
-          {incompleteDocuments.length > 1 ? <div className="recovery-center-heading"><div><strong>{incompleteDocuments.length} incomplete active documents</strong><p>Each document will be restored from its newest version that passes the current validator.</p></div><button className="primary-button" type="button" disabled={isBusy || incompleteDocuments.some(document => !document.hasRecoveryCandidate)} onClick={() => setConfirmBulkIncomplete(true)}><RotateCcw /> Recover all valid versions</button></div> : null}
+          {incompleteDocuments.length > 1 ? <div className="recovery-center-heading"><div><strong>{incompleteDocuments.length} incomplete active documents</strong><p>{recoverableIncompleteDocuments.length} can be restored from their newest versions that pass the current validator.</p></div><button className="primary-button" type="button" disabled={isBusy || !recoverableIncompleteDocuments.length} onClick={() => setConfirmBulkIncomplete(true)}><RotateCcw /> Recover all valid versions</button></div> : null}
           <div className="document-recovery-list">{incompleteDocuments.map(document => <article className="document-recovery-row incomplete-document-row" key={document.documentId}>
             <div><strong>{document.title}</strong><small>Active record version {document.recordVersion} is incomplete.</small><small>{document.hasRecoveryCandidate ? `Protected version ${document.recoveryCandidateRecordVersion} passed validation${document.recoveryCandidateCreatedAt ? ` · ${new Date(document.recoveryCandidateCreatedAt).toLocaleString()}` : ""}.` : "No protected version passes the current validator."}</small></div>
             <div className="document-recovery-actions">
@@ -253,9 +254,9 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
     </div> : null}
     {confirmBulkIncomplete ? <div className="admin-modal-backdrop permanent-delete-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !isBusy) setConfirmBulkIncomplete(false); }}>
       <section className="admin-modal permanent-delete-dialog protected-restore-dialog" role="alertdialog" aria-modal="true" aria-labelledby="recover-incomplete-heading">
-        <header><div><span className="eyebrow">VALIDATED RECOVERY</span><h2 id="recover-incomplete-heading">Recover {incompleteDocuments.length} incomplete documents?</h2></div><button type="button" disabled={isBusy} onClick={() => setConfirmBulkIncomplete(false)} aria-label="Close recovery confirmation"><X /></button></header>
-        <div className="permanent-delete-dialog__body"><AlertTriangle /><p>Every selected record must still match this Library revision. The newest protected version that passes the current validator will replace each incomplete active record in one all-or-nothing operation.</p></div>
-        <footer><button className="secondary-button" type="button" disabled={isBusy} onClick={() => setConfirmBulkIncomplete(false)}>Cancel</button><button className="primary-button" type="button" disabled={isBusy} onClick={() => void run("bulk-incomplete", () => onRecoverIncomplete(incompleteDocuments)).then(success => { if (success) setConfirmBulkIncomplete(false); })}>{busyId === "bulk-incomplete" ? <><LoaderCircle className="spinning-icon" /> Recovering…</> : <><RotateCcw /> Recover all</>}</button></footer>
+        <header><div><span className="eyebrow">VALIDATED RECOVERY</span><h2 id="recover-incomplete-heading">Recover {recoverableIncompleteDocuments.length} incomplete documents?</h2></div><button type="button" disabled={isBusy} onClick={() => setConfirmBulkIncomplete(false)} aria-label="Close recovery confirmation"><X /></button></header>
+        <div className="permanent-delete-dialog__body"><AlertTriangle /><p>Every selected record must still match this Library revision. The newest protected version that passes the current validator will replace each recoverable active record in one all-or-nothing operation. Records without a valid version will remain unchanged.</p></div>
+        <footer><button className="secondary-button" type="button" disabled={isBusy} onClick={() => setConfirmBulkIncomplete(false)}>Cancel</button><button className="primary-button" type="button" disabled={isBusy} onClick={() => void run("bulk-incomplete", () => onRecoverIncomplete(recoverableIncompleteDocuments)).then(success => { if (success) setConfirmBulkIncomplete(false); })}>{busyId === "bulk-incomplete" ? <><LoaderCircle className="spinning-icon" /> Recovering…</> : <><RotateCcw /> Recover all</>}</button></footer>
       </section>
     </div> : null}
   </div>;
