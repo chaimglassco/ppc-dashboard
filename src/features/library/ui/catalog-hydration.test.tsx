@@ -119,6 +119,46 @@ describe("catalog hydration", () => {
     expect(catalog.getByText("Reorder needs at least 2 active documents. Add or recover another document first.")).toBeVisible();
   });
 
+  it("marks an incomplete active record as needing recovery instead of presenting it as healthy", async () => {
+    const document = getPublishedDocuments()[0];
+    const safeSummary = { ...document, title: "Untitled document", body: "", topics: [] };
+    const incompleteResponse = {
+      initialized: true,
+      state: { version: 1 as const, documents: [safeSummary], categories: createDefaultCategories() },
+      revision: 12,
+      recordVersions: { documents: { [document.id]: 6 }, categories: {} },
+      updatedAt: null,
+      updatedBy: null,
+      recoveryDocumentCount: 0,
+      recordIntegrity: {
+        documents: {
+          [document.id]: {
+            status: "incomplete" as const,
+            documentId: document.id,
+            slug: document.slug,
+            title: document.title,
+            recordVersion: 6,
+            reasonCode: "DOCUMENT_SCHEMA_INVALID" as const,
+            hasRecoveryCandidate: true,
+            recoveryCandidateVersionId: "version-5",
+            recoveryCandidateRecordVersion: 5,
+            recoveryCandidateCreatedAt: "2026-07-30T10:00:00.000Z",
+          },
+        },
+      },
+    };
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: incompleteResponse, source: "server" });
+    client.fetchSharedLibraryState.mockResolvedValue(incompleteResponse);
+    render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>);
+
+    const heading = await screen.findByRole("heading", { name: document.title });
+    const card = heading.closest<HTMLElement>(".document-card");
+    if (!card) throw new Error("Incomplete document card was not found.");
+    expect(within(card).getByText("Needs recovery")).toBeVisible();
+    expect(within(card).getByRole("link", { name: "Preview recovery version" })).toHaveAttribute("href", `/library/${document.slug}`);
+    expect(within(card).queryByRole("link", { name: "Read Document" })).not.toBeInTheDocument();
+  });
+
   it("opens Recovery immediately while its two data sources load independently", async () => {
     const documents = getPublishedDocuments().slice(0, 2);
     const liveResponse = {
@@ -198,7 +238,7 @@ describe("catalog hydration", () => {
 
     window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
 
-    await waitFor(() => expect(client.fetchSharedLibraryState).toHaveBeenCalledWith(undefined, { summary: true }));
+    await waitFor(() => expect(client.fetchSharedLibraryState).toHaveBeenCalledWith(undefined, { summary: true, integrityPreview: true }));
   });
 
   it("lets an ADMIN confirm and run the protected migration", async () => {

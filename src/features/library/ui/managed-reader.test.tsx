@@ -12,6 +12,15 @@ const client = vi.hoisted(() => ({
   hydrateSharedLibraryState: vi.fn(),
   mutateSharedLibrary: vi.fn(),
 }));
+const navigation = vi.hoisted(() => ({
+  replace: vi.fn(),
+  get: vi.fn(() => null as string | null),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: navigation.replace }),
+  useSearchParams: () => ({ get: navigation.get }),
+}));
 
 vi.mock("../state/shared-library-client", async importOriginal => {
   const actual = await importOriginal<typeof import("../state/shared-library-client")>();
@@ -80,6 +89,9 @@ describe("managed reader loading states", () => {
     client.fetchSharedLibraryState.mockReset();
     client.hydrateSharedLibraryState.mockReset();
     client.mutateSharedLibrary.mockReset();
+    navigation.replace.mockReset();
+    navigation.get.mockReset();
+    navigation.get.mockReturnValue(null);
   });
   afterEach(cleanup);
 
@@ -280,5 +292,144 @@ describe("managed reader loading states", () => {
     await waitFor(() => expect(screen.getByText(/current editor copy was preserved/i)).toBeVisible());
     expect(screen.getByTestId("reader")).toHaveTextContent(`${document.title}:read-only`);
     expect(screen.queryByRole("heading", { name: "Document unavailable" })).not.toBeInTheDocument();
+  });
+
+  it("opens the newest validated protected version read-only and lets an ADMIN restore it", async () => {
+    const protectedDocument = getPublishedDocuments()[0];
+    const safeSummary = { ...protectedDocument, title: "Untitled document", body: "", topics: [], contentElements: undefined };
+    const incomplete = {
+      ...response([safeSummary]),
+      recordVersions: { documents: { [protectedDocument.id]: 6 }, categories: {} },
+      recordManifest: {
+        documents: [{
+          id: protectedDocument.id,
+          slug: protectedDocument.slug,
+          recordVersion: 6,
+          lifecycleState: "active" as const,
+          hidden: false,
+          status: "published" as const,
+        }],
+      },
+      documentStatus: {
+        status: "incomplete" as const,
+        slug: protectedDocument.slug,
+        documentId: protectedDocument.id,
+        title: protectedDocument.title,
+        recordVersion: 6,
+        reasonCode: "DOCUMENT_SCHEMA_INVALID" as const,
+        hasRecoveryCandidate: true,
+      },
+      recordIntegrity: {
+        documents: {
+          [protectedDocument.id]: {
+            status: "incomplete" as const,
+            documentId: protectedDocument.id,
+            slug: protectedDocument.slug,
+            title: protectedDocument.title,
+            recordVersion: 6,
+            reasonCode: "DOCUMENT_SCHEMA_INVALID" as const,
+            hasRecoveryCandidate: true,
+            recoveryCandidateVersionId: "version-5",
+            recoveryCandidateRecordVersion: 5,
+            recoveryCandidateCreatedAt: "2026-07-30T10:00:00.000Z",
+          },
+        },
+      },
+      recoveryPreview: {
+        document: protectedDocument,
+        versionId: "version-5",
+        recordVersion: 5,
+        createdAt: "2026-07-30T10:00:00.000Z",
+        operationType: "document.update",
+        actorEmail: "admin@example.com",
+      },
+    };
+    const restored = {
+      ...response([protectedDocument]),
+      revision: 3,
+      recordVersions: { documents: { [protectedDocument.id]: 7 }, categories: {} },
+      recordManifest: {
+        documents: [{
+          id: protectedDocument.id,
+          slug: protectedDocument.slug,
+          recordVersion: 7,
+          lifecycleState: "active" as const,
+          hidden: false,
+          status: "published" as const,
+        }],
+      },
+      documentStatus: {
+        status: "active" as const,
+        slug: protectedDocument.slug,
+        documentId: protectedDocument.id,
+        recordVersion: 7,
+      },
+    };
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: incomplete, source: "server" });
+    client.mutateSharedLibrary.mockResolvedValue(restored);
+    render(<ManagedReader slug={protectedDocument.slug} />);
+
+    expect(await screen.findByText(/Needs recovery/)).toBeVisible();
+    expect(screen.getByTestId("reader")).toHaveTextContent(`${protectedDocument.title}:read-only`);
+    fireEvent.click(screen.getByRole("button", { name: "Restore this version" }));
+
+    await waitFor(() => expect(client.mutateSharedLibrary).toHaveBeenCalledWith({
+      operation: "documents.restoreIncomplete",
+      records: [{
+        documentId: protectedDocument.id,
+        versionId: "version-5",
+        expectedVersion: 6,
+      }],
+      expectedRevision: 2,
+    }, { slug: protectedDocument.slug, integrityPreview: true }));
+    expect(await screen.findByText(/was recovered successfully/i)).toBeVisible();
+    expect(screen.getByTestId("reader")).toHaveTextContent(`${protectedDocument.title}:editable`);
+  });
+
+  it("explains when an incomplete active document has no restorable protected version", async () => {
+    const document = getPublishedDocuments()[0];
+    const incomplete = {
+      ...response([document]),
+      recordVersions: { documents: { [document.id]: 4 }, categories: {} },
+      recordManifest: {
+        documents: [{
+          id: document.id,
+          slug: document.slug,
+          recordVersion: 4,
+          lifecycleState: "active" as const,
+          hidden: false,
+          status: "published" as const,
+        }],
+      },
+      documentStatus: {
+        status: "incomplete" as const,
+        slug: document.slug,
+        documentId: document.id,
+        title: document.title,
+        recordVersion: 4,
+        reasonCode: "DOCUMENT_SCHEMA_INVALID" as const,
+        hasRecoveryCandidate: false,
+      },
+      recordIntegrity: {
+        documents: {
+          [document.id]: {
+            status: "incomplete" as const,
+            documentId: document.id,
+            slug: document.slug,
+            title: document.title,
+            recordVersion: 4,
+            reasonCode: "DOCUMENT_SCHEMA_INVALID" as const,
+            hasRecoveryCandidate: false,
+          },
+        },
+      },
+      recoveryPreview: undefined,
+    };
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: incomplete, source: "server" });
+    render(<ManagedReader slug={document.slug} />);
+
+    expect(await screen.findByRole("heading", { name: "Document recovery required" })).toBeVisible();
+    expect(screen.getByText(/no protected version passes the current validator/i)).toBeVisible();
+    expect(client.mutateSharedLibrary).not.toHaveBeenCalled();
   });
 });

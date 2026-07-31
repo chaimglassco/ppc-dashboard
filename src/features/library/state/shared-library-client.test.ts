@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "./category-storage";
-import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryIncompleteResponseError, SharedLibraryRequestError, SharedLibraryTimeoutError, verifyRestoredLibraryDocument } from "./shared-library-client";
+import { fetchSharedLibraryState, getSharedLibraryCacheKey, hydrateSharedLibraryState, initializeSharedLibrary, mutateSharedLibrary, reconcileSharedLibraryDocumentCaches, SHARED_LIBRARY_CACHE_KEY, SHARED_LIBRARY_REQUEST_TIMEOUT_MS, SharedLibraryIncompleteResponseError, SharedLibraryRequestError, SharedLibraryTimeoutError, verifyRestoredIncompleteDocuments, verifyRestoredLibraryDocument } from "./shared-library-client";
 
 const documents = getPublishedDocuments().slice(0, 1);
 const categories = createDefaultCategories();
@@ -133,6 +133,16 @@ describe("shared library client", () => {
     expect(fetchMock).toHaveBeenCalledWith("/ppc/api/library?slug=checking-spend", expect.any(Object));
   });
 
+  it("opts into structured incomplete-document previews without changing the cache identity", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(response), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchSharedLibraryState(undefined, { slug: "checking-spend", integrityPreview: true });
+
+    expect(fetchMock).toHaveBeenCalledWith("/ppc/api/library?slug=checking-spend&integrityPreview=1", expect.any(Object));
+    expect(getSharedLibraryCacheKey({ slug: "checking-spend", integrityPreview: true })).toBe(`${SHARED_LIBRARY_CACHE_KEY}:document:checking-spend`);
+  });
+
   it("confirms a restored version only from a newer document-scoped active response", () => {
     const document = response.state.documents[0];
     const restored = {
@@ -157,6 +167,39 @@ describe("shared library client", () => {
     expect(verifyRestoredLibraryDocument(restored, document.id, document.slug, 1)?.id).toBe(document.id);
     expect(verifyRestoredLibraryDocument({ ...restored, catalogCompleteness: { ...restored.catalogCompleteness, scope: "catalog" } }, document.id, document.slug, 1)).toBeNull();
     expect(verifyRestoredLibraryDocument(restored, document.id, document.slug, 2)).toBeNull();
+  });
+
+  it("confirms an atomic incomplete-document recovery only when every record advanced and cleared its integrity marker", () => {
+    const document = response.state.documents[0];
+    const restored = {
+      ...response,
+      restoredCount: 1,
+      recordVersions: { ...response.recordVersions, documents: { [document.id]: 2 } },
+      recordManifest: {
+        documents: [{ ...response.recordManifest.documents[0], recordVersion: 2 }],
+      },
+      recordIntegrity: { documents: {} },
+    };
+    const records = [{ documentId: document.id, expectedVersion: 1 }];
+
+    expect(verifyRestoredIncompleteDocuments(restored, records)).toBe(true);
+    expect(verifyRestoredIncompleteDocuments({ ...restored, restoredCount: 0 }, records)).toBe(false);
+    expect(verifyRestoredIncompleteDocuments({
+      ...restored,
+      recordIntegrity: {
+        documents: {
+          [document.id]: {
+            status: "incomplete",
+            documentId: document.id,
+            slug: document.slug,
+            title: document.title,
+            recordVersion: 2,
+            reasonCode: "DOCUMENT_SCHEMA_INVALID",
+            hasRecoveryCandidate: false,
+          },
+        },
+      },
+    }, records)).toBe(false);
   });
 
   it("loads tombstones and deletion attribution only for an explicit recovery request", async () => {

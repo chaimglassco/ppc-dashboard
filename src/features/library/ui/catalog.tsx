@@ -23,6 +23,7 @@ import {
   reconcileSharedLibraryDocumentCaches,
   restorePurgedLibraryDocument,
   SharedLibraryConflictError,
+  verifyRestoredIncompleteDocuments,
   verifyRestoredLibraryDocument,
   type LibraryBackup,
   type LibraryIntegrityIncident,
@@ -32,7 +33,7 @@ import {
   type SharedLibraryReadOptions,
 } from "../state/shared-library-client";
 import { getSharedLibraryRefreshDelay } from "../state/shared-library-retry";
-import type { SharedLibraryResponse } from "../state/shared-library-state";
+import type { SharedLibraryDocumentIntegrity, SharedLibraryResponse } from "../state/shared-library-state";
 import { CategoryManager } from "./category-manager";
 import { DeleteDocumentDialog } from "./delete-document-dialog";
 import { DeletedDocuments } from "./deleted-documents";
@@ -47,6 +48,8 @@ function cachedSnapshotNotice(response: SharedLibraryResponse | null) {
   const revision = response ? ` Revision ${response.revision}.` : "";
   return `Shared library is unavailable. Showing the last confirmed copy from ${when} in read-only mode.${revision}`;
 }
+
+const CATALOG_READ_OPTIONS: SharedLibraryReadOptions = { summary: true, integrityPreview: true };
 
 export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const { canAdmin, canEdit } = useGlasscoSession();
@@ -80,6 +83,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const [librarySource, setLibrarySource] = useState<"server" | "cache" | null>(null);
   const [isMigrating, setIsMigrating] = useState(false);
   const [shared, setShared] = useState<SharedLibraryResponse | null>(null);
+  const [incompleteIntegrity, setIncompleteIntegrity] = useState<Record<string, SharedLibraryDocumentIntegrity>>({});
   const sharedRef = useRef<SharedLibraryResponse | null>(null);
   const refreshInFlightRef = useRef(false);
   const consecutiveFailuresRef = useRef(0);
@@ -108,12 +112,16 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       : [];
     sharedRef.current = response;
     setShared(response);
+    if (response.recordIntegrity) setIncompleteIntegrity(response.recordIntegrity.documents);
     setManaged(response.state.documents);
     setCategories(response.state.categories);
     setAvailableDocumentIds(response.state.documents
-      .filter(document => !document.deletedAt && !document.hidden && document.status === "published")
+      .filter(document => !document.deletedAt
+        && !document.hidden
+        && document.status === "published"
+        && !response.recordIntegrity?.documents[document.id])
       .map(document => document.id));
-    if (cache) cacheSharedLibraryResponse(response, window.localStorage, { summary: true });
+    if (cache) cacheSharedLibraryResponse(response, window.localStorage, CATALOG_READ_OPTIONS);
     return removed;
   }, [setAvailableDocumentIds]);
 
@@ -122,9 +130,12 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     if (refreshInFlightRef.current) return false;
     refreshInFlightRef.current = true;
     try {
-      const readOptions: SharedLibraryReadOptions = requestedOptions ?? (showDocumentRecovery
+      const requestedReadOptions: SharedLibraryReadOptions = requestedOptions ?? (showDocumentRecovery
         ? { summary: true, recovery: true }
-        : { summary: true });
+        : CATALOG_READ_OPTIONS);
+      const readOptions = requestedReadOptions.summary && !requestedReadOptions.recovery && !requestedReadOptions.archive
+        ? { ...requestedReadOptions, integrityPreview: true }
+        : requestedReadOptions;
       const response = await fetchSharedLibraryState(signal, readOptions);
       const categoryWasCleared = Boolean(category)
         && !response.state.categories.some(item => !item.deletedAt && !item.hidden && item.name === category);
@@ -163,7 +174,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   useEffect(() => {
     const controller = new AbortController();
     refreshInFlightRef.current = true;
-    void hydrateSharedLibraryState(window.localStorage, controller.signal, { summary: true }).then(({ response, source }) => {
+    void hydrateSharedLibraryState(window.localStorage, controller.signal, CATALOG_READ_OPTIONS).then(({ response, source }) => {
       if (controller.signal.aborted) return;
       applySharedResponse(response, source === "server");
       consecutiveFailuresRef.current = source === "server" ? 0 : 1;
@@ -232,7 +243,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const commitMutation = async (
     mutation: SharedLibraryMutation,
     message: string,
-    readOptions: SharedLibraryReadOptions = { summary: true },
+    readOptions: SharedLibraryReadOptions = CATALOG_READ_OPTIONS,
   ) => {
     lastMutationErrorRef.current = "";
     if (!mutationsEnabled) {
@@ -327,7 +338,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     setLibraryBackups([]);
     setIntegrityIncidents([]);
     setPurgedHistoryError("");
-    void refresh(undefined, { summary: true });
+    void refresh(undefined, CATALOG_READ_OPTIONS);
   };
 
   const requestDocumentDelete = (document: ManagedLibraryDocument) => {
@@ -440,11 +451,15 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const editorCategories = activeCategories.map(item => item.name);
   const activeDocuments = managed.filter(document => !document.deletedAt);
   const visibleToReader = activeDocuments.filter(document => !document.hidden);
-  const catalogDocuments = manageMode ? activeDocuments : visibleToReader;
+  const catalogDocuments = (manageMode ? activeDocuments : visibleToReader).map(document => {
+    const integrity = incompleteIntegrity[document.id];
+    return integrity ? { ...document, title: integrity.title } : document;
+  });
   const results = filterDocuments(catalogDocuments, { q: deferred, category });
   const filtered = Boolean(q || category);
   const deleted = managed.filter(document => document.deletedAt);
-  const recoveryDocumentCount = shared?.recoveryDocumentCount ?? deleted.length;
+  const incompleteDocuments = Object.values(incompleteIntegrity);
+  const recoveryDocumentCount = (shared?.recoveryDocumentCount ?? deleted.length) + incompleteDocuments.length;
   const documentCounts = managed.reduce<Record<string, number>>((counts, document) => { counts[document.category] = (counts[document.category] ?? 0) + 1; return counts; }, {});
   const saveDocumentOrder = async (order: string[]) => {
     const initialRevision = sharedRef.current?.revision;
@@ -488,6 +503,37 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     const restoredCount = response.restoredCount ?? documentIds.length;
     announceSuccess(`${restoredCount} system-deleted ${restoredCount === 1 ? "document was" : "documents were"} recovered successfully.`);
     if ((response.recoveryDocumentCount ?? 0) === 0) closeDocumentRecovery();
+  };
+  const recoverIncompleteDocuments = async (entries: SharedLibraryDocumentIntegrity[]) => {
+    const revision = sharedRef.current?.revision;
+    if (revision === undefined) return "The current Library revision is unavailable. Refresh Recovery and try again.";
+    const recoverable = entries.filter(entry => entry.hasRecoveryCandidate && entry.recoveryCandidateVersionId);
+    if (!recoverable.length) return "No valid protected version is available for the selected document.";
+    try {
+      const records = recoverable.map(entry => ({
+        documentId: entry.documentId,
+        versionId: String(entry.recoveryCandidateVersionId),
+        expectedVersion: entry.recordVersion,
+      }));
+      const response = await mutateSharedLibrary({
+        operation: "documents.restoreIncomplete",
+        records,
+        expectedRevision: revision,
+      }, CATALOG_READ_OPTIONS);
+      if (!verifyRestoredIncompleteDocuments(response, records)) {
+        return "The recovered documents were not confirmed by the shared Library.";
+      }
+      applySharedResponse(response, true, true);
+      const restoredCount = response.restoredCount ?? records.length;
+      announceSuccess(`${restoredCount} incomplete ${restoredCount === 1 ? "document was" : "documents were"} restored successfully.`);
+      return null;
+    } catch (error) {
+      if (error instanceof SharedLibraryConflictError) {
+        applySharedResponse(error.latest, true, true);
+        return "The Library changed in another session. Recovery was not applied; review the refreshed list and try again.";
+      }
+      return error instanceof Error ? error.message : "The incomplete documents could not be recovered.";
+    }
   };
   const permanentlyDeleteDocument = async (document: ManagedLibraryDocument) => {
     const expectedVersion = sharedRef.current?.recordVersions.documents[document.id];
@@ -535,7 +581,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       operation: "document.restoreArchived",
       documentId: document.id,
       expectedVersion,
-    }, "", { summary: true });
+    }, "", CATALOG_READ_OPTIONS);
     if (!response) return lastMutationErrorRef.current || "The archived document could not be restored.";
     announceSuccess(`${document.title} was restored from the protected archive.`);
     await refreshDocumentRecovery();
@@ -604,7 +650,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         recordType: "document",
         recordIds: selected,
         expectedRevision: revision,
-      }, "", { summary: true });
+      }, "", CATALOG_READ_OPTIONS);
       if (!response) return lastMutationErrorRef.current || "The selected snapshot records could not be restored.";
       announceSuccess(`${selected.length} snapshot ${selected.length === 1 ? "document was" : "documents were"} restored successfully.`);
       await refreshDocumentRecovery();
@@ -620,7 +666,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       operation: "integrity.acknowledge",
       incidentId: incident.id,
       expectedRevision: revision,
-    }, "", { summary: true });
+    }, "", CATALOG_READ_OPTIONS);
     if (!response) return lastMutationErrorRef.current || "The integrity incident could not be acknowledged.";
     setIntegrityIncidents(current => current.map(item => item.id === incident.id
       ? { ...item, acknowledgedAt: new Date().toISOString(), acknowledgedBy: "Current administrator" }
@@ -654,15 +700,18 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
         [next[activeIndex], next[target]] = [next[target], next[activeIndex]];
         void commitMutation({ operation: "documents.reorder", documentIds: next.map(document => document.id), expectedRevision: sharedRef.current.revision }, "Document order updated.");
       };
-      return <DocumentCard key={doc.id} doc={doc} admin={manageMode && mutationsEnabled ? { onToggleHidden: () => updateDocument({ ...doc, hidden: !doc.hidden, updatedAt: new Date().toISOString() }, doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => requestDocumentDelete(doc), onMoveUp: () => reorder(-1), onMoveDown: () => reorder(1), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1 } : undefined}/>;
+      const needsRecovery = Boolean(incompleteIntegrity[doc.id]);
+      return <DocumentCard key={doc.id} doc={doc} needsRecovery={needsRecovery} admin={manageMode && mutationsEnabled && !needsRecovery ? { onToggleHidden: () => updateDocument({ ...doc, hidden: !doc.hidden, updatedAt: new Date().toISOString() }, doc.hidden ? "Document is visible." : "Document hidden."), onDelete: () => requestDocumentDelete(doc), onMoveUp: () => reorder(-1), onMoveDown: () => reorder(1), canMoveUp: activeIndex > 0, canMoveDown: activeIndex < activeDocuments.length - 1 } : undefined}/>;
     })}</div> : filtered ? <div className="empty-state"><Search aria-hidden="true" /><h2>No documents match</h2><p>Try a broader search or remove the active filters.</p><button className="primary-button" onClick={clear}>Clear all filters</button></div> : <div className="empty-state library-empty-state"><Search aria-hidden="true" /><h2>The Library has no active documents</h2><p>Add a new document, or open Recovery to restore a deleted document or the protected bQool snapshot.</p>{canAdmin && mutationsEnabled ? <div className="library-empty-actions"><button className="primary-button" type="button" onClick={() => setEditor("new")}><Plus /> Add document</button><button className="secondary-button" type="button" onClick={openDocumentRecovery}><RotateCcw /> Open Recovery</button></div> : null}</div>}</> : <div className="skeleton-grid" aria-label="Loading library documents">{[1, 2, 3].map(item => <div className="skeleton" key={item} />)}</div>}
     {canAdmin && showDocumentRecovery ? <DeletedDocuments
       documents={deleted}
+      incompleteDocuments={incompleteDocuments}
       deletionAudit={shared?.deletionAudit?.documents ?? {}}
       isRecoveringSystemDocuments={isRecoveringSystemDocuments}
       systemRecoveryError={systemRecoveryError}
       onClose={closeDocumentRecovery}
       onRecover={recoverDocument}
+      onRecoverIncomplete={recoverIncompleteDocuments}
       onRecoverSystemDeleted={documentIds => void recoverSystemDeletedDocuments(documentIds)}
       onPermanentlyDelete={permanentlyDeleteDocument}
       archivedDocuments={archivedDocuments}

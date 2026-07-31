@@ -58,8 +58,34 @@ export type SharedLibraryDeletionAudit = {
   documents: Record<string, LibraryDocumentDeletionAudit>;
 };
 
+export type SharedLibraryDocumentIntegrity = {
+  status: "incomplete";
+  documentId: string;
+  slug: string;
+  title: string;
+  recordVersion: number;
+  reasonCode: "DOCUMENT_SCHEMA_INVALID";
+  hasRecoveryCandidate: boolean;
+  recoveryCandidateVersionId?: string;
+  recoveryCandidateRecordVersion?: number;
+  recoveryCandidateCreatedAt?: string;
+};
+
+export type SharedLibraryRecordIntegrity = {
+  documents: Record<string, SharedLibraryDocumentIntegrity>;
+};
+
+export type SharedLibraryRecoveryPreview = {
+  document: ManagedLibraryDocument;
+  versionId: string;
+  recordVersion: number;
+  createdAt: string;
+  operationType: string;
+  actorEmail: string;
+};
+
 export type SharedLibraryDocumentStatus = {
-  status: "active" | "deleted" | "archived" | "purged" | "not_found";
+  status: "active" | "deleted" | "archived" | "purged" | "not_found" | "incomplete";
   slug: string;
   documentId?: string;
   title?: string;
@@ -68,6 +94,8 @@ export type SharedLibraryDocumentStatus = {
   hidden?: boolean;
   recordVersion?: number;
   deletionAudit?: LibraryDocumentDeletionAudit;
+  reasonCode?: "DOCUMENT_SCHEMA_INVALID";
+  hasRecoveryCandidate?: boolean;
 };
 
 export type SharedLibraryIntegrityStatus = {
@@ -99,6 +127,8 @@ export type SharedLibraryResponse = {
   integrityStatus?: SharedLibraryIntegrityStatus;
   documentStatus?: SharedLibraryDocumentStatus;
   deletionAudit?: SharedLibraryDeletionAudit;
+  recordIntegrity?: SharedLibraryRecordIntegrity;
+  recoveryPreview?: SharedLibraryRecoveryPreview;
   restoredCount?: number;
   mutationResult?: SharedLibraryMutationResult;
 };
@@ -223,7 +253,35 @@ export function isAuthoritativeSharedLibraryResponse(response: SharedLibraryResp
     if (status.status === "active" && (!manifestEntry || manifestEntry.lifecycleState !== "active" || manifestEntry.slug !== status.slug)) return false;
     if (status.status === "deleted" && (!manifestEntry || manifestEntry.lifecycleState !== "deleted" || manifestEntry.slug !== status.slug)) return false;
     if (status.status === "archived" && (!manifestEntry || manifestEntry.lifecycleState !== "archived" || manifestEntry.slug !== status.slug)) return false;
+    if (status.status === "incomplete" && (!manifestEntry || manifestEntry.lifecycleState !== "active" || manifestEntry.slug !== status.slug)) return false;
     if (status.recordVersion !== undefined && (!manifestEntry || status.recordVersion !== manifestEntry.recordVersion)) return false;
+  }
+  const integrityEntries = Object.values(response.recordIntegrity?.documents || {});
+  for (const integrity of integrityEntries) {
+    const manifestEntry = manifestById.get(integrity.documentId);
+    if (!manifestEntry
+      || manifestEntry.lifecycleState !== "active"
+      || manifestEntry.slug !== integrity.slug
+      || manifestEntry.recordVersion !== integrity.recordVersion
+      || response.recordVersions.documents[integrity.documentId] !== integrity.recordVersion) return false;
+  }
+  if (response.documentStatus?.status === "incomplete") {
+    const integrity = response.documentStatus.documentId
+      ? response.recordIntegrity?.documents[response.documentStatus.documentId]
+      : undefined;
+    if (!integrity
+      || integrity.slug !== response.documentStatus.slug
+      || integrity.hasRecoveryCandidate !== response.documentStatus.hasRecoveryCandidate) return false;
+  }
+  if (response.recoveryPreview) {
+    const status = response.documentStatus;
+    const integrity = status?.documentId ? response.recordIntegrity?.documents[status.documentId] : undefined;
+    if (status?.status !== "incomplete"
+      || !integrity
+      || !integrity.hasRecoveryCandidate
+      || response.recoveryPreview.document.id !== integrity.documentId
+      || response.recoveryPreview.versionId !== integrity.recoveryCandidateVersionId
+      || response.recoveryPreview.recordVersion !== integrity.recoveryCandidateRecordVersion) return false;
   }
   if (response.mutationResult) {
     const result = response.mutationResult;
@@ -274,13 +332,15 @@ function parseDeletionAudit(value: unknown): SharedLibraryDeletionAudit | null {
 function parseDocumentStatus(value: unknown): SharedLibraryDocumentStatus | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const entry = value as Record<string, unknown>;
-  if (!["active", "deleted", "archived", "purged", "not_found"].includes(String(entry.status)) || typeof entry.slug !== "string") return null;
+  if (!["active", "deleted", "archived", "purged", "not_found", "incomplete"].includes(String(entry.status)) || typeof entry.slug !== "string") return null;
   if (entry.documentId !== undefined && typeof entry.documentId !== "string") return null;
   if (entry.title !== undefined && typeof entry.title !== "string") return null;
   if (entry.deletedAt !== undefined && (typeof entry.deletedAt !== "string" || !Number.isFinite(Date.parse(entry.deletedAt)))) return null;
   if (entry.archivedAt !== undefined && (typeof entry.archivedAt !== "string" || !Number.isFinite(Date.parse(entry.archivedAt)))) return null;
   if (entry.hidden !== undefined && typeof entry.hidden !== "boolean") return null;
   if (entry.recordVersion !== undefined && (!Number.isInteger(entry.recordVersion) || Number(entry.recordVersion) < 0)) return null;
+  if (entry.reasonCode !== undefined && entry.reasonCode !== "DOCUMENT_SCHEMA_INVALID") return null;
+  if (entry.hasRecoveryCandidate !== undefined && typeof entry.hasRecoveryCandidate !== "boolean") return null;
   let deletionAudit: LibraryDocumentDeletionAudit | undefined;
   if (entry.deletionAudit !== undefined) {
     const parsed = parseDeletionAudit({ documents: { status: entry.deletionAudit } });
@@ -297,6 +357,81 @@ function parseDocumentStatus(value: unknown): SharedLibraryDocumentStatus | null
     ...(typeof entry.hidden === "boolean" ? { hidden: entry.hidden } : {}),
     ...(entry.recordVersion === undefined ? {} : { recordVersion: Number(entry.recordVersion) }),
     ...(deletionAudit ? { deletionAudit } : {}),
+    ...(entry.reasonCode === "DOCUMENT_SCHEMA_INVALID" ? { reasonCode: entry.reasonCode } : {}),
+    ...(typeof entry.hasRecoveryCandidate === "boolean" ? { hasRecoveryCandidate: entry.hasRecoveryCandidate } : {}),
+  };
+}
+
+function parseRecordIntegrity(value: unknown): SharedLibraryRecordIntegrity | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const documentsValue = (value as Record<string, unknown>).documents;
+  if (!documentsValue || typeof documentsValue !== "object" || Array.isArray(documentsValue)) return null;
+  const entries: Array<[string, SharedLibraryDocumentIntegrity]> = [];
+  for (const [id, entryValue] of Object.entries(documentsValue as Record<string, unknown>)) {
+    if (!entryValue || typeof entryValue !== "object" || Array.isArray(entryValue)) return null;
+    const entry = entryValue as Record<string, unknown>;
+    if (entry.status !== "incomplete"
+      || entry.documentId !== id
+      || typeof entry.slug !== "string"
+      || !entry.slug
+      || typeof entry.title !== "string"
+      || !Number.isInteger(entry.recordVersion)
+      || Number(entry.recordVersion) < 1
+      || entry.reasonCode !== "DOCUMENT_SCHEMA_INVALID"
+      || typeof entry.hasRecoveryCandidate !== "boolean") return null;
+    const candidateFields = [
+      entry.recoveryCandidateVersionId,
+      entry.recoveryCandidateRecordVersion,
+      entry.recoveryCandidateCreatedAt,
+    ];
+    if (entry.hasRecoveryCandidate) {
+      if (typeof candidateFields[0] !== "string"
+        || !candidateFields[0]
+        || !Number.isInteger(candidateFields[1])
+        || Number(candidateFields[1]) < 1
+        || typeof candidateFields[2] !== "string"
+        || !Number.isFinite(Date.parse(candidateFields[2]))) return null;
+    } else if (candidateFields.some(field => field !== undefined)) return null;
+    entries.push([id, {
+      status: "incomplete",
+      documentId: id,
+      slug: entry.slug,
+      title: entry.title,
+      recordVersion: Number(entry.recordVersion),
+      reasonCode: "DOCUMENT_SCHEMA_INVALID",
+      hasRecoveryCandidate: entry.hasRecoveryCandidate,
+      ...(entry.hasRecoveryCandidate ? {
+        recoveryCandidateVersionId: String(entry.recoveryCandidateVersionId),
+        recoveryCandidateRecordVersion: Number(entry.recoveryCandidateRecordVersion),
+        recoveryCandidateCreatedAt: String(entry.recoveryCandidateCreatedAt),
+      } : {}),
+    }]);
+  }
+  return { documents: Object.fromEntries(entries) };
+}
+
+function parseRecoveryPreview(value: unknown): SharedLibraryRecoveryPreview | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const entry = value as Record<string, unknown>;
+  const parsed = parseAdminLibraryState(JSON.stringify({ version: 1, documents: [entry.document] }));
+  const document = parsed?.documents[0];
+  if (!document
+    || parsed?.documents.length !== 1
+    || typeof entry.versionId !== "string"
+    || !entry.versionId
+    || !Number.isInteger(entry.recordVersion)
+    || Number(entry.recordVersion) < 1
+    || typeof entry.createdAt !== "string"
+    || !Number.isFinite(Date.parse(entry.createdAt))
+    || typeof entry.operationType !== "string"
+    || typeof entry.actorEmail !== "string") return null;
+  return {
+    document,
+    versionId: entry.versionId,
+    recordVersion: Number(entry.recordVersion),
+    createdAt: entry.createdAt,
+    operationType: entry.operationType,
+    actorEmail: entry.actorEmail,
   };
 }
 
@@ -351,6 +486,10 @@ export function parseSharedLibraryResponse(value: unknown): SharedLibraryRespons
   if (candidate.documentStatus !== undefined && !documentStatus) return null;
   const deletionAudit = candidate.deletionAudit === undefined ? undefined : parseDeletionAudit(candidate.deletionAudit);
   if (candidate.deletionAudit !== undefined && !deletionAudit) return null;
+  const recordIntegrity = candidate.recordIntegrity === undefined ? undefined : parseRecordIntegrity(candidate.recordIntegrity);
+  if (candidate.recordIntegrity !== undefined && !recordIntegrity) return null;
+  const recoveryPreview = candidate.recoveryPreview === undefined ? undefined : parseRecoveryPreview(candidate.recoveryPreview);
+  if (candidate.recoveryPreview !== undefined && !recoveryPreview) return null;
   const mutationResult = candidate.mutationResult === undefined ? undefined : parseMutationResult(candidate.mutationResult);
   if (candidate.mutationResult !== undefined && !mutationResult) return null;
   if (candidate.restoredCount !== undefined && (!Number.isInteger(candidate.restoredCount) || Number(candidate.restoredCount) < 0)) return null;
@@ -378,6 +517,8 @@ export function parseSharedLibraryResponse(value: unknown): SharedLibraryRespons
     ...(integrityStatus ? { integrityStatus } : {}),
     ...(documentStatus ? { documentStatus } : {}),
     ...(deletionAudit ? { deletionAudit } : {}),
+    ...(recordIntegrity ? { recordIntegrity } : {}),
+    ...(recoveryPreview ? { recoveryPreview } : {}),
     ...(candidate.restoredCount === undefined ? {} : { restoredCount: Number(candidate.restoredCount) }),
     ...(mutationResult ? { mutationResult } : {}),
   };

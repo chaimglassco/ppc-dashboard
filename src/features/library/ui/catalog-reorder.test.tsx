@@ -69,7 +69,7 @@ describe("catalog document reordering", () => {
       operation: "documents.reorder",
       documentIds: [documents[1].id, documents[0].id],
       expectedRevision: 7,
-    }, { summary: true });
+    }, { summary: true, integrityPreview: true });
   });
 
   it("keeps the dialog and selected order available for retry after a save failure", async () => {

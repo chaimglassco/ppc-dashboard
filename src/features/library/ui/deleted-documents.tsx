@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertTriangle, Archive, Clock3, DatabaseBackup, History, LoaderCircle, RotateCcw, ShieldAlert, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { AlertTriangle, Archive, Clock3, DatabaseBackup, Eye, History, LoaderCircle, RotateCcw, ShieldAlert, X } from "lucide-react";
+import Link from "next/link";
+import { useMemo, useRef, useState } from "react";
 import type { ManagedLibraryDocument } from "../state/admin-storage";
 import {
   fetchLibrarySnapshot,
@@ -11,12 +12,13 @@ import {
   type PurgedLibraryDocument,
   type LibraryVersion,
 } from "../state/shared-library-client";
-import type { LibraryDocumentDeletionAudit } from "../state/shared-library-state";
+import type { LibraryDocumentDeletionAudit, SharedLibraryDocumentIntegrity } from "../state/shared-library-state";
 
-type RecoveryTab = "deleted" | "archive" | "versions" | "snapshots" | "incidents";
+type RecoveryTab = "incomplete" | "deleted" | "archive" | "versions" | "snapshots" | "incidents";
 
 type DeletedDocumentsProps = {
   documents: ManagedLibraryDocument[];
+  incompleteDocuments?: SharedLibraryDocumentIntegrity[];
   archivedDocuments?: ManagedLibraryDocument[];
   activeDocuments?: ManagedLibraryDocument[];
   backups?: LibraryBackup[];
@@ -26,6 +28,7 @@ type DeletedDocumentsProps = {
   systemRecoveryError: string;
   onClose: () => void;
   onRecover: (document: ManagedLibraryDocument) => Promise<string | null>;
+  onRecoverIncomplete?: (documents: SharedLibraryDocumentIntegrity[]) => Promise<string | null>;
   onRecoverSystemDeleted: (documentIds: string[]) => void;
   onPermanentlyDelete: (document: ManagedLibraryDocument) => Promise<string | null>;
   onRestoreArchived?: (document: ManagedLibraryDocument) => Promise<string | null>;
@@ -58,6 +61,7 @@ function deletionLabel(document: ManagedLibraryDocument, audit?: LibraryDocument
 
 function tabLabel(tab: RecoveryTab, count: number) {
   const labels: Record<RecoveryTab, string> = {
+    incomplete: "Needs recovery",
     deleted: "Deleted",
     archive: "Protected archive",
     versions: "Version history",
@@ -70,6 +74,7 @@ function tabLabel(tab: RecoveryTab, count: number) {
 export function DeletedDocuments(props: DeletedDocumentsProps) {
   const {
     documents,
+    incompleteDocuments = [],
     archivedDocuments = [],
     activeDocuments = [],
     backups = [],
@@ -79,6 +84,7 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
     systemRecoveryError,
     onClose,
     onRecover,
+    onRecoverIncomplete = async () => "Incomplete-document recovery is unavailable.",
     onRecoverSystemDeleted,
     onPermanentlyDelete,
     onRestoreArchived = async () => "Protected archive recovery is unavailable.",
@@ -94,7 +100,7 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
     isLoadingPurgedHistory,
     onRetry,
   } = props;
-  const [tab, setTab] = useState<RecoveryTab>("deleted");
+  const [tab, setTab] = useState<RecoveryTab>(incompleteDocuments.length ? "incomplete" : "deleted");
   const [busyId, setBusyId] = useState("");
   const [rowError, setRowError] = useState("");
   const [archiveTarget, setArchiveTarget] = useState<ManagedLibraryDocument | null>(null);
@@ -105,6 +111,8 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
   const [snapshotDocuments, setSnapshotDocuments] = useState<ManagedLibraryDocument[]>([]);
   const [selectedSnapshotIds, setSelectedSnapshotIds] = useState<string[]>([]);
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
+  const [confirmBulkIncomplete, setConfirmBulkIncomplete] = useState(false);
+  const versionRequestRef = useRef(0);
   const allDocuments = useMemo(() => {
     const map = new Map<string, ManagedLibraryDocument>();
     [...activeDocuments, ...documents, ...archivedDocuments].forEach(document => map.set(document.id, document));
@@ -128,17 +136,19 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
   };
 
   const loadVersions = async (recordId: string) => {
+    const request = ++versionRequestRef.current;
     setVersionRecordId(recordId);
     setVersions([]);
     setRowError("");
     if (!recordId) return;
     setLoadingVersions(true);
     try {
-      setVersions(await fetchLibraryVersions("document", recordId));
+      const nextVersions = await fetchLibraryVersions("document", recordId);
+      if (versionRequestRef.current === request) setVersions(nextVersions);
     } catch (error) {
-      setRowError(error instanceof Error ? error.message : "Version history could not be loaded.");
+      if (versionRequestRef.current === request) setRowError(error instanceof Error ? error.message : "Version history could not be loaded.");
     } finally {
-      setLoadingVersions(false);
+      if (versionRequestRef.current === request) setLoadingVersions(false);
     }
   };
 
@@ -168,6 +178,7 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
       </header>
       <nav className="recovery-center-tabs" aria-label="Recovery Center sections">
         {([
+          ["incomplete", incompleteDocuments.length],
           ["deleted", documents.length],
           ["archive", archivedDocuments.length + purgedDocuments.length],
           ["versions", 0],
@@ -179,6 +190,18 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
         {(isLoadingDocuments || isLoadingPurgedHistory) ? <div className="document-recovery-load-state" role="status"><LoaderCircle className="spinning-icon" /><strong>Loading Recovery Center…</strong></div> : null}
         {(documentLoadError || purgedHistoryError) ? <div className="document-recovery-load-error" role="alert"><p>{documentLoadError || purgedHistoryError}</p><button className="secondary-button" type="button" onClick={onRetry}><RotateCcw /> Try again</button></div> : null}
         {rowError ? <div className="document-recovery-load-error" role="alert"><p>{rowError}</p></div> : null}
+
+        {tab === "incomplete" ? <section className="recovery-center-section">
+          {incompleteDocuments.length > 1 ? <div className="recovery-center-heading"><div><strong>{incompleteDocuments.length} incomplete active documents</strong><p>Each document will be restored from its newest version that passes the current validator.</p></div><button className="primary-button" type="button" disabled={isBusy || incompleteDocuments.some(document => !document.hasRecoveryCandidate)} onClick={() => setConfirmBulkIncomplete(true)}><RotateCcw /> Recover all valid versions</button></div> : null}
+          <div className="document-recovery-list">{incompleteDocuments.map(document => <article className="document-recovery-row incomplete-document-row" key={document.documentId}>
+            <div><strong>{document.title}</strong><small>Active record version {document.recordVersion} is incomplete.</small><small>{document.hasRecoveryCandidate ? `Protected version ${document.recoveryCandidateRecordVersion} passed validation${document.recoveryCandidateCreatedAt ? ` · ${new Date(document.recoveryCandidateCreatedAt).toLocaleString()}` : ""}.` : "No protected version passes the current validator."}</small></div>
+            <div className="document-recovery-actions">
+              <Link className="secondary-button" href={`/library/${document.slug}`}><Eye /> Preview</Link>
+              <button className="secondary-button" type="button" disabled={isBusy || !document.hasRecoveryCandidate} onClick={() => void run(`incomplete-${document.documentId}`, () => onRecoverIncomplete([document]))}>{busyId === `incomplete-${document.documentId}` ? <LoaderCircle className="spinning-icon" /> : <RotateCcw />} Restore</button>
+            </div>
+          </article>)}</div>
+          {!incompleteDocuments.length ? <p className="document-recovery-empty">There are no incomplete active documents.</p> : null}
+        </section> : null}
 
         {tab === "deleted" && !isLoadingDocuments ? <>
           {systemDeletedIds.length ? <section className="system-recovery-panel"><ShieldAlert /><div><strong>{systemDeletedIds.length} system-deleted {systemDeletedIds.length === 1 ? "document" : "documents"} detected</strong><p>This restores only records attributed to the Initial Library cleanup.</p>{systemRecoveryError ? <p role="alert">{systemRecoveryError}</p> : null}</div><button className="primary-button" type="button" disabled={isBusy} onClick={() => onRecoverSystemDeleted(systemDeletedIds)}>{isRecoveringSystemDocuments ? <><LoaderCircle className="spinning-icon" /> Recovering…</> : <><RotateCcw /> Recover system-deleted</>}</button></section> : null}
@@ -205,7 +228,7 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
         {tab === "versions" ? <section className="recovery-center-section">
           <label>Document<select value={versionRecordId} onChange={event => void loadVersions(event.target.value)}><option value="">Choose a document</option>{allDocuments.map(document => <option key={document.id} value={document.id}>{document.title}</option>)}</select></label>
           {loadingVersions ? <div className="document-recovery-load-state"><LoaderCircle className="spinning-icon" /> Loading versions…</div> : null}
-          <div className="document-recovery-list">{versions.map(version => <article className="document-recovery-row" key={version.id}><div><strong>{String((version.data as ManagedLibraryDocument).title || "Untitled document")}</strong><small>{new Date(version.createdAt).toLocaleString()} · Version {version.recordVersion} · {version.operationType} · {version.actorEmail || "System"}</small><small>{version.lifecycleState} · Revision {version.catalogRevision}</small></div><button className="secondary-button" type="button" disabled={isBusy || !version.trusted} onClick={() => void run(`version-${version.id}`, () => onRestoreVersion(version))}>{busyId === `version-${version.id}` ? <LoaderCircle className="spinning-icon" /> : <History />} Restore version</button></article>)}</div>
+          <div className="document-recovery-list">{versions.map(version => <article className="document-recovery-row" key={version.id}><div><strong>{String((version.data as ManagedLibraryDocument).title || "Untitled document")}</strong><small>{new Date(version.createdAt).toLocaleString()} · Version {version.recordVersion} · {version.operationType} · {version.actorEmail || "System"}</small><small>{version.lifecycleState} · Revision {version.catalogRevision}{!version.restorable ? " · Does not pass the current validator" : ""}</small></div><button className="secondary-button" type="button" disabled={isBusy || !version.restorable} title={!version.restorable ? "This version cannot be restored because it does not pass the current document validator." : "Restore this validated version."} onClick={() => void run(`version-${version.id}`, () => onRestoreVersion(version))}>{busyId === `version-${version.id}` ? <LoaderCircle className="spinning-icon" /> : <History />} Restore version</button></article>)}</div>
           {versionRecordId && !loadingVersions && !versions.length ? <p className="document-recovery-empty">No retained versions were found.</p> : null}
         </section> : null}
 
@@ -226,6 +249,13 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
         <header><div><span className="eyebrow">PROTECTED ARCHIVE</span><h2 id="archive-document-heading">Move out of normal Recovery?</h2></div><button type="button" disabled={isBusy} onClick={() => setArchiveTarget(null)} aria-label="Close archive confirmation"><X /></button></header>
         <div className="permanent-delete-dialog__body"><AlertTriangle /><p><strong>“{archiveTarget.title}”</strong> will disappear from the Deleted tab, but its full content and history will remain protected indefinitely and can be restored from the Protected archive tab.</p></div>
         <footer><button className="secondary-button" type="button" disabled={isBusy} onClick={() => setArchiveTarget(null)}>Cancel</button><button className="primary-button" type="button" disabled={isBusy} onClick={() => void run(`archive-confirm-${archiveTarget.id}`, () => onPermanentlyDelete(archiveTarget)).then(success => { if (success) { setArchiveTarget(null); setTab("archive"); } })}>{busyId === `archive-confirm-${archiveTarget.id}` ? <><LoaderCircle className="spinning-icon" /> Archiving…</> : <><Archive /> Move to protected archive</>}</button></footer>
+      </section>
+    </div> : null}
+    {confirmBulkIncomplete ? <div className="admin-modal-backdrop permanent-delete-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !isBusy) setConfirmBulkIncomplete(false); }}>
+      <section className="admin-modal permanent-delete-dialog protected-restore-dialog" role="alertdialog" aria-modal="true" aria-labelledby="recover-incomplete-heading">
+        <header><div><span className="eyebrow">VALIDATED RECOVERY</span><h2 id="recover-incomplete-heading">Recover {incompleteDocuments.length} incomplete documents?</h2></div><button type="button" disabled={isBusy} onClick={() => setConfirmBulkIncomplete(false)} aria-label="Close recovery confirmation"><X /></button></header>
+        <div className="permanent-delete-dialog__body"><AlertTriangle /><p>Every selected record must still match this Library revision. The newest protected version that passes the current validator will replace each incomplete active record in one all-or-nothing operation.</p></div>
+        <footer><button className="secondary-button" type="button" disabled={isBusy} onClick={() => setConfirmBulkIncomplete(false)}>Cancel</button><button className="primary-button" type="button" disabled={isBusy} onClick={() => void run("bulk-incomplete", () => onRecoverIncomplete(incompleteDocuments)).then(success => { if (success) setConfirmBulkIncomplete(false); })}>{busyId === "bulk-incomplete" ? <><LoaderCircle className="spinning-icon" /> Recovering…</> : <><RotateCcw /> Recover all</>}</button></footer>
       </section>
     </div> : null}
   </div>;

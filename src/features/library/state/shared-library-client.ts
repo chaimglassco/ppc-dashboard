@@ -8,7 +8,7 @@ export const SHARED_LIBRARY_CACHE_KEY = "glassco-library-confirmed-cache-v2";
 export const SHARED_LIBRARY_REQUEST_TIMEOUT_MS = 18_000;
 export const PROTECTED_LIBRARY_RECOVERY_TIMEOUT_MS = 120_000;
 
-export type SharedLibraryReadOptions = { summary?: boolean; slug?: string; recovery?: boolean; archive?: boolean; includeDeletionAudit?: boolean };
+export type SharedLibraryReadOptions = { summary?: boolean; slug?: string; recovery?: boolean; archive?: boolean; includeDeletionAudit?: boolean; integrityPreview?: boolean };
 export type LibraryBackup = {
   id: string;
   revision: number;
@@ -39,6 +39,8 @@ export type LibraryVersion = {
   requestId: string;
   checksum: string;
   trusted: boolean;
+  restorable: boolean;
+  validationErrorCode: string | null;
   createdAt: string;
 };
 export type LibraryIntegrityIncident = {
@@ -104,6 +106,7 @@ export type SharedLibraryMutation =
   | { operation: "records.restoreFromSnapshot"; snapshotId: string; recordType: "document" | "category"; recordIds: string[]; expectedRevision: number }
   | { operation: "integrity.acknowledge"; incidentId: string; expectedRevision: number }
   | { operation: "documents.restoreSystemDeleted"; documentIds: string[]; expectedRevision: number }
+  | { operation: "documents.restoreIncomplete"; records: Array<{ documentId: string; versionId: string; expectedVersion: number }>; expectedRevision: number }
   | { operation: "documents.reorder"; documentIds: string[]; expectedRevision: number }
   | { operation: "category.create"; category: ManagedCategory }
   | { operation: "category.update"; categoryId: string; expectedVersion: number; category: ManagedCategory }
@@ -123,6 +126,7 @@ function sharedLibraryUrl(options: SharedLibraryReadOptions = {}) {
   if (options.recovery) params.set("recovery", "1");
   if (options.archive) params.set("archive", "1");
   if (options.includeDeletionAudit) params.set("includeDeletionAudit", "1");
+  if (options.integrityPreview) params.set("integrityPreview", "1");
   const query = params.toString();
   return `${withPpcBasePath("/api/library")}${query ? `?${query}` : ""}`;
 }
@@ -228,6 +232,26 @@ export function verifyRestoredLibraryDocument(
     : null;
 }
 
+export function verifyRestoredIncompleteDocuments(
+  response: SharedLibraryResponse,
+  records: Array<{ documentId: string; expectedVersion: number }>,
+): boolean {
+  if (response.catalogCompleteness?.scope !== "catalog"
+    || response.restoredCount !== records.length) return false;
+  const manifestById = new Map(response.recordManifest?.documents.map(entry => [entry.id, entry]) || []);
+  return records.every((record) => {
+    const restored = response.state.documents.find(document => document.id === record.documentId);
+    const manifest = manifestById.get(record.documentId);
+    const restoredVersion = response.recordVersions.documents[record.documentId];
+    return Boolean(restored
+      && manifest?.lifecycleState === "active"
+      && manifest.slug === restored.slug
+      && Number.isSafeInteger(restoredVersion)
+      && restoredVersion > record.expectedVersion
+      && !response.recordIntegrity?.documents[record.documentId]);
+  });
+}
+
 export async function initializeSharedLibrary(): Promise<SharedLibraryResponse> {
   const value = await readJson(await fetchWithTimeout(withPpcBasePath("/api/library/migration"), {
     method: "POST",
@@ -316,10 +340,17 @@ export async function fetchLibraryVersions(recordType: "document" | "category", 
   }));
   const items = value && typeof value === "object" ? (value as Record<string, unknown>).versions : null;
   if (!Array.isArray(items)) throw new Error("Library version history returned invalid data.");
-  return items.filter((item): item is LibraryVersion => Boolean(item && typeof item === "object"
+  const parsed = items.filter((item): item is LibraryVersion => Boolean(item && typeof item === "object"
     && typeof (item as Record<string, unknown>).id === "string"
     && typeof (item as Record<string, unknown>).recordId === "string"
-    && ["document", "category"].includes(String((item as Record<string, unknown>).recordType))));
+    && ["document", "category"].includes(String((item as Record<string, unknown>).recordType))
+    && typeof (item as Record<string, unknown>).restorable === "boolean"
+    && (
+      (item as Record<string, unknown>).validationErrorCode === null
+      || typeof (item as Record<string, unknown>).validationErrorCode === "string"
+    )));
+  if (parsed.length !== items.length) throw new Error("Library version history returned invalid data.");
+  return parsed;
 }
 
 export async function fetchLibraryIntegrityIncidents(): Promise<LibraryIntegrityIncident[]> {

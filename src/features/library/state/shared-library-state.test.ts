@@ -135,4 +135,77 @@ describe("shared library state", () => {
       recordManifest: { documents: [{ ...envelope.recordManifest.documents[0], recordVersion: 5 }] },
     })).toBeNull();
   });
+
+  it("accepts a clearly classified incomplete active document with a validated recovery preview", () => {
+    const state = createSharedLibraryState(getPublishedDocuments().slice(0, 1));
+    const document = state.documents[0];
+    const categoryVersions = Object.fromEntries(state.categories.map(category => [category.id, 1]));
+    const integrity = {
+      status: "incomplete",
+      documentId: document.id,
+      slug: document.slug,
+      title: document.title,
+      recordVersion: 6,
+      reasonCode: "DOCUMENT_SCHEMA_INVALID",
+      hasRecoveryCandidate: true,
+      recoveryCandidateVersionId: "version-5",
+      recoveryCandidateRecordVersion: 5,
+      recoveryCandidateCreatedAt: "2026-07-30T10:00:00.000Z",
+    };
+    const envelope = {
+      initialized: true,
+      state,
+      revision: 10,
+      recordVersions: { documents: { [document.id]: 6 }, categories: categoryVersions },
+      updatedAt: null,
+      updatedBy: null,
+      recordManifest: {
+        documents: [{
+          id: document.id,
+          slug: document.slug,
+          recordVersion: 6,
+          lifecycleState: "active",
+          hidden: document.hidden,
+          status: document.status,
+        }],
+      },
+      catalogCompleteness: {
+        complete: true,
+        scope: "document",
+        expectedDocumentCount: 1,
+        returnedDocumentCount: 1,
+        expectedCategoryCount: state.categories.length,
+        returnedCategoryCount: state.categories.length,
+        activeDocumentCount: 1,
+        manifestDocumentCount: 1,
+        checksum: "incomplete-document",
+      },
+      documentStatus: {
+        status: "incomplete",
+        slug: document.slug,
+        documentId: document.id,
+        title: document.title,
+        recordVersion: 6,
+        reasonCode: "DOCUMENT_SCHEMA_INVALID",
+        hasRecoveryCandidate: true,
+      },
+      recordIntegrity: { documents: { [document.id]: integrity } },
+      recoveryPreview: {
+        document,
+        versionId: "version-5",
+        recordVersion: 5,
+        createdAt: "2026-07-30T10:00:00.000Z",
+        operationType: "document.update",
+        actorEmail: "admin@example.com",
+      },
+    };
+    const parsed = parseSharedLibraryResponse(envelope);
+    expect(parsed && isAuthoritativeSharedLibraryResponse(parsed)).toBe(true);
+    expect(parsed?.documentStatus?.status).toBe("incomplete");
+    expect(parsed?.recoveryPreview?.document.id).toBe(document.id);
+    expect(parseSharedLibraryResponse({
+      ...envelope,
+      recoveryPreview: { ...envelope.recoveryPreview, versionId: "wrong-version" },
+    })).toBeNull();
+  });
 });

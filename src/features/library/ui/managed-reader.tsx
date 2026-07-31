@@ -1,13 +1,14 @@
 "use client";
 import { LoaderCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGlasscoSession } from "@/components/glassco-session";
 import { getTopicsFromContentElements } from "../domain/document-elements";
 import type { LibraryContentElement } from "../domain/types";
 import { normalizeManagedLibraryContentUpdate, type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories } from "../state/category-storage";
-import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, invalidateSharedLibraryDocumentCache, mutateSharedLibrary, SharedLibraryConflictError, SharedLibraryIncompleteResponseError, SharedLibraryRequestError } from "../state/shared-library-client";
+import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, invalidateSharedLibraryDocumentCache, mutateSharedLibrary, SharedLibraryConflictError, SharedLibraryIncompleteResponseError, SharedLibraryRequestError, verifyRestoredLibraryDocument } from "../state/shared-library-client";
 import { getSharedLibraryRefreshDelay } from "../state/shared-library-retry";
 import type { LibraryDocumentDeletionAudit, SharedLibraryDocumentStatus, SharedLibraryResponse } from "../state/shared-library-state";
 import type { DocumentMetadataDraft } from "./document-builder";
@@ -67,12 +68,17 @@ export function verifyDocumentSaveResponse(response: SharedLibraryResponse, subm
 
 export function ManagedReader({ slug }: { slug: string }) {
   const { canAdmin } = useGlasscoSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [document, setDocument] = useState<ManagedLibraryDocument | null | undefined>(undefined);
   const [documentSlug, setDocumentSlug] = useState(slug);
   const [categories, setCategories] = useState(() => createDefaultCategories().map(category => category.name));
   const [mutationsEnabled, setMutationsEnabled] = useState(false);
+  const [recoveryAvailable, setRecoveryAvailable] = useState(false);
   const [migrationPending, setMigrationPending] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState(() => searchParams.get("recovered") === "1"
+    ? "The document was recovered successfully."
+    : "");
   const [documentStatus, setDocumentStatus] = useState<SharedLibraryDocumentStatus | null>(null);
   const [isRecovering, setIsRecovering] = useState(false);
   const [recoveryError, setRecoveryError] = useState("");
@@ -83,8 +89,11 @@ export function ManagedReader({ slug }: { slug: string }) {
   const consecutiveFailuresRef = useRef(0);
 
   const applyResponse = useCallback((response: SharedLibraryResponse, cache = true, preserveOnMissing = false) => {
-    const nextDocument = response.state.documents.find(item => item.slug === slug && !item.deletedAt && !item.hidden) ?? null;
-    const nextStatus = response.documentStatus ?? (nextDocument ? { status: "active" as const, slug } : null);
+    const activeDocument = response.state.documents.find(item => item.slug === slug && !item.deletedAt && !item.hidden) ?? null;
+    const nextStatus = response.documentStatus ?? (activeDocument ? { status: "active" as const, slug } : null);
+    const nextDocument = nextStatus?.status === "incomplete"
+      ? response.recoveryPreview?.document ?? null
+      : activeDocument;
     const explicitlyUnavailable = nextStatus?.status === "deleted" || nextStatus?.status === "purged" || nextStatus?.status === "archived";
     const hasConfirmedDocument = Boolean(documentRef.current);
     if (!nextDocument && (preserveOnMissing || hasConfirmedDocument) && !explicitlyUnavailable) {
@@ -99,8 +108,11 @@ export function ManagedReader({ slug }: { slug: string }) {
     setDocument(nextDocument);
     setLoadError(null);
     setCategories(response.state.categories.filter(category => !category.deletedAt).map(category => category.name));
-    if (nextStatus && nextStatus.status !== "active") invalidateSharedLibraryDocumentCache(window.localStorage, slug);
-    else if (cache && nextDocument) cacheSharedLibraryResponse(response, window.localStorage, { slug });
+    if (nextStatus && ["deleted", "purged", "archived"].includes(nextStatus.status)) {
+      invalidateSharedLibraryDocumentCache(window.localStorage, slug);
+    } else if (cache && nextDocument) {
+      cacheSharedLibraryResponse(response, window.localStorage, { slug, integrityPreview: true });
+    }
     return true;
   }, [slug]);
 
@@ -108,18 +120,20 @@ export function ManagedReader({ slug }: { slug: string }) {
     if (refreshInFlightRef.current) return false;
     refreshInFlightRef.current = true;
     try {
-      const response = await fetchSharedLibraryState(signal, { slug });
+      const response = await fetchSharedLibraryState(signal, { slug, integrityPreview: true });
       const applied = applyResponse(response);
       if (!applied) return false;
       consecutiveFailuresRef.current = 0;
       setMigrationPending(!response.initialized);
-      setMutationsEnabled(response.initialized);
+      setRecoveryAvailable(response.initialized);
+      setMutationsEnabled(response.initialized && response.documentStatus?.status === "active");
       setNotice(response.initialized ? "" : "Library migration pending. This document is read-only until an administrator completes initialization.");
       return true;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return false;
       consecutiveFailuresRef.current += 1;
       setMutationsEnabled(false);
+      setRecoveryAvailable(false);
       if (documentRef.current === undefined) {
         const integrityFailure = error instanceof SharedLibraryIncompleteResponseError
           || (error instanceof SharedLibraryRequestError && error.code === "LIBRARY_CATALOG_INCOMPLETE");
@@ -145,12 +159,13 @@ export function ManagedReader({ slug }: { slug: string }) {
     const controller = new AbortController();
     documentRef.current = undefined;
     refreshInFlightRef.current = true;
-    void hydrateSharedLibraryState(window.localStorage, controller.signal, { slug }).then(({ response, source }) => {
+    void hydrateSharedLibraryState(window.localStorage, controller.signal, { slug, integrityPreview: true }).then(({ response, source }) => {
       if (controller.signal.aborted) return;
       applyResponse(response, source === "server");
       consecutiveFailuresRef.current = source === "server" ? 0 : 1;
       setMigrationPending(source === "server" && !response.initialized);
-      setMutationsEnabled(source === "server" && response.initialized);
+      setRecoveryAvailable(source === "server" && response.initialized);
+      setMutationsEnabled(source === "server" && response.initialized && response.documentStatus?.status === "active");
       if (source === "cache") {
         const timestamp = response.snapshotAt || response.updatedAt;
         const when = timestamp ? new Date(timestamp).toLocaleString() : "an earlier session";
@@ -172,6 +187,7 @@ export function ManagedReader({ slug }: { slug: string }) {
         });
         consecutiveFailuresRef.current = 1;
         setMutationsEnabled(false);
+        setRecoveryAvailable(false);
       }
     }).finally(() => {
       refreshInFlightRef.current = false;
@@ -180,7 +196,7 @@ export function ManagedReader({ slug }: { slug: string }) {
   }, [applyResponse, slug]);
 
   useEffect(() => {
-    const currentDocument = document && document.slug === slug
+    const currentDocument = document && documentSlug === slug
       ? document
       : document === null && documentSlug === slug
         ? null
@@ -211,14 +227,14 @@ export function ManagedReader({ slug }: { slug: string }) {
       globalThis.document.removeEventListener("visibilitychange", onResume);
     };
   }, [document, documentSlug, loadError, refresh, slug]);
-  const currentDocument = document && document.slug === slug
+  const currentDocument = document && documentSlug === slug
     ? document
     : document === null && documentSlug === slug
       ? null
       : undefined;
   const currentLoadError = loadError?.slug === slug ? loadError : null;
   const recoverDeletedDocument = async () => {
-    if (!canAdmin || !mutationsEnabled || documentStatus?.status !== "deleted" || !documentStatus.documentId || documentStatus.recordVersion === undefined || isRecovering) return;
+    if (!canAdmin || !recoveryAvailable || documentStatus?.status !== "deleted" || !documentStatus.documentId || documentStatus.recordVersion === undefined || isRecovering) return;
     setIsRecovering(true);
     setRecoveryError("");
     try {
@@ -228,8 +244,57 @@ export function ManagedReader({ slug }: { slug: string }) {
         expectedVersion: documentStatus.recordVersion,
       }, { slug });
       applyResponse(saved);
+      setRecoveryAvailable(saved.initialized);
       setMutationsEnabled(saved.initialized);
       setNotice(`“${documentStatus.title || "Document"}” was recovered successfully.`);
+    } catch (error) {
+      if (error instanceof SharedLibraryConflictError) applyResponse(error.latest);
+      setRecoveryError(error instanceof Error ? error.message : "The document could not be recovered. Please try again.");
+    } finally {
+      setIsRecovering(false);
+    }
+  };
+  const recoverIncompleteDocument = async () => {
+    const authoritative = sharedRef.current;
+    const preview = authoritative?.recoveryPreview;
+    if (!canAdmin
+      || !recoveryAvailable
+      || !authoritative
+      || documentStatus?.status !== "incomplete"
+      || !documentStatus.documentId
+      || documentStatus.recordVersion === undefined
+      || !preview
+      || isRecovering) return;
+    setIsRecovering(true);
+    setRecoveryError("");
+    try {
+      const saved = await mutateSharedLibrary({
+        operation: "documents.restoreIncomplete",
+        records: [{
+          documentId: documentStatus.documentId,
+          versionId: preview.versionId,
+          expectedVersion: documentStatus.recordVersion,
+        }],
+        expectedRevision: authoritative.revision,
+      }, { slug: preview.document.slug, integrityPreview: true });
+      const restored = verifyRestoredLibraryDocument(
+        saved,
+        documentStatus.documentId,
+        preview.document.slug,
+        documentStatus.recordVersion,
+      );
+      if (!restored) throw new DocumentSaveVerificationError("The restored document was not confirmed by the shared Library.");
+      invalidateSharedLibraryDocumentCache(window.localStorage, slug);
+      invalidateSharedLibraryDocumentCache(window.localStorage, restored.slug);
+      cacheSharedLibraryResponse(saved, window.localStorage, { slug: restored.slug, integrityPreview: true });
+      if (restored.slug !== slug) {
+        router.replace(`/library/${restored.slug}?recovered=1`);
+        return;
+      }
+      applyResponse(saved);
+      setRecoveryAvailable(saved.initialized);
+      setMutationsEnabled(saved.initialized);
+      setNotice(`“${restored.title}” was recovered successfully.`);
     } catch (error) {
       if (error instanceof SharedLibraryConflictError) applyResponse(error.latest);
       setRecoveryError(error instanceof Error ? error.message : "The document could not be recovered. Please try again.");
@@ -247,7 +312,10 @@ export function ManagedReader({ slug }: { slug: string }) {
   </div>;
   if (currentDocument === undefined) return <div className="reader-loading" aria-label="Loading document"><div className="skeleton wide"/></div>;
   if (currentDocument === null && documentStatus?.status === "deleted") {
-    return <DeletedDocumentState status={documentStatus} canRecover={canAdmin && mutationsEnabled && documentStatus.recordVersion !== undefined} isRecovering={isRecovering} error={recoveryError} onRecover={() => void recoverDeletedDocument()} />;
+    return <DeletedDocumentState status={documentStatus} canRecover={canAdmin && recoveryAvailable && documentStatus.recordVersion !== undefined} isRecovering={isRecovering} error={recoveryError} onRecover={() => void recoverDeletedDocument()} />;
+  }
+  if (documentStatus?.status === "incomplete" && currentDocument === null) {
+    return <div className="empty-state managed-not-found"><h1>Document recovery required</h1><p>This active document is incomplete, and no protected version passes the current validator.</p><p>No data was changed. An administrator can inspect other retained versions in Recovery Center.</p><Link className="primary-button" prefetch={false} href="/library">Return to Library</Link></div>;
   }
   if (currentDocument === null && documentStatus?.status === "purged") {
     return <div className="empty-state managed-not-found"><h1>{documentStatus.title ? `“${documentStatus.title}” was permanently deleted` : "Document permanently deleted"}</h1><p>This document was permanently removed and cannot be recovered.</p><Link className="primary-button" prefetch={false} href="/library">Return to Library</Link></div>;
@@ -306,7 +374,8 @@ export function ManagedReader({ slug }: { slug: string }) {
     const updated: ManagedLibraryDocument = { ...currentDocument, videoUrl: videoUrl || undefined };
     await saveDocument(updated);
   };
-  return <>{notice ? <p className="admin-notice" role="status">{notice}</p> : null}<Reader doc={currentDocument} categories={categories} onSaveContentElements={saveContentElements} onSaveVideoUrl={saveVideoUrl} mutationsEnabled={mutationsEnabled}/></>;
+  const isRecoveryPreview = documentStatus?.status === "incomplete";
+  return <>{notice ? <p className="admin-notice" role="status">{notice}</p> : null}{isRecoveryPreview ? <div className="document-recovery-preview-banner" role="status"><div><strong>Needs recovery — protected preview</strong><p>You are viewing the newest retained version that passes the current document validator. The incomplete active record has not been changed.</p></div>{recoveryError ? <p className="admin-notice" role="alert">{recoveryError}</p> : null}<div>{canAdmin && recoveryAvailable ? <button className="primary-button" type="button" disabled={isRecovering} onClick={() => void recoverIncompleteDocument()}>{isRecovering ? <><LoaderCircle className="spinning-icon" /> Recovering…</> : <><RotateCcw /> Restore this version</>}</button> : null}<Link className="secondary-button" prefetch={false} href="/library">Return to Library</Link></div></div> : null}<Reader doc={currentDocument} categories={categories} onSaveContentElements={saveContentElements} onSaveVideoUrl={saveVideoUrl} mutationsEnabled={mutationsEnabled && !isRecoveryPreview}/></>;
 }
 
 function auditActor(audit?: LibraryDocumentDeletionAudit) {

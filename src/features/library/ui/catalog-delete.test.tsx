@@ -91,7 +91,7 @@ describe("catalog document deletion", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Delete document?" })).not.toBeInTheDocument());
     expect(screen.queryByRole("heading", { name: document.title })).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(`${document.title} was deleted successfully.`);
-    expect(client.mutateSharedLibrary).toHaveBeenCalledWith({ operation: "document.delete", documentId: document.id, expectedVersion: 1 }, { summary: true });
+    expect(client.mutateSharedLibrary).toHaveBeenCalledWith({ operation: "document.delete", documentId: document.id, expectedVersion: 1 }, { summary: true, integrityPreview: true });
   });
 
   it("keeps the document available, shows the server error, and permits a real retry", async () => {
@@ -134,7 +134,7 @@ describe("catalog document deletion", () => {
     expect(within(emptyState).getByRole("button", { name: "Open Recovery" })).toBeEnabled();
     expect(client.mutateSharedLibrary).toHaveBeenCalledWith(
       { operation: "document.delete", documentId: document.id, expectedVersion: 1 },
-      { summary: true },
+      { summary: true, integrityPreview: true },
     );
   });
 });
