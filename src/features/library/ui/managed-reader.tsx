@@ -42,6 +42,7 @@ export function verifyDocumentSaveResponse(response: SharedLibraryResponse, subm
     || result.operation !== "document.update"
     || result.documentId !== submitted.id
     || result.document.id !== submitted.id
+    || !returned
     || result.document.slug !== submitted.slug
     || result.lifecycleState !== "active"
     || result.recordVersion <= expectedVersion
@@ -55,13 +56,14 @@ export function verifyDocumentSaveResponse(response: SharedLibraryResponse, subm
     || result.document.title !== submitted.title
     || result.document.description !== submitted.description
     || result.document.category !== submitted.category
-    || !sameStructuredContent(result.document.contentElements, submitted.contentElements)) {
+    || !sameStructuredContent(result.document.contentElements, submitted.contentElements)
+    || returned.slug !== submitted.slug
+    || returned.deletedAt
+    || returned.archivedAt
+    || !sameStructuredContent(returned, result.document)) {
     throw new DocumentSaveVerificationError();
   }
-  if (returned && (returned.slug !== submitted.slug || returned.deletedAt || returned.archivedAt)) {
-    throw new DocumentSaveVerificationError();
-  }
-  return result.document;
+  return returned;
 }
 
 export function ManagedReader({ slug }: { slug: string }) {

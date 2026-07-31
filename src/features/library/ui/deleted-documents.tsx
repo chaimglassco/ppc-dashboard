@@ -121,6 +121,13 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
     [...activeDocuments, ...documents, ...archivedDocuments].forEach(document => map.set(document.id, document));
     return [...map.values()].sort((a, b) => a.title.localeCompare(b.title));
   }, [activeDocuments, archivedDocuments, documents]);
+  const versionDocumentOptions = useMemo(() => {
+    const map = new Map(allDocuments.map(document => [document.id, document.title]));
+    incompleteDocuments.forEach(document => map.set(document.documentId, document.title || "Untitled document"));
+    return [...map.entries()]
+      .map(([id, title]) => ({ id, title }))
+      .sort((left, right) => left.title.localeCompare(right.title));
+  }, [allDocuments, incompleteDocuments]);
   const systemDeletedIds = documents.filter(document => deletionAudit[document.id]?.source === "system_migration").map(document => document.id);
   const recoverableIncompleteDocuments = incompleteDocuments.filter(document => document.hasRecoveryCandidate);
   const unacknowledged = incidents.filter(incident => !incident.acknowledgedAt).length;
@@ -231,9 +238,9 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
         {!archivedDocuments.length && !purgedDocuments.some(document => document.canRestore) ? <p className="document-recovery-empty">The protected archive is empty.</p> : null}</div> : null}
 
         {tab === "versions" ? <section className="recovery-center-section">
-          <label>Document<select value={versionRecordId} onChange={event => void loadVersions(event.target.value)}><option value="">Choose a document</option>{allDocuments.map(document => <option key={document.id} value={document.id}>{document.title}</option>)}</select></label>
+          <label>Document<select value={versionRecordId} onChange={event => void loadVersions(event.target.value)}><option value="">Choose a document</option>{versionDocumentOptions.map(document => <option key={document.id} value={document.id}>{document.title}</option>)}</select></label>
           {loadingVersions ? <div className="document-recovery-load-state"><LoaderCircle className="spinning-icon" /> Loading versions…</div> : null}
-          <div className="document-recovery-list">{versions.map(version => <article className="document-recovery-row" key={version.id}><div><strong>{String((version.data as ManagedLibraryDocument).title || "Untitled document")}</strong><small>{new Date(version.createdAt).toLocaleString()} · Version {version.recordVersion} · {version.operationType} · {version.actorEmail || "System"}</small><small>{version.lifecycleState} · Revision {version.catalogRevision}{!version.restorable ? " · Does not pass the current validator" : ""}</small></div><button className="secondary-button" type="button" disabled={isBusy || !version.restorable} title={!version.restorable ? "This version cannot be restored because it does not pass the current document validator." : "Restore this validated version."} onClick={() => void run(`version-${version.id}`, () => onRestoreVersion(version))}>{busyId === `version-${version.id}` ? <LoaderCircle className="spinning-icon" /> : <History />} Restore version</button></article>)}</div>
+          <div className="document-recovery-list">{versions.map(version => <article className="document-recovery-row" key={version.id}><div><strong>{String((version.data as ManagedLibraryDocument).title || "Untitled document")}</strong><small>{new Date(version.createdAt).toLocaleString()} · Version {version.recordVersion} · {version.operationType} · {version.actorEmail || "System"}</small><small>{version.lifecycleState} · Revision {version.catalogRevision}{!version.restorable ? ` · ${version.validationErrorReason || "Does not pass the current validator"}` : ""}</small></div><button className="secondary-button" type="button" disabled={isBusy || !version.restorable} title={!version.restorable ? "This version cannot be restored because it does not pass the current document validator." : "Restore this validated version."} onClick={() => void run(`version-${version.id}`, () => onRestoreVersion(version))}>{busyId === `version-${version.id}` ? <LoaderCircle className="spinning-icon" /> : <History />} Restore version</button></article>)}</div>
           {versionRecordId && !loadingVersions && !versions.length ? <p className="document-recovery-empty">No retained versions were found.</p> : null}
         </section> : null}
 

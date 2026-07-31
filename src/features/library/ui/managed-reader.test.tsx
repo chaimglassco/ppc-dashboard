@@ -270,6 +270,32 @@ describe("managed reader loading states", () => {
     expect(screen.queryByRole("heading", { name: "Document unavailable" })).not.toBeInTheDocument();
   });
 
+  it("rejects a valid-looking mutation result when the authoritative read omits the saved document", async () => {
+    const document = { ...getPublishedDocuments()[0], contentElements: [createBlankContentElement("statement", 1)] };
+    const initial = response([document]);
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: initial, source: "server" });
+    client.mutateSharedLibrary.mockResolvedValue({
+      ...response([]),
+      revision: 3,
+      recordVersions: { documents: { [document.id]: 2 }, categories: {} },
+      documentStatus: { status: "active", slug: document.slug, documentId: document.id, recordVersion: 2 },
+      mutationResult: {
+        operation: "document.update",
+        documentId: document.id,
+        document,
+        recordVersion: 2,
+        lifecycleState: "active",
+      },
+    });
+    render(<ManagedReader slug={document.slug} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Save formatted document" }));
+
+    expect(await screen.findByText(/save could not be verified/i)).toBeVisible();
+    expect(screen.getByTestId("reader")).toHaveTextContent(`${document.title}:editable`);
+    expect(screen.queryByRole("heading", { name: "Document unavailable" })).not.toBeInTheDocument();
+  });
+
   it("rejects a catalog summary placeholder before submitting a formatted-content update", async () => {
     const full = { ...getPublishedDocuments()[0], contentElements: [createBlankContentElement("statement", 1)] };
     const summary = {

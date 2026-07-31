@@ -53,4 +53,29 @@ describe("Library Recovery Center", () => {
     fireEvent.click(within(confirmation).getByRole("button", { name: "Move to protected archive" }));
     await waitFor(() => expect(callbacks.onPermanentlyDelete).toHaveBeenCalledWith(document));
   });
+
+  it("keeps incomplete active documents available in version history", () => {
+    const document = getPublishedDocuments()[0];
+    const view = render(<DeletedDocuments
+      {...props()}
+      activeDocuments={[]}
+      incompleteDocuments={[{
+        status: "incomplete",
+        documentId: document.id,
+        slug: document.slug,
+        title: "TEST 1",
+        recordVersion: 2,
+        reasonCode: "DOCUMENT_SCHEMA_INVALID",
+        hasRecoveryCandidate: true,
+        recoveryCandidateVersionId: "version-1",
+        recoveryCandidateRecordVersion: 1,
+        recoveryCandidateCreatedAt: "2026-07-31T03:24:00.947Z",
+      }]}
+    />);
+    const dialog = within(view.container).getByRole("dialog", { name: "Recovery Center" });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Version history" }));
+
+    expect(within(dialog).getByRole("option", { name: "TEST 1" })).toHaveValue(document.id);
+  });
 });

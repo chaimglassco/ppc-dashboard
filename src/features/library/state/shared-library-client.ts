@@ -41,6 +41,13 @@ export type LibraryVersion = {
   trusted: boolean;
   restorable: boolean;
   validationErrorCode: string | null;
+  validationErrorReason?: string | null;
+  payloadShape?: {
+    storedType: string;
+    canonicalType: string;
+    storedKeys: string[];
+    canonicalKeys: string[];
+  };
   createdAt: string;
 };
 export type LibraryIntegrityIncident = {
