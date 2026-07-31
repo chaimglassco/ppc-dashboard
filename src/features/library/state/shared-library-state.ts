@@ -525,3 +525,16 @@ export function parseSharedLibraryResponse(value: unknown): SharedLibraryRespons
   if (recordManifest && catalogCompleteness && !isAuthoritativeSharedLibraryResponse(response)) return null;
   return response;
 }
+
+export function parseSharedLibraryDocumentUpdateResponse(value: unknown): SharedLibraryResponse | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const candidate = value as Record<string, unknown>;
+  const focused = {
+    ...candidate,
+    deletionAudit: undefined,
+    recordIntegrity: undefined,
+    recoveryPreview: undefined,
+  };
+  const parsed = parseSharedLibraryResponse(focused);
+  return parsed?.mutationResult?.operation === "document.update" ? parsed : null;
+}

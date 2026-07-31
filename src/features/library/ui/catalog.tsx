@@ -449,16 +449,14 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
   const activeCategories = categories.filter(item => !item.deletedAt && !item.archivedAt);
   const filterCategories = activeCategories.filter(item => manageMode || !item.hidden);
   const editorCategories = activeCategories.map(item => item.name);
-  const activeDocuments = managed.filter(document => !document.deletedAt);
+  const incompleteDocuments = Object.values(incompleteIntegrity);
+  const incompleteDocumentIds = new Set(incompleteDocuments.map(document => document.documentId));
+  const activeDocuments = managed.filter(document => !document.deletedAt && !incompleteDocumentIds.has(document.id));
   const visibleToReader = activeDocuments.filter(document => !document.hidden);
-  const catalogDocuments = (manageMode ? activeDocuments : visibleToReader).map(document => {
-    const integrity = incompleteIntegrity[document.id];
-    return integrity ? { ...document, title: integrity.title } : document;
-  });
+  const catalogDocuments = manageMode ? activeDocuments : visibleToReader;
   const results = filterDocuments(catalogDocuments, { q: deferred, category });
   const filtered = Boolean(q || category);
   const deleted = managed.filter(document => document.deletedAt);
-  const incompleteDocuments = Object.values(incompleteIntegrity);
   const recoveryDocumentCount = (shared?.recoveryDocumentCount ?? deleted.length) + incompleteDocuments.length;
   const documentCounts = managed.reduce<Record<string, number>>((counts, document) => { counts[document.category] = (counts[document.category] ?? 0) + 1; return counts; }, {});
   const saveDocumentOrder = async (order: string[]) => {
@@ -545,6 +543,17 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
     }, "", { summary: true, recovery: true });
     if (!response) return lastMutationErrorRef.current || "The document could not be moved to the protected archive. Please try again.";
     announceSuccess(`${document.title} was moved to the protected archive.`);
+    void refreshDocumentRecovery();
+    return null;
+  };
+  const archiveIncompleteDocument = async (document: SharedLibraryDocumentIntegrity) => {
+    const response = await commitMutation({
+      operation: "document.archiveIncomplete",
+      documentId: document.documentId,
+      expectedVersion: document.recordVersion,
+    }, "", { summary: true, recovery: true, integrityPreview: true });
+    if (!response) return lastMutationErrorRef.current || "The incomplete document could not be moved to the protected archive. Please try again.";
+    announceSuccess(`${document.title} was removed from Needs recovery and moved to the protected archive.`);
     void refreshDocumentRecovery();
     return null;
   };
@@ -712,6 +721,7 @@ export function Catalog({ documents }: { documents: LibraryDocument[] }) {
       onClose={closeDocumentRecovery}
       onRecover={recoverDocument}
       onRecoverIncomplete={recoverIncompleteDocuments}
+      onArchiveIncomplete={archiveIncompleteDocument}
       onRecoverSystemDeleted={documentIds => void recoverSystemDeletedDocuments(documentIds)}
       onPermanentlyDelete={permanentlyDeleteDocument}
       archivedDocuments={archivedDocuments}

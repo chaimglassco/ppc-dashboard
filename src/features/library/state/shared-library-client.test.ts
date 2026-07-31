@@ -66,6 +66,38 @@ describe("shared library client", () => {
     expect(fetchMock).toHaveBeenCalledWith("/ppc/api/library", expect.objectContaining({ method: "PATCH", body: expect.stringContaining('"operation":"document.create"') }));
   });
 
+  it("accepts a focused document update confirmation when optional recovery metadata is malformed", async () => {
+    const document = response.state.documents[0];
+    const updated = {
+      ...response,
+      revision: 3,
+      recordVersions: { ...response.recordVersions, documents: { [document.id]: 2 } },
+      recordManifest: {
+        documents: [{ ...response.recordManifest.documents[0], recordVersion: 2 }],
+      },
+      documentStatus: { status: "active", slug: document.slug, documentId: document.id, recordVersion: 2 },
+      mutationResult: {
+        operation: "document.update",
+        documentId: document.id,
+        document,
+        recordVersion: 2,
+        lifecycleState: "active",
+      },
+      recordIntegrity: { documents: "malformed optional data" },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(updated), { status: 200 })));
+
+    await expect(mutateSharedLibrary({
+      operation: "document.update",
+      documentId: document.id,
+      expectedVersion: 1,
+      updateScope: "content",
+      document: { ...document, contentElements: [] },
+    }, { slug: document.slug })).resolves.toMatchObject({
+      mutationResult: { documentId: document.id, recordVersion: 2 },
+    });
+  });
+
   it("preserves structured retry details from a failed shared Library request", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       error: "The shared Library database did not respond in time. Please retry.",

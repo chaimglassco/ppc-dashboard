@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createDefaultCategories } from "./category-storage";
-import { createSharedLibraryState, isAuthoritativeSharedLibraryResponse, parseSharedLibraryResponse, parseSharedLibraryState } from "./shared-library-state";
+import { createSharedLibraryState, isAuthoritativeSharedLibraryResponse, parseSharedLibraryDocumentUpdateResponse, parseSharedLibraryResponse, parseSharedLibraryState } from "./shared-library-state";
 
 describe("shared library state", () => {
   it("rejects malformed snapshots without adding repository seeds", () => {
@@ -89,6 +89,31 @@ describe("shared library state", () => {
       updatedBy: null,
       mutationResult: { operation: "document.update", documentId: document.id, document, recordVersion: 5, lifecycleState: "missing" },
     })).toBeNull();
+  });
+
+  it("keeps a focused document update confirmation independent of malformed recovery metadata", () => {
+    const state = createSharedLibraryState(getPublishedDocuments().slice(0, 1));
+    const document = state.documents[0];
+    const value = {
+      initialized: true,
+      state,
+      revision: 9,
+      recordVersions: { documents: { [document.id]: 5 }, categories: {} },
+      updatedAt: "2026-07-30T00:00:00.000Z",
+      updatedBy: "admin@example.com",
+      documentStatus: { status: "active", slug: document.slug, documentId: document.id, recordVersion: 5 },
+      mutationResult: {
+        operation: "document.update",
+        documentId: document.id,
+        document,
+        recordVersion: 5,
+        lifecycleState: "active",
+      },
+      recordIntegrity: { documents: "malformed optional data" },
+    };
+
+    expect(parseSharedLibraryResponse(value)).toBeNull();
+    expect(parseSharedLibraryDocumentUpdateResponse(value)?.mutationResult?.documentId).toBe(document.id);
   });
 
   it("accepts only internally complete authoritative catalog metadata", () => {

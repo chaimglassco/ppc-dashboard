@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Archive, Clock3, DatabaseBackup, Eye, History, LoaderCircle, RotateCcw, ShieldAlert, X } from "lucide-react";
+import { AlertTriangle, Archive, Clock3, DatabaseBackup, Eye, History, LoaderCircle, RotateCcw, ShieldAlert, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import type { ManagedLibraryDocument } from "../state/admin-storage";
@@ -29,6 +29,7 @@ type DeletedDocumentsProps = {
   onClose: () => void;
   onRecover: (document: ManagedLibraryDocument) => Promise<string | null>;
   onRecoverIncomplete?: (documents: SharedLibraryDocumentIntegrity[]) => Promise<string | null>;
+  onArchiveIncomplete?: (document: SharedLibraryDocumentIntegrity) => Promise<string | null>;
   onRecoverSystemDeleted: (documentIds: string[]) => void;
   onPermanentlyDelete: (document: ManagedLibraryDocument) => Promise<string | null>;
   onRestoreArchived?: (document: ManagedLibraryDocument) => Promise<string | null>;
@@ -85,6 +86,7 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
     onClose,
     onRecover,
     onRecoverIncomplete = async () => "Incomplete-document recovery is unavailable.",
+    onArchiveIncomplete = async () => "Incomplete-document removal is unavailable.",
     onRecoverSystemDeleted,
     onPermanentlyDelete,
     onRestoreArchived = async () => "Protected archive recovery is unavailable.",
@@ -112,6 +114,7 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
   const [selectedSnapshotIds, setSelectedSnapshotIds] = useState<string[]>([]);
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
   const [confirmBulkIncomplete, setConfirmBulkIncomplete] = useState(false);
+  const [incompleteArchiveTarget, setIncompleteArchiveTarget] = useState<SharedLibraryDocumentIntegrity | null>(null);
   const versionRequestRef = useRef(0);
   const allDocuments = useMemo(() => {
     const map = new Map<string, ManagedLibraryDocument>();
@@ -199,6 +202,7 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
             <div className="document-recovery-actions">
               <Link className="secondary-button" href={`/library/${document.slug}`}><Eye /> Preview</Link>
               <button className="secondary-button" type="button" disabled={isBusy || !document.hasRecoveryCandidate} onClick={() => void run(`incomplete-${document.documentId}`, () => onRecoverIncomplete([document]))}>{busyId === `incomplete-${document.documentId}` ? <LoaderCircle className="spinning-icon" /> : <RotateCcw />} Restore</button>
+              <button className="document-permanent-delete-button" type="button" disabled={isBusy} aria-label={`Move ${document.title} to protected archive`} title="Move to protected archive" onClick={() => setIncompleteArchiveTarget(document)}><Trash2 /></button>
             </div>
           </article>)}</div>
           {!incompleteDocuments.length ? <p className="document-recovery-empty">There are no incomplete active documents.</p> : null}
@@ -250,6 +254,13 @@ export function DeletedDocuments(props: DeletedDocumentsProps) {
         <header><div><span className="eyebrow">PROTECTED ARCHIVE</span><h2 id="archive-document-heading">Move out of normal Recovery?</h2></div><button type="button" disabled={isBusy} onClick={() => setArchiveTarget(null)} aria-label="Close archive confirmation"><X /></button></header>
         <div className="permanent-delete-dialog__body"><AlertTriangle /><p><strong>“{archiveTarget.title}”</strong> will disappear from the Deleted tab, but its full content and history will remain protected indefinitely and can be restored from the Protected archive tab.</p></div>
         <footer><button className="secondary-button" type="button" disabled={isBusy} onClick={() => setArchiveTarget(null)}>Cancel</button><button className="primary-button" type="button" disabled={isBusy} onClick={() => void run(`archive-confirm-${archiveTarget.id}`, () => onPermanentlyDelete(archiveTarget)).then(success => { if (success) { setArchiveTarget(null); setTab("archive"); } })}>{busyId === `archive-confirm-${archiveTarget.id}` ? <><LoaderCircle className="spinning-icon" /> Archiving…</> : <><Archive /> Move to protected archive</>}</button></footer>
+      </section>
+    </div> : null}
+    {incompleteArchiveTarget ? <div className="admin-modal-backdrop permanent-delete-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !isBusy) setIncompleteArchiveTarget(null); }}>
+      <section className="admin-modal permanent-delete-dialog protected-restore-dialog" role="alertdialog" aria-modal="true" aria-labelledby="archive-incomplete-document-heading">
+        <header><div><span className="eyebrow">INCOMPLETE DOCUMENT REMOVAL</span><h2 id="archive-incomplete-document-heading">Remove from Needs recovery?</h2></div><button type="button" disabled={isBusy} onClick={() => setIncompleteArchiveTarget(null)} aria-label="Close incomplete document removal"><X /></button></header>
+        <div className="permanent-delete-dialog__body"><AlertTriangle /><p><strong>“{incompleteArchiveTarget.title}”</strong> will be removed from the active Library and normal Recovery. Its audit and version history will remain protected for disaster recovery.</p></div>
+        <footer><button className="secondary-button" type="button" disabled={isBusy} onClick={() => setIncompleteArchiveTarget(null)}>Cancel</button><button className="primary-button" type="button" disabled={isBusy} onClick={() => void run(`archive-incomplete-${incompleteArchiveTarget.documentId}`, () => onArchiveIncomplete(incompleteArchiveTarget)).then(success => { if (success) { setIncompleteArchiveTarget(null); setTab("archive"); } })}>{busyId === `archive-incomplete-${incompleteArchiveTarget.documentId}` ? <><LoaderCircle className="spinning-icon" /> Removing…</> : <><Trash2 /> Remove document</>}</button></footer>
       </section>
     </div> : null}
     {confirmBulkIncomplete ? <div className="admin-modal-backdrop permanent-delete-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !isBusy) setConfirmBulkIncomplete(false); }}>

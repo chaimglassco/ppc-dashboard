@@ -233,6 +233,25 @@ describe("managed reader loading states", () => {
     expect(screen.queryByRole("heading", { name: "Document unavailable" })).not.toBeInTheDocument();
   });
 
+  it("keeps editing controls enabled after a transient save-confirmation failure", async () => {
+    const document = { ...getPublishedDocuments()[0], contentElements: [createBlankContentElement("statement", 1)] };
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: response([document]), source: "server" });
+    client.mutateSharedLibrary.mockRejectedValue(new SharedLibraryRequestError(
+      "Temporary confirmation failure.",
+      503,
+      "LIBRARY_DATABASE_UNAVAILABLE",
+      "read-library-document",
+      true,
+    ));
+    render(<ManagedReader slug={document.slug} />);
+
+    expect(await screen.findByTestId("reader")).toHaveTextContent(`${document.title}:editable`);
+    fireEvent.click(screen.getByRole("button", { name: "Save formatted document" }));
+
+    expect(await screen.findByText(/save could not be confirmed/i)).toBeVisible();
+    expect(screen.getByTestId("reader")).toHaveTextContent(`${document.title}:editable`);
+  });
+
   it("preserves the current document when a save response cannot prove it stayed active", async () => {
     const document = { ...getPublishedDocuments()[0], contentElements: [createBlankContentElement("statement", 1)] };
     const initial = response([document]);

@@ -119,7 +119,7 @@ describe("catalog hydration", () => {
     expect(catalog.getByText("Reorder needs at least 2 active documents. Add or recover another document first.")).toBeVisible();
   });
 
-  it("marks an incomplete active record as needing recovery instead of presenting it as healthy", async () => {
+  it("keeps an incomplete active record out of the catalog and exposes it only in Recovery", async () => {
     const document = getPublishedDocuments()[0];
     const safeSummary = { ...document, title: "Untitled document", body: "", topics: [] };
     const incompleteResponse = {
@@ -149,14 +149,16 @@ describe("catalog hydration", () => {
     };
     client.hydrateSharedLibraryState.mockResolvedValue({ response: incompleteResponse, source: "server" });
     client.fetchSharedLibraryState.mockResolvedValue(incompleteResponse);
-    render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>);
+    const view = render(<ReadingStateProvider><Catalog documents={getPublishedDocuments()} /></ReadingStateProvider>);
+    const catalog = within(view.container);
 
-    const heading = await screen.findByRole("heading", { name: document.title });
-    const card = heading.closest<HTMLElement>(".document-card");
-    if (!card) throw new Error("Incomplete document card was not found.");
-    expect(within(card).getByText("Needs recovery")).toBeVisible();
-    expect(within(card).getByRole("link", { name: "Preview recovery version" })).toHaveAttribute("href", `/library/${document.slug}`);
-    expect(within(card).queryByRole("link", { name: "Read Document" })).not.toBeInTheDocument();
+    await waitFor(() => expect(catalog.getByText("The Library has no active documents")).toBeVisible());
+    expect(catalog.queryByRole("heading", { name: document.title })).not.toBeInTheDocument();
+
+    fireEvent.click(catalog.getByRole("button", { name: "Open document recovery (1)" }));
+    const recovery = await within(view.container).findByRole("dialog", { name: "Recovery Center" });
+    expect(within(recovery).getByText(document.title)).toBeVisible();
+    expect(within(recovery).getByRole("link", { name: "Preview" })).toHaveAttribute("href", `/library/${document.slug}`);
   });
 
   it("opens Recovery immediately while its two data sources load independently", async () => {

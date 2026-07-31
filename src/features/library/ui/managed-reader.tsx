@@ -48,22 +48,20 @@ export function verifyDocumentSaveResponse(response: SharedLibraryResponse, subm
     || returnedVersion !== result.recordVersion
     || response.documentStatus?.status !== "active"
     || response.documentStatus.documentId !== submitted.id
-    || !returned
-    || returned.slug !== submitted.slug
-    || returned.deletedAt
-    || returned.archivedAt
     || result.document.deletedAt
     || result.document.archivedAt
-    || returned.hidden !== submitted.hidden
-    || returned.status !== submitted.status
-    || returned.title !== submitted.title
-    || returned.description !== submitted.description
-    || returned.category !== submitted.category
-    || !sameStructuredContent(returned.contentElements, submitted.contentElements)
+    || result.document.hidden !== submitted.hidden
+    || result.document.status !== submitted.status
+    || result.document.title !== submitted.title
+    || result.document.description !== submitted.description
+    || result.document.category !== submitted.category
     || !sameStructuredContent(result.document.contentElements, submitted.contentElements)) {
     throw new DocumentSaveVerificationError();
   }
-  return returned;
+  if (returned && (returned.slug !== submitted.slug || returned.deletedAt || returned.archivedAt)) {
+    throw new DocumentSaveVerificationError();
+  }
+  return result.document;
 }
 
 export function ManagedReader({ slug }: { slug: string }) {
@@ -349,7 +347,22 @@ export function ManagedReader({ slug }: { slug: string }) {
         document: normalized,
       }, { slug });
       const verified = verifyDocumentSaveResponse(saved, normalized, expectedVersion);
-      if (!applyResponse(saved, true, true) || verified.id !== normalized.id) {
+      const confirmed: SharedLibraryResponse = {
+        ...saved,
+        state: { ...saved.state, documents: [verified] },
+        recordVersions: {
+          ...saved.recordVersions,
+          documents: { ...saved.recordVersions.documents, [verified.id]: saved.mutationResult!.recordVersion },
+        },
+        documentStatus: {
+          status: "active",
+          slug: verified.slug,
+          documentId: verified.id,
+          recordVersion: saved.mutationResult!.recordVersion,
+          hidden: verified.hidden,
+        },
+      };
+      if (!applyResponse(confirmed, true, true) || verified.id !== normalized.id) {
         throw new DocumentSaveVerificationError();
       }
     } catch (error) {
@@ -359,8 +372,10 @@ export function ManagedReader({ slug }: { slug: string }) {
       } else if (error instanceof DocumentSaveVerificationError) {
         setNotice(error.message);
       } else {
-        setMutationsEnabled(false);
-        setNotice("Unable to verify the shared Library save. Your editor changes remain open; reconnect, then try saving again.");
+        if (error instanceof SharedLibraryRequestError && [401, 403].includes(error.status)) {
+          setMutationsEnabled(false);
+        }
+        setNotice("The shared Library save could not be confirmed. Your editor changes remain open; try saving again.");
       }
       throw error;
     }

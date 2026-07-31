@@ -33,6 +33,7 @@ const incompleteDocuments: SharedLibraryDocumentIntegrity[] = [
 function renderRecovery(
   onRecoverIncomplete = vi.fn().mockResolvedValue(null),
   documents = incompleteDocuments,
+  onArchiveIncomplete = vi.fn().mockResolvedValue(null),
 ) {
   render(<DeletedDocuments
     documents={[]}
@@ -43,6 +44,7 @@ function renderRecovery(
     onClose={() => undefined}
     onRecover={async () => null}
     onRecoverIncomplete={onRecoverIncomplete}
+    onArchiveIncomplete={onArchiveIncomplete}
     onRecoverSystemDeleted={() => undefined}
     onPermanentlyDelete={async () => null}
     purgedHistoryError=""
@@ -51,14 +53,14 @@ function renderRecovery(
     isLoadingPurgedHistory={false}
     onRetry={() => undefined}
   />);
-  return onRecoverIncomplete;
+  return { onRecoverIncomplete, onArchiveIncomplete };
 }
 
 describe("incomplete active document recovery", () => {
   afterEach(cleanup);
 
   it("shows a protected preview and restores one validated candidate", async () => {
-    const recover = renderRecovery();
+    const { onRecoverIncomplete: recover } = renderRecovery();
 
     expect(screen.getAllByRole("link", { name: "Preview" })[0]).toHaveAttribute("href", "/library/first-document");
     fireEvent.click(screen.getAllByRole("button", { name: "Restore" })[0]);
@@ -67,7 +69,7 @@ describe("incomplete active document recovery", () => {
   });
 
   it("requires confirmation before requesting an all-or-nothing bulk recovery", async () => {
-    const recover = renderRecovery();
+    const { onRecoverIncomplete: recover } = renderRecovery();
 
     fireEvent.click(screen.getByRole("button", { name: "Recover all valid versions" }));
     const dialog = screen.getByRole("alertdialog", { name: "Recover 2 incomplete documents?" });
@@ -89,12 +91,27 @@ describe("incomplete active document recovery", () => {
       recoveryCandidateRecordVersion: undefined,
       recoveryCandidateCreatedAt: undefined,
     };
-    const recover = renderRecovery(undefined, [incompleteDocuments[0], incompleteDocuments[1], unavailable]);
+    const { onRecoverIncomplete: recover } = renderRecovery(undefined, [incompleteDocuments[0], incompleteDocuments[1], unavailable]);
 
     expect(screen.getByText("2 can be restored from their newest versions that pass the current validator.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Recover all valid versions" }));
     fireEvent.click(screen.getByRole("button", { name: "Recover all" }));
 
     await waitFor(() => expect(recover).toHaveBeenCalledWith(incompleteDocuments));
+  });
+
+  it("requires confirmation and shows progress before archiving an incomplete document", async () => {
+    let finishArchive!: (value: string | null) => void;
+    const archive = vi.fn(() => new Promise<string | null>(resolve => { finishArchive = resolve; }));
+    renderRecovery(undefined, incompleteDocuments, archive);
+
+    fireEvent.click(screen.getByRole("button", { name: "Move First document to protected archive" }));
+    expect(screen.getByRole("alertdialog", { name: "Remove from Needs recovery?" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Remove document" }));
+
+    expect(screen.getByText("Removing…")).toBeVisible();
+    expect(archive).toHaveBeenCalledWith(incompleteDocuments[0]);
+    finishArchive(null);
+    await waitFor(() => expect(screen.queryByRole("alertdialog", { name: "Remove from Needs recovery?" })).not.toBeInTheDocument());
   });
 });

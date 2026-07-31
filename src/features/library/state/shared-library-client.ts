@@ -2,7 +2,7 @@ import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import type { ManagedLibraryDocument } from "./admin-storage";
 import type { ManagedCategory } from "./category-storage";
-import { isAuthoritativeSharedLibraryResponse, parseSharedLibraryResponse, type SharedLibraryResponse, type SharedLibraryState } from "./shared-library-state";
+import { isAuthoritativeSharedLibraryResponse, parseSharedLibraryDocumentUpdateResponse, parseSharedLibraryResponse, type SharedLibraryResponse, type SharedLibraryState } from "./shared-library-state";
 
 export const SHARED_LIBRARY_CACHE_KEY = "glassco-library-confirmed-cache-v2";
 export const SHARED_LIBRARY_REQUEST_TIMEOUT_MS = 18_000;
@@ -101,7 +101,7 @@ export type SharedLibraryMutation =
   | { operation: "catalog.initialize"; state: SharedLibraryState; expectedRevision: 0 }
   | { operation: "document.create"; document: ManagedLibraryDocument }
   | { operation: "document.update"; documentId: string; expectedVersion: number; document: ManagedLibraryDocument; updateScope?: "content" }
-  | { operation: "document.delete" | "document.restore" | "document.archive" | "document.restoreArchived" | "document.purge"; documentId: string; expectedVersion: number }
+  | { operation: "document.delete" | "document.restore" | "document.archive" | "document.archiveIncomplete" | "document.restoreArchived" | "document.purge"; documentId: string; expectedVersion: number }
   | { operation: "record.restoreVersion"; recordType: "document" | "category"; recordId: string; versionId: string; expectedVersion: number }
   | { operation: "records.restoreFromSnapshot"; snapshotId: string; recordType: "document" | "category"; recordIds: string[]; expectedRevision: number }
   | { operation: "integrity.acknowledge"; incidentId: string; expectedRevision: number }
@@ -211,6 +211,10 @@ export async function mutateSharedLibrary(mutation: SharedLibraryMutation, optio
     headers: { "Content-Type": "application/json", ...getPipelineAuthorizationHeader() },
     body: JSON.stringify(mutation),
   }));
+  if (mutation.operation === "document.update") {
+    const parsed = parseSharedLibraryResponse(value) ?? parseSharedLibraryDocumentUpdateResponse(value);
+    if (parsed && isAuthoritativeSharedLibraryResponse(parsed)) return parsed;
+  }
   return requireAuthoritativeResponse(value, "The shared Library mutation returned incomplete confirmation. Your last confirmed copy was preserved.");
 }
 
