@@ -2,10 +2,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPublishedDocuments } from "../data/repository";
 import { createBlankContentElement } from "../domain/document-elements";
+import type { ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories } from "../state/category-storage";
 import { SharedLibraryRequestError } from "../state/shared-library-client";
 import type { SharedLibraryResponse } from "../state/shared-library-state";
-import { ManagedReader } from "./managed-reader";
+import { getLinkableDocumentOptions, ManagedReader } from "./managed-reader";
 
 const client = vi.hoisted(() => ({
   fetchSharedLibraryState: vi.fn(),
@@ -28,10 +29,15 @@ vi.mock("../state/shared-library-client", async importOriginal => {
 });
 
 vi.mock("./reader", () => ({
-  Reader: ({ doc, mutationsEnabled, onSaveContentElements }: {
+  Reader: ({ doc, mutationsEnabled, onSaveContentElements, documentLinkCatalog }: {
     doc: { title: string; description: string; category: string; contentElements?: unknown[] };
     mutationsEnabled: boolean;
     onSaveContentElements: (elements: unknown[], metadata: { title: string; description: string; category: string }) => Promise<void>;
+    documentLinkCatalog?: {
+      options: Array<{ title: string }>;
+      status: string;
+      onRequest: () => void;
+    };
   }) =>
     <div data-testid="reader">
       {doc.title}:{mutationsEnabled ? "editable" : "read-only"}
@@ -42,10 +48,12 @@ vi.mock("./reader", () => ({
           category: doc.category,
         }).catch(() => undefined);
       }}>Save formatted document</button>
+      <button type="button" onClick={documentLinkCatalog?.onRequest}>Load document links</button>
+      <span data-testid="document-link-catalog">{documentLinkCatalog?.status}:{documentLinkCatalog?.options.map(option => option.title).join(",")}</span>
     </div>,
 }));
 
-function response(documents = getPublishedDocuments().slice(0, 1)): SharedLibraryResponse {
+function response(documents: ManagedLibraryDocument[] = getPublishedDocuments().slice(0, 1)): SharedLibraryResponse {
   const manifest = documents.map(document => ({
     id: document.id,
     slug: document.slug,
@@ -84,6 +92,35 @@ function response(documents = getPublishedDocuments().slice(0, 1)): SharedLibrar
   };
 }
 
+describe("document link catalog", () => {
+  it("keeps only other active, published, visible, complete documents and sorts them by title", () => {
+    const [current, visible, hidden, draft, deleted, archived, incomplete] = getPublishedDocuments().slice(0, 7);
+    const catalog = response([
+      current,
+      { ...visible, title: "Zulu guide" },
+      { ...getPublishedDocuments()[7], title: "Alpha guide" },
+      { ...hidden, hidden: true },
+      { ...draft, status: "draft" },
+      { ...deleted, deletedAt: "2026-07-31T00:00:00.000Z" },
+      { ...archived, archivedAt: "2026-07-31T00:00:00.000Z" },
+      incomplete,
+    ]);
+    catalog.recordIntegrity = { documents: {
+      [incomplete.id]: {
+        status: "incomplete",
+        documentId: incomplete.id,
+        slug: incomplete.slug,
+        title: incomplete.title,
+        recordVersion: 2,
+        reasonCode: "DOCUMENT_SCHEMA_INVALID",
+        hasRecoveryCandidate: true,
+      },
+    } };
+
+    expect(getLinkableDocumentOptions(catalog, current.id).map(option => option.title)).toEqual(["Alpha guide", "Zulu guide"]);
+  });
+});
+
 describe("managed reader loading states", () => {
   beforeEach(() => {
     client.fetchSharedLibraryState.mockReset();
@@ -94,6 +131,24 @@ describe("managed reader loading states", () => {
     navigation.get.mockReturnValue(null);
   });
   afterEach(cleanup);
+
+  it("loads one shared authoritative document-link catalog on demand", async () => {
+    const documents = getPublishedDocuments();
+    const current = documents[0];
+    const target = { ...documents[1], title: "Link target" };
+    client.hydrateSharedLibraryState.mockResolvedValue({ response: response([current]), source: "server" });
+    client.fetchSharedLibraryState.mockResolvedValue(response([current, target]));
+    render(<ManagedReader slug={current.slug} />);
+
+    await screen.findByText(`${current.title}:editable`);
+    const load = screen.getByRole("button", { name: "Load document links" });
+    fireEvent.click(load);
+    fireEvent.click(load);
+
+    await waitFor(() => expect(screen.getByTestId("document-link-catalog")).toHaveTextContent("ready:Link target"));
+    expect(client.fetchSharedLibraryState).toHaveBeenCalledTimes(1);
+    expect(client.fetchSharedLibraryState).toHaveBeenCalledWith(expect.any(AbortSignal), { summary: true, integrityPreview: true });
+  });
 
   it("shows a retryable connection error instead of claiming the document is unavailable", async () => {
     client.hydrateSharedLibraryState.mockRejectedValue(new Error("offline"));

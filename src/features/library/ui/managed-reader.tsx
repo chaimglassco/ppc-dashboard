@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGlasscoSession } from "@/components/glassco-session";
 import { getTopicsFromContentElements } from "../domain/document-elements";
-import type { LibraryContentElement } from "../domain/types";
+import type { LibraryContentElement, LibraryDocumentLinkOption } from "../domain/types";
 import { normalizeManagedLibraryContentUpdate, type ManagedLibraryDocument } from "../state/admin-storage";
 import { createDefaultCategories } from "../state/category-storage";
 import { cacheSharedLibraryResponse, fetchSharedLibraryState, hydrateSharedLibraryState, invalidateSharedLibraryDocumentCache, mutateSharedLibrary, SharedLibraryConflictError, SharedLibraryIncompleteResponseError, SharedLibraryRequestError, verifyRestoredLibraryDocument } from "../state/shared-library-client";
@@ -32,6 +32,23 @@ function stableValue(value: unknown): unknown {
 
 function sameStructuredContent(left: unknown, right: unknown) {
   return JSON.stringify(stableValue(left)) === JSON.stringify(stableValue(right));
+}
+
+export function getLinkableDocumentOptions(response: SharedLibraryResponse, currentDocumentId: string): LibraryDocumentLinkOption[] {
+  const manifestById = new Map(response.recordManifest?.documents.map(entry => [entry.id, entry]));
+  const incompleteIds = new Set(Object.keys(response.recordIntegrity?.documents ?? {}));
+  return response.state.documents
+    .filter(document => (
+      document.id !== currentDocumentId
+      && document.status === "published"
+      && !document.hidden
+      && !document.deletedAt
+      && !document.archivedAt
+      && manifestById.get(document.id)?.lifecycleState === "active"
+      && !incompleteIds.has(document.id)
+    ))
+    .map(({ id, slug, title, category, description }) => ({ id, slug, title, category, description }))
+    .sort((left, right) => left.title.localeCompare(right.title));
 }
 
 export function verifyDocumentSaveResponse(response: SharedLibraryResponse, submitted: ManagedLibraryDocument, expectedVersion: number): ManagedLibraryDocument {
@@ -83,10 +100,18 @@ export function ManagedReader({ slug }: { slug: string }) {
   const [isRecovering, setIsRecovering] = useState(false);
   const [recoveryError, setRecoveryError] = useState("");
   const [loadError, setLoadError] = useState<{ slug: string; message: string; kind: "connection" | "integrity" } | null>(null);
+  const [documentLinkCatalogState, setDocumentLinkCatalogState] = useState<{
+    documentId: string;
+    options: LibraryDocumentLinkOption[];
+    status: "idle" | "loading" | "ready" | "error";
+    error: string;
+  }>({ documentId: "", options: [], status: "idle", error: "" });
   const sharedRef = useRef<SharedLibraryResponse | null>(null);
   const refreshInFlightRef = useRef(false);
   const documentRef = useRef<ManagedLibraryDocument | null | undefined>(undefined);
   const consecutiveFailuresRef = useRef(0);
+  const documentLinkOwnerRef = useRef("");
+  const documentLinkRequestRef = useRef<{ documentId: string; controller: AbortController } | null>(null);
 
   const applyResponse = useCallback((response: SharedLibraryResponse, cache = true, preserveOnMissing = false) => {
     const activeDocument = response.state.documents.find(item => item.slug === slug && !item.deletedAt && !item.hidden) ?? null;
@@ -114,6 +139,42 @@ export function ManagedReader({ slug }: { slug: string }) {
       cacheSharedLibraryResponse(response, window.localStorage, { slug, integrityPreview: true });
     }
     return true;
+  }, [slug]);
+
+  const requestDocumentLinks = useCallback(() => {
+    const currentDocumentId = documentRef.current?.id;
+    if (!currentDocumentId || documentLinkOwnerRef.current === currentDocumentId || documentLinkRequestRef.current?.documentId === currentDocumentId) return;
+    documentLinkRequestRef.current?.controller.abort();
+    const controller = new AbortController();
+    documentLinkRequestRef.current = { documentId: currentDocumentId, controller };
+    setDocumentLinkCatalogState({ documentId: currentDocumentId, options: [], status: "loading", error: "" });
+    void fetchSharedLibraryState(controller.signal, { summary: true, integrityPreview: true }).then(response => {
+      if (controller.signal.aborted) return;
+      documentLinkOwnerRef.current = currentDocumentId;
+      setDocumentLinkCatalogState({
+        documentId: currentDocumentId,
+        options: getLinkableDocumentOptions(response, currentDocumentId),
+        status: "ready",
+        error: "",
+      });
+    }).catch(error => {
+      if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) return;
+      setDocumentLinkCatalogState({
+        documentId: currentDocumentId,
+        options: [],
+        status: "error",
+        error: "Library documents could not be loaded. Try again.",
+      });
+    }).finally(() => {
+      if (documentLinkRequestRef.current?.controller === controller) documentLinkRequestRef.current = null;
+    });
+  }, []);
+
+  useEffect(() => {
+    documentLinkRequestRef.current?.controller.abort();
+    documentLinkRequestRef.current = null;
+    documentLinkOwnerRef.current = "";
+    return () => documentLinkRequestRef.current?.controller.abort();
   }, [slug]);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
@@ -392,7 +453,10 @@ export function ManagedReader({ slug }: { slug: string }) {
     await saveDocument(updated);
   };
   const isRecoveryPreview = documentStatus?.status === "incomplete";
-  return <>{notice ? <p className="admin-notice" role="status">{notice}</p> : null}{isRecoveryPreview ? <div className="document-recovery-preview-banner" role="status"><div><strong>Needs recovery — protected preview</strong><p>You are viewing the newest retained version that passes the current document validator. The incomplete active record has not been changed.</p></div>{recoveryError ? <p className="admin-notice" role="alert">{recoveryError}</p> : null}<div>{canAdmin && recoveryAvailable ? <button className="primary-button" type="button" disabled={isRecovering} onClick={() => void recoverIncompleteDocument()}>{isRecovering ? <><LoaderCircle className="spinning-icon" /> Recovering…</> : <><RotateCcw /> Restore this version</>}</button> : null}<Link className="secondary-button" prefetch={false} href="/library">Return to Library</Link></div></div> : null}<Reader doc={currentDocument} categories={categories} onSaveContentElements={saveContentElements} onSaveVideoUrl={saveVideoUrl} mutationsEnabled={mutationsEnabled && !isRecoveryPreview}/></>;
+  const documentLinkCatalog = documentLinkCatalogState.documentId === currentDocument.id
+    ? { options: documentLinkCatalogState.options, status: documentLinkCatalogState.status, error: documentLinkCatalogState.error, onRequest: requestDocumentLinks }
+    : { options: [], status: "idle" as const, error: "", onRequest: requestDocumentLinks };
+  return <>{notice ? <p className="admin-notice" role="status">{notice}</p> : null}{isRecoveryPreview ? <div className="document-recovery-preview-banner" role="status"><div><strong>Needs recovery — protected preview</strong><p>You are viewing the newest retained version that passes the current document validator. The incomplete active record has not been changed.</p></div>{recoveryError ? <p className="admin-notice" role="alert">{recoveryError}</p> : null}<div>{canAdmin && recoveryAvailable ? <button className="primary-button" type="button" disabled={isRecovering} onClick={() => void recoverIncompleteDocument()}>{isRecovering ? <><LoaderCircle className="spinning-icon" /> Recovering…</> : <><RotateCcw /> Restore this version</>}</button> : null}<Link className="secondary-button" prefetch={false} href="/library">Return to Library</Link></div></div> : null}<Reader doc={currentDocument} categories={categories} onSaveContentElements={saveContentElements} onSaveVideoUrl={saveVideoUrl} documentLinkCatalog={documentLinkCatalog} mutationsEnabled={mutationsEnabled && !isRecoveryPreview}/></>;
 }
 
 function auditActor(audit?: LibraryDocumentDeletionAudit) {

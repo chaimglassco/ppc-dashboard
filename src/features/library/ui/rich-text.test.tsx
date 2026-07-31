@@ -1,11 +1,12 @@
-import { fireEvent, render, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { richTextFromMarkdown } from "../domain/rich-text";
 import type { RichTextDocument } from "../domain/types";
-import { RichTextEditor, RichTextRenderer, shouldShowSelectionToolbar } from "./rich-text";
+import { DocumentLinkCatalogProvider, getLibraryDocumentHref, RichTextEditor, RichTextRenderer, shouldShowSelectionToolbar } from "./rich-text";
 
 function selectText(element: HTMLElement, start: number, end: number) {
-  const text = element.querySelector("p")?.firstChild;
+  const paragraph = element.querySelector("p");
+  const text = paragraph ? document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT).nextNode() : null;
   if (!text) throw new Error("Editable text was not rendered.");
   const range = document.createRange();
   range.setStart(text, start);
@@ -18,12 +19,14 @@ function selectText(element: HTMLElement, start: number, end: number) {
   fireEvent.mouseUp(element);
 }
 
+afterEach(cleanup);
+
 describe("RichTextEditor", () => {
   it("shows the full accessible toolbar and toggles list formatting visually", () => {
     const onChange = vi.fn();
     const view = render(<RichTextEditor ariaLabel="Body" value={richTextFromMarkdown("First item")} onChange={onChange} />);
     const toolbar = view.getByRole("toolbar", { name: "Body formatting" });
-    expect(within(toolbar).getAllByRole("button").map(button => button.getAttribute("aria-label"))).toEqual(["Normal", "Bold", "Italic", "Underlined", "Align left", "Align center", "Align right", "Bullets", "Checklist", "Numbers", "Link"]);
+    expect(within(toolbar).getAllByRole("button").map(button => button.getAttribute("aria-label"))).toEqual(["Normal", "Bold", "Italic", "Underlined", "Align left", "Align center", "Align right", "Bullets", "Checklist", "Numbers", "Link", "Link document"]);
     expect(within(toolbar).getAllByRole("button").every(button => button.textContent === "")).toBe(true);
     expect(within(toolbar).getAllByRole("group").map(group => group.getAttribute("aria-label"))).toEqual(["Text styles", "Text alignment", "Lists", "Links"]);
     fireEvent.click(within(toolbar).getByRole("button", { name: "Bold" }));
@@ -43,7 +46,7 @@ describe("RichTextEditor", () => {
   it("limits standalone row composers to inline styles", () => {
     const view = render(<RichTextEditor ariaLabel="Bullet row" allowLists={false} value={richTextFromMarkdown("Text")} onChange={vi.fn()} />);
     const toolbar = view.getByRole("toolbar", { name: "Bullet row formatting" });
-    expect(within(toolbar).getAllByRole("button").map(button => button.getAttribute("aria-label"))).toEqual(["Normal", "Bold", "Italic", "Underlined", "Align left", "Align center", "Align right", "Link"]);
+    expect(within(toolbar).getAllByRole("button").map(button => button.getAttribute("aria-label"))).toEqual(["Normal", "Bold", "Italic", "Underlined", "Align left", "Align center", "Align right", "Link", "Link document"]);
     expect(within(toolbar).queryByRole("group", { name: "Lists" })).not.toBeInTheDocument();
   });
 
@@ -95,6 +98,83 @@ describe("RichTextEditor", () => {
     }));
   });
 
+  it("searches Library documents and applies the selected internal link to the preserved selection", async () => {
+    const onChange = vi.fn();
+    const options = [
+      { id: "library-a", slug: "campaign-structure", title: "Campaign Structure", category: "Campaigns", description: "Naming rules" },
+      { id: "library-b", slug: "budget-control", title: "Budget Control", category: "Budgets", description: "Daily spend limits" },
+    ];
+    const view = render(<DocumentLinkCatalogProvider value={{ options, status: "ready", error: "", onRequest: vi.fn() }}>
+      <RichTextEditor ariaLabel="Document linked body" value={richTextFromMarkdown("Selected text")} onChange={onChange} />
+    </DocumentLinkCatalogProvider>);
+    const editor = view.getByRole("textbox", { name: "Document linked body" });
+    selectText(editor, 0, 8);
+    const documentLinkButton = within(view.getByRole("toolbar", { name: "Document linked body formatting" })).getByRole("button", { name: "Link document" });
+    await waitFor(() => expect(documentLinkButton).toBeEnabled());
+    fireEvent.click(documentLinkButton);
+    const dialog = view.getByRole("dialog", { name: "Link Library document" });
+    const search = within(dialog).getByRole("searchbox", { name: "Search documents" });
+    fireEvent.change(search, { target: { value: "missing document" } });
+    expect(within(dialog).getByText("No documents match your search.")).toBeVisible();
+    fireEvent.change(search, { target: { value: "spend limits" } });
+    expect(within(dialog).getByRole("button", { name: /Budget Control/ })).toBeVisible();
+    expect(within(dialog).queryByRole("button", { name: /Campaign Structure/ })).not.toBeInTheDocument();
+    fireEvent.keyDown(search, { key: "Enter" });
+    await waitFor(() => expect(onChange.mock.calls.at(-1)?.[0]).toMatchObject({
+      content: [expect.objectContaining({ content: expect.arrayContaining([expect.objectContaining({
+        marks: [{ type: "link", attrs: { href: "/ppc/library/budget-control" } }],
+      })]) })],
+    }));
+  });
+
+  it("loads document choices on demand, supports retry, and removes an existing document link", async () => {
+    const onRequest = vi.fn();
+    const linkedValue: RichTextDocument = { type: "doc", content: [{
+      type: "paragraph",
+      content: [{ type: "text", text: "Selected text", marks: [{ type: "link", attrs: { href: "/ppc/library/budget-control" } }] }],
+    }] };
+    const onChange = vi.fn();
+    const view = render(<DocumentLinkCatalogProvider value={{ options: [], status: "idle", error: "", onRequest }}>
+      <RichTextEditor ariaLabel="Existing document link" value={linkedValue} onChange={onChange} />
+    </DocumentLinkCatalogProvider>);
+    const editor = view.getByRole("textbox", { name: "Existing document link" });
+    selectText(editor, 0, 8);
+    const documentLinkButton = within(view.getByRole("toolbar", { name: "Existing document link formatting" })).getByRole("button", { name: "Link document" });
+    await waitFor(() => expect(documentLinkButton).toBeEnabled());
+    fireEvent.click(documentLinkButton);
+    expect(onRequest).toHaveBeenCalledTimes(1);
+    expect(view.getByRole("status")).toHaveTextContent("Loading Library documents");
+    fireEvent.click(view.getByRole("button", { name: "Remove link" }));
+    await waitFor(() => expect(onChange.mock.calls.at(-1)?.[0].content[0].content[0].marks).toBeUndefined());
+
+    const retry = vi.fn();
+    view.rerender(<DocumentLinkCatalogProvider value={{ options: [], status: "error", error: "Catalog unavailable.", onRequest: retry }}>
+      <RichTextEditor ariaLabel="Existing document link" value={richTextFromMarkdown("Selected text")} onChange={onChange} />
+    </DocumentLinkCatalogProvider>);
+    selectText(view.getByRole("textbox", { name: "Existing document link" }), 0, 8);
+    const retryDocumentLinkButton = within(view.getByRole("toolbar", { name: "Existing document link formatting" })).getByRole("button", { name: "Link document" });
+    await waitFor(() => expect(retryDocumentLinkButton).toBeEnabled());
+    fireEvent.click(retryDocumentLinkButton);
+    expect(view.getByRole("alert")).toHaveTextContent("Catalog unavailable.");
+    fireEvent.click(view.getByRole("button", { name: "Retry" }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports an empty document catalog and restores the selection when Escape cancels", async () => {
+    const view = render(<DocumentLinkCatalogProvider value={{ options: [], status: "ready", error: "", onRequest: vi.fn() }}>
+      <RichTextEditor ariaLabel="Empty document catalog" value={richTextFromMarkdown("Selected text")} onChange={vi.fn()} />
+    </DocumentLinkCatalogProvider>);
+    const editor = view.getByRole("textbox", { name: "Empty document catalog" });
+    selectText(editor, 0, 8);
+    const documentLinkButton = within(view.getByRole("toolbar", { name: "Empty document catalog formatting" })).getByRole("button", { name: "Link document" });
+    await waitFor(() => expect(documentLinkButton).toBeEnabled());
+    fireEvent.click(documentLinkButton);
+    expect(view.getByText("No other published documents are available.")).toBeVisible();
+    fireEvent.keyDown(view.getByRole("searchbox", { name: "Search documents" }), { key: "Escape" });
+    expect(view.queryByRole("dialog", { name: "Link Library document" })).not.toBeInTheDocument();
+    expect(documentLinkButton).toBeEnabled();
+  });
+
   it("sanitizes pasted HTML through the allowlisted editor schema", async () => {
     const view = render(<RichTextEditor ariaLabel="Paste body" value={richTextFromMarkdown("")} onChange={vi.fn()} />);
     const editor = view.getByRole("textbox", { name: "Paste body" });
@@ -130,5 +210,18 @@ describe("RichTextRenderer", () => {
     expect(view.getByText("Glassco").closest("p")).toHaveStyle({ textAlign: "right" });
     expect(view.getByRole("link", { name: "Glassco" })).toHaveAttribute("href", "https://glassco.com");
     expect(view.getByRole("link", { name: "Glassco" })).toHaveAttribute("target", "_blank");
+  });
+
+  it("builds and renders Library document links in a protected new tab", () => {
+    expect(getLibraryDocumentHref("budget-control")).toBe("/ppc/library/budget-control");
+    const value: RichTextDocument = { type: "doc", content: [{ type: "paragraph", content: [{
+      type: "text",
+      text: "Budget guide",
+      marks: [{ type: "link", attrs: { href: "/ppc/library/budget-control" } }],
+    }] }] };
+    const view = render(<RichTextRenderer value={value} />);
+    expect(view.getByRole("link", { name: "Budget guide" })).toHaveAttribute("href", "/ppc/library/budget-control");
+    expect(view.getByRole("link", { name: "Budget guide" })).toHaveAttribute("target", "_blank");
+    expect(view.getByRole("link", { name: "Budget guide" })).toHaveAttribute("rel", "noopener noreferrer");
   });
 });

@@ -267,6 +267,8 @@ Rich documents use a ProseMirror-style `{ "type": "doc", "content": [...] }` obj
 
 Persisted attributes are limited to `orderedList.start`, `taskItem.checked`, `paragraph.textAlign` (`left`, `center`, or `right`), and `link.href`. Link values accept validated HTTP(S), `mailto:`, or app-relative destinations; bare domains normalize to HTTPS and unsafe schemes are rejected. Reader links always render with `_blank` plus `noopener noreferrer`.
 
+Searchable document links do not add a mark or document field. The editor resolves a selected active, published, visible catalog record to `/ppc/library/<encoded-slug>` and persists it through the same `link.href` contract. Picker options are presentation-only compact catalog data and are never copied into the edited document.
+
 The corresponding legacy body/text fields remain required search and compatibility fallbacks and are updated with every edit. Legacy Headline and Description `textAlignment` remains accepted and is dual-written when alignment changes. Consumers prefer valid rich JSON and reconstruct it from fallback fields when JSON is absent or invalid.
 
 ## Library read-state metadata

@@ -72,6 +72,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Replaced word-based rich-text controls with a compact icon-only toolbar grouped by text styles, Left/Center/Right alignment, lists, and links; the same controls follow highlighted text in a floating selection menu.
 - Headline and Description alignment now lives inside the shared formatting toolbar while legacy element-level alignment remains dual-written for compatibility; Headline continues to omit list controls.
 - Added safe link creation, editing, removal, Markdown/paste preservation, new-tab reader rendering, and rejection of unsafe URL schemes.
+- Added a searchable Document link control beside the URL-link icon. One lazy authoritative catalog is shared across all editors, unsafe/unavailable targets are excluded, and selected documents persist as protected new-tab `/ppc/library/:slug` links.
 - Hardened formatting persistence end to end: client and server canonicalize rich-text JSON, content-only updates preserve document identity/lifecycle, and the reader verifies the authoritative active document plus advanced version before closing edit mode.
 - Incomplete, stale, or malformed formatting responses now preserve the open editor, unsaved changes, and reader cache. Only explicit lifecycle status can show a deleted, purged, or archived document state.
 - Highlighted text opens a matching viewport-aware selection toolbar, and all fixed/floating toolbar controls retain compact typography inside large-text elements.

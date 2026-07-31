@@ -48,3 +48,4 @@ export type LibraryContentElement={
   images?:Array<{url:string;alt:string}>;
 };
 export type LibraryDocument={id:string;slug:string;title:string;description:string;category:Category;type:DocumentType;tags:string[];updatedAt:string;status:"published"|"draft";hidden:boolean;readingMinutes:number;body:string;topics:Topic[];contentElements?:LibraryContentElement[];videoUrl?:string};
+export type LibraryDocumentLinkOption=Pick<LibraryDocument,"id"|"slug"|"title"|"category"|"description">;

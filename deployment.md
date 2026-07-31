@@ -94,6 +94,7 @@ The existing `.gitignore` already excludes these paths.
 20. Add Buttons for internal and HTTPS links; verify every width/alignment option, invalid-link feedback, secure new-tab attributes, and mobile full-width behavior.
 21. Add a shared Google Drive video link and confirm a large 16:9 Drive preview player appears inside the blue document header’s right column. Confirm the play icon and playing video content are centered, the compact new-tab icon works, and no separate OPEN VIDEO text button appears.
 22. Edit a long document and confirm the compact icon toolbar groups text styles, alignment, lists, and links with separators. Highlight text near the viewport bottom, add/edit/remove a link in the floating toolbar, save, refresh, and confirm alignment plus secure new-tab navigation persist.
+   Use the neighboring Document link icon, search for a different published visible document, save, refresh, and confirm the linked text opens the selected `/ppc/library/:slug` route in a protected new tab. Confirm current, hidden, draft, deleted, archived, and recovery-only records are absent and catalog-load errors offer Retry without blocking other edits.
    For each formatting type (Bold, Italic, Underline, alignment, bullets, checklist, numbers, and link), confirm the same document remains active after save, its record version advances, and it reopens from the catalog.
    Simulate an incomplete or malformed formatting-save response and confirm edit mode stays open with unsaved changes. A genuine concurrent delete must be displayed only from an explicit `deleted` status.
 22. Open a second authenticated account and confirm the temporary document appears within five seconds, then edit it and confirm the ADMIN tab updates within five seconds or immediately after focus.
@@ -134,7 +135,7 @@ Both default to `https://glasscopipeline.vercel.app`. Roll back PPC and Pipeline
 
 ## Rich-text deployment notes
 
-Rich-text support adds client/runtime packages and optional fields inside the existing shared Library JSON payload. It requires no environment variables, database migration, or conversion job. Existing documents are upgraded lazily when edited and remain readable through synchronized legacy fields. Verify a saved formatted document through the canonical `/ppc/library/:slug` route before promotion.
+Rich-text support adds client/runtime packages and optional fields inside the existing shared Library JSON payload. It requires no environment variables, database migration, or conversion job. Searchable document links reuse the existing `link.href` mark and compact summary endpoint. Existing documents are upgraded lazily when edited and remain readable through synchronized legacy fields. Verify a saved formatted document through the canonical `/ppc/library/:slug` route before promotion.
 
 ## Live-state rollout
 

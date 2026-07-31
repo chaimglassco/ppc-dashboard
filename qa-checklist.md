@@ -153,6 +153,7 @@ Use this checklist before merging or deploying changes.
 - [x] Highlighting text near the bottom of a long editor opens the same compact toolbar beside the selection without scrolling the page.
 - [x] Left, Center, and Right alignment persists in rich-text JSON; legacy Headline and Description alignment remains compatible.
 - [x] Selected text supports adding, editing, and removing validated HTTP(S), email, and Library-relative links; reader links open in a protected new tab.
+- [x] The neighboring Document link icon preserves highlighted text, loads one shared authoritative catalog on demand, searches title/category/description, excludes the current and unavailable records, supports retry/removal, and saves a protected `/ppc/library/:slug` link.
 - [x] Selecting text and applying Normal, Bold, Italic, or Underlined updates only the selection and matches reader typography after save.
 - [x] Bullets, Numbers, and Checklists can be toggled or converted, and toolbar `aria-pressed` states follow the cursor or selection.
 - [x] Checklist state survives save and refresh; reader checkboxes are checked correctly and disabled.

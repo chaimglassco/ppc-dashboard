@@ -10,7 +10,7 @@ import { resolveRichText, richTextToParagraphs, richTextToRoadmapStyle } from ".
 import type { ButtonAlignment, ButtonWidth, Category, InsightColor, LibraryContentElement, LibraryContentElementType, LibraryDocument, RoadmapAlignment, RoadmapNumberPosition, RoadmapStep, Topic } from "../domain/types";
 import { getVideoPresentation, normalizeVideoUrl } from "../domain/video-links";
 import { Markdown } from "./markdown";
-import { RichTextEditor, RichTextRenderer } from "./rich-text";
+import { DocumentLinkCatalogProvider, RichTextEditor, RichTextRenderer, type DocumentLinkCatalog } from "./rich-text";
 import styles from "./document-builder.module.css";
 
 const ELEMENT_OPTIONS: Array<{ type: LibraryContentElementType; label: string }> = [
@@ -45,12 +45,13 @@ type DocumentBuilderProps = {
   onModeTransition?: (id: string) => void;
   onSave: (elements: LibraryContentElement[], metadata: DocumentMetadataDraft) => Promise<void> | void;
   onSaveVideoUrl: (url: string) => Promise<void> | void;
+  documentLinkCatalog?: DocumentLinkCatalog;
   canEdit?: boolean;
 };
 
 export type DocumentMetadataDraft = Pick<LibraryDocument, "title" | "description" | "category">;
 
-export function DocumentBuilder({ doc, categories = [doc.category], activeTopicId, onTopicChange, onModeTransition = () => undefined, onSave, onSaveVideoUrl, canEdit = false }: DocumentBuilderProps) {
+export function DocumentBuilder({ doc, categories = [doc.category], activeTopicId, onTopicChange, onModeTransition = () => undefined, onSave, onSaveVideoUrl, documentLinkCatalog, canEdit = false }: DocumentBuilderProps) {
   const [elements, setElements] = useState(() => getInitialContentElements(doc));
   const [metadata, setMetadata] = useState<DocumentMetadataDraft>(() => ({ title: doc.title, description: doc.description, category: doc.category }));
   const [isEditMode, setIsEditMode] = useState(false);
@@ -155,7 +156,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
     }
   };
 
-  return <>
+  return <DocumentLinkCatalogProvider value={documentLinkCatalog}>
     <details className="mobile-topics">
       <summary>On this page · {topics.filter(topic => topic.level === 2).length} topics</summary>
       <TopicLinks topics={topics} active={activeTopicId} onSelect={onTopicChange} />
@@ -204,7 +205,7 @@ export function DocumentBuilder({ doc, categories = [doc.category], activeTopicI
       <div><button type="button" onClick={() => setPreviewImage("")} aria-label="Close image preview"><X /></button><AuthenticatedImage url={previewImage} alt="Document feature preview" /></div>
     </div> : null}
     {isReorderOpen ? <ReorderDialog elements={elements} order={reorderIds} isSaving={isSaving} onMove={moveReorderItem} onCancel={() => setIsReorderOpen(false)} onSave={() => void saveReorder()} /> : null}
-  </>;
+  </DocumentLinkCatalogProvider>;
 }
 
 function getElementSummary(element: LibraryContentElement, index: number) {

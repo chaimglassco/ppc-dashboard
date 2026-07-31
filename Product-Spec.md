@@ -107,6 +107,7 @@ These require a separately approved milestone and must preserve the current shar
 - Supported element body fields provide selection-aware Normal, Bold, Italic, Underlined, Bullets, Checklist, and Numbers controls with a live WYSIWYG editing surface.
 - The formatting toolbar is icon-only and separated into Text styles, Left/Center/Right alignment, Lists, and Link groups. A matching viewport-aware selection toolbar appears beside highlighted text.
 - Highlighted text can receive a validated HTTP(S), email, or Library-relative link through a compact URL editor; saved links open in a protected new tab and can be edited or removed from the same control.
+- A neighboring Document link control lazily loads the authoritative catalog, searches reader-visible documents by title/category/description, and applies the selected `/ppc/library/:slug` destination without exposing hidden, draft, deleted, archived, incomplete, or self-link targets.
 - Titles, labels, metadata, button text, tables, code blocks, and diagnostic-flow nodes remain plain-text controls.
 - Standalone list-element rows retain their element-level markers and omit nested-list controls while keeping text styles, alignment, and links.
 - Pasted content is constrained by the editor schema to supported paragraphs, marks, safe links, lists, and checklists; images, colors, fonts, headings, unsafe URLs, and arbitrary HTML are not persisted.
