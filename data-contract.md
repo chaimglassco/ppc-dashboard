@@ -225,6 +225,16 @@ The value is the last schema-valid full shared response. A successful authoritat
 
 Legacy keys `glassco-library-admin-state` and `glassco-library-category-state` are ignored for shared hydration/migration. Their contents cannot merge with repository seeds or authoritative state.
 
+### Weekly PPC performance drafts
+
+Key: `glassco.ppcPerformanceNotes.v1`
+
+Schema version: `1`
+
+The record maps a stable `<productId>:<Monday ISO date>` key to one weekly report containing status, weekly/daily budgets, performance numbers, goals, prior-week result notes, weekly notes, action items, and `updatedAt`. Parsing is fail-closed per report; malformed records are discarded. Product names, ASINs, and SKUs are not duplicated into this store because `/ppc/api/dashboard/products` loads them from authoritative Pipeline workspace state.
+
+This record is a browser-local draft contract for the initial dashboard UI. It is not shared team state and must never be uploaded through the Library document API. A future shared reporting API requires a separate versioned server contract and migration plan.
+
 ## Validation and fallback rules
 
 - Treat all browser-storage input as untrusted.

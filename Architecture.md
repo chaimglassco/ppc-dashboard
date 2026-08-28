@@ -88,6 +88,8 @@ No document cards render while shared administration state is hydrating. The doc
 
 The shared application launcher renders three independent card links inside each shell's reserved top bar. Product Pipeline, Team SOP Library, and PPC Dashboard are real `target="_blank"` links; the current application remains visually active and `glassco.appRoutes.v1` supplies independently validated destinations. Its optional `ppcDashboard` field extends the legacy `{ pipeline, ppc }` record without invalidating it.
 
+The dashboard page remains a Server Component boundary that renders one focused interactive Client Component. `/ppc/api/dashboard/products` verifies the Pipeline bearer session, fetches `/api/workspace-state` server-to-server with `no-store`, and returns only compact added-product identity fields. The three-panel dashboard uses a colocated CSS Module so its dense responsive workspace does not leak styling into the Library reader or builder.
+
 For session-only logins, the source tab writes the versioned `glassco.authHandoff.v1` record to same-origin local storage with a 30-second expiration and a Pipeline/PPC target. The matching destination consumes it once into its own session storage, removes the record, and verifies the bearer token through `/ppc/api/pipeline-session`. Persistent local-storage sessions bypass the handoff. Missing/401 sessions return to Pipeline with a validated `/ppc/library/*` or `/ppc/dashboard` `returnTo`; temporary verification failures show a retry gate.
 
 ## Storage boundaries

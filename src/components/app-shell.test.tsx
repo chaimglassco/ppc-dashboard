@@ -62,11 +62,11 @@ describe("Glassco application tabs", () => {
   it("marks PPC Dashboard current without activating the Library navigation", () => {
     navigation.pathname = "/dashboard";
     window.history.replaceState({}, "", "/ppc/dashboard");
-    render(<AppShell><div>Dashboard placeholder</div></AppShell>);
+    render(<AppShell><div>Dashboard content</div></AppShell>);
 
     expect(screen.getByRole("link", { name: "PPC Dashboard" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Team SOP Library" })).not.toHaveAttribute("aria-current");
-    expect(within(screen.getByRole("navigation", { name: "Primary navigation" })).getByRole("link", { name: "Library" })).not.toHaveAttribute("aria-current");
+    expect(screen.queryByRole("navigation", { name: "Primary navigation" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Log out" })).toBeVisible();
   });
 });

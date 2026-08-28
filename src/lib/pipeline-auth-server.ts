@@ -2,6 +2,10 @@ import type { PipelineUser } from "./pipeline-session";
 
 const pipelineOrigin = (process.env.PIPELINE_AUTH_ORIGIN || "https://glasscopipeline.vercel.app").replace(/\/$/, "");
 
+export function getPipelineOrigin() {
+  return pipelineOrigin;
+}
+
 type VerifiedSession = { user: PipelineUser };
 
 export async function verifyPipelineRequest(request: Request, requireAdmin = false): Promise<VerifiedSession | Response> {

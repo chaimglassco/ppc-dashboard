@@ -102,7 +102,7 @@ The existing `.gitignore` already excludes these paths.
 24. Check the browser console for hydration or runtime errors.
 25. Confirm mobile layout at approximately 390px width.
 26. Confirm the Product Pipeline, Team SOP Library, and PPC Dashboard cards appear separately in the reserved top bar, show white text for the active app, and each open its remembered route in a new browser tab—including the active tab—without changing or overlapping the source page.
-27. Confirm `/ppc/dashboard` renders the shared authenticated shell and centered “PPC Dashboard — Coming soon” placeholder.
+27. Confirm `/ppc/dashboard` renders the authenticated three-panel Weekly PPC Performance workspace, loads the signed-in user’s Pipeline products, and preserves a saved local report after refresh.
 28. From a session-only Pipeline login, open each PPC card and confirm the one-time handoff is consumed without another login. Confirm persistent “Remember me,” expired-session return, external `returnTo` rejection, keyboard focus, hover, and narrow-screen horizontal scrolling.
 
 ## Authoritative persistence rollout

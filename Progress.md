@@ -113,12 +113,20 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 # Unified Glassco integration
 
 - Production deployment `dpl_6xM9bVCRqW8dLUqGL8GXtymQRR1V` was released first on 2026-07-22 and aliased to `glasscoppc.vercel.app`; the canonical Pipeline gateway serves `/ppc/dashboard` with HTTP 200 and rejects unsigned session checks with HTTP 401.
-- Added `/ppc` base-path support for pages, assets, and APIs, including the authenticated `/ppc/dashboard` coming-soon route.
+- Added `/ppc` base-path support for pages, assets, and APIs, including the authenticated `/ppc/dashboard` route.
 - Replaced the combined switcher with three independent, responsive Product Pipeline, Team SOP Library, and PPC Dashboard new-tab cards with per-application active states and remembered routes.
 - Added a 30-second one-use cross-tab handoff for session-only logins, preserved “Remember me,” and added validated post-login return destinations.
 - Added Pipeline session verification and role-aware Team SOP Library administration.
 - Protected shared-library reads and scoped writes through Pipeline: ADMIN has full access, USER may create/update documents, and VIEWER is read-only.
 - Added legacy `glasscoppc.vercel.app` canonical redirect handling.
+
+# Weekly PPC Performance workspace
+
+- Replaced the dashboard placeholder with a responsive three-panel product, reporting-period, and weekly documentation UI based on the approved Stitch reference.
+- Added an authenticated compact product-catalog proxy backed by Pipeline workspace state.
+- Added editable weekly goals, weekly/daily budget limits, performance metrics, previous-week outcomes, summary notes, and next-week action items.
+- Added versioned, validated browser-local draft/report persistence with explicit unsaved and saved feedback.
+- Added route, state-contract, API normalization, shell-layout, and idempotent UI coverage. Shared multi-browser PPC report persistence remains a future milestone.
 
 # WYSIWYG Library composers
 

@@ -1,6 +1,6 @@
 # Glassco Team SOP Library and PPC Dashboard
 
-This repository provides the Glassco Team SOP Library—a responsive Amazon PPC knowledge base, shared document-administration interface, and structured document builder—and the authenticated `/ppc/dashboard` coming-soon placeholder.
+This repository provides the Glassco Team SOP Library—a responsive Amazon PPC knowledge base, shared document-administration interface, and structured document builder—and the authenticated Weekly PPC Performance workspace at `/ppc/dashboard`.
 
 It is deployed as the PPC application inside the unified Glassco website:
 
@@ -18,6 +18,8 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Session-only Pipeline logins cross into a new tab through a 30-second one-use handoff; persistent “Remember me” sessions are unchanged.
 - Missing or expired sessions return to Pipeline login with a validated requested PPC destination.
 - PPC verifies the existing Pipeline session through Pipeline’s `/api/auth/session` endpoint.
+- PPC Dashboard loads the authenticated user’s compact Pipeline product catalog and provides a three-panel product, reporting-period, and weekly documentation workspace.
+- Weekly goals, budget limits, performance figures, prior-week outcomes, notes, and action items save to the versioned `glassco.ppcPerformanceNotes.v1` browser record in this initial UI milestone; they are not yet shared across browsers.
 - ADMIN users have full document, category, attributed recovery, reorder, snapshot, version, protected-archive, and integrity-incident access. Document content is never physically deleted through the application.
 - USER users can create documents and edit active document content and metadata.
 - VIEWER users receive read-only Library access. Personal bookmark and completion controls remain available to every role.

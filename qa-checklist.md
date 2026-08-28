@@ -132,7 +132,11 @@ Use this checklist before merging or deploying changes.
 # Unified application checks
 
 - [ ] `/ppc/library`, nested documents, recent, and bookmarks load directly and after refresh.
-- [ ] `/ppc/dashboard` loads inside the authenticated shared shell and shows only the centered coming-soon placeholder.
+- [ ] `/ppc/dashboard` loads inside the authenticated full-width shell and renders Products, Reporting Periods, and Weekly PPC Performance workspace panels.
+- [ ] Dashboard products come from the authenticated Pipeline workspace, support search/filter/retry/empty states, and never expose the full workspace response to the browser.
+- [ ] Selecting a product/week isolates its goals, weekly/daily budgets, performance metrics, prior-week result, notes, and action items.
+- [ ] Save Draft and Save Weekly Report persist a schema-valid `glassco.ppcPerformanceNotes.v1` record, survive refresh, and clearly identify unsaved versus saved local state.
+- [ ] At desktop widths all three panels remain usable; at narrow widths the panels stack without hiding save controls or producing inaccessible inputs.
 - [ ] Missing and expired Pipeline sessions redirect to Pipeline with a validated requested PPC `returnTo`; temporary server failures remain on a retry gate.
 - [ ] ADMIN sees full catalog/category controls and can save shared changes.
 - [ ] USER can create/edit active documents but cannot delete, restore, reorder, or manage categories; forbidden direct `PATCH /ppc/api/library` returns `403`.

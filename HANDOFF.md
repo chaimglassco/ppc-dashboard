@@ -1,6 +1,6 @@
 # Glassco PPC Dashboard Handoff
 
-Last updated: July 21, 2026
+Last updated: August 28, 2026
 
 ## Start here
 
@@ -26,6 +26,11 @@ The PPC Dashboard checkout contains an unreleased video-header placement update.
 
 ## Unreleased local work
 
+- `/ppc/dashboard` now contains the Weekly PPC Performance three-panel workspace instead of the coming-soon placeholder.
+- The dashboard loads a compact authenticated list of real Pipeline products through `/ppc/api/dashboard/products` and keeps the full workspace payload server-side.
+- Goals, weekly/daily budgets, performance metrics, previous-week results, notes, and action items save to validated browser-local `glassco.ppcPerformanceNotes.v1` records. Shared cross-browser reporting persistence is not part of this UI milestone.
+- The dashboard removes the old Library sidebar so Products, Reporting Periods, and the working panel are the only content columns.
+
 - Video playback now sits in a large responsive right-hand section inside the blue header. Google Drive’s fixed toolbar is cropped outside the visible frame so its play control and playing content remain centered; a compact new-tab overlay remains and the redundant OPEN VIDEO text button is removed.
 - Gallery full-image previews now reuse each tile’s already-resolved image source, so opening the modal does not trigger another authenticated media download.
 - Key Insight remains one builder element and now includes persistent Green, Blue, and Red color tabs; missing legacy `insightColor` values render Green.
@@ -40,7 +45,7 @@ The PPC Dashboard checkout contains an unreleased video-header placement update.
 
 - PPC production deployment `dpl_6xM9bVCRqW8dLUqGL8GXtymQRR1V` is READY and aliased to `glasscoppc.vercel.app`. `/ppc/dashboard` is already available through the canonical Pipeline gateway; deploy Pipeline only after explicit production approval.
 - Pipeline remains the default application at `/`.
-- PPC is mounted behind the Pipeline domain at `/ppc` using a Vercel external rewrite. Team SOP Library remains at `/ppc/library/*`; `/ppc/dashboard` is the authenticated coming-soon page.
+- PPC is mounted behind the Pipeline domain at `/ppc` using a Vercel external rewrite. Team SOP Library remains at `/ppc/library/*`; `/ppc/dashboard` is the authenticated weekly performance workspace.
 - Both application shells include separate Product Pipeline, Team SOP Library, and PPC Dashboard cards.
 - Each application card opens its last validated route from the backward-compatible `glassco.appRoutes.v1` record in a new browser tab, including the active app, while leaving the source page unchanged.
 - PPC uses `basePath: "/ppc"`; pages, assets, client API calls, and nested routes respect it.

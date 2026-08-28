@@ -94,12 +94,14 @@ Authenticated users can open the Library, search/filter/read shared content, and
 These require a separately approved milestone and must preserve the current shared-state and stable-ID contracts.
 # Unified Glassco application behavior
 
-- Team SOP Library is presented at `/ppc/library/*`; PPC Dashboard is the authenticated `/ppc/dashboard` coming-soon page.
+- Team SOP Library is presented at `/ppc/library/*`; PPC Dashboard is the authenticated `/ppc/dashboard` weekly performance documentation workspace.
 - Three responsive application cards remain visible in the reserved top bar, with the active application shown in white text on blue.
 - Clicking any application card, including the active card, opens its remembered route in a new browser tab and leaves the current page unchanged.
 - Team SOP Library and PPC Dashboard remember routes independently and otherwise open `/ppc/library` and `/ppc/dashboard` respectively.
 - A session-only Pipeline login is handed off once to the destination tab; missing or expired authentication returns to the requested safe PPC route after login.
 - A verified Pipeline session is required before the PPC interface renders.
+- Dashboard users select a real Pipeline product, choose a Monday–Sunday reporting period, and document weekly goals, weekly/daily budget limits, current performance, prior-week results, summary notes, and next-week actions.
+- The dashboard product catalog is authoritative Pipeline data. In the initial UI milestone, report drafts are versioned browser-local data and the interface identifies their local save state; shared reporting persistence is deferred.
 - ADMIN can create/edit/reorder/hide/delete/recover documents, manage categories, and manage backups. USER can create and edit active documents. VIEWER is read-only apart from personal reading controls.
 
 # Rich-text composer behavior

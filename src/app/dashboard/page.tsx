@@ -1,7 +1,18 @@
+import type { Metadata } from "next";
+import { PpcPerformanceDashboard } from "@/features/dashboard/ui/ppc-performance-dashboard";
+
+export const metadata: Metadata = {
+  title: "Weekly PPC Performance",
+  description: "Weekly PPC goals, budgets, performance notes, and action plans by product.",
+};
+export const dynamic = "force-dynamic";
+
 export default function PpcDashboardPage() {
-  return <section className="ppc-dashboard-placeholder" aria-labelledby="ppc-dashboard-title">
-    <p className="ppc-dashboard-placeholder__eyebrow">GLASSCO WORKSPACE</p>
-    <h1 id="ppc-dashboard-title">PPC Dashboard</h1>
-    <p>Coming soon</p>
-  </section>;
+  const todayIso = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return <PpcPerformanceDashboard initialToday={todayIso} />;
 }

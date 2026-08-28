@@ -66,8 +66,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     rememberGlasscoAppRoute(window.localStorage, isDashboard ? "ppcDashboard" : "ppc", route);
   }, [isDashboard, pathname]);
 
-  return <div className={`app-shell${isLibrary ? " app-shell--library" : ""}`}>
-    {!isLibrary ? <aside className="sidebar">
+  return <div className={`app-shell${isLibrary ? " app-shell--library" : isDashboard ? " app-shell--dashboard" : ""}`}>
+    {!isLibrary && !isDashboard ? <aside className="sidebar">
       <Link className="shell-logo glassco-wordmark" href="/library" aria-label="Glassco Library home">Glassco</Link>
       <nav className="shell-nav" aria-label="Primary navigation"><Link href="/library" className={`shell-nav-link${!isDashboard ? " active" : ""}`} aria-current={!isDashboard ? "page" : undefined}><Library aria-hidden="true" /><span>Library</span></Link></nav>
     </aside> : null}
@@ -75,6 +75,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="topbar"><div className="breadcrumb"><span>GLASSCO WORKSPACE</span><i>/</i><strong>{section}</strong></div><AppTabs pathname={pathname} /><div className="topbar-actions"><AccountActions /></div></header>
       <main id="main-content" tabIndex={-1}>{children}</main>
     </div>
-    {!isLibrary ? <nav className="mobile-nav" aria-label="Mobile navigation"><Link href="/library" aria-current={!isDashboard ? "page" : undefined}><Library/><span>Library</span></Link></nav> : null}
+    {!isLibrary && !isDashboard ? <nav className="mobile-nav" aria-label="Mobile navigation"><Link href="/library"><Library/><span>Library</span></Link></nav> : null}
   </div>;
 }
