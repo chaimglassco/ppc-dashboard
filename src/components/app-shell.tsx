@@ -28,7 +28,7 @@ function AppTabs({ pathname }: { pathname: string }) {
   return <nav className="glassco-app-tabs" aria-label="Glassco applications">
     <a className="glassco-app-tabs__tab" href={new URL(GLASSCO_DEFAULT_APP_ROUTES.pipeline, PIPELINE_HOME).toString()} target="_blank" rel="noopener noreferrer" onMouseDown={event => prepareTab(event, "pipeline", "pipeline")} onClick={event => prepareTab(event, "pipeline", "pipeline")}>Product Pipeline</a>
     <a className={`glassco-app-tabs__tab${!isDashboard ? " active" : ""}`} href={GLASSCO_DEFAULT_APP_ROUTES.ppc} target="_blank" rel="noopener noreferrer" aria-current={!isDashboard ? "page" : undefined} onMouseDown={event => prepareTab(event, "ppc", "ppc")} onClick={event => prepareTab(event, "ppc", "ppc")}>Team SOP Library</a>
-    <a className={`glassco-app-tabs__tab${isDashboard ? " active" : ""}`} href={GLASSCO_DEFAULT_APP_ROUTES.ppcDashboard} target="_blank" rel="noopener noreferrer" aria-current={isDashboard ? "page" : undefined} onMouseDown={event => prepareTab(event, "ppcDashboard", "ppc")} onClick={event => prepareTab(event, "ppcDashboard", "ppc")}>PPC Dashboard</a>
+    <a className={`glassco-app-tabs__tab${isDashboard ? " active" : ""}`} href={GLASSCO_DEFAULT_APP_ROUTES.ppcDashboard} target="_blank" rel="noopener noreferrer" aria-current={isDashboard ? "page" : undefined} onMouseDown={event => prepareTab(event, "ppcDashboard", "ppc")} onClick={event => prepareTab(event, "ppcDashboard", "ppc")}>PPC Weekly Goals</a>
   </nav>;
 }
 
@@ -59,7 +59,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isDashboard = pathname === "/dashboard" || pathname === "/ppc/dashboard";
   const isLibrary = pathname === "/library" || pathname.startsWith("/library/");
-  const section = isDashboard ? "PPC Dashboard" : pathname.includes("bookmarks") ? "Bookmarks" : pathname.includes("recent") ? "Recent" : "Team SOP Library";
+  const section = isDashboard ? "PPC Weekly Goals" : pathname.includes("bookmarks") ? "Bookmarks" : pathname.includes("recent") ? "Recent" : "Team SOP Library";
 
   useEffect(() => {
     const route = `${window.location.pathname}${window.location.search}${window.location.hash}`;
