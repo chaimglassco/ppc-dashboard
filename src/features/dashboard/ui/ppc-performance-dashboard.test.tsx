@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PPC_DASHBOARD_CATALOG_STORAGE_KEY } from "../domain/ppc-dashboard-catalog";
 import { PPC_DASHBOARD_STORAGE_KEY } from "../domain/ppc-dashboard-state";
 import { PpcPerformanceDashboard } from "./ppc-performance-dashboard";
 
@@ -14,7 +15,10 @@ describe("PpcPerformanceDashboard", () => {
     }));
   });
 
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   it("loads a Pipeline product and saves the selected weekly report explicitly", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
@@ -37,5 +41,52 @@ describe("PpcPerformanceDashboard", () => {
       notes: "Scale the best converting exact-match campaign.",
       status: "Draft",
     });
+  });
+
+  it("creates a tag and dashboard product, exposes identifier links, edits it, and deletes it", async () => {
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
+    expect(screen.queryByText("Active", { exact: true })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
+    const tagDialog = screen.getByRole("dialog", { name: "Add tag" });
+    fireEvent.change(within(tagDialog).getByRole("textbox", { name: "Tag name" }), { target: { value: "Launch group" } });
+    fireEvent.click(within(tagDialog).getByRole("button", { name: "Add tag" }));
+    expect(screen.getByRole("combobox", { name: "Filter products by tag" })).toHaveDisplayValue("Launch group");
+
+    fireEvent.click(screen.getByRole("button", { name: "Add product" }));
+    const productDialog = screen.getByRole("dialog", { name: "Add product" });
+    fireEvent.change(within(productDialog).getByRole("textbox", { name: "Product name" }), { target: { value: "Glass Polish" } });
+    fireEvent.change(within(productDialog).getByRole("textbox", { name: "ASIN" }), { target: { value: "b012345679" } });
+    fireEvent.change(within(productDialog).getByRole("textbox", { name: "SKU" }), { target: { value: "POLISH-01" } });
+    fireEvent.change(within(productDialog).getByLabelText(/Product image/i), { target: { files: [new File(["image"], "polish.png", { type: "image/png" })] } });
+    expect(await within(productDialog).findByAltText("Product preview")).toBeVisible();
+    expect(within(productDialog).getByRole("combobox", { name: "Tag" })).toHaveDisplayValue("Launch group");
+    fireEvent.click(within(productDialog).getByRole("button", { name: "Add product" }));
+
+    expect(await screen.findByRole("heading", { name: "Glass Polish" })).toBeVisible();
+    expect(screen.getByAltText("Glass Polish product")).toBeVisible();
+    const asinLink = screen.getByRole("link", { name: "Open ASIN B012345679 on Amazon" });
+    const skuLink = screen.getByRole("link", { name: "Open SKU POLISH-01 in Seller Central" });
+    expect(asinLink).toHaveAttribute("href", "https://www.amazon.com/dp/B012345679");
+    expect(skuLink).toHaveAttribute("href", expect.stringContaining("POLISH-01"));
+    expect(asinLink).toHaveAttribute("target", "_blank");
+    expect(skuLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.getAllByText("Launch group").length).toBeGreaterThan(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Glass Polish" }));
+    const editDialog = screen.getByRole("dialog", { name: "Edit product" });
+    fireEvent.change(within(editDialog).getByRole("textbox", { name: "Product name" }), { target: { value: "Glass Polish Pro" } });
+    fireEvent.click(within(editDialog).getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByRole("heading", { name: "Glass Polish Pro" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Glass Polish Pro" }));
+    const deleteDialog = screen.getByRole("alertdialog", { name: "Remove Glass Polish Pro?" });
+    fireEvent.click(within(deleteDialog).getByRole("button", { name: "Delete product" }));
+    expect(screen.queryByRole("button", { name: "Edit Glass Polish Pro" })).not.toBeInTheDocument();
+
+    const stored = JSON.parse(window.localStorage.getItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY) || "{}");
+    expect(stored.tags).toEqual([expect.objectContaining({ name: "Launch group" })]);
+    expect(stored.customProducts).toEqual([]);
   });
 });

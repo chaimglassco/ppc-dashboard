@@ -125,6 +125,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Replaced the dashboard placeholder with a responsive three-panel product, reporting-period, and weekly documentation UI based on the approved Stitch reference.
 - Added an authenticated compact product-catalog proxy backed by Pipeline workspace state.
 - Added editable weekly goals, weekly/daily budget limits, performance metrics, previous-week outcomes, summary notes, and next-week action items.
+- Added product and tag management to the first panel: accessible add/edit/delete dialogs, optional browser-local images, reusable tag creation/filtering, protected ASIN and SKU links, and tag pills replacing active-status badges. Pipeline products are customized through a non-destructive local overlay.
 - Added versioned, validated browser-local draft/report persistence with explicit unsaved and saved feedback.
 - Added route, state-contract, API normalization, shell-layout, and idempotent UI coverage. Shared multi-browser PPC report persistence remains a future milestone.
 

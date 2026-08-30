@@ -90,6 +90,8 @@ The shared application launcher renders three independent card links inside each
 
 The dashboard page remains a Server Component boundary that renders one focused interactive Client Component. `/ppc/api/dashboard/products` verifies the Pipeline bearer session, fetches `/api/workspace-state` server-to-server with `no-store`, and returns only compact added-product identity fields. The three-panel dashboard uses a colocated CSS Module so its dense responsive workspace does not leak styling into the Library reader or builder.
 
+The Products panel is isolated in a focused Client Component. It merges the compact Pipeline list with a validated browser-local `glassco.ppcDashboardCatalog.v1` overlay containing dashboard-only products, reusable tags, and per-Pipeline-product display overrides. The overlay never writes to Pipeline and product deletion is limited to dashboard-added products; weekly-report records are retained independently.
+
 For session-only logins, the source tab writes the versioned `glassco.authHandoff.v1` record to same-origin local storage with a 30-second expiration and a Pipeline/PPC target. The matching destination consumes it once into its own session storage, removes the record, and verifies the bearer token through `/ppc/api/pipeline-session`. Persistent local-storage sessions bypass the handoff. Missing/401 sessions return to Pipeline with a validated `/ppc/library/*` or `/ppc/dashboard` `returnTo`; temporary verification failures show a retry gate.
 
 ## Storage boundaries

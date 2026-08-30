@@ -28,6 +28,7 @@ The PPC Dashboard checkout contains an unreleased video-header placement update.
 
 - `/ppc/dashboard` now contains the Weekly PPC Performance three-panel workspace instead of the coming-soon placeholder.
 - The dashboard loads a compact authenticated list of real Pipeline products through `/ppc/api/dashboard/products` and keeps the full workspace payload server-side.
+- The first panel now merges those Pipeline products with validated browser-local `glassco.ppcDashboardCatalog.v1` custom products, local display overrides, optional images, and reusable tags. Add/edit/tag/filter are local-only, delete is limited to dashboard-added products, and ASIN/SKU links open protected new tabs.
 - Goals, weekly/daily budgets, performance metrics, previous-week results, notes, and action items save to validated browser-local `glassco.ppcPerformanceNotes.v1` records. Shared cross-browser reporting persistence is not part of this UI milestone.
 - The dashboard removes the old Library sidebar so Products, Reporting Periods, and the working panel are the only content columns.
 
@@ -142,7 +143,7 @@ After this rollout, move Pipeline authentication to secure same-origin cookies a
 - Reader content uses static React rendering; checklist state persists and reader checkboxes are disabled.
 - Optional JSON fields coexist with synchronized legacy strings. Legacy Markdown converts lazily, and malformed rich JSON falls back to saved text.
 - Standalone list rows intentionally expose inline formatting only.
-- Automated status at handoff: lint, typecheck, all 212 passing tests across 33 files (6 skipped), and the production build (including `/dashboard`) pass. Rerun all four gates after any further changes.
+- Automated status at handoff: lint, typecheck, all 220 passing tests across 37 files (6 skipped), and the production build (including `/dashboard`) pass. Rerun all four gates after any further changes.
 - Reader mode controls now show Eye in view mode and a non-submitting Pencil indicator in edit mode. Edit mode exposes a separate `Save changes` button; successful saves return to view mode, while rejected saves retain the editor and unsaved draft.
 - Authenticated browser verification covers the new selection toolbar, Headline/Description picker and alignment controls, Diagnostic Flow descriptions, exact table deletion safeguards, compact 11px/32px toolbar controls, desktop layout, and a 390px viewport. All verification edits were discarded without saving and produced no browser warnings or errors.
 - Authenticated browser verification now passes through a temporary local same-origin gateway that mirrors the production Pipeline `/ppc/*` rewrite: real Pipeline ADMIN login, PPC session verification, selection-aware Bold/Underline/Checklist editing, checked checklist persistence, save, reader rendering, full refresh, return to edit mode, and cleanup were verified against the production PPC build with no browser warnings or errors. The gateway and test content were removed afterward; no authentication bypass was added.

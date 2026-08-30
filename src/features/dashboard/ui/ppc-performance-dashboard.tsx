@@ -2,9 +2,9 @@
 
 import {
   ArrowLeft, ArrowRight, BarChart3, CalendarDays, Check, CheckCircle2, ClipboardList, DollarSign,
-  FileText, Flag, Package, Plus, RefreshCw, Save, Search, Trash2, WalletCards,
+  FileText, Flag, Plus, Save, Trash2, WalletCards,
 } from "lucide-react";
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
@@ -13,9 +13,13 @@ import {
   startOfWeekIso, type ActionItem, type DashboardProduct, type GoalStatus, type ReportStatus,
   type WeeklyGoal, type WeeklyPpcReport,
 } from "../domain/ppc-dashboard-state";
+import {
+  PPC_DASHBOARD_CATALOG_STORAGE_KEY, createDashboardTagId, emptyDashboardCatalog, mergeDashboardProducts,
+  parseDashboardCatalogStore, type DashboardCatalogProduct, type DashboardCatalogStore, type ManagedDashboardProduct,
+} from "../domain/ppc-dashboard-catalog";
+import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfolio-panel";
 import styles from "./ppc-performance-dashboard.module.css";
 
-type ProductFilter = "All" | "Active" | "Paused";
 type MetricField = "spend" | "sales" | "orders" | "impressions" | "clicks" | "acos" | "roas";
 
 const REPORT_STATUSES: ReportStatus[] = ["Draft", "In Progress", "Completed", "Needs Review"];
@@ -47,7 +51,8 @@ function statusTone(status: string) {
 
 export function PpcPerformanceDashboard({ initialToday }: { initialToday: string }) {
   const initialWeekStart = startOfWeekIso(initialToday);
-  const [products, setProducts] = useState<DashboardProduct[]>([]);
+  const [pipelineProducts, setPipelineProducts] = useState<DashboardProduct[]>([]);
+  const [catalog, setCatalog] = useState<DashboardCatalogStore>(emptyDashboardCatalog);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
@@ -55,11 +60,8 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const [monthAnchor, setMonthAnchor] = useState(initialToday);
   const currentWeekStart = initialWeekStart;
   const [reports, setReports] = useState<Record<string, WeeklyPpcReport>>({});
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<ProductFilter>("All");
   const [dirtyReportKeys, setDirtyReportKeys] = useState<Set<string>>(() => new Set());
   const [saveNotice, setSaveNotice] = useState("");
-  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
 
   const loadProducts = useCallback(async (signal?: AbortSignal) => {
     setProductsLoading(true);
@@ -70,8 +72,8 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
       if (!response.ok || !value || typeof value !== "object") throw new Error("Could not load Pipeline products.");
       const candidates = (value as { products?: unknown }).products;
       const nextProducts = Array.isArray(candidates) ? candidates as DashboardProduct[] : [];
-      setProducts(nextProducts);
-      setSelectedProductId(current => nextProducts.some(product => product.id === current) ? current : nextProducts[0]?.id ?? "");
+      setPipelineProducts(nextProducts);
+      setSelectedProductId(current => current || nextProducts[0]?.id || "");
     } catch (error) {
       if ((error as Error).name !== "AbortError") setProductsError(error instanceof Error ? error.message : "Could not load Pipeline products.");
     } finally {
@@ -80,7 +82,12 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   }, []);
 
   useEffect(() => {
-    const storageTimer = window.setTimeout(() => setReports(parsePpcDashboardStore(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY)).reports), 0);
+    const storageTimer = window.setTimeout(() => {
+      const storedCatalog = parseDashboardCatalogStore(window.localStorage.getItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY));
+      setReports(parsePpcDashboardStore(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY)).reports);
+      setCatalog(storedCatalog);
+      setSelectedProductId(current => current || storedCatalog.customProducts[0]?.id || "");
+    }, 0);
     const controller = new AbortController();
     const productTimer = window.setTimeout(() => void loadProducts(controller.signal), 0);
     return () => { window.clearTimeout(storageTimer); window.clearTimeout(productTimer); controller.abort(); };
@@ -93,13 +100,10 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
   }, [dirtyReportKeys.size]);
 
-  const filteredProducts = useMemo(() => products.filter(product => {
-    const matchesFilter = filter === "All" || product.status === filter;
-    const haystack = `${product.name} ${product.asin} ${product.sku}`.toLowerCase();
-    return matchesFilter && (!deferredSearch || haystack.includes(deferredSearch));
-  }), [deferredSearch, filter, products]);
+  const products = useMemo(() => mergeDashboardProducts(pipelineProducts, catalog), [catalog, pipelineProducts]);
   const weekStarts = useMemo(() => monthAnchor ? getMonthWeekStarts(monthAnchor) : [], [monthAnchor]);
   const selectedProduct = products.find(product => product.id === selectedProductId) ?? null;
+  const selectedProductTag = selectedProduct ? catalog.tags.find(tag => tag.id === selectedProduct.tagId) ?? null : null;
   const selectedKey = selectedProductId && selectedWeekStart ? reportKey(selectedProductId, selectedWeekStart) : "";
   const dirty = selectedKey ? dirtyReportKeys.has(selectedKey) : false;
   const report = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart) : null;
@@ -115,6 +119,43 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const patchReport = (patch: Partial<WeeklyPpcReport>) => { if (report) replaceReport({ ...report, ...patch }); };
   const selectProduct = (productId: string) => { setSelectedProductId(productId); setSaveNotice(""); };
   const selectWeek = (weekStart: string) => { setSelectedWeekStart(weekStart); setSaveNotice(""); };
+
+  const persistCatalog = (nextCatalog: DashboardCatalogStore) => {
+    try {
+      window.localStorage.setItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY, JSON.stringify(nextCatalog));
+      setCatalog(nextCatalog);
+      return "";
+    } catch {
+      return "This browser could not save the product catalog. Remove a large image or free browser storage and try again.";
+    }
+  };
+  const createTag = (name: string) => {
+    const existing = catalog.tags.find(tag => tag.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+    if (existing) return { id: existing.id, error: "" };
+    const suffix = typeof crypto.randomUUID === "function" ? crypto.randomUUID().slice(0, 8) : String(Date.now());
+    const tag = { id: createDashboardTagId(name, suffix), name: name.trim().slice(0, 40) };
+    const error = persistCatalog({ ...catalog, tags: [...catalog.tags, tag] });
+    return { id: error ? "" : tag.id, error };
+  };
+  const saveProduct = (value: ProductFormValue) => {
+    if (!value.id) {
+      const suffix = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const product: DashboardCatalogProduct = { id: `dashboard-${suffix}`, source: "dashboard", stageId: "dashboard", status: "Active", name: value.name, asin: value.asin, sku: value.sku, tagId: value.tagId, imageDataUrl: value.imageDataUrl };
+      const error = persistCatalog({ ...catalog, customProducts: [product, ...catalog.customProducts] });
+      if (error) return error;
+      selectProduct(product.id);
+      return "";
+    }
+    if (value.source === "dashboard") {
+      return persistCatalog({ ...catalog, customProducts: catalog.customProducts.map(product => product.id === value.id ? { ...product, name: value.name, asin: value.asin, sku: value.sku, tagId: value.tagId, imageDataUrl: value.imageDataUrl } : product) });
+    }
+    return persistCatalog({ ...catalog, productOverrides: { ...catalog.productOverrides, [value.id]: { name: value.name, asin: value.asin, sku: value.sku, tagId: value.tagId, imageDataUrl: value.imageDataUrl } } });
+  };
+  const deleteProduct = (product: ManagedDashboardProduct) => {
+    if (product.source !== "dashboard") return;
+    persistCatalog({ ...catalog, customProducts: catalog.customProducts.filter(candidate => candidate.id !== product.id) });
+    if (selectedProductId === product.id) selectProduct(products.find(candidate => candidate.id !== product.id)?.id ?? "");
+  };
 
   const updateGoal = (goalId: string, patch: Partial<WeeklyGoal>) => {
     if (report) patchReport({ goals: report.goals.map(goal => goal.id === goalId ? { ...goal, ...patch } : goal) });
@@ -144,21 +185,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   };
 
   return <section className={styles.dashboard} aria-label="Weekly PPC Performance Notes">
-    <aside className={styles.productsPanel} aria-labelledby="products-heading">
-      <div className={styles.panelHeader}>
-        <div className={styles.headingRow}><div><span className={styles.eyebrow}>PORTFOLIO</span><h1 id="products-heading">Products</h1></div><span className={styles.count}>{products.length}</span></div>
-        <label className={styles.search}><Search aria-hidden="true" /><span className="sr-only">Search products</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search products..." /></label>
-        <div className={styles.segmented} aria-label="Filter products">{(["All", "Active", "Paused"] as ProductFilter[]).map(option => <button type="button" key={option} className={filter === option ? styles.segmentActive : ""} aria-pressed={filter === option} onClick={() => setFilter(option)}>{option}</button>)}</div>
-      </div>
-      <div className={styles.productList}>
-        {productsLoading ? <div className={styles.loadingState}><RefreshCw className={styles.spinner} aria-hidden="true" />Loading Pipeline products…</div> : null}
-        {!productsLoading && productsError ? <div className={styles.errorState} role="alert"><p>{productsError}</p><button type="button" onClick={() => void loadProducts()}><RefreshCw aria-hidden="true" />Retry</button></div> : null}
-        {!productsLoading && !productsError && filteredProducts.length === 0 ? <div className={styles.emptyState}><Package aria-hidden="true" /><strong>No products found</strong><span>Add products in Product Pipeline first.</span></div> : null}
-        {filteredProducts.map(product => <button type="button" key={product.id} className={`${styles.productCard} ${selectedProductId === product.id ? styles.selectedProduct : ""}`} onClick={() => selectProduct(product.id)}>
-          <span className={styles.productIcon}><Package aria-hidden="true" /></span><span className={styles.productCopy}><strong>{product.name}</strong><small>{product.asin || "ASIN: N/A"} · {product.sku || "SKU: N/A"}</small><i><span />{product.status}</i></span>
-        </button>)}
-      </div>
-    </aside>
+    <ProductPortfolioPanel products={products} tags={catalog.tags} loading={productsLoading} error={productsError} selectedProductId={selectedProductId} onSelectProduct={selectProduct} onRetry={() => void loadProducts()} onCreateTag={createTag} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} />
 
     <aside className={styles.periodsPanel} aria-labelledby="periods-heading">
       <div className={styles.panelHeader}>
@@ -181,7 +208,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     <main className={styles.workspace}>
       {!selectedProduct || !report ? <div className={styles.workspaceEmpty}><BarChart3 aria-hidden="true" /><h2>Select a product</h2><p>Choose a Pipeline product to start its weekly PPC documentation.</p></div> : <>
         <header className={styles.workspaceHeader}>
-          <div><span className={styles.eyebrow}>WEEKLY PPC PERFORMANCE</span><div className={styles.titleRow}><h2>{selectedProduct.name}</h2><span>{selectedProduct.status}</span></div><p>ASIN: <strong>{selectedProduct.asin || "N/A"}</strong><i />SKU: <strong>{selectedProduct.sku || "N/A"}</strong><i /><CalendarDays />{formatWeekRange(selectedWeekStart)} · Week {getIsoWeekNumber(selectedWeekStart)}</p></div>
+          <div><span className={styles.eyebrow}>WEEKLY PPC PERFORMANCE</span><div className={styles.titleRow}><h2>{selectedProduct.name}</h2>{selectedProductTag ? <span>{selectedProductTag.name}</span> : null}</div><p>ASIN: <strong>{selectedProduct.asin || "N/A"}</strong><i />SKU: <strong>{selectedProduct.sku || "N/A"}</strong><i /><CalendarDays />{formatWeekRange(selectedWeekStart)} · Week {getIsoWeekNumber(selectedWeekStart)}</p></div>
           <div className={styles.saveArea}><div><button type="button" className={styles.secondaryButton} onClick={() => saveReport("Draft")}><FileText />Save Draft</button><button type="button" className={styles.primaryButton} onClick={() => saveReport("Completed")}><Save />Save Weekly Report</button></div><small className={dirty ? styles.unsaved : styles.saved}>{dirty ? "Unsaved changes" : saveNotice || (report.updatedAt ? `Saved ${new Date(report.updatedAt).toLocaleString()}` : "Local draft not saved yet")}</small></div>
         </header>
 

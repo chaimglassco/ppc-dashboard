@@ -19,6 +19,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Missing or expired sessions return to Pipeline login with a validated requested PPC destination.
 - PPC verifies the existing Pipeline session through Pipeline’s `/api/auth/session` endpoint.
 - PPC Dashboard loads the authenticated user’s compact Pipeline product catalog and provides a three-panel product, reporting-period, and weekly documentation workspace.
+- The Products panel can add dashboard-only products, apply local edits and images, create reusable tags, filter by tag, and remove dashboard-added products. These catalog customizations use the validated `glassco.ppcDashboardCatalog.v1` browser record and do not mutate Product Pipeline records.
 - Weekly goals, budget limits, performance figures, prior-week outcomes, notes, and action items save to the versioned `glassco.ppcPerformanceNotes.v1` browser record in this initial UI milestone; they are not yet shared across browsers.
 - ADMIN users have full document, category, attributed recovery, reorder, snapshot, version, protected-archive, and integrity-incident access. Document content is never physically deleted through the application.
 - USER users can create documents and edit active document content and metadata.

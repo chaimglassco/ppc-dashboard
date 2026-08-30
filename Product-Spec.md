@@ -101,7 +101,7 @@ These require a separately approved milestone and must preserve the current shar
 - A session-only Pipeline login is handed off once to the destination tab; missing or expired authentication returns to the requested safe PPC route after login.
 - A verified Pipeline session is required before the PPC interface renders.
 - Dashboard users select a real Pipeline product, choose a Monday–Sunday reporting period, and document weekly goals, weekly/daily budget limits, current performance, prior-week results, summary notes, and next-week actions.
-- The dashboard product catalog is authoritative Pipeline data. In the initial UI milestone, report drafts are versioned browser-local data and the interface identifies their local save state; shared reporting persistence is deferred.
+- Pipeline products remain authoritative source records. The dashboard may layer browser-local names, ASINs, SKUs, images, and tags over them without changing Pipeline, and users may add/edit/delete dashboard-only products. The Products panel supports tag creation and filtering, renders tags instead of active-status badges, and opens saved ASIN/SKU destinations in protected new tabs. Report drafts and catalog customizations are versioned browser-local data; shared dashboard persistence is deferred.
 - ADMIN can create/edit/reorder/hide/delete/recover documents, manage categories, and manage backups. USER can create and edit active documents. VIEWER is read-only apart from personal reading controls.
 
 # Rich-text composer behavior

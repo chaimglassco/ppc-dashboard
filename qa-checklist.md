@@ -133,7 +133,10 @@ Use this checklist before merging or deploying changes.
 
 - [ ] `/ppc/library`, nested documents, recent, and bookmarks load directly and after refresh.
 - [ ] `/ppc/dashboard` loads inside the authenticated full-width shell and renders Products, Reporting Periods, and Weekly PPC Performance workspace panels.
-- [ ] Dashboard products come from the authenticated Pipeline workspace, support search/filter/retry/empty states, and never expose the full workspace response to the browser.
+- [ ] Dashboard products combine the authenticated compact Pipeline list with the validated local catalog overlay, support search/tag-filter/retry/empty states, and never expose the full workspace response to the browser.
+- [ ] Add Product accepts an optional image plus required name and optional ASIN, SKU, and tag; save selects the new card, ASIN and SKU open protected new tabs, and refresh preserves the product.
+- [ ] Add Tag creates one reusable case-insensitive option, selects it in the filter, and exposes it in product forms; tagged cards show the tag instead of an active-status badge.
+- [ ] Editing a Pipeline product creates only a dashboard-local override. Deleting is available only for dashboard-added products, retains weekly reports, and survives refresh.
 - [ ] Selecting a product/week isolates its goals, weekly/daily budgets, performance metrics, prior-week result, notes, and action items.
 - [ ] Save Draft and Save Weekly Report persist a schema-valid `glassco.ppcPerformanceNotes.v1` record, survive refresh, and clearly identify unsaved versus saved local state.
 - [ ] At desktop widths all three panels remain usable; at narrow widths the panels stack without hiding save controls or producing inaccessible inputs.
