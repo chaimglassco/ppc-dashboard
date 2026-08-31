@@ -88,7 +88,7 @@ describe("PpcPerformanceDashboard", () => {
     const asinLink = screen.getByRole("link", { name: "Open ASIN B012345679 on Amazon" });
     const skuLink = screen.getByRole("link", { name: "Open SKU POLISH-01 in Seller Central" });
     expect(asinLink).toHaveAttribute("href", "https://www.amazon.com/dp/B012345679");
-    expect(skuLink).toHaveAttribute("href", expect.stringContaining("POLISH-01"));
+    expect(skuLink).toHaveAttribute("href", "https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=POLISH-01");
     expect(asinLink).toHaveAttribute("target", "_blank");
     expect(skuLink).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getAllByText("Launch group").length).toBeGreaterThan(1);
