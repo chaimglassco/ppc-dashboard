@@ -13,12 +13,14 @@ describe("PPC dashboard catalog", () => {
       productOverrides: {
         "pipeline-1": { name: "Renamed", asin: "b000000001", sku: "P-1", tagId: "missing", imageDataUrl: "" },
       },
+      hiddenPipelineProductIds: ["pipeline-hidden", "pipeline-hidden", "", 42],
     }));
 
     expect(parsed.tags).toEqual([{ id: "tag-a", name: "Launch" }]);
     expect(parsed.customProducts).toHaveLength(1);
     expect(parsed.customProducts[0]).toMatchObject({ asin: "B012345678", tagId: "tag-a", imageDataUrl: "" });
     expect(parsed.productOverrides["pipeline-1"].tagId).toBe("");
+    expect(parsed.hiddenPipelineProductIds).toEqual(["pipeline-hidden"]);
   });
 
   it("applies local overrides without changing the Pipeline source object", () => {
@@ -28,9 +30,27 @@ describe("PPC dashboard catalog", () => {
       tags: [{ id: "tag-launch", name: "Launch" }],
       customProducts: [],
       productOverrides: { "pipeline-1": { name: "Dashboard Name", asin: "B", sku: "T", tagId: "tag-launch", imageDataUrl: "" } },
+      hiddenPipelineProductIds: [],
     });
 
     expect(merged[0]).toMatchObject({ name: "Dashboard Name", tagId: "tag-launch", source: "pipeline" });
     expect(pipeline[0].name).toBe("Original");
+  });
+
+  it("filters locally hidden Pipeline products without changing the source list", () => {
+    const pipeline = [
+      { id: "pipeline-1", name: "Keep", asin: "A", sku: "S", stageId: "research", status: "Active" as const },
+      { id: "pipeline-2", name: "Hide", asin: "B", sku: "T", stageId: "launch", status: "Active" as const },
+    ];
+    const merged = mergeDashboardProducts(pipeline, {
+      version: 1,
+      tags: [],
+      customProducts: [],
+      productOverrides: {},
+      hiddenPipelineProductIds: ["pipeline-2"],
+    });
+
+    expect(merged.map(product => product.id)).toEqual(["pipeline-1"]);
+    expect(pipeline).toHaveLength(2);
   });
 });

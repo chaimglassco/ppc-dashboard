@@ -43,6 +43,24 @@ describe("PpcPerformanceDashboard", () => {
     });
   });
 
+  it("confirms before hiding a Pipeline product from the weekly portfolio", async () => {
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Enable product editing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete Glass Cleaner" }));
+    const warning = screen.getByRole("alertdialog", { name: "Remove Glass Cleaner?" });
+    expect(within(warning).getByText(/remains unchanged in Product Pipeline/i)).toBeVisible();
+    fireEvent.click(within(warning).getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: "Delete Glass Cleaner" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Glass Cleaner" }));
+    fireEvent.click(within(screen.getByRole("alertdialog", { name: "Remove Glass Cleaner?" })).getByRole("button", { name: "Delete product" }));
+    expect(screen.queryByRole("button", { name: "Delete Glass Cleaner" })).not.toBeInTheDocument();
+    const stored = JSON.parse(window.localStorage.getItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY) || "{}");
+    expect(stored.hiddenPipelineProductIds).toEqual(["product-1"]);
+  });
+
   it("creates a tag and dashboard product, exposes identifier links, edits it, and deletes it", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();

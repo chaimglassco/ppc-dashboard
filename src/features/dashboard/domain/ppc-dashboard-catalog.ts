@@ -21,6 +21,7 @@ export type DashboardCatalogStore = {
   tags: DashboardTag[];
   customProducts: DashboardCatalogProduct[];
   productOverrides: Record<string, DashboardProductOverride>;
+  hiddenPipelineProductIds: string[];
 };
 export type ManagedDashboardProduct = DashboardProduct & {
   source: "pipeline" | "dashboard";
@@ -29,7 +30,7 @@ export type ManagedDashboardProduct = DashboardProduct & {
 };
 
 export function emptyDashboardCatalog(): DashboardCatalogStore {
-  return { version: 1, tags: [], customProducts: [], productOverrides: {} };
+  return { version: 1, tags: [], customProducts: [], productOverrides: {}, hiddenPipelineProductIds: [] };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -116,14 +117,23 @@ export function parseDashboardCatalogStore(raw: string | null): DashboardCatalog
         if (cleanId && override) productOverrides[cleanId] = { ...override, tagId: tagIds.has(override.tagId) ? override.tagId : "" };
       }
     }
-    return { version: 1, tags, customProducts, productOverrides };
+    const hiddenPipelineProductIds: string[] = [];
+    const hiddenIds = new Set<string>();
+    for (const candidate of Array.isArray(value.hiddenPipelineProductIds) ? value.hiddenPipelineProductIds : []) {
+      const id = text(candidate, 160);
+      if (!id || hiddenIds.has(id) || hiddenPipelineProductIds.length >= 2_000) continue;
+      hiddenPipelineProductIds.push(id);
+      hiddenIds.add(id);
+    }
+    return { version: 1, tags, customProducts, productOverrides, hiddenPipelineProductIds };
   } catch {
     return emptyDashboardCatalog();
   }
 }
 
 export function mergeDashboardProducts(pipelineProducts: DashboardProduct[], catalog: DashboardCatalogStore): ManagedDashboardProduct[] {
-  const imported = pipelineProducts.map(product => {
+  const hiddenIds = new Set(catalog.hiddenPipelineProductIds);
+  const imported = pipelineProducts.filter(product => !hiddenIds.has(product.id)).map(product => {
     const override = catalog.productOverrides[product.id];
     return {
       ...product,

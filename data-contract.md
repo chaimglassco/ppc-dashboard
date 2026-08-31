@@ -241,9 +241,9 @@ Key: `glassco.ppcDashboardCatalog.v1`
 
 Schema version: `1`
 
-The record contains `tags`, `customProducts`, and `productOverrides`. Tags have stable IDs and case-insensitively unique names. Dashboard-only products retain their stable ID, name, optional ASIN/SKU, optional tag ID, and optional validated image data URL. Overrides key the same display fields by an authoritative Pipeline product ID. Images are restricted to supported image data URLs and the UI limits selected files to 900 KB.
+The record contains `tags`, `customProducts`, `productOverrides`, and optional `hiddenPipelineProductIds`. Tags have stable IDs and case-insensitively unique names. Dashboard-only products retain their stable ID, name, optional ASIN/SKU, optional tag ID, and optional validated image data URL. Overrides key the same display fields by an authoritative Pipeline product ID. `hiddenPipelineProductIds` is a deduplicated list of stable Pipeline IDs removed only from this browser's PPC Weekly Goals portfolio. Images are restricted to supported image data URLs and the UI limits selected files to 900 KB.
 
-Parsing is fail-closed: malformed records reset to an empty overlay; malformed and duplicate entries are discarded; missing tag references become untagged; unrecognized image values are removed. The overlay is browser-local, never mutates or deletes Pipeline products, and is not uploaded through either shared API. Removing a dashboard-only product does not delete its separately stored weekly reports.
+Parsing is fail-closed: malformed records reset to an empty overlay; malformed and duplicate entries are discarded; missing tag references become untagged; unrecognized image values are removed. The overlay is browser-local, never mutates or deletes authoritative Pipeline products, and is not uploaded through either shared API. Removing any product from this portfolio does not delete its separately stored weekly reports; Pipeline-backed products remain intact in Product Pipeline.
 
 ## Validation and fallback rules
 

@@ -28,7 +28,7 @@ The PPC Dashboard checkout contains an unreleased video-header placement update.
 
 - `/ppc/dashboard` now contains the Weekly PPC Performance three-panel workspace instead of the coming-soon placeholder.
 - The dashboard loads a compact authenticated list of real Pipeline products through `/ppc/api/dashboard/products` and keeps the full workspace payload server-side.
-- The first panel now merges those Pipeline products with validated browser-local `glassco.ppcDashboardCatalog.v1` custom products, local display overrides, optional images, and reusable tags. Add/edit/tag/filter are local-only, delete is limited to dashboard-added products, and ASIN/SKU links open protected new tabs.
+- The first panel now merges those Pipeline products with validated browser-local `glassco.ppcDashboardCatalog.v1` custom products, local display overrides, optional images, reusable tags, and locally hidden Pipeline product IDs. Add/edit/tag/filter are local-only; deleting a Pipeline product removes it only from PPC Weekly Goals after confirmation and never mutates Pipeline; ASIN/SKU links open protected new tabs.
 - Goals, weekly/daily budgets, performance metrics, previous-week results, notes, and action items save to validated browser-local `glassco.ppcPerformanceNotes.v1` records. Shared cross-browser reporting persistence is not part of this UI milestone.
 - The dashboard removes the old Library sidebar so Products, Reporting Periods, and the working panel are the only content columns.
 

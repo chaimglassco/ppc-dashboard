@@ -152,8 +152,10 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     return persistCatalog({ ...catalog, productOverrides: { ...catalog.productOverrides, [value.id]: { name: value.name, asin: value.asin, sku: value.sku, tagId: value.tagId, imageDataUrl: value.imageDataUrl } } });
   };
   const deleteProduct = (product: ManagedDashboardProduct) => {
-    if (product.source !== "dashboard") return;
-    persistCatalog({ ...catalog, customProducts: catalog.customProducts.filter(candidate => candidate.id !== product.id) });
+    const nextCatalog = product.source === "dashboard"
+      ? { ...catalog, customProducts: catalog.customProducts.filter(candidate => candidate.id !== product.id) }
+      : { ...catalog, hiddenPipelineProductIds: [...new Set([...catalog.hiddenPipelineProductIds, product.id])] };
+    persistCatalog(nextCatalog);
     if (selectedProductId === product.id) selectProduct(products.find(candidate => candidate.id !== product.id)?.id ?? "");
   };
 
