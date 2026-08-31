@@ -3,3 +3,4 @@
 @media(max-width:760px){.panel{height:auto;max-height:520px;border-right:0;border-bottom:1px solid #dfe4ec}.backdrop{padding:10px}.dialog{max-height:calc(100vh - 20px)}.formColumns{grid-template-columns:1fr}}
 .headingRow{flex-wrap:wrap}.headingActions{margin-left:auto}
 .productSelect{min-height:88px;padding-bottom:40px}.identifiers{right:45px;bottom:8px;display:grid;align-items:initial;gap:2px}.identifiers i{display:none}
+@media(min-width:761px){.panel{border:1px solid #bfd0e8;border-radius:16px;background:linear-gradient(180deg,#e3edfb 0%,#edf4fd 48%,#f5f8fd 100%);box-shadow:0 16px 36px rgba(20,53,96,.16),0 4px 12px rgba(20,53,96,.09)}.header{background:rgba(255,255,255,.2)}.list{background:transparent}}
