@@ -47,6 +47,7 @@ describe("PpcPerformanceDashboard", () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
     expect(screen.queryByText("Active", { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit Glass Cleaner" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
     const tagDialog = screen.getByRole("dialog", { name: "Add tag" });
@@ -74,6 +75,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(skuLink).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getAllByText("Launch group").length).toBeGreaterThan(1);
 
+    fireEvent.click(screen.getByRole("button", { name: "Enable product editing" }));
+    expect(screen.getByRole("button", { name: "Exit product editing" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Edit Glass Polish" }));
     const editDialog = screen.getByRole("dialog", { name: "Edit product" });
     fireEvent.change(within(editDialog).getByRole("textbox", { name: "Product name" }), { target: { value: "Glass Polish Pro" } });

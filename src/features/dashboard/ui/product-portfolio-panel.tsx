@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ImagePlus, Package, Pencil, Plus, RefreshCw, Search, Tag, Trash2, X } from "lucide-react";
+import { Eye, ImagePlus, Package, Pencil, Plus, RefreshCw, Search, Tag, Trash2, X } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { MAX_DASHBOARD_PRODUCT_IMAGE_BYTES, type DashboardTag, type ManagedDashboardProduct } from "../domain/ppc-dashboard-catalog";
 import styles from "./product-portfolio-panel.module.css";
@@ -43,6 +43,7 @@ function productImage(file: File) {
 export function ProductPortfolioPanel({ products, tags, loading, error, selectedProductId, onSelectProduct, onRetry, onCreateTag, onSaveProduct, onDeleteProduct }: Props) {
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("all");
+  const [editMode, setEditMode] = useState(false);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState<ManagedDashboardProduct | null>(null);
@@ -136,11 +137,10 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
 
   return <aside className={styles.panel} aria-labelledby="products-heading">
     <div className={styles.header}>
-      <div className={styles.headingRow}><div><span className={styles.eyebrow}>PORTFOLIO</span><h1 id="products-heading">Products</h1></div><div className={styles.headingActions}><span className={styles.count}>{products.length}</span><button type="button" className={styles.addProduct} aria-label="Add product" title="Add product" onClick={openCreateProduct}><Plus aria-hidden="true" /></button></div></div>
+      <div className={styles.headingRow}><div><span className={styles.eyebrow}>PORTFOLIO</span><h1 id="products-heading">Products</h1></div><div className={styles.headingActions}><span className={styles.count}>{products.length}</span><button type="button" className={styles.addProduct} aria-label="Add product" title="Add product" onClick={openCreateProduct}><Plus aria-hidden="true" /></button><button type="button" className={styles.addTag} onClick={() => { setTagError(""); setTagDialogOpen(true); }}><Plus aria-hidden="true" />Add tag</button><button type="button" className={`${styles.editModeToggle} ${editMode ? styles.editModeActive : ""}`} aria-label={editMode ? "Exit product editing" : "Enable product editing"} aria-pressed={editMode} title={editMode ? "Edit mode on" : "View mode"} onClick={() => setEditMode(current => !current)}>{editMode ? <Pencil aria-hidden="true" /> : <Eye aria-hidden="true" />}</button></div></div>
       <label className={styles.search}><Search aria-hidden="true" /><span className="sr-only">Search products</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search products..." /></label>
       <div className={styles.tagControls}>
         <label><span className="sr-only">Filter products by tag</span><Tag aria-hidden="true" /><select aria-label="Filter products by tag" value={tagFilter} onChange={event => setTagFilter(event.target.value)}><option value="all">All tags</option><option value="untagged">Untagged</option>{tags.map(tag => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label>
-        <button type="button" onClick={() => { setTagError(""); setTagDialogOpen(true); }}><Plus aria-hidden="true" />Add tag</button>
       </div>
     </div>
 
@@ -157,7 +157,7 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
             <span className={styles.productCopy}><strong>{product.name}</strong>{tag ? <em><Tag aria-hidden="true" />{tag.name}</em> : null}</span>
           </button>
           <span className={styles.identifiers}>{product.asin ? <a href={`https://www.amazon.com/dp/${encodeURIComponent(product.asin)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open ASIN ${product.asin} on Amazon`}>ASIN: {product.asin}</a> : <small>ASIN: N/A</small>}<i>·</i>{product.sku ? <a href={`https://sellercentral.amazon.com/inventory?searchField=sku&searchTerm=${encodeURIComponent(product.sku)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open SKU ${product.sku} in Seller Central`}>SKU: {product.sku}</a> : <small>SKU: N/A</small>}</span>
-          <div className={styles.cardActions}><button type="button" aria-label={`Edit ${product.name}`} title="Edit product" onClick={() => openEditProduct(product)}><Pencil aria-hidden="true" /></button>{product.source === "dashboard" ? <button type="button" aria-label={`Delete ${product.name}`} title="Delete product" onClick={() => setDeleteCandidate(product)}><Trash2 aria-hidden="true" /></button> : null}</div>
+          {editMode ? <div className={styles.cardActions}><button type="button" aria-label={`Edit ${product.name}`} title="Edit product" onClick={() => openEditProduct(product)}><Pencil aria-hidden="true" /></button>{product.source === "dashboard" ? <button type="button" aria-label={`Delete ${product.name}`} title="Delete product" onClick={() => setDeleteCandidate(product)}><Trash2 aria-hidden="true" /></button> : null}</div> : null}
         </article>;
       })}
     </div>
