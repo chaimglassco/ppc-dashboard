@@ -19,6 +19,8 @@ const DEFAULT_GOALS: WeeklyGoal[] = [
 const DEFAULT_ACTIONS: ActionItem[] = [
   { id: "action-negatives", title: "Review search terms and add negative exact keywords", priority: "High", dueDate: "", done: false },
 ];
+const REPORTING_WEEK_START_DAY = 3;
+const LEGACY_REPORTING_WEEK_START_DAY = 1;
 
 export function reportKey(productId: string, weekStart: string) { return `${productId}:${weekStart}`; }
 
@@ -52,8 +54,11 @@ function normalizeAction(value: unknown, index: number): ActionItem | null {
 function normalizeReport(value: unknown): WeeklyPpcReport | null {
   if (!isRecord(value)) return null;
   const productId = String(value.productId ?? "").trim();
-  const weekStart = String(value.weekStart ?? "").trim();
-  if (!productId || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) return null;
+  const storedWeekStart = String(value.weekStart ?? "").trim();
+  if (!productId || !/^\d{4}-\d{2}-\d{2}$/.test(storedWeekStart)) return null;
+  const storedWeekDate = dateFromIso(storedWeekStart);
+  if (Number.isNaN(storedWeekDate.getTime())) return null;
+  const weekStart = storedWeekDate.getDay() === LEGACY_REPORTING_WEEK_START_DAY ? addDaysIso(storedWeekStart, 2) : storedWeekStart;
   const statuses: ReportStatus[] = ["Draft", "In Progress", "Completed", "Needs Review"];
   const goals = Array.isArray(value.goals) ? value.goals.map(normalizeGoal).filter((goal): goal is WeeklyGoal => Boolean(goal)) : [];
   const actions = Array.isArray(value.actions) ? value.actions.map(normalizeAction).filter((action): action is ActionItem => Boolean(action)) : [];
@@ -82,7 +87,7 @@ export function parsePpcDashboardStore(raw: string | null): PpcDashboardStore {
 
 function dateFromIso(iso: string) { return new Date(`${iso}T12:00:00`); }
 export function toIsoDate(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
-export function startOfWeekIso(iso: string) { const date = dateFromIso(iso); const day = date.getDay(); date.setDate(date.getDate() - (day === 0 ? 6 : day - 1)); return toIsoDate(date); }
+export function startOfWeekIso(iso: string) { const date = dateFromIso(iso); const daysSinceWednesday = (date.getDay() - REPORTING_WEEK_START_DAY + 7) % 7; date.setDate(date.getDate() - daysSinceWednesday); return toIsoDate(date); }
 export function addDaysIso(iso: string, days: number) { const date = dateFromIso(iso); date.setDate(date.getDate() + days); return toIsoDate(date); }
 export function addMonthsIso(iso: string, months: number) { const date = dateFromIso(iso); date.setDate(1); date.setMonth(date.getMonth() + months); return toIsoDate(date); }
 export function getMonthWeekStarts(monthIso: string) {

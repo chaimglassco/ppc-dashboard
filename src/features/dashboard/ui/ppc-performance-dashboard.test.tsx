@@ -26,6 +26,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
     expect(fetch).toHaveBeenCalledTimes(1);
     const currentPeriod = screen.getByText("Current").closest("button") as HTMLButtonElement;
+    expect(within(currentPeriod).getByText("Aug 26 – Sep 1, 2026")).toBeVisible();
     expect(within(currentPeriod).getByText("Order")).toBeVisible();
     expect(within(currentPeriod).getByText("ACOS")).toBeVisible();
     expect(within(currentPeriod).queryByText("ROAS")).not.toBeInTheDocument();
@@ -39,8 +40,9 @@ describe("PpcPerformanceDashboard", () => {
 
     const stored = JSON.parse(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY) || "{}");
     expect(stored.version).toBe(1);
-    expect(stored.reports["product-1:2026-08-24"]).toMatchObject({
+    expect(stored.reports["product-1:2026-08-26"]).toMatchObject({
       productId: "product-1",
+      weekStart: "2026-08-26",
       weeklyBudget: 1500,
       notes: "Scale the best converting exact-match campaign.",
       status: "Draft",
