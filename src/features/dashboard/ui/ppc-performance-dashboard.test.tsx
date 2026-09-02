@@ -25,6 +25,7 @@ describe("PpcPerformanceDashboard", () => {
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
     expect(fetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Open current week" })).not.toBeInTheDocument();
     const currentPeriod = screen.getByText("Current").closest("button") as HTMLButtonElement;
     expect(within(currentPeriod).getByText("Aug 26 – Sep 1, 2026")).toBeVisible();
     expect(within(currentPeriod).getByText("Order")).toBeVisible();

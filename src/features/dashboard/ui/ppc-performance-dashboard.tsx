@@ -208,7 +208,6 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
       <div className={styles.panelHeader}>
         <div className={styles.headingRow}><div><span className={styles.eyebrow}>TIMELINE</span><h2 id="periods-heading">Reporting Periods</h2></div></div>
         <div className={styles.monthPickerRow}><div className={styles.monthPicker} role="group" aria-label="Month navigation"><button type="button" aria-label="Previous month" onClick={() => monthAnchor && setMonthAnchor(addMonthsIso(monthAnchor, -1))}><ArrowLeft /></button><strong>{formatMonth(monthAnchor)}</strong><button type="button" aria-label="Next month" onClick={() => monthAnchor && setMonthAnchor(addMonthsIso(monthAnchor, 1))}><ArrowRight /></button></div><button type="button" className={styles.calendarPickerButton} aria-label={`Choose reporting month, ${formatMonth(monthAnchor)}`} onClick={openMonthPicker}><CalendarDays aria-hidden="true" /></button></div>
-        <button type="button" className={styles.addWeek} onClick={() => { if (currentWeekStart) { selectWeek(currentWeekStart); setMonthAnchor(currentWeekStart); } }}><Plus aria-hidden="true" />Open current week</button>
       </div>
       <div className={styles.periodList} aria-label="Reporting periods">{weekStarts.map(weekStart => {
         const periodReport = selectedProductId ? reports[reportKey(selectedProductId, weekStart)] : null;
