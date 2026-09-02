@@ -30,6 +30,20 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(currentPeriod).getByText("Order")).toBeVisible();
     expect(within(currentPeriod).getByText("ACOS")).toBeVisible();
     expect(within(currentPeriod).queryByText("ROAS")).not.toBeInTheDocument();
+    expect(currentPeriod).toHaveAttribute("aria-pressed", "true");
+    expect(within(screen.getByLabelText("Reporting periods")).getAllByRole("button")[0]).toBe(currentPeriod);
+
+    const monthTrigger = screen.getByRole("button", { name: "Choose reporting month, August 2026" });
+    expect(monthTrigger.querySelector("svg")).not.toBeNull();
+    fireEvent.click(monthTrigger);
+    const monthDialog = screen.getByRole("dialog", { name: "Choose a month" });
+    expect(within(monthDialog).getByRole("button", { name: "August 2026" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(within(monthDialog).getByRole("button", { name: "July 2026" }));
+    expect(screen.getByRole("button", { name: "Choose reporting month, July 2026" })).toBeVisible();
+    expect(within(screen.getByLabelText("Reporting periods")).getAllByRole("button")[0]).toHaveTextContent("Current");
+    fireEvent.click(screen.getByRole("button", { name: "Choose reporting month, July 2026" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Choose a month" })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("textbox", { name: /Weekly limit/i }), { target: { value: "1500" } });
     fireEvent.change(screen.getByRole("textbox", { name: "Performance documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });

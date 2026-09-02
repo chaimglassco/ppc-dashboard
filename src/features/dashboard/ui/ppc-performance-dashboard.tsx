@@ -2,7 +2,7 @@
 
 import {
   ArrowLeft, ArrowRight, BarChart3, CalendarDays, Check, CheckCircle2, ClipboardList, DollarSign,
-  FileText, Flag, Plus, Save, Trash2, WalletCards,
+  FileText, Flag, Plus, Save, Trash2, WalletCards, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
@@ -24,6 +24,7 @@ type MetricField = "spend" | "sales" | "orders" | "impressions" | "clicks" | "ac
 
 const REPORT_STATUSES: ReportStatus[] = ["Draft", "In Progress", "Completed", "Needs Review"];
 const GOAL_STATUSES: GoalStatus[] = ["On Track", "At Risk", "Achieved", "Missed"];
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const METRICS: { field: MetricField; label: string; prefix?: string; suffix?: string }[] = [
   { field: "spend", label: "Ad Spend", prefix: "$" }, { field: "sales", label: "PPC Sales", prefix: "$" },
   { field: "orders", label: "Orders" }, { field: "impressions", label: "Impressions" },
@@ -58,6 +59,8 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedWeekStart, setSelectedWeekStart] = useState(initialWeekStart);
   const [monthAnchor, setMonthAnchor] = useState(initialToday);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [monthPickerYear, setMonthPickerYear] = useState(Number(initialToday.slice(0, 4)));
   const currentWeekStart = initialWeekStart;
   const [reports, setReports] = useState<Record<string, WeeklyPpcReport>>({});
   const [dirtyReportKeys, setDirtyReportKeys] = useState<Set<string>>(() => new Set());
@@ -100,8 +103,18 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
   }, [dirtyReportKeys.size]);
 
+  useEffect(() => {
+    if (!monthPickerOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setMonthPickerOpen(false); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [monthPickerOpen]);
+
   const products = useMemo(() => mergeDashboardProducts(pipelineProducts, catalog), [catalog, pipelineProducts]);
-  const weekStarts = useMemo(() => monthAnchor ? getMonthWeekStarts(monthAnchor) : [], [monthAnchor]);
+  const weekStarts = useMemo(() => {
+    const monthWeekStarts = monthAnchor ? getMonthWeekStarts(monthAnchor) : [];
+    return [currentWeekStart, ...monthWeekStarts.filter(weekStart => weekStart !== currentWeekStart)];
+  }, [currentWeekStart, monthAnchor]);
   const selectedProduct = products.find(product => product.id === selectedProductId) ?? null;
   const selectedProductTag = selectedProduct ? catalog.tags.find(tag => tag.id === selectedProduct.tagId) ?? null : null;
   const selectedKey = selectedProductId && selectedWeekStart ? reportKey(selectedProductId, selectedWeekStart) : "";
@@ -119,6 +132,8 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const patchReport = (patch: Partial<WeeklyPpcReport>) => { if (report) replaceReport({ ...report, ...patch }); };
   const selectProduct = (productId: string) => { setSelectedProductId(productId); setSaveNotice(""); };
   const selectWeek = (weekStart: string) => { setSelectedWeekStart(weekStart); setSaveNotice(""); };
+  const openMonthPicker = () => { setMonthPickerYear(Number(monthAnchor.slice(0, 4))); setMonthPickerOpen(true); };
+  const selectMonth = (monthIndex: number) => { setMonthAnchor(`${monthPickerYear}-${String(monthIndex + 1).padStart(2, "0")}-01`); setMonthPickerOpen(false); };
 
   const persistCatalog = (nextCatalog: DashboardCatalogStore) => {
     try {
@@ -191,15 +206,15 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
 
     <aside className={styles.periodsPanel} aria-labelledby="periods-heading">
       <div className={styles.panelHeader}>
-        <div className={styles.headingRow}><div><span className={styles.eyebrow}>TIMELINE</span><h2 id="periods-heading">Reporting Periods</h2></div><CalendarDays aria-hidden="true" /></div>
-        <div className={styles.monthPicker}><button type="button" aria-label="Previous month" onClick={() => monthAnchor && setMonthAnchor(addMonthsIso(monthAnchor, -1))}><ArrowLeft /></button><strong>{monthAnchor ? formatMonth(monthAnchor) : "Loading…"}</strong><button type="button" aria-label="Next month" onClick={() => monthAnchor && setMonthAnchor(addMonthsIso(monthAnchor, 1))}><ArrowRight /></button></div>
+        <div className={styles.headingRow}><div><span className={styles.eyebrow}>TIMELINE</span><h2 id="periods-heading">Reporting Periods</h2></div></div>
+        <div className={styles.monthPicker}><button type="button" aria-label="Previous month" onClick={() => monthAnchor && setMonthAnchor(addMonthsIso(monthAnchor, -1))}><ArrowLeft /></button><button type="button" className={styles.monthDialogTrigger} aria-label={`Choose reporting month, ${formatMonth(monthAnchor)}`} onClick={openMonthPicker}><strong>{formatMonth(monthAnchor)}</strong><CalendarDays aria-hidden="true" /></button><button type="button" aria-label="Next month" onClick={() => monthAnchor && setMonthAnchor(addMonthsIso(monthAnchor, 1))}><ArrowRight /></button></div>
         <button type="button" className={styles.addWeek} onClick={() => { if (currentWeekStart) { selectWeek(currentWeekStart); setMonthAnchor(currentWeekStart); } }}><Plus aria-hidden="true" />Open current week</button>
       </div>
-      <div className={styles.periodList}>{weekStarts.map(weekStart => {
+      <div className={styles.periodList} aria-label="Reporting periods">{weekStarts.map(weekStart => {
         const periodReport = selectedProductId ? reports[reportKey(selectedProductId, weekStart)] : null;
         const isCurrent = weekStart === currentWeekStart;
         const isSelected = weekStart === selectedWeekStart;
-        return <button type="button" key={weekStart} className={`${styles.periodCard} ${isSelected ? styles.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
+        return <button type="button" key={weekStart} aria-pressed={isSelected} className={`${styles.periodCard} ${isSelected ? styles.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
           {isCurrent ? <span className={styles.currentBadge}>Current</span> : null}
           <span className={styles.periodTop}><span><strong>{formatWeekRange(weekStart)}</strong><small>Week {getIsoWeekNumber(weekStart)}</small></span><i className={statusTone(periodReport?.status ?? "Draft")}>{periodReport?.status ?? "Draft"}</i></span>
           <span className={styles.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>Sales</small><strong>{currency(periodReport?.sales ?? 0)}</strong></span><span><small>Order</small><strong>{periodReport?.orders ?? 0}</strong></span><span><small>ACOS</small><strong>{periodReport?.acos ?? 0}%</strong></span></span>
@@ -234,5 +249,18 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         </div>
       </>}
     </main>
+
+    {monthPickerOpen ? <div className={styles.monthDialogBackdrop} onMouseDown={event => { if (event.target === event.currentTarget) setMonthPickerOpen(false); }}>
+      <section className={styles.monthDialog} role="dialog" aria-modal="true" aria-labelledby="month-dialog-heading">
+        <header><div><span className={styles.eyebrow}>REPORTING PERIOD</span><h2 id="month-dialog-heading">Choose a month</h2></div><button type="button" aria-label="Close month picker" onClick={() => setMonthPickerOpen(false)}><X aria-hidden="true" /></button></header>
+        <div className={styles.monthDialogYear}><button type="button" aria-label="Previous year" onClick={() => setMonthPickerYear(year => year - 1)}><ArrowLeft aria-hidden="true" /></button><strong>{monthPickerYear}</strong><button type="button" aria-label="Next year" onClick={() => setMonthPickerYear(year => year + 1)}><ArrowRight aria-hidden="true" /></button></div>
+        <div className={styles.monthGrid}>{MONTH_NAMES.map((monthName, monthIndex) => {
+          const monthValue = `${monthPickerYear}-${String(monthIndex + 1).padStart(2, "0")}`;
+          const isSelectedMonth = monthAnchor.startsWith(monthValue);
+          const isCurrentMonth = initialToday.startsWith(monthValue);
+          return <button type="button" key={monthName} className={`${styles.monthOption} ${isSelectedMonth ? styles.monthOptionSelected : ""} ${isCurrentMonth ? styles.monthOptionCurrent : ""}`} aria-label={`${monthName} ${monthPickerYear}`} aria-pressed={isSelectedMonth} aria-current={isCurrentMonth ? "date" : undefined} autoFocus={isSelectedMonth} onClick={() => selectMonth(monthIndex)}><span>{monthName}</span>{isCurrentMonth ? <small>Current</small> : null}</button>;
+        })}</div>
+      </section>
+    </div> : null}
   </section>;
 }
