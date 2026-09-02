@@ -27,7 +27,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Open current week" })).not.toBeInTheDocument();
     const currentPeriod = screen.getByText("Current").closest("button") as HTMLButtonElement;
-    expect(within(currentPeriod).getByText("Aug 26 – Sep 1, 2026")).toBeVisible();
+    expect(within(currentPeriod).getByText("August 26 to September 1")).toBeVisible();
     expect(within(currentPeriod).getByText("Order")).toBeVisible();
     expect(within(currentPeriod).getByText("ACOS")).toBeVisible();
     expect(within(currentPeriod).queryByText("ROAS")).not.toBeInTheDocument();

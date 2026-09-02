@@ -98,10 +98,9 @@ export function getMonthWeekStarts(monthIso: string) {
 }
 export function formatMonth(iso: string) { return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(dateFromIso(iso)); }
 export function formatWeekRange(weekStart: string) {
-  const start = dateFromIso(weekStart); const end = dateFromIso(addDaysIso(weekStart, 6)); const sameMonth = start.getMonth() === end.getMonth();
-  const startLabel = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(start);
-  const endLabel = new Intl.DateTimeFormat("en-US", { month: sameMonth ? undefined : "short", day: "numeric", year: "numeric" }).format(end);
-  return `${startLabel} – ${endLabel}`;
+  const start = dateFromIso(weekStart); const end = dateFromIso(addDaysIso(weekStart, 6));
+  const formatter = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric" });
+  return `${formatter.format(start)} to ${formatter.format(end)}`;
 }
 export function getIsoWeekNumber(iso: string) { const date = dateFromIso(iso); const utc = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())); const day = utc.getUTCDay() || 7; utc.setUTCDate(utc.getUTCDate() + 4 - day); const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1)); return Math.ceil((((utc.getTime() - yearStart.getTime()) / 86400000) + 1) / 7); }
 export function currency(value: number) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value || 0); }

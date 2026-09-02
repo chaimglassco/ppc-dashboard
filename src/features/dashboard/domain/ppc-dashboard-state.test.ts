@@ -8,7 +8,8 @@ describe("PPC dashboard state", () => {
     expect(startOfWeekIso("2026-09-02")).toBe("2026-09-02");
     expect(addDaysIso("2026-08-26", 6)).toBe("2026-09-01");
     expect(reportKey("product-1", "2026-08-26")).toBe("product-1:2026-08-26");
-    expect(formatWeekRange("2026-08-26")).toBe("Aug 26 – Sep 1, 2026");
+    expect(formatWeekRange("2026-08-26")).toBe("August 26 to September 1");
+    expect(formatWeekRange("2026-09-02")).toBe("September 2 to September 8");
     expect(getMonthWeekStarts("2026-08-28")).toContain("2026-08-26");
   });
 
