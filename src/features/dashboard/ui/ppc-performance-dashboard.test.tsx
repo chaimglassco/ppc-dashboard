@@ -35,6 +35,7 @@ describe("PpcPerformanceDashboard", () => {
 
     const monthTrigger = screen.getByRole("button", { name: "Choose reporting month, August 2026" });
     expect(monthTrigger.querySelector("svg")).not.toBeNull();
+    expect(within(screen.getByRole("group", { name: "Month navigation" })).queryByRole("button", { name: /Choose reporting month/i })).not.toBeInTheDocument();
     fireEvent.click(monthTrigger);
     const monthDialog = screen.getByRole("dialog", { name: "Choose a month" });
     expect(within(monthDialog).getByRole("button", { name: "August 2026" })).toHaveAttribute("aria-pressed", "true");
