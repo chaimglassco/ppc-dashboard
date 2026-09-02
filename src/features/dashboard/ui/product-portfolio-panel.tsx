@@ -151,7 +151,7 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
       {filteredProducts.map(product => {
         const tag = tagById.get(product.tagId);
         const selected = selectedProductId === product.id;
-        return <article key={product.id} className={`${styles.productCard} ${selected ? styles.selected : ""}`}>
+        return <article key={product.id} className={`${styles.productCard} ${selected ? styles.selected : ""} ${tag ? styles.tagged : ""}`}>
           <button type="button" className={styles.productSelect} aria-pressed={selected} onClick={() => onSelectProduct(product.id)}>
             <span className={styles.productImage}>{product.imageDataUrl ? <Image src={product.imageDataUrl} alt={`${product.name} product`} width={44} height={44} unoptimized /> : <Package aria-hidden="true" />}</span>
             <span className={styles.productCopy}><strong>{product.name}</strong>{tag ? <em><Tag aria-hidden="true" />{tag.name}</em> : null}</span>
