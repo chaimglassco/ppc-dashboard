@@ -25,6 +25,10 @@ describe("PpcPerformanceDashboard", () => {
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
     expect(fetch).toHaveBeenCalledTimes(1);
+    const currentPeriod = screen.getByText("Current").closest("button") as HTMLButtonElement;
+    expect(within(currentPeriod).getByText("Order")).toBeVisible();
+    expect(within(currentPeriod).getByText("ACOS")).toBeVisible();
+    expect(within(currentPeriod).queryByText("ROAS")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("textbox", { name: /Weekly limit/i }), { target: { value: "1500" } });
     fireEvent.change(screen.getByRole("textbox", { name: "Performance documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });

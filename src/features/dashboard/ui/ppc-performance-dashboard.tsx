@@ -202,7 +202,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         return <button type="button" key={weekStart} className={`${styles.periodCard} ${isSelected ? styles.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
           {isCurrent ? <span className={styles.currentBadge}>Current</span> : null}
           <span className={styles.periodTop}><span><strong>{formatWeekRange(weekStart)}</strong><small>Week {getIsoWeekNumber(weekStart)}</small></span><i className={statusTone(periodReport?.status ?? "Draft")}>{periodReport?.status ?? "Draft"}</i></span>
-          <span className={styles.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>Sales</small><strong>{currency(periodReport?.sales ?? 0)}</strong></span><span><small>ROAS</small><strong>{periodReport?.roas || "0.0"}</strong></span></span>
+          <span className={styles.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>Sales</small><strong>{currency(periodReport?.sales ?? 0)}</strong></span><span><small>Order</small><strong>{periodReport?.orders ?? 0}</strong></span><span><small>ACOS</small><strong>{periodReport?.acos ?? 0}%</strong></span></span>
         </button>;
       })}</div>
     </aside>
