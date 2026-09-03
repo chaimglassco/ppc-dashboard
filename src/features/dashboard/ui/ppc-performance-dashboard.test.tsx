@@ -99,6 +99,17 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
   });
 
+  it("lists the current week first and follows it with earlier weeks", async () => {
+    render(<PpcPerformanceDashboard initialToday="2026-09-03" />);
+    expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
+
+    const periods = within(screen.getByLabelText("Reporting periods")).getAllByRole("button");
+    expect(periods[0]).toHaveTextContent("September 2 to September 8");
+    expect(periods[1]).toHaveTextContent("August 26 to September 1");
+    expect(periods[2]).toHaveTextContent("August 19 to August 25");
+    expect(screen.queryByText("September 30 to October 6")).not.toBeInTheDocument();
+  });
+
   it("confirms before hiding a Pipeline product from the weekly portfolio", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();

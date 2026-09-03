@@ -209,9 +209,15 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
 
   const products = useMemo(() => mergeDashboardProducts(pipelineProducts, catalog), [catalog, pipelineProducts]);
   const weekStarts = useMemo(() => {
+    if (monthAnchor.slice(0, 7) === initialToday.slice(0, 7)) {
+      return Array.from({ length: 6 }, (_, index) => addDaysIso(currentWeekStart, index * -7));
+    }
     const monthWeekStarts = monthAnchor ? getMonthWeekStarts(monthAnchor) : [];
-    return [currentWeekStart, ...monthWeekStarts.filter(weekStart => weekStart !== currentWeekStart)];
-  }, [currentWeekStart, monthAnchor]);
+    const previousWeekStarts = monthWeekStarts
+      .filter(weekStart => weekStart < currentWeekStart)
+      .sort((first, second) => second.localeCompare(first));
+    return [currentWeekStart, ...previousWeekStarts];
+  }, [currentWeekStart, initialToday, monthAnchor]);
   const selectedProduct = products.find(product => product.id === selectedProductId) ?? null;
   const selectedProductTag = selectedProduct ? catalog.tags.find(tag => tag.id === selectedProduct.tagId) ?? null : null;
   const selectedKey = selectedProductId && selectedWeekStart ? reportKey(selectedProductId, selectedWeekStart) : "";
