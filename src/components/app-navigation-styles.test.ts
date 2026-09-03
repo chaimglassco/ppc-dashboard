@@ -36,6 +36,8 @@ describe("application navigation style contract", () => {
   it("joins the selected product to the reporting-period panel as one continuous surface", () => {
     expect(dashboardCss).toContain(".dashboard{column-gap:0;row-gap:12px}");
     expect(dashboardCss).toContain(".periodsPanel{border-left:0;border-radius:0 16px 16px 0;background:#dceaff");
+    expect(portfolioCss).toContain(".list{direction:rtl}");
+    expect(portfolioCss).toContain(".list>*{direction:ltr}");
     expect(portfolioCss).toContain(".selected{z-index:2;margin-right:-12px;border-color:#dceaff;border-radius:12px 0 0 12px;background:#dceaff");
     expect(portfolioCss).toContain(".selected::after{position:absolute;top:-1px;right:-12px;bottom:-1px;width:13px;background:#dceaff");
   });
