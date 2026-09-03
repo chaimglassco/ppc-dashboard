@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDaysIso, createWeeklyPpcReport, formatWeekRange, getMonthWeekStarts, parsePpcDashboardStore, reportKey, startOfWeekIso } from "./ppc-dashboard-state";
+import { addDaysIso, createWeeklyPpcReport, formatWeekRange, getMonthWeekStarts, parsePpcDashboardStore, reportKey, startOfWeekIso, withCalculatedPerformance } from "./ppc-dashboard-state";
 
 describe("PPC dashboard state", () => {
   it("creates stable product/week report keys for Wednesday through Tuesday periods", () => {
@@ -33,5 +33,31 @@ describe("PPC dashboard state", () => {
       ppcSales: 320, organicSales: 0, totalSales: 320,
       ppcOrders: 8, organicOrders: 0, totalOrders: 8,
     });
+  });
+
+  it("calculates organic results and efficiency metrics from verified totals", () => {
+    const calculated = withCalculatedPerformance({
+      ...createWeeklyPpcReport("product-1", "2026-08-26"),
+      spend: 75, ppcSales: 100, totalSales: 300, ppcOrders: 3, totalOrders: 8,
+    });
+
+    expect(calculated).toMatchObject({ organicSales: 200, organicOrders: 5, acos: 75, tacos: 25 });
+  });
+
+  it("carries unfinished goals into the following week and resets their progress", () => {
+    const previous = {
+      ...createWeeklyPpcReport("product-1", "2026-08-26"),
+      goals: [
+        { id: "done", title: "Completed goal", target: "10", actual: "10", status: "Achieved" as const },
+        { id: "risk", title: "Improve ACOS", target: "25%", actual: "32%", status: "At Risk" as const },
+        { id: "missed", title: "Increase sales", target: "$500", actual: "$300", status: "Missed" as const },
+      ],
+    };
+    const next = createWeeklyPpcReport("product-1", "2026-09-02", previous);
+
+    expect(next.goals.map(goal => ({ title: goal.title, actual: goal.actual, status: goal.status }))).toEqual([
+      { title: "Improve ACOS", actual: "", status: "On Track" },
+      { title: "Increase sales", actual: "", status: "On Track" },
+    ]);
   });
 });

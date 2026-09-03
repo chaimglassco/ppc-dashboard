@@ -83,6 +83,23 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(performanceCard).getAllByRole("textbox").map(input => input.getAttribute("aria-label"))).toEqual([
       "Spend", "PPC Sales", "Organic Sales", "Total Sales", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
     ]);
+    fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Sales" }), { target: { value: "100" } });
+    fireEvent.change(within(performanceCard).getByRole("textbox", { name: "Total Sales" }), { target: { value: "300" } });
+    fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Orders" }), { target: { value: "3" } });
+    fireEvent.change(within(performanceCard).getByRole("textbox", { name: "Total Orders" }), { target: { value: "8" } });
+    expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveValue("200");
+    expect(within(performanceCard).getByRole("textbox", { name: "Organic Orders" })).toHaveValue("5");
+    expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveValue("75");
+    expect(within(performanceCard).getByRole("textbox", { name: "TACOS" })).toHaveValue("25");
+    expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveAttribute("readonly");
+
+    const goalStatus = screen.getByRole("combobox", { name: "Reduce ACOS status" });
+    expect(goalStatus.className).toMatch(/success/);
+    fireEvent.change(goalStatus, { target: { value: "At Risk" } });
+    expect(goalStatus.className).toMatch(/warning/);
+    expect(within(goalStatus).getByRole("option", { name: "Missed" }).className).toMatch(/danger/);
+    expect(screen.queryByText(/Previous week:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No saved report exists/i)).not.toBeInTheDocument();
 
     const carryForward = screen.getByRole("textbox", { name: "Carry-forward result and lessons" }) as HTMLTextAreaElement;
     const documentation = screen.getByRole("textbox", { name: "Performance documentation" }) as HTMLTextAreaElement;

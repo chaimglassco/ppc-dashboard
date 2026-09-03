@@ -25,12 +25,27 @@ const LEGACY_REPORTING_WEEK_START_DAY = 1;
 
 export function reportKey(productId: string, weekStart: string) { return `${productId}:${weekStart}`; }
 
-export function createWeeklyPpcReport(productId: string, weekStart: string): WeeklyPpcReport {
+export function createWeeklyPpcReport(productId: string, weekStart: string, previousReport?: WeeklyPpcReport | null): WeeklyPpcReport {
+  const carriedGoals = previousReport
+    ? previousReport.goals.filter(goal => goal.status !== "Achieved").map((goal, index) => ({
+      ...goal, id: `${goal.id}-carried-${weekStart}-${index}`, actual: "", status: "On Track" as GoalStatus,
+    }))
+    : DEFAULT_GOALS.map(goal => ({ ...goal }));
   return {
     productId, weekStart, status: "Draft", weeklyBudget: 0, dailyBudget: 0, spend: 0,
     ppcSales: 0, organicSales: 0, totalSales: 0, ppcOrders: 0, organicOrders: 0, totalOrders: 0,
-    acos: 0, tacos: 0, goals: DEFAULT_GOALS.map(goal => ({ ...goal })), previousWeekResult: "",
+    acos: 0, tacos: 0, goals: carriedGoals, previousWeekResult: "",
     notes: "", actions: DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt: null,
+  };
+}
+
+export function withCalculatedPerformance(report: WeeklyPpcReport): WeeklyPpcReport {
+  return {
+    ...report,
+    organicSales: Math.max(0, report.totalSales - report.ppcSales),
+    organicOrders: Math.max(0, report.totalOrders - report.ppcOrders),
+    acos: report.ppcSales ? Math.round((report.spend / report.ppcSales) * 10000) / 100 : 0,
+    tacos: report.totalSales ? Math.round((report.spend / report.totalSales) * 10000) / 100 : 0,
   };
 }
 
@@ -68,15 +83,15 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
   const organicSales = finiteNumber(value.organicSales);
   const ppcOrders = finiteNumber(value.ppcOrders ?? value.orders);
   const organicOrders = finiteNumber(value.organicOrders);
-  return {
+  return withCalculatedPerformance({
     productId, weekStart, status: statuses.includes(value.status as ReportStatus) ? value.status as ReportStatus : "Draft",
     weeklyBudget: finiteNumber(value.weeklyBudget), dailyBudget: finiteNumber(value.dailyBudget), spend: finiteNumber(value.spend),
     ppcSales, organicSales, totalSales: value.totalSales == null ? ppcSales + organicSales : finiteNumber(value.totalSales),
     ppcOrders, organicOrders, totalOrders: value.totalOrders == null ? ppcOrders + organicOrders : finiteNumber(value.totalOrders),
     acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
-    goals: goals.length ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), previousWeekResult: String(value.previousWeekResult ?? ""), notes: String(value.notes ?? ""),
+    goals: Array.isArray(value.goals) ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), previousWeekResult: String(value.previousWeekResult ?? ""), notes: String(value.notes ?? ""),
     actions: actions.length ? actions : DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : null,
-  };
+  });
 }
 
 export function parsePpcDashboardStore(raw: string | null): PpcDashboardStore {

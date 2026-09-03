@@ -3,7 +3,7 @@
 import Image from "next/image";
 import {
   ArrowLeft, ArrowRight, BarChart3, Bold, CalendarDays, Check, CheckCircle2, ClipboardList, DollarSign,
-  FileText, Flag, Italic, List, ListOrdered, Plus, Save, Trash2, WalletCards, X,
+  FileText, Flag, Italic, List, ListOrdered, Plus, Save, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
@@ -11,7 +11,7 @@ import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
   PPC_DASHBOARD_STORAGE_KEY, addDaysIso, addMonthsIso, createWeeklyPpcReport, currency, formatMonth,
   formatWeekRange, getIsoWeekNumber, getMonthWeekStarts, parsePpcDashboardStore, percentage, reportKey,
-  startOfWeekIso, type ActionItem, type DashboardProduct, type GoalStatus, type ReportStatus,
+  startOfWeekIso, withCalculatedPerformance, type ActionItem, type DashboardProduct, type GoalStatus, type ReportStatus,
   type WeeklyGoal, type WeeklyPpcReport,
 } from "../domain/ppc-dashboard-state";
 import {
@@ -22,22 +22,21 @@ import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfoli
 import styles from "./ppc-performance-dashboard.module.css";
 
 type MetricField = "spend" | "ppcSales" | "organicSales" | "totalSales" | "ppcOrders" | "organicOrders" | "totalOrders" | "acos" | "tacos";
-type MetricDefinition = { field: MetricField; label: string; prefix?: string; suffix?: string };
+type MetricDefinition = { field: MetricField; label: string; prefix?: string; suffix?: string; calculated?: boolean };
 
-const REPORT_STATUSES: ReportStatus[] = ["Draft", "In Progress", "Completed", "Needs Review"];
 const GOAL_STATUSES: GoalStatus[] = ["On Track", "At Risk", "Achieved", "Missed"];
 const AUTO_SAVE_DELAY_MS = 500;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const METRIC_GROUPS: { title: string; metrics: MetricDefinition[] }[] = [
   { title: "Sales", metrics: [
     { field: "spend", label: "Spend", prefix: "$" }, { field: "ppcSales", label: "PPC Sales", prefix: "$" },
-    { field: "organicSales", label: "Organic Sales", prefix: "$" }, { field: "totalSales", label: "Total Sales", prefix: "$" },
+    { field: "organicSales", label: "Organic Sales", prefix: "$", calculated: true }, { field: "totalSales", label: "Total Sales", prefix: "$" },
   ] },
   { title: "Orders", metrics: [
-    { field: "ppcOrders", label: "PPC Orders" }, { field: "organicOrders", label: "Organic Orders" }, { field: "totalOrders", label: "Total Orders" },
+    { field: "ppcOrders", label: "PPC Orders" }, { field: "organicOrders", label: "Organic Orders", calculated: true }, { field: "totalOrders", label: "Total Orders" },
   ] },
   { title: "Efficiency", metrics: [
-    { field: "acos", label: "ACOS", suffix: "%" }, { field: "tacos", label: "TACOS", suffix: "%" },
+    { field: "acos", label: "ACOS", suffix: "%", calculated: true }, { field: "tacos", label: "TACOS", suffix: "%", calculated: true },
   ] },
 ];
 
@@ -55,9 +54,9 @@ function preciseCurrency(value: number) {
 }
 
 function MetricInput({ metric, report, onChange }: { metric: MetricDefinition; report: WeeklyPpcReport; onChange: (field: MetricField, value: number) => void }) {
-  return <label className={styles.metricCard}>
+  return <label className={`${styles.metricCard} ${metric.calculated ? styles.calculatedMetric : ""}`}>
     <span>{metric.label}</span>
-    <span className={styles.metricInputWrap}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} inputMode="decimal" value={report[metric.field] || ""} placeholder="0" onChange={event => onChange(metric.field, numericValue(event.target.value))} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
+    <span className={styles.metricInputWrap}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-readonly={metric.calculated || undefined} readOnly={metric.calculated} inputMode="decimal" value={report[metric.field] || ""} placeholder="0" onChange={event => { if (!metric.calculated) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
   </label>;
 }
 
@@ -247,8 +246,8 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const selectedProductTag = selectedProduct ? catalog.tags.find(tag => tag.id === selectedProduct.tagId) ?? null : null;
   const selectedKey = selectedProductId && selectedWeekStart ? reportKey(selectedProductId, selectedWeekStart) : "";
   const dirty = selectedKey ? dirtyReportKeys.has(selectedKey) : false;
-  const report = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart) : null;
   const previousReport = selectedProductId && selectedWeekStart ? reports[reportKey(selectedProductId, addDaysIso(selectedWeekStart, -7))] ?? null : null;
+  const report = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart, previousReport) : null;
   const budgetUsage = report ? percentage(report.spend, report.weeklyBudget) : 0;
   const budgetBalance = report ? report.weeklyBudget - report.spend : 0;
   const isOverspent = budgetBalance < 0;
@@ -259,7 +258,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     setDirtyReportKeys(current => new Set(current).add(selectedKey));
     setSaveNotice("Saving changes…");
   };
-  const patchReport = (patch: Partial<WeeklyPpcReport>) => { if (report) replaceReport({ ...report, ...patch }); };
+  const patchReport = (patch: Partial<WeeklyPpcReport>) => { if (report) replaceReport(withCalculatedPerformance({ ...report, ...patch })); };
   const selectProduct = (productId: string) => { setSelectedProductId(productId); setSaveNotice(""); };
   const selectWeek = (weekStart: string) => { setSelectedWeekStart(weekStart); setSaveNotice(""); };
   const openMonthPicker = () => { setMonthPickerYear(Number(monthAnchor.slice(0, 4))); setMonthPickerOpen(true); };
@@ -359,10 +358,8 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         </header>
 
         <div className={styles.workspaceScroll}>
-          <div className={styles.statusBar}><label>Status<select value={report.status} onChange={event => patchReport({ status: event.target.value as ReportStatus })}>{REPORT_STATUSES.map(status => <option key={status}>{status}</option>)}</select></label><span><CheckCircle2 />Previous week: {previousReport?.status ?? "No saved report"}</span><span><WalletCards />Budget used: {budgetUsage}%</span></div>
-
           <div className={styles.twoColumn}>
-            <section className={styles.card} aria-labelledby="goals-heading"><div className={styles.cardTitle}><h3 id="goals-heading"><Flag />Weekly Goals</h3><button type="button" onClick={addGoal}><Plus />Add Goal</button></div><div className={styles.goalList}>{report.goals.map(goal => <div className={styles.goalRow} key={goal.id}><input className={styles.goalTitleInput} aria-label="Goal title" value={goal.title} onChange={event => updateGoal(goal.id, { title: event.target.value })} /><div className={styles.goalMetrics}><label>Target<input value={goal.target} onChange={event => updateGoal(goal.id, { target: event.target.value })} /></label><label>Actual<input value={goal.actual} onChange={event => updateGoal(goal.id, { actual: event.target.value })} /></label><label>Status<select aria-label={`${goal.title} status`} className={statusTone(goal.status)} value={goal.status} onChange={event => updateGoal(goal.id, { status: event.target.value as GoalStatus })}>{GOAL_STATUSES.map(status => <option key={status}>{status}</option>)}</select></label><button type="button" aria-label={`Remove ${goal.title}`} onClick={() => removeGoal(goal.id)}><Trash2 /></button></div></div>)}</div></section>
+            <section className={styles.card} aria-labelledby="goals-heading"><div className={styles.cardTitle}><h3 id="goals-heading"><Flag />Weekly Goals</h3><button type="button" onClick={addGoal}><Plus />Add Goal</button></div><div className={styles.goalList}>{report.goals.map(goal => <div className={styles.goalRow} key={goal.id}><input className={styles.goalTitleInput} aria-label="Goal title" value={goal.title} onChange={event => updateGoal(goal.id, { title: event.target.value })} /><div className={styles.goalMetrics}><label>Target<input value={goal.target} onChange={event => updateGoal(goal.id, { target: event.target.value })} /></label><label>Actual<input value={goal.actual} onChange={event => updateGoal(goal.id, { actual: event.target.value })} /></label><label>Status<select aria-label={`${goal.title} status`} className={statusTone(goal.status)} value={goal.status} onChange={event => updateGoal(goal.id, { status: event.target.value as GoalStatus })}>{GOAL_STATUSES.map(status => <option className={statusTone(status)} key={status}>{status}</option>)}</select></label><button type="button" aria-label={`Remove ${goal.title}`} onClick={() => removeGoal(goal.id)}><Trash2 /></button></div></div>)}</div></section>
 
             <section className={styles.card} aria-labelledby="budget-heading">
               <div className={styles.cardTitle}><h3 id="budget-heading"><DollarSign />Budget Tracking</h3></div>
@@ -379,7 +376,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
           <section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><span>Enter verified Seller Central results</span></div><div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
 
           <div className={styles.twoColumn}>
-            <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}><span className={statusTone(previousReport.status)}>{previousReport.status}</span><strong>{currency(previousReport.totalSales)} total sales · {previousReport.tacos || 0}% TACOS</strong><p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : <p className={styles.mutedCopy}>No saved report exists for {formatWeekRange(addDaysIso(selectedWeekStart, -7))}.</p>}<FormattedTextarea label="Carry-forward result and lessons" value={report.previousWeekResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></section>
+            <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}><span className={statusTone(previousReport.status)}>{previousReport.status}</span><strong>{currency(previousReport.totalSales)} total sales · {previousReport.tacos || 0}% TACOS</strong><p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : null}<FormattedTextarea label="Carry-forward result and lessons" value={report.previousWeekResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></section>
             <section className={styles.card} aria-labelledby="notes-heading"><div className={styles.cardTitle}><h3 id="notes-heading"><FileText />Weekly Summary & Notes</h3></div><FormattedTextarea label="Performance documentation" value={report.notes} onChange={notes => patchReport({ notes })} placeholder="Executive summary, wins, underperformance, bid changes, negative keywords, learnings, and priorities for next week..." /></section>
           </div>
 
