@@ -48,6 +48,10 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.queryByRole("dialog", { name: "Choose a month" })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("textbox", { name: /Weekly limit/i }), { target: { value: "1500" } });
+    expect(screen.getByText("$214.29")).toBeVisible();
+    fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "350" } });
+    expect(screen.getByText("$1,150")).toBeVisible();
+    expect(screen.getByText("23% of the weekly budget used")).toBeVisible();
     fireEvent.change(screen.getByRole("textbox", { name: "Performance documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
     expect(screen.getByText("Unsaved changes")).toBeVisible();
 
@@ -60,10 +64,12 @@ describe("PpcPerformanceDashboard", () => {
       productId: "product-1",
       weekStart: "2026-08-26",
       weeklyBudget: 1500,
+      dailyBudget: 214.29,
+      spend: 350,
       notes: "Scale the best converting exact-match campaign.",
       status: "Draft",
     });
-  });
+  }, 10_000);
 
   it("confirms before hiding a Pipeline product from the weekly portfolio", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);

@@ -36,6 +36,14 @@ function numericValue(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
+function dailyLimitFromWeekly(weeklyLimit: number) {
+  return Math.round((weeklyLimit / 7) * 100) / 100;
+}
+
+function preciseCurrency(value: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: Number.isInteger(value) ? 0 : 2, maximumFractionDigits: 2 }).format(value || 0);
+}
+
 function MetricInput({ metric, report, onChange }: { metric: typeof METRICS[number]; report: WeeklyPpcReport; onChange: (field: MetricField, value: number) => void }) {
   return <label className={styles.metricCard}>
     <span>{metric.label}</span>
@@ -234,7 +242,16 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
           <div className={styles.twoColumn}>
             <section className={styles.card} aria-labelledby="goals-heading"><div className={styles.cardTitle}><h3 id="goals-heading"><Flag />Weekly Goals</h3><button type="button" onClick={addGoal}><Plus />Add Goal</button></div><div className={styles.goalList}>{report.goals.map(goal => <div className={styles.goalRow} key={goal.id}><input aria-label="Goal title" value={goal.title} onChange={event => updateGoal(goal.id, { title: event.target.value })} /><label>Target<input value={goal.target} onChange={event => updateGoal(goal.id, { target: event.target.value })} /></label><label>Actual<input value={goal.actual} onChange={event => updateGoal(goal.id, { actual: event.target.value })} /></label><select aria-label={`${goal.title} status`} className={statusTone(goal.status)} value={goal.status} onChange={event => updateGoal(goal.id, { status: event.target.value as GoalStatus })}>{GOAL_STATUSES.map(status => <option key={status}>{status}</option>)}</select><button type="button" aria-label={`Remove ${goal.title}`} onClick={() => removeGoal(goal.id)}><Trash2 /></button></div>)}</div></section>
 
-            <section className={styles.card} aria-labelledby="budget-heading"><div className={styles.cardTitle}><h3 id="budget-heading"><DollarSign />Budget Tracking</h3></div><div className={styles.budgetGrid}><label><span>Weekly limit</span><span className={styles.moneyInput}><i>$</i><input inputMode="decimal" value={report.weeklyBudget || ""} placeholder="0" onChange={event => patchReport({ weeklyBudget: numericValue(event.target.value) })} /></span></label><label><span>Daily limit</span><span className={styles.moneyInput}><i>$</i><input inputMode="decimal" value={report.dailyBudget || ""} placeholder="0" onChange={event => patchReport({ dailyBudget: numericValue(event.target.value) })} /></span></label><div><span>Actual spend</span><strong>{currency(report.spend)}</strong></div><div><span>Remaining</span><strong>{currency(Math.max(0, report.weeklyBudget - report.spend))}</strong></div></div><div className={styles.progressTrack} aria-label={`${budgetUsage}% of weekly budget used`}><span className={budgetUsage >= 100 ? styles.progressDanger : budgetUsage >= 80 ? styles.progressWarning : ""} style={{ width: `${Math.min(100, budgetUsage)}%` }} /></div><small>{budgetUsage}% of the weekly budget used</small></section>
+            <section className={styles.card} aria-labelledby="budget-heading">
+              <div className={styles.cardTitle}><h3 id="budget-heading"><DollarSign />Budget Tracking</h3></div>
+              <div className={styles.budgetGrid}>
+                <label><span>Weekly limit</span><span className={styles.moneyInput}><i>$</i><input inputMode="decimal" value={report.weeklyBudget || ""} placeholder="0" onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} /></span></label>
+                <div><span>Daily limit</span><strong>{preciseCurrency(dailyLimitFromWeekly(report.weeklyBudget))}</strong></div>
+                <label><span>Actual spend</span><span className={styles.moneyInput}><i>$</i><input aria-label="Actual spend" inputMode="decimal" value={report.spend || ""} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span></label>
+                <div><span>Remaining</span><strong>{currency(Math.max(0, report.weeklyBudget - report.spend))}</strong></div>
+              </div>
+              <div className={styles.progressTrack} aria-label={`${budgetUsage}% of weekly budget used`}><span className={budgetUsage >= 100 ? styles.progressDanger : budgetUsage >= 80 ? styles.progressWarning : ""} style={{ width: `${Math.min(100, budgetUsage)}%` }} /></div><small>{budgetUsage}% of the weekly budget used</small>
+            </section>
           </div>
 
           <section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><span>Enter verified Seller Central results</span></div><div className={styles.metricsGrid}>{METRICS.map(metric => <MetricInput key={metric.field} metric={metric} report={report} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>
