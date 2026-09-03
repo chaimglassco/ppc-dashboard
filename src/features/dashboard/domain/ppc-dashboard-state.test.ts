@@ -22,4 +22,16 @@ describe("PPC dashboard state", () => {
     expect(parsed.reports["product-1:2026-08-26"].notes).toBe("Keep this");
     expect(parsePpcDashboardStore("not json")).toEqual({ version: 1, reports: {} });
   });
+
+  it("migrates legacy sales and order metrics into the expanded performance report", () => {
+    const legacyReport = {
+      productId: "product-1", weekStart: "2026-08-26", status: "Draft", sales: 320, orders: 8,
+    };
+    const parsed = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { legacy: legacyReport } }));
+
+    expect(parsed.reports["product-1:2026-08-26"]).toMatchObject({
+      ppcSales: 320, organicSales: 0, totalSales: 320,
+      ppcOrders: 8, organicOrders: 0, totalOrders: 8,
+    });
+  });
 });

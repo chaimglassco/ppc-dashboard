@@ -69,6 +69,36 @@ describe("PpcPerformanceDashboard", () => {
     });
   }, 10_000);
 
+  it("shows overspend, grouped metrics, formatted notes, and color-coded priorities without dates", async () => {
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
+
+    fireEvent.change(screen.getByRole("textbox", { name: /Weekly limit/i }), { target: { value: "50" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "75" } });
+    const budgetCard = screen.getByRole("region", { name: "Budget Tracking" });
+    expect(within(budgetCard).getByText("Overspent")).toBeVisible();
+    expect(within(budgetCard).getByText("$25")).toBeVisible();
+
+    const performanceCard = screen.getByRole("region", { name: "Weekly Performance" });
+    expect(within(performanceCard).getAllByRole("textbox").map(input => input.getAttribute("aria-label"))).toEqual([
+      "Spend", "PPC Sales", "Organic Sales", "Total Sales", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
+    ]);
+
+    const carryForward = screen.getByRole("textbox", { name: "Carry-forward result and lessons" });
+    const documentation = screen.getByRole("textbox", { name: "Performance documentation" }) as HTMLTextAreaElement;
+    expect(carryForward.className).toBe(documentation.className);
+    fireEvent.change(documentation, { target: { value: "First action\nSecond action" } });
+    documentation.setSelectionRange(0, "First action\nSecond action".length);
+    fireEvent.click(screen.getByRole("button", { name: "Bulleted list Performance documentation" }));
+    expect(documentation).toHaveValue("• First action\n• Second action");
+
+    const priority = screen.getByRole("combobox", { name: /negative exact keywords priority/i });
+    expect(priority.className).toMatch(/priorityHigh/);
+    fireEvent.change(priority, { target: { value: "Low" } });
+    expect(priority.className).toMatch(/priorityLow/);
+    expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
+  });
+
   it("confirms before hiding a Pipeline product from the weekly portfolio", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();

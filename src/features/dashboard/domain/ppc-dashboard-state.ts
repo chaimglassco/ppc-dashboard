@@ -7,7 +7,8 @@ export type WeeklyGoal = { id: string; title: string; target: string; actual: st
 export type ActionItem = { id: string; title: string; priority: "High" | "Medium" | "Low"; dueDate: string; done: boolean };
 export type WeeklyPpcReport = {
   productId: string; weekStart: string; status: ReportStatus; weeklyBudget: number; dailyBudget: number;
-  spend: number; sales: number; orders: number; impressions: number; clicks: number; acos: number; roas: number;
+  spend: number; ppcSales: number; organicSales: number; totalSales: number;
+  ppcOrders: number; organicOrders: number; totalOrders: number; acos: number; tacos: number;
   goals: WeeklyGoal[]; previousWeekResult: string; notes: string; actions: ActionItem[]; updatedAt: string | null;
 };
 export type PpcDashboardStore = { version: 1; reports: Record<string, WeeklyPpcReport> };
@@ -26,8 +27,9 @@ export function reportKey(productId: string, weekStart: string) { return `${prod
 
 export function createWeeklyPpcReport(productId: string, weekStart: string): WeeklyPpcReport {
   return {
-    productId, weekStart, status: "Draft", weeklyBudget: 0, dailyBudget: 0, spend: 0, sales: 0, orders: 0,
-    impressions: 0, clicks: 0, acos: 0, roas: 0, goals: DEFAULT_GOALS.map(goal => ({ ...goal })), previousWeekResult: "",
+    productId, weekStart, status: "Draft", weeklyBudget: 0, dailyBudget: 0, spend: 0,
+    ppcSales: 0, organicSales: 0, totalSales: 0, ppcOrders: 0, organicOrders: 0, totalOrders: 0,
+    acos: 0, tacos: 0, goals: DEFAULT_GOALS.map(goal => ({ ...goal })), previousWeekResult: "",
     notes: "", actions: DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt: null,
   };
 }
@@ -62,10 +64,16 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
   const statuses: ReportStatus[] = ["Draft", "In Progress", "Completed", "Needs Review"];
   const goals = Array.isArray(value.goals) ? value.goals.map(normalizeGoal).filter((goal): goal is WeeklyGoal => Boolean(goal)) : [];
   const actions = Array.isArray(value.actions) ? value.actions.map(normalizeAction).filter((action): action is ActionItem => Boolean(action)) : [];
+  const ppcSales = finiteNumber(value.ppcSales ?? value.sales);
+  const organicSales = finiteNumber(value.organicSales);
+  const ppcOrders = finiteNumber(value.ppcOrders ?? value.orders);
+  const organicOrders = finiteNumber(value.organicOrders);
   return {
     productId, weekStart, status: statuses.includes(value.status as ReportStatus) ? value.status as ReportStatus : "Draft",
-    weeklyBudget: finiteNumber(value.weeklyBudget), dailyBudget: finiteNumber(value.dailyBudget), spend: finiteNumber(value.spend), sales: finiteNumber(value.sales),
-    orders: finiteNumber(value.orders), impressions: finiteNumber(value.impressions), clicks: finiteNumber(value.clicks), acos: finiteNumber(value.acos), roas: finiteNumber(value.roas),
+    weeklyBudget: finiteNumber(value.weeklyBudget), dailyBudget: finiteNumber(value.dailyBudget), spend: finiteNumber(value.spend),
+    ppcSales, organicSales, totalSales: value.totalSales == null ? ppcSales + organicSales : finiteNumber(value.totalSales),
+    ppcOrders, organicOrders, totalOrders: value.totalOrders == null ? ppcOrders + organicOrders : finiteNumber(value.totalOrders),
+    acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
     goals: goals.length ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), previousWeekResult: String(value.previousWeekResult ?? ""), notes: String(value.notes ?? ""),
     actions: actions.length ? actions : DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : null,
   };

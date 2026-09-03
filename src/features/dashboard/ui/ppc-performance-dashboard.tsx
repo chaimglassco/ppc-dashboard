@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  ArrowLeft, ArrowRight, BarChart3, CalendarDays, Check, CheckCircle2, ClipboardList, DollarSign,
-  FileText, Flag, Plus, Save, Trash2, WalletCards, X,
+  ArrowLeft, ArrowRight, BarChart3, Bold, CalendarDays, Check, CheckCircle2, ClipboardList, DollarSign,
+  FileText, Flag, Italic, List, ListOrdered, Plus, Save, Trash2, WalletCards, X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
@@ -20,16 +20,24 @@ import {
 import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfolio-panel";
 import styles from "./ppc-performance-dashboard.module.css";
 
-type MetricField = "spend" | "sales" | "orders" | "impressions" | "clicks" | "acos" | "roas";
+type MetricField = "spend" | "ppcSales" | "organicSales" | "totalSales" | "ppcOrders" | "organicOrders" | "totalOrders" | "acos" | "tacos";
+type MetricDefinition = { field: MetricField; label: string; prefix?: string; suffix?: string };
 
 const REPORT_STATUSES: ReportStatus[] = ["Draft", "In Progress", "Completed", "Needs Review"];
 const GOAL_STATUSES: GoalStatus[] = ["On Track", "At Risk", "Achieved", "Missed"];
 const AUTO_SAVE_DELAY_MS = 500;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const METRICS: { field: MetricField; label: string; prefix?: string; suffix?: string }[] = [
-  { field: "spend", label: "Ad Spend", prefix: "$" }, { field: "sales", label: "PPC Sales", prefix: "$" },
-  { field: "orders", label: "Orders" }, { field: "impressions", label: "Impressions" },
-  { field: "clicks", label: "Clicks" }, { field: "acos", label: "ACOS", suffix: "%" }, { field: "roas", label: "ROAS" },
+const METRIC_GROUPS: { title: string; metrics: MetricDefinition[] }[] = [
+  { title: "Sales", metrics: [
+    { field: "spend", label: "Spend", prefix: "$" }, { field: "ppcSales", label: "PPC Sales", prefix: "$" },
+    { field: "organicSales", label: "Organic Sales", prefix: "$" }, { field: "totalSales", label: "Total Sales", prefix: "$" },
+  ] },
+  { title: "Orders", metrics: [
+    { field: "ppcOrders", label: "PPC Orders" }, { field: "organicOrders", label: "Organic Orders" }, { field: "totalOrders", label: "Total Orders" },
+  ] },
+  { title: "Efficiency", metrics: [
+    { field: "acos", label: "ACOS", suffix: "%" }, { field: "tacos", label: "TACOS", suffix: "%" },
+  ] },
 ];
 
 function numericValue(value: string) {
@@ -45,11 +53,50 @@ function preciseCurrency(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: Number.isInteger(value) ? 0 : 2, maximumFractionDigits: 2 }).format(value || 0);
 }
 
-function MetricInput({ metric, report, onChange }: { metric: typeof METRICS[number]; report: WeeklyPpcReport; onChange: (field: MetricField, value: number) => void }) {
+function MetricInput({ metric, report, onChange }: { metric: MetricDefinition; report: WeeklyPpcReport; onChange: (field: MetricField, value: number) => void }) {
   return <label className={styles.metricCard}>
     <span>{metric.label}</span>
     <span className={styles.metricInputWrap}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} inputMode="decimal" value={report[metric.field] || ""} placeholder="0" onChange={event => onChange(metric.field, numericValue(event.target.value))} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
   </label>;
+}
+
+function FormattedTextarea({ label, value, placeholder, onChange }: { label: string; value: string; placeholder: string; onChange: (value: string) => void }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const applyFormat = (format: "bold" | "italic" | "bullet" | "numbered") => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = value.slice(start, end);
+    let replacement = selected;
+    let selectionStart = start;
+    let selectionEnd = end;
+
+    if (format === "bold" || format === "italic") {
+      const marker = format === "bold" ? "**" : "_";
+      const content = selected || (format === "bold" ? "bold text" : "italic text");
+      replacement = `${marker}${content}${marker}`;
+      selectionStart = start + marker.length;
+      selectionEnd = selectionStart + content.length;
+    } else {
+      const content = selected || "List item";
+      replacement = content.split("\n").map((line, index) => `${format === "bullet" ? "•" : `${index + 1}.`} ${line.replace(/^\s*(?:[-•]|\d+\.)\s*/, "")}`).join("\n");
+      selectionEnd = start + replacement.length;
+    }
+
+    onChange(`${value.slice(0, start)}${replacement}${value.slice(end)}`);
+    window.requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(selectionStart, selectionEnd);
+    });
+  };
+
+  return <div className={styles.textAreaLabel}><span>{label}</span><span className={styles.formatToolbar} role="toolbar" aria-label={`${label} formatting`}>
+    <button type="button" aria-label={`Bold ${label}`} onClick={() => applyFormat("bold")}><Bold aria-hidden="true" /></button>
+    <button type="button" aria-label={`Italic ${label}`} onClick={() => applyFormat("italic")}><Italic aria-hidden="true" /></button>
+    <button type="button" aria-label={`Bulleted list ${label}`} onClick={() => applyFormat("bullet")}><List aria-hidden="true" /></button>
+    <button type="button" aria-label={`Numbered list ${label}`} onClick={() => applyFormat("numbered")}><ListOrdered aria-hidden="true" /></button>
+  </span><textarea ref={textareaRef} className={styles.notesArea} aria-label={label} value={value} onChange={event => onChange(event.target.value)} placeholder={placeholder} /></div>;
 }
 
 function statusTone(status: string) {
@@ -57,6 +104,12 @@ function statusTone(status: string) {
   if (status === "Needs Review" || status === "At Risk") return styles.warning;
   if (status === "Missed") return styles.danger;
   return styles.info;
+}
+
+function priorityTone(priority: ActionItem["priority"]) {
+  if (priority === "High") return styles.priorityHigh;
+  if (priority === "Low") return styles.priorityLow;
+  return styles.priorityMedium;
 }
 
 export function PpcPerformanceDashboard({ initialToday }: { initialToday: string }) {
@@ -165,6 +218,8 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const report = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart) : null;
   const previousReport = selectedProductId && selectedWeekStart ? reports[reportKey(selectedProductId, addDaysIso(selectedWeekStart, -7))] ?? null : null;
   const budgetUsage = report ? percentage(report.spend, report.weeklyBudget) : 0;
+  const budgetBalance = report ? report.weeklyBudget - report.spend : 0;
+  const isOverspent = budgetBalance < 0;
 
   const replaceReport = (nextReport: WeeklyPpcReport) => {
     if (!selectedKey) return;
@@ -259,7 +314,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         return <button type="button" key={weekStart} aria-pressed={isSelected} className={`${styles.periodCard} ${isSelected ? styles.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
           {isCurrent ? <span className={styles.currentBadge}>Current</span> : null}
           <span className={styles.periodTop}><span><strong>{formatWeekRange(weekStart)}</strong><small>Week {getIsoWeekNumber(weekStart)}</small></span><i className={statusTone(periodReport?.status ?? "Draft")}>{periodReport?.status ?? "Draft"}</i></span>
-          <span className={styles.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>Sales</small><strong>{currency(periodReport?.sales ?? 0)}</strong></span><span><small>Order</small><strong>{periodReport?.orders ?? 0}</strong></span><span><small>ACOS</small><strong>{periodReport?.acos ?? 0}%</strong></span></span>
+          <span className={styles.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>Sales</small><strong>{currency(periodReport?.totalSales ?? 0)}</strong></span><span><small>Order</small><strong>{periodReport?.totalOrders ?? 0}</strong></span><span><small>ACOS</small><strong>{periodReport?.acos ?? 0}%</strong></span></span>
         </button>;
       })}</div>
     </aside>
@@ -283,20 +338,20 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
                 <label><span>Weekly limit</span><span className={styles.moneyInput}><i>$</i><input inputMode="decimal" value={report.weeklyBudget || ""} placeholder="0" onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} /></span></label>
                 <div><span>Daily limit</span><strong>{preciseCurrency(dailyLimitFromWeekly(report.weeklyBudget))}</strong></div>
                 <label><span>Actual spend</span><span className={styles.moneyInput}><i>$</i><input aria-label="Actual spend" inputMode="decimal" value={report.spend || ""} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span></label>
-                <div><span>Remaining</span><strong>{currency(Math.max(0, report.weeklyBudget - report.spend))}</strong></div>
+                <div className={isOverspent ? styles.budgetOver : ""}><span>{isOverspent ? "Overspent" : "Remaining"}</span><strong>{currency(Math.abs(budgetBalance))}</strong></div>
               </div>
               <div className={styles.progressTrack} aria-label={`${budgetUsage}% of weekly budget used`}><span className={budgetUsage >= 100 ? styles.progressDanger : budgetUsage >= 80 ? styles.progressWarning : ""} style={{ width: `${Math.min(100, budgetUsage)}%` }} /></div><small>{budgetUsage}% of the weekly budget used</small>
             </section>
           </div>
 
-          <section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><span>Enter verified Seller Central results</span></div><div className={styles.metricsGrid}>{METRICS.map(metric => <MetricInput key={metric.field} metric={metric} report={report} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>
+          <section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><span>Enter verified Seller Central results</span></div><div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
 
           <div className={styles.twoColumn}>
-            <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}><span className={statusTone(previousReport.status)}>{previousReport.status}</span><strong>{currency(previousReport.sales)} sales · {previousReport.roas || 0} ROAS</strong><p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : <p className={styles.mutedCopy}>No saved report exists for {formatWeekRange(addDaysIso(selectedWeekStart, -7))}.</p>}<label className={styles.textAreaLabel}>Carry-forward result and lessons<textarea value={report.previousWeekResult} onChange={event => patchReport({ previousWeekResult: event.target.value })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></label></section>
-            <section className={styles.card} aria-labelledby="notes-heading"><div className={styles.cardTitle}><h3 id="notes-heading"><FileText />Weekly Summary & Notes</h3></div><label className={styles.textAreaLabel}>Performance documentation<textarea className={styles.notesArea} value={report.notes} onChange={event => patchReport({ notes: event.target.value })} placeholder="Executive summary, wins, underperformance, bid changes, negative keywords, learnings, and priorities for next week..." /></label></section>
+            <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}><span className={statusTone(previousReport.status)}>{previousReport.status}</span><strong>{currency(previousReport.totalSales)} total sales · {previousReport.tacos || 0}% TACOS</strong><p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : <p className={styles.mutedCopy}>No saved report exists for {formatWeekRange(addDaysIso(selectedWeekStart, -7))}.</p>}<FormattedTextarea label="Carry-forward result and lessons" value={report.previousWeekResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></section>
+            <section className={styles.card} aria-labelledby="notes-heading"><div className={styles.cardTitle}><h3 id="notes-heading"><FileText />Weekly Summary & Notes</h3></div><FormattedTextarea label="Performance documentation" value={report.notes} onChange={notes => patchReport({ notes })} placeholder="Executive summary, wins, underperformance, bid changes, negative keywords, learnings, and priorities for next week..." /></section>
           </div>
 
-          <section className={styles.card} aria-labelledby="actions-heading"><div className={styles.cardTitle}><h3 id="actions-heading"><ClipboardList />Next-Week Action Plan</h3><button type="button" onClick={addAction}><Plus />Add Item</button></div><div className={styles.actionList}>{report.actions.map(action => <div className={styles.actionRow} key={action.id}><button type="button" className={action.done ? styles.actionDone : ""} aria-label={action.done ? `Mark ${action.title} incomplete` : `Mark ${action.title} complete`} onClick={() => updateAction(action.id, { done: !action.done })}>{action.done ? <Check /> : null}</button><input aria-label="Action item" value={action.title} onChange={event => updateAction(action.id, { title: event.target.value })} /><select aria-label={`${action.title} priority`} value={action.priority} onChange={event => updateAction(action.id, { priority: event.target.value as ActionItem["priority"] })}><option>High</option><option>Medium</option><option>Low</option></select><input aria-label={`${action.title} due date`} type="date" value={action.dueDate} onChange={event => updateAction(action.id, { dueDate: event.target.value })} /><button type="button" aria-label={`Remove ${action.title}`} onClick={() => removeAction(action.id)}><Trash2 /></button></div>)}</div></section>
+          <section className={styles.card} aria-labelledby="actions-heading"><div className={styles.cardTitle}><h3 id="actions-heading"><ClipboardList />Next-Week Action Plan</h3><button type="button" onClick={addAction}><Plus />Add Item</button></div><div className={styles.actionList}>{report.actions.map(action => <div className={styles.actionRow} key={action.id}><button type="button" className={action.done ? styles.actionDone : ""} aria-label={action.done ? `Mark ${action.title} incomplete` : `Mark ${action.title} complete`} onClick={() => updateAction(action.id, { done: !action.done })}>{action.done ? <Check /> : null}</button><input aria-label="Action item" value={action.title} onChange={event => updateAction(action.id, { title: event.target.value })} /><select aria-label={`${action.title} priority`} className={priorityTone(action.priority)} value={action.priority} onChange={event => updateAction(action.id, { priority: event.target.value as ActionItem["priority"] })}><option>High</option><option>Medium</option><option>Low</option></select><button type="button" aria-label={`Remove ${action.title}`} onClick={() => removeAction(action.id)}><Trash2 /></button></div>)}</div></section>
         </div>
       </>}
     </main>
