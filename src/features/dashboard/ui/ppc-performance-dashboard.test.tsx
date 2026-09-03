@@ -20,7 +20,7 @@ describe("PpcPerformanceDashboard", () => {
     vi.unstubAllGlobals();
   });
 
-  it("loads a Pipeline product and saves the selected weekly report explicitly", async () => {
+  it("loads a Pipeline product and automatically saves the selected weekly report", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
@@ -53,10 +53,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.getByText("$1,150")).toBeVisible();
     expect(screen.getByText("23% of the weekly budget used")).toBeVisible();
     fireEvent.change(screen.getByRole("textbox", { name: "Performance documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
-    expect(screen.getByText("Unsaved changes")).toBeVisible();
-
-    fireEvent.click(screen.getByRole("button", { name: "Save Draft" }));
-    await waitFor(() => expect(screen.getByText("Draft saved")).toBeVisible());
+    expect(screen.getByText("Saving changes…")).toBeVisible();
+    await waitFor(() => expect(screen.getByText("Changes saved automatically")).toBeVisible(), { timeout: 3_000 });
 
     const stored = JSON.parse(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY) || "{}");
     expect(stored.version).toBe(1);

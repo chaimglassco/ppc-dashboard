@@ -24,6 +24,7 @@ type MetricField = "spend" | "sales" | "orders" | "impressions" | "clicks" | "ac
 
 const REPORT_STATUSES: ReportStatus[] = ["Draft", "In Progress", "Completed", "Needs Review"];
 const GOAL_STATUSES: GoalStatus[] = ["On Track", "At Risk", "Achieved", "Missed"];
+const AUTO_SAVE_DELAY_MS = 500;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const METRICS: { field: MetricField; label: string; prefix?: string; suffix?: string }[] = [
   { field: "spend", label: "Ad Spend", prefix: "$" }, { field: "sales", label: "PPC Sales", prefix: "$" },
@@ -112,6 +113,40 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   }, [dirtyReportKeys.size]);
 
   useEffect(() => {
+    if (dirtyReportKeys.size === 0) return;
+    const pendingKeys = [...dirtyReportKeys];
+    const pendingReports = Object.fromEntries(
+      pendingKeys.flatMap(key => reports[key] ? [[key, reports[key]]] : []),
+    ) as Record<string, WeeklyPpcReport>;
+
+    const autoSaveTimer = window.setTimeout(() => {
+      try {
+        const savedAt = new Date().toISOString();
+        const storedReports = parsePpcDashboardStore(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY)).reports;
+        const savedReports = Object.fromEntries(
+          Object.entries(pendingReports).map(([key, pendingReport]) => [key, { ...pendingReport, updatedAt: savedAt }]),
+        ) as Record<string, WeeklyPpcReport>;
+
+        window.localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
+          version: 1,
+          reports: { ...storedReports, ...savedReports },
+        }));
+        setReports(current => ({ ...current, ...savedReports }));
+        setDirtyReportKeys(current => {
+          const next = new Set(current);
+          pendingKeys.forEach(key => next.delete(key));
+          return next;
+        });
+        setSaveNotice("Changes saved automatically");
+      } catch {
+        setSaveNotice("Auto-save failed — use Save Draft");
+      }
+    }, AUTO_SAVE_DELAY_MS);
+
+    return () => window.clearTimeout(autoSaveTimer);
+  }, [dirtyReportKeys, reports]);
+
+  useEffect(() => {
     if (!monthPickerOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setMonthPickerOpen(false); };
     window.addEventListener("keydown", closeOnEscape);
@@ -135,7 +170,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     if (!selectedKey) return;
     setReports(current => ({ ...current, [selectedKey]: nextReport }));
     setDirtyReportKeys(current => new Set(current).add(selectedKey));
-    setSaveNotice("");
+    setSaveNotice("Saving changes…");
   };
   const patchReport = (patch: Partial<WeeklyPpcReport>) => { if (report) replaceReport({ ...report, ...patch }); };
   const selectProduct = (productId: string) => { setSelectedProductId(productId); setSaveNotice(""); };
@@ -233,7 +268,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
       {!selectedProduct || !report ? <div className={styles.workspaceEmpty}><BarChart3 aria-hidden="true" /><h2>Select a product</h2><p>Choose a Pipeline product to start its weekly PPC documentation.</p></div> : <>
         <header className={styles.workspaceHeader}>
           <div><span className={styles.eyebrow}>WEEKLY PPC PERFORMANCE</span><div className={styles.titleRow}><h2>{selectedProduct.name}</h2>{selectedProductTag ? <span>{selectedProductTag.name}</span> : null}</div><p>ASIN: <strong>{selectedProduct.asin || "N/A"}</strong><i />SKU: <strong>{selectedProduct.sku || "N/A"}</strong><i /><CalendarDays />{formatWeekRange(selectedWeekStart)} · Week {getIsoWeekNumber(selectedWeekStart)}</p></div>
-          <div className={styles.saveArea}><div><button type="button" className={styles.secondaryButton} onClick={() => saveReport("Draft")}><FileText />Save Draft</button><button type="button" className={styles.primaryButton} onClick={() => saveReport("Completed")}><Save />Save Weekly Report</button></div><small className={dirty ? styles.unsaved : styles.saved}>{dirty ? "Unsaved changes" : saveNotice || (report.updatedAt ? `Saved ${new Date(report.updatedAt).toLocaleString()}` : "Local draft not saved yet")}</small></div>
+          <div className={styles.saveArea}><div><button type="button" className={styles.secondaryButton} onClick={() => saveReport("Draft")}><FileText />Save Draft</button><button type="button" className={styles.primaryButton} onClick={() => saveReport("Completed")}><Save />Save Weekly Report</button></div><small className={dirty ? styles.unsaved : styles.saved}>{dirty ? saveNotice || "Saving changes…" : saveNotice || (report.updatedAt ? `Saved ${new Date(report.updatedAt).toLocaleString()}` : "Local draft not saved yet")}</small></div>
         </header>
 
         <div className={styles.workspaceScroll}>
