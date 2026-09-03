@@ -25,6 +25,7 @@ describe("PpcPerformanceDashboard", () => {
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
     expect(fetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Weekly Report" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Open current week" })).not.toBeInTheDocument();
     const currentPeriod = screen.getByText("Current").closest("button") as HTMLButtonElement;
     expect(within(currentPeriod).getByText("August 26 to September 1")).toBeVisible();
@@ -53,8 +54,10 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.getByText("$1,150")).toBeVisible();
     expect(screen.getByText("23% of the weekly budget used")).toBeVisible();
     fireEvent.change(screen.getByRole("textbox", { name: "Performance documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
+    expect(screen.getByRole("button", { name: "Save Changes" })).toBeVisible();
     expect(screen.getByText("Saving changes…")).toBeVisible();
     await waitFor(() => expect(screen.getByText("Changes saved automatically")).toBeVisible(), { timeout: 3_000 });
+    expect(screen.getByRole("button", { name: "Weekly Report" })).toBeVisible();
 
     const stored = JSON.parse(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY) || "{}");
     expect(stored.version).toBe(1);
