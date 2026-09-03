@@ -5,7 +5,7 @@ import {
   ArrowLeft, ArrowRight, BarChart3, Bold, CalendarDays, Check, CheckCircle2, ClipboardList, DollarSign,
   FileText, Flag, Italic, List, ListOrdered, Plus, Save, Trash2, WalletCards, X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
@@ -80,8 +80,12 @@ function FormattedTextarea({ label, value, placeholder, onChange }: { label: str
       selectionStart = start + marker.length;
       selectionEnd = selectionStart + content.length;
     } else {
-      const content = selected || "List item";
-      replacement = content.split("\n").map((line, index) => `${format === "bullet" ? "•" : `${index + 1}.`} ${line.replace(/^\s*(?:[-•]|\d+\.)\s*/, "")}`).join("\n");
+      if (!selected) {
+        replacement = format === "bullet" ? "• " : "1. ";
+      } else {
+        replacement = selected.split("\n").map((line, index) => `${format === "bullet" ? "•" : `${index + 1}.`} ${line.replace(/^\s*(?:[-•]|\d+\.)\s*/, "")}`).join("\n");
+      }
+      selectionStart = start + replacement.length;
       selectionEnd = start + replacement.length;
     }
 
@@ -92,12 +96,33 @@ function FormattedTextarea({ label, value, placeholder, onChange }: { label: str
     });
   };
 
+  const continueList = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || !event.shiftKey) return;
+    const textarea = event.currentTarget;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+    const currentLine = value.slice(lineStart, start);
+    const bullet = currentLine.match(/^(\s*)•\s?/);
+    const numbered = currentLine.match(/^(\s*)(\d+)\.\s?/);
+    if (!bullet && !numbered) return;
+
+    event.preventDefault();
+    const continuation = bullet ? `\n${bullet[1]}• ` : `\n${numbered?.[1] ?? ""}${Number(numbered?.[2] ?? 0) + 1}. `;
+    const nextCursor = start + continuation.length;
+    onChange(`${value.slice(0, start)}${continuation}${value.slice(end)}`);
+    window.requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
+
   return <div className={styles.textAreaLabel}><span>{label}</span><span className={styles.formatToolbar} role="toolbar" aria-label={`${label} formatting`}>
     <button type="button" aria-label={`Bold ${label}`} onClick={() => applyFormat("bold")}><Bold aria-hidden="true" /></button>
     <button type="button" aria-label={`Italic ${label}`} onClick={() => applyFormat("italic")}><Italic aria-hidden="true" /></button>
     <button type="button" aria-label={`Bulleted list ${label}`} onClick={() => applyFormat("bullet")}><List aria-hidden="true" /></button>
     <button type="button" aria-label={`Numbered list ${label}`} onClick={() => applyFormat("numbered")}><ListOrdered aria-hidden="true" /></button>
-  </span><textarea ref={textareaRef} className={styles.notesArea} aria-label={label} value={value} onChange={event => onChange(event.target.value)} placeholder={placeholder} /></div>;
+  </span><textarea ref={textareaRef} className={styles.notesArea} aria-label={label} value={value} onChange={event => onChange(event.target.value)} onKeyDown={continueList} placeholder={placeholder} /></div>;
 }
 
 function statusTone(status: string) {

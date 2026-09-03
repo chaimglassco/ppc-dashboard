@@ -84,13 +84,25 @@ describe("PpcPerformanceDashboard", () => {
       "Spend", "PPC Sales", "Organic Sales", "Total Sales", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
     ]);
 
-    const carryForward = screen.getByRole("textbox", { name: "Carry-forward result and lessons" });
+    const carryForward = screen.getByRole("textbox", { name: "Carry-forward result and lessons" }) as HTMLTextAreaElement;
     const documentation = screen.getByRole("textbox", { name: "Performance documentation" }) as HTMLTextAreaElement;
     expect(carryForward.className).toBe(documentation.className);
+    fireEvent.click(screen.getByRole("button", { name: "Bulleted list Performance documentation" }));
+    expect(documentation).toHaveValue("• ");
     fireEvent.change(documentation, { target: { value: "First action\nSecond action" } });
     documentation.setSelectionRange(0, "First action\nSecond action".length);
     fireEvent.click(screen.getByRole("button", { name: "Bulleted list Performance documentation" }));
     expect(documentation).toHaveValue("• First action\n• Second action");
+    documentation.setSelectionRange(documentation.value.length, documentation.value.length);
+    fireEvent.keyDown(documentation, { key: "Enter", shiftKey: true });
+    expect(documentation).toHaveValue("• First action\n• Second action\n• ");
+
+    fireEvent.click(screen.getByRole("button", { name: "Numbered list Carry-forward result and lessons" }));
+    expect(carryForward).toHaveValue("1. ");
+    fireEvent.change(carryForward, { target: { value: "1. First action" } });
+    carryForward.setSelectionRange(carryForward.value.length, carryForward.value.length);
+    fireEvent.keyDown(carryForward, { key: "Enter", shiftKey: true });
+    expect(carryForward).toHaveValue("1. First action\n2. ");
 
     const priority = screen.getByRole("combobox", { name: /negative exact keywords priority/i });
     expect(priority.className).toMatch(/priorityHigh/);
