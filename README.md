@@ -94,8 +94,11 @@ The current browser-stored Pipeline bearer token is not the final page-security 
 
 ```bash
 npm install
+copy .env.example .env.local
 npm run dev
 ```
+
+Leave unused credential fields blank and put real secret values only in the ignored `.env.local` file or the deployment platform's encrypted server environment.
 
 Open <http://localhost:3000/ppc/library>.
 
