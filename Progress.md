@@ -1,10 +1,19 @@
 # Project Progress
 
-Last updated: July 28, 2026
+Last updated: September 4, 2026
 
 ## Overall status
 
 The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgres-authoritative shared persistence, scoped versioned mutations, read-only outage caching, and cross-account synchronization.
+
+## 2026-09-04 — Scale Insights weekly performance
+
+- Added an authenticated, no-store `/ppc/api/dashboard/performance` route backed by the official MCP client and server-only Scale Insights credentials.
+- Added strict query and upstream response validation for exact ASIN, marketplace, and Wednesday–Tuesday reporting scope.
+- Added concurrent `get_ads_performance` and `get_sales_data` retrieval for Spend, PPC Sales, PPC Orders, Total Sales, and Total Orders.
+- Centralized Organic Sales, Organic Orders, ACOS, and TACOS calculations in the dashboard domain layer.
+- Added automatic dashboard sync, freshness/error/warning feedback, explicit refresh, and imported-field locking with manual fallback when the connector is unavailable.
+- Added focused domain, MCP adapter, API route, and UI coverage. Production credential configuration and authenticated live-data smoke testing remain deployment steps.
 
 ## 2026-07-28 — Library control reliability
 
@@ -90,7 +99,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Twenty-two Vitest files and 124 tests pass.
+- Thirty-nine Vitest files pass with 238 passing tests and 6 intentionally skipped tests.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.
@@ -99,7 +108,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 - Secure cookie-based page authentication and account recovery.
 - Organizations, workspaces, invitations, or row-level multi-tenant isolation.
-- Amazon Ads API integration.
+- Direct Amazon Ads API integration beyond the Scale Insights reporting connector.
 - Analytics, reporting automation, and PPC analyzers.
 - Automated committed browser E2E suite.
 

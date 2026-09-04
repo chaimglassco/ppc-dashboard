@@ -225,13 +225,21 @@ The value is the last schema-valid full shared response. A successful authoritat
 
 Legacy keys `glassco-library-admin-state` and `glassco-library-category-state` are ignored for shared hydration/migration. Their contents cannot merge with repository seeds or authoritative state.
 
+### Scale Insights weekly performance response
+
+Authenticated GET route: `/ppc/api/dashboard/performance?asin=<ASIN>&country=<marketplace>&weekStart=<YYYY-MM-DD>`
+
+The route accepts a ten-character alphanumeric ASIN, an allowlisted marketplace, and a valid Wednesday week start. It derives the inclusive Tuesday end date and returns `Cache-Control: no-store`. The response contains the normalized scope, currency, five upstream source metrics (`spend`, `ppcSales`, `ppcOrders`, `totalSales`, `totalOrders`), four calculated metrics (`organicSales`, `organicOrders`, `acos`, `tacos`), freshness timestamps, and non-secret consistency warnings.
+
+Advertising source metrics come from `get_ads_performance` totals. Total-sales metrics come from `get_sales_data` summary values. The server rejects malformed, negative, non-integer order, empty, or differently scoped data rather than estimating. Organic metrics are clamped at zero; ACOS and TACOS are zero when their sales denominator is zero and otherwise rounded to two decimal places. OAuth client credentials and access tokens are read only from server environment variables and are excluded from every response and storage contract.
+
 ### Weekly PPC performance drafts
 
 Key: `glassco.ppcPerformanceNotes.v1`
 
 Schema version: `1`
 
-The record maps a stable `<productId>:<Monday ISO date>` key to one weekly report containing status, weekly/daily budgets, performance numbers, goals, prior-week result notes, weekly notes, action items, and `updatedAt`. Parsing is fail-closed per report; malformed records are discarded. Product names, ASINs, and SKUs are not duplicated into this store because `/ppc/api/dashboard/products` loads them from authoritative Pipeline workspace state.
+The record maps a stable `<productId>:<Wednesday ISO date>` key to one weekly report containing status, weekly/daily budgets, performance numbers, goals, prior-week result notes, weekly notes, action items, and `updatedAt`. Parsing is fail-closed per report; malformed records are discarded. Product names, ASINs, and SKUs are not duplicated into this store because `/ppc/api/dashboard/products` loads them from authoritative Pipeline workspace state. Validated Scale Insights metric values may be copied into the selected report, but credentials, tokens, and raw MCP payloads are never stored.
 
 This record is a browser-local draft contract for the initial dashboard UI. It is not shared team state and must never be uploaded through the Library document API. A future shared reporting API requires a separate versioned server contract and migration plan.
 

@@ -19,6 +19,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - Missing or expired sessions return to Pipeline login with a validated requested PPC destination.
 - PPC verifies the existing Pipeline session through Pipeline’s `/api/auth/session` endpoint.
 - PPC Dashboard loads the authenticated user’s compact Pipeline product catalog and provides a three-panel product, reporting-period, and weekly documentation workspace.
+- For products with an ASIN, the selected Wednesday–Tuesday period automatically loads Spend, PPC Sales, PPC Orders, Total Sales, and Total Orders from Scale Insights through an authenticated server route. Organic Sales, Organic Orders, ACOS, and TACOS are calculated by this application.
 - The Products panel can add dashboard-only products, apply local edits and images, create reusable tags, filter by tag, and remove dashboard-added products. These catalog customizations use the validated `glassco.ppcDashboardCatalog.v1` browser record and do not mutate Product Pipeline records.
 - Weekly goals, budget limits, performance figures, prior-week outcomes, notes, and action items save to the versioned `glassco.ppcPerformanceNotes.v1` browser record in this initial UI milestone; they are not yet shared across browsers.
 - ADMIN users have full document, category, attributed recovery, reorder, snapshot, version, protected-archive, and integrity-incident access. Document content is never physically deleted through the application.
@@ -57,6 +58,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 ## Architecture and persistence
 
 - Next.js uses `basePath: "/ppc"` for pages, assets, and API routes.
+- `/ppc/api/dashboard/performance` verifies the Pipeline session before connecting to the Scale Insights MCP server. OAuth client credentials or access tokens remain server-only and are never returned to the browser or written to browser storage.
 - Private shared images are fetched by client previews with the Pipeline bearer token and rendered through temporary browser object URLs; raw private API URLs are never assigned directly to image elements.
 - Pipeline proxies `/ppc/:path*` to the independently deployed PPC Vercel project.
 - Pipeline's Postgres-backed `/api/library-state` endpoint is the only authoritative document and category store. Repository Markdown under `content/library` is bootstrap/compatibility input and is never merged into an initialized catalog.
@@ -108,7 +110,7 @@ npm test
 npm run build
 ```
 
-The last verified state passes all four commands with 22 test files and 124 tests.
+The last verified state passes all four commands with 39 test files, 238 passing tests, and 6 intentionally skipped tests.
 
 ## Project structure
 
@@ -117,7 +119,9 @@ content/library/                    Bootstrap/compatibility Markdown documents
 src/app/                            Next.js routes, APIs, layout, and global styling
 src/app/api/library/                Authenticated shared-library API
 src/app/api/pipeline-session/       Pipeline session verification endpoint
+src/app/api/dashboard/performance/ Authenticated Scale Insights performance endpoint
 src/components/                     Application shell and session provider
+src/features/dashboard/data/       Scale Insights validation and server-only MCP transport
 src/features/library/data/          Markdown bootstrap and legacy Blob migration adapters
 src/features/library/domain/        Types, validation, search, and builder rules
 src/features/library/state/         Shared-library client and browser reading state
@@ -132,6 +136,14 @@ Production requires the existing private Vercel Blob connection for images and t
 
 - `PIPELINE_AUTH_ORIGIN` — server-side Pipeline authentication origin; defaults to `https://glasscopipeline.vercel.app`.
 - `NEXT_PUBLIC_PIPELINE_ORIGIN` — browser navigation origin; defaults to `https://glasscopipeline.vercel.app`.
+
+Automatic dashboard metrics additionally require one server-only Scale Insights credential strategy:
+
+- OAuth client credentials: `SCALE_INSIGHTS_OAUTH_CLIENT_ID` and `SCALE_INSIGHTS_OAUTH_CLIENT_SECRET`, with optional `SCALE_INSIGHTS_OAUTH_SCOPE` and `SCALE_INSIGHTS_OAUTH_ISSUER`.
+- Pre-authorized token: `SCALE_INSIGHTS_MCP_ACCESS_TOKEN`.
+- `SCALE_INSIGHTS_MCP_URL` optionally overrides the default `https://mcp.scaleinsights.com/mcp`; production endpoints must use HTTPS.
+
+Never prefix these variables with `NEXT_PUBLIC_`, embed them in frontend code, or persist them in `localStorage`.
 
 For this persistence rollout, deploy Pipeline's authoritative endpoint before the Library client, then back up and initialize data as described in [deployment.md](deployment.md). For later base-path or gateway-only changes, deploy PPC before Pipeline navigation changes. Pipeline’s rewrite targets the public PPC production alias so it is not blocked by Vercel deployment protection.
 

@@ -87,7 +87,7 @@ Authenticated users can open the Library, search/filter/read shared content, and
 - Secure same-origin cookie sessions and account recovery.
 - Organizations, workspaces, and invitations beyond the current shared team catalog.
 - Row-level multi-workspace isolation beyond current role authorization.
-- Amazon Ads API integrations.
+- Direct Amazon Ads API integration beyond the Scale Insights reporting connector.
 - PPC analyzers, audits, reporting automation, collaboration, and analytics.
 - Public sharing and billing.
 
@@ -100,7 +100,8 @@ These require a separately approved milestone and must preserve the current shar
 - Team SOP Library and PPC Dashboard remember routes independently and otherwise open `/ppc/library` and `/ppc/dashboard` respectively.
 - A session-only Pipeline login is handed off once to the destination tab; missing or expired authentication returns to the requested safe PPC route after login.
 - A verified Pipeline session is required before the PPC interface renders.
-- Dashboard users select a real Pipeline product, choose a Monday–Sunday reporting period, and document weekly goals, weekly/daily budget limits, current performance, prior-week results, summary notes, and next-week actions.
+- Dashboard users select a real Pipeline product, choose a Wednesday–Tuesday reporting period, and document weekly goals, weekly/daily budget limits, current performance, prior-week results, summary notes, and next-week actions.
+- When the selected product has an ASIN, the dashboard automatically requests exact-period Spend, PPC Sales, PPC Orders, Total Sales, and Total Orders through the authenticated server-side Scale Insights connector. The application calculates Organic Sales, Organic Orders, ACOS, and TACOS, displays freshness or mismatch warnings, and allows an explicit retry. Scale Insights credentials must never be sent to frontend code or browser storage.
 - Pipeline products remain authoritative source records. The dashboard may layer browser-local names, ASINs, SKUs, images, and tags over them without changing Pipeline, and users may add/edit/delete dashboard-only products. The Products panel supports tag creation and filtering, renders tags instead of active-status badges, and opens saved ASIN/SKU destinations in protected new tabs. Report drafts and catalog customizations are versioned browser-local data; shared dashboard persistence is deferred.
 - ADMIN can create/edit/reorder/hide/delete/recover documents, manage categories, and manage backups. USER can create and edit active documents. VIEWER is read-only apart from personal reading controls.
 

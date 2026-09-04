@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDaysIso, createWeeklyPpcReport, formatWeekRange, getMonthWeekStarts, parsePpcDashboardStore, reportKey, startOfWeekIso, withCalculatedPerformance } from "./ppc-dashboard-state";
+import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatWeekRange, getMonthWeekStarts, parsePpcDashboardStore, reportKey, startOfWeekIso, withCalculatedPerformance } from "./ppc-dashboard-state";
 
 describe("PPC dashboard state", () => {
   it("creates stable product/week report keys for Wednesday through Tuesday periods", () => {
@@ -42,6 +42,15 @@ describe("PPC dashboard state", () => {
     });
 
     expect(calculated).toMatchObject({ organicSales: 200, organicOrders: 5, acos: 75, tacos: 25 });
+  });
+
+  it("rounds currency differences and handles zero denominators without invalid percentages", () => {
+    expect(calculateWeeklyPerformance({
+      spend: 12.34, ppcSales: 0, totalSales: 20.1, ppcOrders: 4, totalOrders: 3,
+    })).toEqual({
+      spend: 12.34, ppcSales: 0, totalSales: 20.1, ppcOrders: 4, totalOrders: 3,
+      organicSales: 20.1, organicOrders: 0, acos: 0, tacos: 61.39,
+    });
   });
 
   it("carries unfinished goals into the following week and resets their progress", () => {

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import {
   ArrowLeft, ArrowRight, BarChart3, Bold, CalendarDays, Check, CheckCircle2, ClipboardList, DollarSign,
-  FileText, Flag, Italic, List, ListOrdered, Plus, Save, Trash2, X,
+  FileText, Flag, Italic, List, ListOrdered, Plus, RefreshCw, Save, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
@@ -19,21 +19,23 @@ import {
   parseDashboardCatalogStore, type DashboardCatalogProduct, type DashboardCatalogStore, type ManagedDashboardProduct,
 } from "../domain/ppc-dashboard-catalog";
 import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfolio-panel";
+import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
 import styles from "./ppc-performance-dashboard.module.css";
 
 type MetricField = "spend" | "ppcSales" | "organicSales" | "totalSales" | "ppcOrders" | "organicOrders" | "totalOrders" | "acos" | "tacos";
-type MetricDefinition = { field: MetricField; label: string; prefix?: string; suffix?: string; calculated?: boolean };
+type MetricDefinition = { field: MetricField; label: string; prefix?: string; suffix?: string; calculated?: boolean; imported?: boolean };
+type PerformanceLoadState = { key: string; status: "idle" | "loading" | "ready" | "error"; message: string; warnings: string[] };
 
 const GOAL_STATUSES: GoalStatus[] = ["On Track", "At Risk", "Achieved", "Missed"];
 const AUTO_SAVE_DELAY_MS = 500;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const METRIC_GROUPS: { title: string; metrics: MetricDefinition[] }[] = [
   { title: "Sales", metrics: [
-    { field: "spend", label: "Spend", prefix: "$" }, { field: "ppcSales", label: "PPC Sales", prefix: "$" },
-    { field: "organicSales", label: "Organic Sales", prefix: "$", calculated: true }, { field: "totalSales", label: "Total Sales", prefix: "$" },
+    { field: "spend", label: "Spend", prefix: "$", imported: true }, { field: "ppcSales", label: "PPC Sales", prefix: "$", imported: true },
+    { field: "organicSales", label: "Organic Sales", prefix: "$", calculated: true }, { field: "totalSales", label: "Total Sales", prefix: "$", imported: true },
   ] },
   { title: "Orders", metrics: [
-    { field: "ppcOrders", label: "PPC Orders" }, { field: "organicOrders", label: "Organic Orders", calculated: true }, { field: "totalOrders", label: "Total Orders" },
+    { field: "ppcOrders", label: "PPC Orders", imported: true }, { field: "organicOrders", label: "Organic Orders", calculated: true }, { field: "totalOrders", label: "Total Orders", imported: true },
   ] },
   { title: "Efficiency", metrics: [
     { field: "acos", label: "ACOS", suffix: "%", calculated: true }, { field: "tacos", label: "TACOS", suffix: "%", calculated: true },
@@ -53,10 +55,11 @@ function preciseCurrency(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: Number.isInteger(value) ? 0 : 2, maximumFractionDigits: 2 }).format(value || 0);
 }
 
-function MetricInput({ metric, report, onChange }: { metric: MetricDefinition; report: WeeklyPpcReport; onChange: (field: MetricField, value: number) => void }) {
-  return <label className={`${styles.metricCard} ${metric.calculated ? styles.calculatedMetric : ""}`}>
+function MetricInput({ metric, report, importedLocked, onChange }: { metric: MetricDefinition; report: WeeklyPpcReport; importedLocked: boolean; onChange: (field: MetricField, value: number) => void }) {
+  const readOnly = Boolean(metric.calculated || (metric.imported && importedLocked));
+  return <label className={`${styles.metricCard} ${readOnly ? styles.calculatedMetric : ""}`}>
     <span>{metric.label}</span>
-    <span className={styles.metricInputWrap}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-readonly={metric.calculated || undefined} readOnly={metric.calculated} inputMode="decimal" value={report[metric.field] || ""} placeholder="0" onChange={event => { if (!metric.calculated) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
+    <span className={styles.metricInputWrap}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="decimal" value={report[metric.field] || ""} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
   </label>;
 }
 
@@ -152,6 +155,8 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const [reports, setReports] = useState<Record<string, WeeklyPpcReport>>({});
   const [dirtyReportKeys, setDirtyReportKeys] = useState<Set<string>>(() => new Set());
   const [saveNotice, setSaveNotice] = useState("");
+  const [performanceLoad, setPerformanceLoad] = useState<PerformanceLoadState>({ key: "", status: "idle", message: "", warnings: [] });
+  const [performanceRefresh, setPerformanceRefresh] = useState(0);
 
   const loadProducts = useCallback(async (signal?: AbortSignal) => {
     setProductsLoading(true);
@@ -245,12 +250,56 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const selectedProduct = products.find(product => product.id === selectedProductId) ?? null;
   const selectedProductTag = selectedProduct ? catalog.tags.find(tag => tag.id === selectedProduct.tagId) ?? null : null;
   const selectedKey = selectedProductId && selectedWeekStart ? reportKey(selectedProductId, selectedWeekStart) : "";
+  const selectedAsin = selectedProduct?.asin?.trim() || "";
   const dirty = selectedKey ? dirtyReportKeys.has(selectedKey) : false;
   const previousReport = selectedProductId && selectedWeekStart ? reports[reportKey(selectedProductId, addDaysIso(selectedWeekStart, -7))] ?? null : null;
   const report = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart, previousReport) : null;
+  const displayedPerformanceLoad: PerformanceLoadState = !selectedKey
+    ? { key: "", status: "idle", message: "", warnings: [] }
+    : !selectedAsin
+      ? { key: selectedKey, status: "idle", message: "Add an ASIN to retrieve Scale Insights performance.", warnings: [] }
+      : performanceLoad.key === selectedKey
+        ? performanceLoad
+        : { key: selectedKey, status: "loading", message: "Retrieving Scale Insights performance…", warnings: [] };
+  const importedMetricsLocked = displayedPerformanceLoad.status === "ready";
   const budgetUsage = report ? percentage(report.spend, report.weeklyBudget) : 0;
   const budgetBalance = report ? report.weeklyBudget - report.spend : 0;
   const isOverspent = budgetBalance < 0;
+
+  useEffect(() => {
+    if (!selectedKey || !selectedAsin) return;
+    const controller = new AbortController();
+    const query = new URLSearchParams({ asin: selectedAsin, country: "US", weekStart: selectedWeekStart });
+    const requestTimer = window.setTimeout(() => {
+      setPerformanceLoad({ key: selectedKey, status: "loading", message: "Retrieving Scale Insights performance…", warnings: [] });
+      void fetch(withPpcBasePath(`/api/dashboard/performance?${query}`), {
+        headers: getPipelineAuthorizationHeader(), cache: "no-store", signal: controller.signal,
+      }).then(async response => {
+        const value: unknown = await response.json();
+        if (!response.ok || !value || typeof value !== "object") {
+          const message = value && typeof value === "object" && typeof (value as { error?: unknown }).error === "string"
+            ? String((value as { error: string }).error)
+            : "Scale Insights performance is unavailable.";
+          throw new Error(message);
+        }
+        const performance = (value as { performance?: unknown }).performance as ScaleInsightsWeeklyPerformance | undefined;
+        if (!performance?.metrics || performance.asin !== selectedAsin.toUpperCase() || performance.startDate !== selectedWeekStart) {
+          throw new Error("Scale Insights returned an invalid performance response.");
+        }
+        setReports(current => {
+          const currentReport = current[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart, previousReport);
+          return { ...current, [selectedKey]: withCalculatedPerformance({ ...currentReport, ...performance.metrics }) };
+        });
+        const through = performance.freshness.salesDataThrough || performance.endDate;
+        setPerformanceLoad({ key: selectedKey, status: "ready", message: `Scale Insights synced through ${through}.`, warnings: performance.warnings });
+      }).catch(error => {
+        if ((error as Error).name !== "AbortError") {
+          setPerformanceLoad({ key: selectedKey, status: "error", message: error instanceof Error ? error.message : "Scale Insights performance is unavailable.", warnings: [] });
+        }
+      });
+    }, 0);
+    return () => { window.clearTimeout(requestTimer); controller.abort(); };
+  }, [performanceRefresh, previousReport, selectedAsin, selectedKey, selectedProductId, selectedWeekStart]);
 
   const replaceReport = (nextReport: WeeklyPpcReport) => {
     if (!selectedKey) return;
@@ -366,14 +415,14 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
               <div className={styles.budgetGrid}>
                 <label><span>Weekly limit</span><span className={styles.moneyInput}><i>$</i><input inputMode="decimal" value={report.weeklyBudget || ""} placeholder="0" onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} /></span></label>
                 <div><span>Daily limit</span><strong>{preciseCurrency(dailyLimitFromWeekly(report.weeklyBudget))}</strong></div>
-                <label><span>Actual spend</span><span className={styles.moneyInput}><i>$</i><input aria-label="Actual spend" inputMode="decimal" value={report.spend || ""} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span></label>
+                <label><span>Actual spend</span><span className={styles.moneyInput}><i>$</i><input aria-label="Actual spend" aria-readonly={importedMetricsLocked || undefined} readOnly={importedMetricsLocked} inputMode="decimal" value={report.spend || ""} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span></label>
                 <div className={isOverspent ? styles.budgetOver : ""}><span>{isOverspent ? "Overspent" : "Remaining"}</span><strong>{currency(Math.abs(budgetBalance))}</strong></div>
               </div>
               <div className={styles.progressTrack} aria-label={`${budgetUsage}% of weekly budget used`}><span className={budgetUsage >= 100 ? styles.progressDanger : budgetUsage >= 80 ? styles.progressWarning : ""} style={{ width: `${Math.min(100, budgetUsage)}%` }} /></div><small>{budgetUsage}% of the weekly budget used</small>
             </section>
           </div>
 
-          <section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><span>Enter verified Seller Central results</span></div><div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
+          <section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><div className={styles.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? styles.performanceError : ""}>{displayedPerformanceLoad.message}</span><button type="button" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => setPerformanceRefresh(value => value + 1)}><RefreshCw aria-hidden="true" />Refresh</button></div></div>{displayedPerformanceLoad.warnings.length ? <ul className={styles.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}<div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
 
           <div className={styles.twoColumn}>
             <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}><span className={statusTone(previousReport.status)}>{previousReport.status}</span><strong>{currency(previousReport.totalSales)} total sales · {previousReport.tacos || 0}% TACOS</strong><p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : null}<FormattedTextarea label="Carry-forward result and lessons" value={report.previousWeekResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></section>

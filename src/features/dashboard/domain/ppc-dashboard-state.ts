@@ -11,6 +11,19 @@ export type WeeklyPpcReport = {
   ppcOrders: number; organicOrders: number; totalOrders: number; acos: number; tacos: number;
   goals: WeeklyGoal[]; previousWeekResult: string; notes: string; actions: ActionItem[]; updatedAt: string | null;
 };
+export type WeeklyPerformanceSourceMetrics = {
+  spend: number;
+  ppcSales: number;
+  ppcOrders: number;
+  totalSales: number;
+  totalOrders: number;
+};
+export type WeeklyPerformanceCalculatedMetrics = WeeklyPerformanceSourceMetrics & {
+  organicSales: number;
+  organicOrders: number;
+  acos: number;
+  tacos: number;
+};
 export type PpcDashboardStore = { version: 1; reports: Record<string, WeeklyPpcReport> };
 
 const DEFAULT_GOALS: WeeklyGoal[] = [
@@ -39,14 +52,20 @@ export function createWeeklyPpcReport(productId: string, weekStart: string, prev
   };
 }
 
-export function withCalculatedPerformance(report: WeeklyPpcReport): WeeklyPpcReport {
+function roundMoney(value: number) { return Math.round(value * 100) / 100; }
+
+export function calculateWeeklyPerformance(metrics: WeeklyPerformanceSourceMetrics): WeeklyPerformanceCalculatedMetrics {
   return {
-    ...report,
-    organicSales: Math.max(0, report.totalSales - report.ppcSales),
-    organicOrders: Math.max(0, report.totalOrders - report.ppcOrders),
-    acos: report.ppcSales ? Math.round((report.spend / report.ppcSales) * 10000) / 100 : 0,
-    tacos: report.totalSales ? Math.round((report.spend / report.totalSales) * 10000) / 100 : 0,
+    ...metrics,
+    organicSales: roundMoney(Math.max(0, metrics.totalSales - metrics.ppcSales)),
+    organicOrders: Math.max(0, metrics.totalOrders - metrics.ppcOrders),
+    acos: metrics.ppcSales ? Math.round((metrics.spend / metrics.ppcSales) * 10000) / 100 : 0,
+    tacos: metrics.totalSales ? Math.round((metrics.spend / metrics.totalSales) * 10000) / 100 : 0,
   };
+}
+
+export function withCalculatedPerformance(report: WeeklyPpcReport): WeeklyPpcReport {
+  return { ...report, ...calculateWeeklyPerformance(report) };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }

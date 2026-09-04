@@ -7,12 +7,15 @@ import { PpcPerformanceDashboard } from "./ppc-performance-dashboard";
 describe("PpcPerformanceDashboard", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }],
-      }),
-    }));
+    vi.stubGlobal("fetch", vi.fn(async input => String(input).includes("/api/dashboard/performance?")
+      ? { ok: false, status: 503, json: async () => ({ error: "Scale Insights is not configured on this server." }) }
+      : {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }],
+        }),
+      }));
   });
 
   afterEach(() => {
@@ -24,7 +27,7 @@ describe("PpcPerformanceDashboard", () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/dashboard/products"), expect.any(Object));
     expect(screen.getByRole("button", { name: "Weekly Report" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Open current week" })).not.toBeInTheDocument();
     const currentPeriod = screen.getByText("Current").closest("button") as HTMLButtonElement;
@@ -71,6 +74,35 @@ describe("PpcPerformanceDashboard", () => {
       status: "Draft",
     });
   }, 10_000);
+
+  it("retrieves the selected week from Scale Insights and locks the imported metrics", async () => {
+    vi.mocked(fetch).mockImplementation(async input => String(input).includes("/api/dashboard/performance?")
+      ? ({
+        ok: true,
+        status: 200,
+        json: async () => ({ performance: {
+          asin: "B012345678", country: "US", startDate: "2026-08-26", endDate: "2026-09-01", currency: "USD",
+          metrics: { spend: 81.75, ppcSales: 481.75, ppcOrders: 23, totalSales: 1317.35, totalOrders: 59, organicSales: 835.6, organicOrders: 36, acos: 16.97, tacos: 6.21 },
+          freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: "2026-09-01" }, warnings: [],
+        } }),
+      } as Response)
+      : ({
+        ok: true,
+        status: 200,
+        json: async () => ({ products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }] }),
+      } as Response));
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+
+    expect(await screen.findByText("Scale Insights synced through 2026-09-01.")).toBeVisible();
+    const performanceCard = screen.getByRole("region", { name: "Weekly Performance" });
+    expect(within(performanceCard).getByRole("textbox", { name: "Spend" })).toHaveValue("81.75");
+    expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveValue("835.6");
+    expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveValue("16.97");
+    expect(within(performanceCard).getByRole("textbox", { name: "PPC Sales" })).toHaveAttribute("readonly");
+    expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveAttribute("readonly");
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
+  });
 
   it("shows overspend, grouped metrics, formatted notes, and color-coded priorities without dates", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);

@@ -1,0 +1,83 @@
+import { describe, expect, it, vi } from "vitest";
+import { loadScaleInsightsWeeklyPerformance, unwrapScaleInsightsPayload } from "./scale-insights-performance";
+
+const params = { asin: "B0FG4H5C6W", country: "US", startDate: "2026-08-26", endDate: "2026-09-01" };
+
+function adsPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    agg: { Country: "US", StartDate: "2026-08-26", EndDate: "2026-09-01", Currency: "USD" },
+    oppMeta: {
+      total_count: 1,
+      data_as_of: "synced 2026-09-03 21:34 UTC",
+      totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23 },
+      ...overrides,
+    },
+  };
+}
+
+function salesPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    Country: "US",
+    StartDate: "2026-08-26",
+    EndDate: "2026-09-01",
+    Meta: { total_count: 1, data_as_of: "synced 2026-09-04 00:26 UTC", data_through: "2026-09-01" },
+    Summary: { TotalSales: 1317.35, TotalOrders: 59, TotalPPCCost: 81.75, TotalPPCSales: 481.75 },
+    ...overrides,
+  };
+}
+
+describe("Scale Insights weekly performance", () => {
+  it("unwraps JSON text from an MCP tool response", () => {
+    expect(unwrapScaleInsightsPayload({ content: [{ type: "text", text: JSON.stringify({ ok: true }) }] })).toEqual({ ok: true });
+  });
+
+  it("loads exact paid and total metrics concurrently and calculates the derived values", async () => {
+    const callTool = vi.fn(async (name: string) => name === "get_ads_performance" ? adsPayload() : salesPayload());
+
+    await expect(loadScaleInsightsWeeklyPerformance(params, callTool)).resolves.toEqual({
+      ...params,
+      currency: "USD",
+      metrics: {
+        spend: 81.75,
+        ppcSales: 481.75,
+        ppcOrders: 23,
+        totalSales: 1317.35,
+        totalOrders: 59,
+        organicSales: 835.6,
+        organicOrders: 36,
+        acos: 16.97,
+        tacos: 6.21,
+      },
+      freshness: {
+        adsDataAsOf: "synced 2026-09-03 21:34 UTC",
+        salesDataAsOf: "synced 2026-09-04 00:26 UTC",
+        salesDataThrough: "2026-09-01",
+      },
+      warnings: [],
+    });
+    expect(callTool).toHaveBeenCalledTimes(2);
+    expect(callTool).toHaveBeenCalledWith("get_ads_performance", expect.objectContaining({
+      asin_list: [params.asin], country: "US", start_date: params.startDate, end_date: params.endDate, summary_only: true,
+    }));
+    expect(callTool).toHaveBeenCalledWith("get_sales_data", expect.objectContaining({ group_by: "total", include_growth: false }));
+  });
+
+  it("warns when the independently synced paid totals disagree", async () => {
+    const callTool = vi.fn(async (name: string) => name === "get_ads_performance"
+      ? adsPayload()
+      : salesPayload({ Summary: { TotalSales: 1317.35, TotalOrders: 59, TotalPPCCost: 82, TotalPPCSales: 482 } }));
+
+    const result = await loadScaleInsightsWeeklyPerformance(params, callTool);
+    expect(result.warnings).toEqual([expect.stringContaining("synced at different times")]);
+  });
+
+  it("fails closed when Scale Insights returns a different scope", async () => {
+    const callTool = vi.fn(async (name: string) => name === "get_ads_performance"
+      ? adsPayload()
+      : salesPayload({ EndDate: "2026-09-02" }));
+
+    await expect(loadScaleInsightsWeeklyPerformance(params, callTool)).rejects.toMatchObject({
+      code: "invalid_response",
+    });
+  });
+});
