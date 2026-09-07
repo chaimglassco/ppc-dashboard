@@ -142,6 +142,10 @@ Both default to `https://glasscopipeline.vercel.app`. Roll back PPC and Pipeline
 
 After deployment, call `/ppc/api/dashboard/performance` through an authenticated dashboard session and verify `401` without that session, a no-store `409` plus hosted consent URL before user authorization, `no-store` on success, exact requested scope, and no OIDC/token material in the response or client bundle. If Scale Insights is not configured, the dashboard intentionally retains manual metric entry and shows a configuration error.
 
+## Automatic listing images
+
+The ASIN image lookup uses the existing Scale Insights connector and requires no new environment variables or migrations. Verify the Add product form with an authorized session: enter a valid ASIN, wait for the listing image preview, and confirm the saved card uses it. Unavailable images must leave manual upload usable.
+
 ## Current-week performance verification
 
 After the September 7 date-cutoff fix, verify a current Wednesday–Tuesday reporting week requests only through yesterday in UTC and displays both the actual through-date and partial-week warning. Verify a completed week still returns its exact Tuesday end date. On Wednesday, the new week must show “no completed days yet” without an MCP request. No environment or data migration is required.

@@ -1,5 +1,9 @@
 # Glassco Back Office Library — Architecture
 
+## Automatic listing images
+
+`/ppc/api/dashboard/product-image` authenticates the Pipeline user, reuses their server-side Vercel Connect grant, and calls `get_product_metadata` for exactly one US ASIN. Only an exact ASIN/country match is accepted. The server downloads the returned HTTPS `m.media-amazon.com/images/I/` thumbnail without redirects, with a timeout and 900 KB streaming limit, and returns a no-store image data URL. The debounced form cancels stale requests and protects manual image choices.
+
 ## Current-week reporting cutoff
 
 The performance route caps the derived Tuesday end date at yesterday in UTC before calling either MCP report. Both reports must match that same effective scope; strict upstream scope validation remains unchanged. Responses expose the effective `endDate` and add a partial-week warning when it precedes Tuesday. Weeks starting after the cutoff return no-store `404` without requesting upstream data. This prevents Scale Insights' exclusion of today/future dates from producing a false scope mismatch.

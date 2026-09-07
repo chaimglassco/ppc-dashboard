@@ -98,12 +98,19 @@ export async function getScaleInsightsWeeklyPerformance(
   params: ScaleInsightsWeeklyPerformanceParams,
   identity: ScaleInsightsRequestIdentity,
 ): Promise<ScaleInsightsWeeklyPerformance> {
+  return withScaleInsightsClient(identity, callTool => loadScaleInsightsWeeklyPerformance(params, callTool));
+}
+
+export async function withScaleInsightsClient<T>(
+  identity: ScaleInsightsRequestIdentity,
+  load: (callTool: import("./scale-insights-performance").ScaleInsightsToolCaller) => Promise<T>,
+): Promise<T> {
   const client = new Client({ name: "glassco-ppc-dashboard", version: "0.1.0" });
   const transport = new StreamableHTTPClientTransport(getServerUrl(), { authProvider: await createAuthProvider(identity) });
 
   try {
     await client.connect(transport);
-    return await loadScaleInsightsWeeklyPerformance(params, async (name, args) => client.callTool(
+    return await load(async (name, args) => client.callTool(
       { name, arguments: args },
       { signal: AbortSignal.timeout(SCALE_INSIGHTS_REQUEST_TIMEOUT_MS) },
     ));

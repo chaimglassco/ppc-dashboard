@@ -1,5 +1,9 @@
 # Glassco Back Office Library — Product Specification
 
+## Automatic listing images
+
+Adding a product with a valid ASIN automatically looks up its US Amazon listing thumbnail through Scale Insights. The form previews the image before saving, allows manual replacement, and leaves manual upload available when no image is returned.
+
 ## Product direction
 
 Glassco Back Office Library is the knowledge and operating-procedure foundation for the Amazon PPC management suite. It provides a searchable shared document catalog, guided reading experience, role-aware administration, and structured document builder.

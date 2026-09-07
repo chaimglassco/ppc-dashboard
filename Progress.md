@@ -2,6 +2,10 @@
 
 Last updated: September 7, 2026
 
+## Automatic listing images
+
+Added automatic ASIN image lookup to the product form using Scale Insights' actual Amazon thumbnail. Manual uploads remain available. No credentials enter frontend code and no catalog schema or existing product data is changed.
+
 ## Overall status
 
 The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgres-authoritative shared persistence, scoped versioned mutations, read-only outage caching, and cross-account synchronization.

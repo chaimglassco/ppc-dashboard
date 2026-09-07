@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import { Eye, ImagePlus, Package, Pencil, Plus, RefreshCw, Search, Tag, Trash2, X } from "lucide-react";
-import { useDeferredValue, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { withPpcBasePath } from "@/lib/glassco-apps";
+import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import { MAX_DASHBOARD_PRODUCT_IMAGE_BYTES, type DashboardTag, type ManagedDashboardProduct } from "../domain/ppc-dashboard-catalog";
 import styles from "./product-portfolio-panel.module.css";
 
@@ -49,9 +51,38 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
   const [deleteCandidate, setDeleteCandidate] = useState<ManagedDashboardProduct | null>(null);
   const [form, setForm] = useState<ProductFormValue>(EMPTY_PRODUCT);
   const [formError, setFormError] = useState("");
+  const [imageNotice, setImageNotice] = useState("");
+  const manualImage = useRef(false);
   const [tagName, setTagName] = useState("");
   const [tagError, setTagError] = useState("");
   const deferredSearch = useDeferredValue(search.trim().toLocaleLowerCase());
+
+  useEffect(() => {
+    if (!productDialogOpen || manualImage.current) return;
+    const controller = new AbortController();
+    const asin = form.asin.trim().toUpperCase();
+    const timer = window.setTimeout(() => {
+      if (manualImage.current) return;
+      setForm(current => ({ ...current, imageDataUrl: "" }));
+      setImageNotice("");
+      if (!/^[A-Z0-9]{10}$/.test(asin)) return;
+      setImageNotice("Looking up Amazon listing image…");
+      void fetch(withPpcBasePath(`/api/dashboard/product-image?${new URLSearchParams({ asin })}`), {
+        headers: getPipelineAuthorizationHeader(), cache: "no-store", signal: controller.signal,
+      }).then(async response => {
+        const value = await response.json();
+        if (controller.signal.aborted || manualImage.current) return;
+        if (!response.ok || value?.asin !== asin || typeof value.imageDataUrl !== "string" || value.imageDataUrl.length > 1_250_000 || !/^data:image\/(png|jpeg|webp|gif);base64,[a-z0-9+/=]+$/i.test(value.imageDataUrl)) {
+          throw new Error("No listing image available. You can choose an image manually.");
+        }
+        setForm(current => current.asin.trim().toUpperCase() === asin ? { ...current, imageDataUrl: value.imageDataUrl } : current);
+        setImageNotice("Amazon listing image added. You can replace it with your own.");
+      }).catch(() => {
+        if (!controller.signal.aborted && !manualImage.current) setImageNotice("No listing image available. You can choose an image manually.");
+      });
+    }, 500);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [form.asin, productDialogOpen]);
 
   useEffect(() => {
     if (!productDialogOpen && !tagDialogOpen && !deleteCandidate) return;
@@ -74,11 +105,15 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
   }), [deferredSearch, products, tagById, tagFilter]);
 
   const openCreateProduct = () => {
+    manualImage.current = false;
+    setImageNotice("");
     setForm({ ...EMPTY_PRODUCT, tagId: tagFilter !== "all" && tagFilter !== "untagged" ? tagFilter : "" });
     setFormError("");
     setProductDialogOpen(true);
   };
   const openEditProduct = (product: ManagedDashboardProduct) => {
+    manualImage.current = Boolean(product.imageDataUrl);
+    setImageNotice("");
     setForm({ id: product.id, source: product.source, name: product.name, asin: product.asin, sku: product.sku, tagId: product.tagId, imageDataUrl: product.imageDataUrl });
     setFormError("");
     setProductDialogOpen(true);
@@ -99,6 +134,8 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
       return;
     }
     try {
+      manualImage.current = true;
+      setImageNotice("");
       const imageDataUrl = await productImage(file);
       setForm(current => ({ ...current, imageDataUrl }));
       setFormError("");
@@ -167,12 +204,17 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
         <header><div><span className={styles.eyebrow}>PPC WEEKLY GOALS</span><h2 id="product-dialog-title">{form.id ? "Edit product" : "Add product"}</h2></div><button type="button" aria-label="Close product form" onClick={closeProductDialog}><X aria-hidden="true" /></button></header>
         <form onSubmit={submitProduct}>
           <label className={styles.imageField}><span>Product image</span><span className={styles.imagePicker}>{form.imageDataUrl ? <Image src={form.imageDataUrl} alt="Product preview" width={64} height={64} unoptimized /> : <ImagePlus aria-hidden="true" />}<span><strong>{form.imageDataUrl ? "Change image" : "Choose image"}</strong><small>PNG, JPG, WEBP, or GIF · max 900 KB</small></span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={event => void handleImage(event)} /></span></label>
+          <small role="status">{imageNotice || "Enter an ASIN to find its Amazon listing image automatically, or choose your own image."}</small>
           <label>Product name<input autoFocus maxLength={120} required value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} placeholder="Enter product name" /></label>
-          <div className={styles.formColumns}><label>ASIN<input maxLength={30} value={form.asin} onChange={event => setForm(current => ({ ...current, asin: event.target.value }))} placeholder="B0XXXXXXXX" /></label><label>SKU<input maxLength={80} value={form.sku} onChange={event => setForm(current => ({ ...current, sku: event.target.value }))} placeholder="Your SKU" /></label></div>
+          <div className={styles.formColumns}><label>ASIN<input maxLength={30} value={form.asin} onChange={event => {
+            const asin = event.target.value;
+            setForm(current => ({ ...current, asin, imageDataUrl: manualImage.current ? current.imageDataUrl : "" }));
+            if (!manualImage.current) setImageNotice(/^[A-Z0-9]{10}$/i.test(asin.trim()) ? "Looking up Amazon listing image…" : "");
+          }} placeholder="B0XXXXXXXX" /></label><label>SKU<input maxLength={80} value={form.sku} onChange={event => setForm(current => ({ ...current, sku: event.target.value }))} placeholder="Your SKU" /></label></div>
           <label>Tag<select value={form.tagId} onChange={event => setForm(current => ({ ...current, tagId: event.target.value }))}><option value="">No tag</option>{tags.map(tag => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label>
-          {form.imageDataUrl ? <button type="button" className={styles.removeImage} onClick={() => setForm(current => ({ ...current, imageDataUrl: "" }))}>Remove image</button> : null}
+          {form.imageDataUrl ? <button type="button" className={styles.removeImage} onClick={() => { manualImage.current = true; setImageNotice(""); setForm(current => ({ ...current, imageDataUrl: "" })); }}>Remove image</button> : null}
           {formError ? <p className={styles.formError} role="alert">{formError}</p> : null}
-          <footer><button type="button" onClick={closeProductDialog}>Cancel</button><button type="submit" className={styles.primary}>{form.id ? "Save changes" : "Add product"}</button></footer>
+          <footer><button type="button" onClick={closeProductDialog}>Cancel</button><button type="submit" disabled={imageNotice === "Looking up Amazon listing image…"} className={styles.primary}>{form.id ? "Save changes" : "Add product"}</button></footer>
         </form>
       </section>
     </div> : null}

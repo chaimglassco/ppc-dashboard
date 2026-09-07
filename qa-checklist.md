@@ -2,6 +2,10 @@
 
 Use this checklist before merging or deploying changes.
 
+## Automatic listing images
+
+Verify entering a valid ASIN previews its listing image, saving retains the image after refresh, manual upload wins over a pending lookup, changing/clearing ASIN cancels stale results, and unavailable images show a manual-upload fallback. Verify invalid ASINs, unauthenticated requests, mismatched metadata, non-image content, redirects and oversized downloads cannot return an image.
+
 ## Automated gates
 
 - [x] `npm run lint`

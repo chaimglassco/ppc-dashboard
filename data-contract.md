@@ -1,5 +1,9 @@
 # Data Contract
 
+## Automatic listing images
+
+The authenticated `GET /ppc/api/dashboard/product-image?asin=...` response is `{ asin, imageDataUrl }` with `Cache-Control: no-store`. It accepts one ten-character ASIN, uses the US marketplace, and returns only a validated, bounded raster image. Automatic images use the existing `imageDataUrl` catalog field; no storage migration is needed.
+
 ## Scope
 
 This document defines the repository bootstrap content, authoritative Pipeline Postgres state, scoped mutation protocol, private-media/legacy-migration storage, and browser-only reading-state contracts used by the Glassco Back Office Library.
