@@ -16,7 +16,7 @@ import {
 } from "../domain/ppc-dashboard-state";
 import {
   PPC_DASHBOARD_CATALOG_STORAGE_KEY, createDashboardTagId, emptyDashboardCatalog, mergeDashboardProducts,
-  parseDashboardCatalogStore, type DashboardCatalogProduct, type DashboardCatalogStore, type ManagedDashboardProduct,
+  parseDashboardCatalogStore, reorderVisibleProducts, type DashboardCatalogProduct, type DashboardCatalogStore, type ManagedDashboardProduct,
 } from "../domain/ppc-dashboard-catalog";
 import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfolio-panel";
 import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
@@ -356,7 +356,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     if (!value.id) {
       const suffix = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const product: DashboardCatalogProduct = { id: `dashboard-${suffix}`, source: "dashboard", stageId: "dashboard", status: "Active", name: value.name, asin: value.asin, sku: value.sku, tagId: value.tagId, imageDataUrl: value.imageDataUrl };
-      const error = persistCatalog({ ...catalog, customProducts: [product, ...catalog.customProducts] });
+      const error = persistCatalog({ ...catalog, customProducts: [product, ...catalog.customProducts], productOrderIds: [product.id, ...products.map(existing => existing.id)] });
       if (error) return error;
       selectProduct(product.id);
       return "";
@@ -373,6 +373,10 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     persistCatalog(nextCatalog);
     if (selectedProductId === product.id) selectProduct(products.find(candidate => candidate.id !== product.id)?.id ?? "");
   };
+  const reorderProducts = (sourceId: string, targetId: string, visibleIds: string[]) => persistCatalog({
+    ...catalog,
+    productOrderIds: reorderVisibleProducts(products.map(product => product.id), visibleIds, sourceId, targetId),
+  });
 
   const updateGoal = (goalId: string, patch: Partial<WeeklyGoal>) => {
     if (report) patchReport({ goals: report.goals.map(goal => goal.id === goalId ? { ...goal, ...patch } : goal) });
@@ -402,7 +406,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   };
 
   return <section className={styles.dashboard} aria-label="Weekly PPC Performance Notes">
-    <ProductPortfolioPanel products={products} tags={catalog.tags} loading={productsLoading} error={productsError} selectedProductId={selectedProductId} onSelectProduct={selectProduct} onRetry={() => void loadProducts()} onCreateTag={createTag} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} />
+    <ProductPortfolioPanel products={products} tags={catalog.tags} loading={productsLoading} error={productsError} selectedProductId={selectedProductId} onSelectProduct={selectProduct} onRetry={() => void loadProducts()} onCreateTag={createTag} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} onReorderProducts={reorderProducts} />
 
     <aside className={styles.periodsPanel} aria-labelledby="periods-heading">
       <div className={styles.panelHeader}>

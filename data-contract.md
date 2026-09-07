@@ -1,5 +1,9 @@
 # Data Contract
 
+## Product portfolio ordering
+
+The version-1 dashboard catalog accepts optional `productOrderIds: string[]` (validated unique IDs, capped at 2,000). Missing order uses the prior source order. Unknown or hidden IDs do not create records, and new products are prepended to the saved order. The ordering changes only local portfolio presentation, never product IDs or weekly-report keys.
+
 ## Automatic listing images
 
 The authenticated `GET /ppc/api/dashboard/product-image?asin=...` response is `{ asin, imageDataUrl }` with `Cache-Control: no-store`. It accepts one ten-character ASIN, uses the US marketplace, and returns only a validated, bounded raster image. Automatic images use the existing `imageDataUrl` catalog field; no storage migration is needed.

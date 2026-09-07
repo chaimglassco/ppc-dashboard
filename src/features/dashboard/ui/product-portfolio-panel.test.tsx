@@ -3,6 +3,24 @@ import { afterEach, expect, it, vi } from "vitest";
 import { ProductPortfolioPanel } from "./product-portfolio-panel";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+it("exposes reorder handles only in edit mode and supports dropping and keyboard movement", () => {
+  const reorder = vi.fn(() => "");
+  const products = ["First", "Second"].map(name => ({ id: name, name, asin: "", sku: "", stageId: "dashboard", status: "Active" as const, source: "dashboard" as const, tagId: "", imageDataUrl: "" }));
+  render(<ProductPortfolioPanel products={products} tags={[]} loading={false} error="" selectedProductId="First" onSelectProduct={vi.fn()} onRetry={vi.fn()} onCreateTag={() => ({ id: "", error: "" })} onSaveProduct={() => ""} onDeleteProduct={vi.fn()} onReorderProducts={reorder} />);
+  expect(screen.queryByRole("button", { name: "Reorder First" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Enable product editing" }));
+  const handle = screen.getByRole("button", { name: "Reorder First" });
+  const dataTransfer = { setData: vi.fn(), effectAllowed: "", dropEffect: "" };
+  fireEvent.dragStart(handle, { dataTransfer });
+  const target = screen.getByRole("button", { name: "Reorder Second" }).closest("article")!;
+  fireEvent.dragOver(target, { dataTransfer });
+  fireEvent.drop(target, { dataTransfer });
+  expect(reorder).toHaveBeenCalledWith("First", "Second", ["First", "Second"]);
+  fireEvent.keyDown(handle, { key: "ArrowDown" });
+  expect(reorder).toHaveBeenCalledTimes(2);
+  fireEvent.click(screen.getByRole("button", { name: "Exit product editing" }));
+  expect(screen.queryByRole("button", { name: "Reorder First" })).not.toBeInTheDocument();
+});
 const image = "data:image/jpeg;base64,/9j/";
 function openForm() {
   const save = vi.fn(() => "");

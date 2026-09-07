@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { mergeDashboardProducts, parseDashboardCatalogStore } from "./ppc-dashboard-catalog";
+import { mergeDashboardProducts, parseDashboardCatalogStore, reorderVisibleProducts } from "./ppc-dashboard-catalog";
 
 describe("PPC dashboard catalog", () => {
+  it("reorders filtered products without shifting unrelated product slots", () => {
+    expect(reorderVisibleProducts(["a", "x", "b", "y", "c"], ["a", "b", "c"], "c", "a")).toEqual(["c", "x", "a", "y", "b"]);
+    expect(reorderVisibleProducts(["a", "b"], ["a", "b"], "missing", "a")).toEqual(["a", "b"]);
+  });
+
+  it("restores a validated saved order while retaining new products", () => {
+    const catalog = parseDashboardCatalogStore(JSON.stringify({ version: 1, productOrderIds: ["b", "a", "b", null, 42] }));
+    const products = ["a", "b", "c"].map(id => ({ id, name: id, asin: "", sku: "", stageId: "launch", status: "Active" as const }));
+    expect(catalog.productOrderIds).toEqual(["b", "a"]);
+    expect(mergeDashboardProducts(products, catalog).map(product => product.id)).toEqual(["b", "a", "c"]);
+  });
   it("fails closed and removes malformed, duplicate, and orphaned values", () => {
     const parsed = parseDashboardCatalogStore(JSON.stringify({
       version: 1,

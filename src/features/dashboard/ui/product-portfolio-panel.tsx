@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Eye, ImagePlus, Package, Pencil, Plus, RefreshCw, Search, Tag, Trash2, X } from "lucide-react";
+import { Eye, GripVertical, ImagePlus, Package, Pencil, Plus, RefreshCw, Search, Tag, Trash2, X } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
@@ -29,6 +29,7 @@ type Props = {
   onCreateTag: (name: string) => { id: string; error: string };
   onSaveProduct: (product: ProductFormValue) => string;
   onDeleteProduct: (product: ManagedDashboardProduct) => void;
+  onReorderProducts?: (sourceId: string, targetId: string, visibleIds: string[]) => string;
 };
 
 const EMPTY_PRODUCT: ProductFormValue = { id: "", source: "dashboard", name: "", asin: "", sku: "", tagId: "", imageDataUrl: "" };
@@ -42,10 +43,13 @@ function productImage(file: File) {
   });
 }
 
-export function ProductPortfolioPanel({ products, tags, loading, error, selectedProductId, onSelectProduct, onRetry, onCreateTag, onSaveProduct, onDeleteProduct }: Props) {
+export function ProductPortfolioPanel({ products, tags, loading, error, selectedProductId, onSelectProduct, onRetry, onCreateTag, onSaveProduct, onDeleteProduct, onReorderProducts }: Props) {
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("all");
   const [editMode, setEditMode] = useState(false);
+  const [draggedId, setDraggedId] = useState("");
+  const [dropTargetId, setDropTargetId] = useState("");
+  const [reorderNotice, setReorderNotice] = useState("");
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState<ManagedDashboardProduct | null>(null);
@@ -103,6 +107,11 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
     const haystack = `${product.name} ${product.asin} ${product.sku} ${tagById.get(product.tagId)?.name ?? ""}`.toLocaleLowerCase();
     return matchesTag && (!deferredSearch || haystack.includes(deferredSearch));
   }), [deferredSearch, products, tagById, tagFilter]);
+  const moveProduct = (sourceId: string, targetId: string) => {
+    if (!editMode || !onReorderProducts || sourceId === targetId) return;
+    const error = onReorderProducts(sourceId, targetId, filteredProducts.map(product => product.id));
+    setReorderNotice(error || "Product order saved.");
+  };
 
   const openCreateProduct = () => {
     manualImage.current = false;
@@ -181,6 +190,7 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
       </div>
     </div>
 
+    <span className="sr-only" role="status">{reorderNotice}</span>
     <div className={styles.list}>
       {loading ? <div className={styles.loadingState}><RefreshCw className={styles.spinner} aria-hidden="true" />Loading Pipeline products…</div> : null}
       {!loading && error ? <div className={styles.errorState} role="alert"><p>{error}</p><button type="button" onClick={onRetry}><RefreshCw aria-hidden="true" />Retry</button></div> : null}
@@ -188,13 +198,26 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
       {filteredProducts.map(product => {
         const tag = tagById.get(product.tagId);
         const selected = selectedProductId === product.id;
-        return <article key={product.id} className={`${styles.productCard} ${selected ? styles.selected : ""} ${tag ? styles.tagged : ""}`}>
+        return <article key={product.id} className={`${styles.productCard} ${selected ? styles.selected : ""} ${tag ? styles.tagged : ""} ${editMode ? styles.editableCard : ""} ${draggedId === product.id ? styles.dragging : ""} ${dropTargetId === product.id ? styles.dropTarget : ""}`}
+          onDragOver={event => { if (editMode && draggedId && draggedId !== product.id) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDropTargetId(product.id); } }}
+          onDrop={event => { if (editMode && draggedId) { event.preventDefault(); moveProduct(draggedId, product.id); setDraggedId(""); setDropTargetId(""); } }}>
           <button type="button" className={styles.productSelect} aria-pressed={selected} onClick={() => onSelectProduct(product.id)}>
             <span className={styles.productImage}>{product.imageDataUrl ? <Image src={product.imageDataUrl} alt={`${product.name} product`} width={44} height={44} unoptimized /> : <Package aria-hidden="true" />}</span>
             <span className={styles.productCopy}><strong>{product.name}</strong>{tag ? <em><Tag aria-hidden="true" />{tag.name}</em> : null}</span>
           </button>
           <span className={styles.identifiers}>{product.asin ? <a href={`https://www.amazon.com/dp/${encodeURIComponent(product.asin)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open ASIN ${product.asin} on Amazon`}>ASIN: {product.asin}</a> : <small>ASIN: N/A</small>}{product.sku ? <a href={`https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=${encodeURIComponent(product.sku)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open SKU ${product.sku} in Seller Central`}>SKU: {product.sku}</a> : <small>SKU: N/A</small>}</span>
-          {editMode ? <div className={styles.cardActions}><button type="button" aria-label={`Edit ${product.name}`} title="Edit product" onClick={() => openEditProduct(product)}><Pencil aria-hidden="true" /></button><button type="button" aria-label={`Delete ${product.name}`} title="Delete product" onClick={() => setDeleteCandidate(product)}><Trash2 aria-hidden="true" /></button></div> : null}
+          {editMode ? <div className={styles.cardActions}><button type="button" aria-label={`Edit ${product.name}`} title="Edit product" onClick={() => openEditProduct(product)}><Pencil aria-hidden="true" /></button><button type="button" aria-label={`Delete ${product.name}`} title="Delete product" onClick={() => setDeleteCandidate(product)}><Trash2 aria-hidden="true" /></button>
+            <button type="button" draggable className={styles.dragHandle} aria-label={`Reorder ${product.name}`} title="Drag to reorder, or use Up and Down arrow keys"
+              onDragStart={event => { setDraggedId(product.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", product.id); }}
+              onDragEnd={() => { setDraggedId(""); setDropTargetId(""); }}
+              onKeyDown={event => {
+                if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+                event.preventDefault();
+                const index = filteredProducts.findIndex(candidate => candidate.id === product.id);
+                const target = filteredProducts[index + (event.key === "ArrowUp" ? -1 : 1)];
+                if (target) moveProduct(product.id, target.id);
+              }}><GripVertical aria-hidden="true" /></button>
+          </div> : null}
         </article>;
       })}
     </div>

@@ -2,6 +2,10 @@
 
 Use this checklist before merging or deploying changes.
 
+## Product portfolio ordering
+
+Check that reorder handles appear below Delete only in edit mode; drag a card up/down and confirm refresh retains its position. Verify keyboard Up/Down, filtered moves preserving unrelated slots, no-op/boundary moves, storage failure feedback, and continued selection/report association.
+
 ## Automatic listing images
 
 Verify entering a valid ASIN previews its listing image, saving retains the image after refresh, manual upload wins over a pending lookup, changing/clearing ASIN cancels stale results, and unavailable images show a manual-upload fallback. Verify invalid ASINs, unauthenticated requests, mismatched metadata, non-image content, redirects and oversized downloads cannot return an image.

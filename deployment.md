@@ -142,6 +142,10 @@ Both default to `https://glasscopipeline.vercel.app`. Roll back PPC and Pipeline
 
 After deployment, call `/ppc/api/dashboard/performance` through an authenticated dashboard session and verify `401` without that session, a no-store `409` plus hosted consent URL before user authorization, `no-store` on success, exact requested scope, and no OIDC/token material in the response or client bundle. If Scale Insights is not configured, the dashboard intentionally retains manual metric entry and shows a configuration error.
 
+## Product portfolio ordering
+
+Product reordering requires no service or environment changes. Existing version-1 browser catalogs accept the optional productOrderIds field without migration. Verify a drag/drop in edit mode, refresh persistence, and a filtered reorder; ordering is local to the browser.
+
 ## Automatic listing images
 
 The ASIN image lookup uses the existing Scale Insights connector and requires no new environment variables or migrations. Verify the Add product form with an authorized session: enter a valid ASIN, wait for the listing image preview, and confirm the saved card uses it. Unavailable images must leave manual upload usable.

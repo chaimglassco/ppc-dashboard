@@ -2,6 +2,10 @@
 
 Last updated: September 7, 2026
 
+## Product portfolio ordering
+
+Added edit-only drag handles below each product's Delete icon, keyboard reordering, drag/drop feedback, and browser-persisted product order. Filtered moves preserve non-visible slots; existing catalogs remain compatible.
+
 ## Automatic listing images
 
 Added automatic ASIN image lookup to the product form using Scale Insights' actual Amazon thumbnail. Manual uploads remain available. No credentials enter frontend code and no catalog schema or existing product data is changed.

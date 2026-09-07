@@ -22,6 +22,7 @@ export type DashboardCatalogStore = {
   customProducts: DashboardCatalogProduct[];
   productOverrides: Record<string, DashboardProductOverride>;
   hiddenPipelineProductIds: string[];
+  productOrderIds?: string[];
 };
 export type ManagedDashboardProduct = DashboardProduct & {
   source: "pipeline" | "dashboard";
@@ -125,7 +126,9 @@ export function parseDashboardCatalogStore(raw: string | null): DashboardCatalog
       hiddenPipelineProductIds.push(id);
       hiddenIds.add(id);
     }
-    return { version: 1, tags, customProducts, productOverrides, hiddenPipelineProductIds };
+    const productOrderIds = [...new Set((Array.isArray(value.productOrderIds) ? value.productOrderIds : [])
+      .map(candidate => text(candidate, 160)).filter(Boolean))].slice(0, 2_000);
+    return { version: 1, tags, customProducts, productOverrides, hiddenPipelineProductIds, productOrderIds };
   } catch {
     return emptyDashboardCatalog();
   }
@@ -143,7 +146,21 @@ export function mergeDashboardProducts(pipelineProducts: DashboardProduct[], cat
       imageDataUrl: override?.imageDataUrl ?? "",
     };
   });
-  return [...catalog.customProducts, ...imported];
+  const positions = new Map((catalog.productOrderIds ?? []).map((id, index) => [id, index]));
+  return [...catalog.customProducts, ...imported].sort((a, b) => (positions.get(a.id) ?? Infinity) - (positions.get(b.id) ?? Infinity));
+}
+
+// Reorder visible slots only so a tag/search filter never moves unrelated products.
+export function reorderVisibleProducts(allIds: string[], visibleIds: string[], sourceId: string, targetId: string): string[] {
+  const visible = visibleIds.filter(id => allIds.includes(id));
+  const from = visible.indexOf(sourceId);
+  const to = visible.indexOf(targetId);
+  if (from < 0 || to < 0 || from === to) return allIds;
+  const moved = [...visible];
+  moved.splice(to, 0, moved.splice(from, 1)[0]);
+  const visibleSet = new Set(visible);
+  let index = 0;
+  return allIds.map(id => visibleSet.has(id) ? moved[index++] : id);
 }
 
 export function createDashboardTagId(name: string, suffix: string) {

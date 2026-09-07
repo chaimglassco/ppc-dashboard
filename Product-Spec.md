@@ -1,5 +1,9 @@
 # Glassco Back Office Library — Product Specification
 
+## Product portfolio ordering
+
+In product edit mode, each card has a drag handle below Delete. Users can reorder by dragging or with Up/Down keys. The order is saved in this browser; filtered reordering changes only visible slots.
+
 ## Automatic listing images
 
 Adding a product with a valid ASIN automatically looks up its US Amazon listing thumbnail through Scale Insights. The form previews the image before saving, allows manual replacement, and leaves manual upload available when no image is returned.
