@@ -2,6 +2,14 @@
 
 Use this checklist before merging or deploying changes.
 
+## Saved weekly performance and smaller tags
+
+Fetch two weeks, switch between them, reload, and verify both timeline cards and the selected metrics retain their values without another performance request. Refresh must update only the selected ASIN/week and retain the last values on error. Verify zero-valued snapshots are reusable, malformed snapshots are ignored, storage failure is reported, and compact tags remain readable.
+
+## Compact product cards
+
+Portfolio cards display the image, product name, and tag without ASIN/SKU rows. View-mode cards use a compact 66px minimum height; edit mode retains room for Edit, Delete, and Reorder controls. ASIN/SKU remain in the selected-product header, edit form, search index, and existing storage; this is presentation-only with no data migration. Verify both identifier links remain in the detail header after selecting a product.
+
 ## Product portfolio ordering
 
 Check that reorder handles appear below Delete only in edit mode; drag a card up/down and confirm refresh retains its position. Verify keyboard Up/Down, filtered moves preserving unrelated slots, no-op/boundary moves, storage failure feedback, and continued selection/report association.

@@ -2,6 +2,14 @@
 
 Last updated: September 7, 2026
 
+## Saved weekly performance and smaller tags
+
+Fixed fetched metrics disappearing after reload: imports previously updated only React report state and were not included in the dirty-report save flow. Added validated ASIN/week snapshots, timeline hydration, explicit-refresh-only updates for saved weeks, and failure retention. Added a reload/navigation/refresh regression test and compacted portfolio tag badges.
+
+## Compact product cards
+
+Portfolio cards display the image, product name, and tag without ASIN/SKU rows. View-mode cards use a compact 66px minimum height; edit mode retains room for Edit, Delete, and Reorder controls. ASIN/SKU remain in the selected-product header, edit form, search index, and existing storage; this is presentation-only with no data migration. Verify both identifier links remain in the detail header after selecting a product.
+
 ## Product portfolio ordering
 
 Added edit-only drag handles below each product's Delete icon, keyboard reordering, drag/drop feedback, and browser-persisted product order. Filtered moves preserve non-visible slots; existing catalogs remain compatible.

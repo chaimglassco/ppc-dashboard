@@ -142,6 +142,14 @@ Both default to `https://glasscopipeline.vercel.app`. Roll back PPC and Pipeline
 
 After deployment, call `/ppc/api/dashboard/performance` through an authenticated dashboard session and verify `401` without that session, a no-store `409` plus hosted consent URL before user authorization, `no-store` on success, exact requested scope, and no OIDC/token material in the response or client bundle. If Scale Insights is not configured, the dashboard intentionally retains manual metric entry and shows a configuration error.
 
+## Saved weekly performance and smaller tags
+
+The performance cache and compact badges need no environment or server data migration. Verify fetching, switching weeks, page reload, explicit Refresh, and failed-refresh retention. Existing values that were never saved by the previous release need one successful fetch to create their snapshots. Cache persistence is local to this browser, not synchronized across devices.
+
+## Compact product cards
+
+Portfolio cards display the image, product name, and tag without ASIN/SKU rows. View-mode cards use a compact 66px minimum height; edit mode retains room for Edit, Delete, and Reorder controls. ASIN/SKU remain in the selected-product header, edit form, search index, and existing storage; this is presentation-only with no data migration. Verify both identifier links remain in the detail header after selecting a product.
+
 ## Product portfolio ordering
 
 Product reordering requires no service or environment changes. Existing version-1 browser catalogs accept the optional productOrderIds field without migration. Verify a drag/drop in edit mode, refresh persistence, and a filtered reorder; ordering is local to the browser.

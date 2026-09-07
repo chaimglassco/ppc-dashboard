@@ -1,5 +1,13 @@
 # Data Contract
 
+## Saved weekly performance and smaller tags
+
+`glassco.ppcPerformanceCache.v1` stores `{ version: 1, entries: { ["US:<ASIN>:<Wednesday date>"]: performance } }` using the minimal performance DTO, never credentials or raw MCP payloads. Restoration validates exact ASIN, US marketplace, real bounded weekly dates, finite nonnegative source numbers and integer orders; it recalculates derived numbers and reconstructs keys. Snapshots include actual end date, freshness and warnings; genuine zero metrics remain valid cache entries. Existing report/catalog keys are unchanged. No automatic expiry or background refresh occurs; Refresh replaces only the selected snapshot.
+
+## Compact product cards
+
+Portfolio cards display the image, product name, and tag without ASIN/SKU rows. View-mode cards use a compact 66px minimum height; edit mode retains room for Edit, Delete, and Reorder controls. ASIN/SKU remain in the selected-product header, edit form, search index, and existing storage; this is presentation-only with no data migration. Verify both identifier links remain in the detail header after selecting a product.
+
 ## Product portfolio ordering
 
 The version-1 dashboard catalog accepts optional `productOrderIds: string[]` (validated unique IDs, capped at 2,000). Missing order uses the prior source order. Unknown or hidden IDs do not create records, and new products are prepended to the saved order. The ordering changes only local portfolio presentation, never product IDs or weekly-report keys.

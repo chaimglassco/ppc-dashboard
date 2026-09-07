@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PPC_DASHBOARD_CATALOG_STORAGE_KEY } from "../domain/ppc-dashboard-catalog";
 import { PPC_DASHBOARD_STORAGE_KEY } from "../domain/ppc-dashboard-state";
+import { PPC_PERFORMANCE_CACHE_KEY } from "../domain/ppc-performance-cache";
 import { PpcPerformanceDashboard } from "./ppc-performance-dashboard";
 
 describe("PpcPerformanceDashboard", () => {
@@ -21,6 +22,47 @@ describe("PpcPerformanceDashboard", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+  });
+
+  it("persists fetched weeks, restores timeline totals after reload, and updates only on Refresh", async () => {
+    let spend = 81.75;
+    let fail = false;
+    const metricsCalls: string[] = [];
+    vi.mocked(fetch).mockImplementation(async input => {
+      const url = String(input);
+      if (!url.includes("/api/dashboard/performance?")) return { ok: true, status: 200, json: async () => ({ products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }] }) } as Response;
+      metricsCalls.push(url);
+      const startDate = new URL(url, "http://localhost").searchParams.get("weekStart")!;
+      if (fail) return { ok: false, status: 502, json: async () => ({ error: "Unavailable" }) } as Response;
+      return { ok: true, status: 200, json: async () => ({ performance: {
+        asin: "B012345678", country: "US", startDate, endDate: startDate === "2026-08-26" ? "2026-09-01" : "2026-08-25", currency: "USD",
+        metrics: { spend, ppcSales: 481.75, ppcOrders: 23, totalSales: 1317.35, totalOrders: 59 },
+        freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: startDate }, warnings: [],
+      } }) } as Response;
+    });
+    const view = render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("81.75"));
+    expect(JSON.parse(localStorage.getItem(PPC_PERFORMANCE_CACHE_KEY)!).entries["US:B012345678:2026-08-26"].metrics.spend).toBe(81.75);
+    fireEvent.click(screen.getByRole("button", { name: /August 19 to August 25/ }));
+    await waitFor(() => expect(metricsCalls).toHaveLength(2));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("81.75"));
+    fireEvent.click(screen.getByRole("button", { name: /August 26 to September 1/ }));
+    await screen.findByText(/Saved Scale Insights data/);
+    expect(metricsCalls).toHaveLength(2);
+    view.unmount();
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    await screen.findByText(/Saved Scale Insights data/);
+    expect(metricsCalls).toHaveLength(2);
+    expect(within(screen.getByRole("button", { name: /August 19 to August 25/ })).getByText("$82")).toBeVisible();
+    spend = 99;
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("99"));
+    expect(metricsCalls).toHaveLength(3);
+    fail = true;
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await screen.findByText("Refresh failed. Previously saved metrics are still displayed.");
+    expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("99");
+    expect(screen.getByRole("textbox", { name: "Spend" })).toHaveAttribute("readonly");
   });
 
   it("loads a Pipeline product and automatically saves the selected weekly report", async () => {
@@ -241,16 +283,14 @@ describe("PpcPerformanceDashboard", () => {
 
     expect(await screen.findByRole("heading", { name: "Glass Polish" })).toBeVisible();
     expect(screen.getAllByAltText("Glass Polish product")).toHaveLength(2);
-    const asinLink = screen.getByRole("link", { name: "Open ASIN B012345679 on Amazon" });
-    const skuLink = screen.getByRole("link", { name: "Open SKU POLISH-01 in Seller Central" });
+    expect(screen.queryByRole("link", { name: "Open ASIN B012345679 on Amazon" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open SKU POLISH-01 in Seller Central" })).not.toBeInTheDocument();
     const headerAsinLink = screen.getByRole("link", { name: "Open selected product ASIN B012345679 on Amazon" });
     const headerSkuLink = screen.getByRole("link", { name: "Open selected product SKU POLISH-01 in Seller Central" });
-    expect(asinLink).toHaveAttribute("href", "https://www.amazon.com/dp/B012345679");
-    expect(skuLink).toHaveAttribute("href", "https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=POLISH-01");
     expect(headerAsinLink).toHaveAttribute("href", "https://www.amazon.com/dp/B012345679");
     expect(headerSkuLink).toHaveAttribute("href", "https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=POLISH-01");
-    expect(asinLink).toHaveAttribute("target", "_blank");
-    expect(skuLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(headerAsinLink).toHaveAttribute("target", "_blank");
+    expect(headerSkuLink).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getAllByText("Launch group").length).toBeGreaterThan(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Enable product editing" }));

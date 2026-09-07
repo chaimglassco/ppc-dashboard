@@ -1,5 +1,13 @@
 # Glassco Back Office Library — Product Specification
 
+## Saved weekly performance and smaller tags
+
+Fetched performance is saved in this browser per US ASIN and reporting week. Selecting a week without a snapshot fetches once; returning to a saved week or reloading displays its exact saved metrics and coverage. Only Refresh updates an existing snapshot; pending/failed refreshes preserve the last values. Portfolio tag badges use compact 7px text and reduced padding.
+
+## Compact product cards
+
+Portfolio cards display the image, product name, and tag without ASIN/SKU rows. View-mode cards use a compact 66px minimum height; edit mode retains room for Edit, Delete, and Reorder controls. ASIN/SKU remain in the selected-product header, edit form, search index, and existing storage; this is presentation-only with no data migration. Verify both identifier links remain in the detail header after selecting a product.
+
 ## Product portfolio ordering
 
 In product edit mode, each card has a drag handle below Delete. Users can reorder by dragging or with Up/Down keys. The order is saved in this browser; filtered reordering changes only visible slots.

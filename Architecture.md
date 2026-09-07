@@ -1,5 +1,13 @@
 # Glassco Back Office Library — Architecture
 
+## Saved weekly performance and smaller tags
+
+A versioned local performance snapshot cache is independent of editable weekly reports, keyed by US marketplace, normalized ASIN, and Wednesday start. Hydration completes before automatic fetches. Five source values are validated and derived metrics recalculated when restoring snapshots; no OAuth material is stored. Successful fetches persist immediately, week cards and detail metrics overlay the matching snapshot, and explicit Refresh bypasses the cache. Canceled requests cannot update state; failed refreshes preserve cached values and read-only imported inputs.
+
+## Compact product cards
+
+Portfolio cards display the image, product name, and tag without ASIN/SKU rows. View-mode cards use a compact 66px minimum height; edit mode retains room for Edit, Delete, and Reorder controls. ASIN/SKU remain in the selected-product header, edit form, search index, and existing storage; this is presentation-only with no data migration. Verify both identifier links remain in the detail header after selecting a product.
+
 ## Product portfolio ordering
 
 Product order is persisted as optional `productOrderIds` in the version-1 dashboard catalog. Parsing validates and deduplicates IDs; the merge uses a stable sort and leaves unspecified/new products in their source order. The reorder helper fills only currently visible slots, so filtering does not move unrelated products. No Pipeline mutations occur.

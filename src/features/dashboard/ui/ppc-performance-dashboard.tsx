@@ -19,7 +19,7 @@ import {
   parseDashboardCatalogStore, reorderVisibleProducts, type DashboardCatalogProduct, type DashboardCatalogStore, type ManagedDashboardProduct,
 } from "../domain/ppc-dashboard-catalog";
 import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfolio-panel";
-import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
+import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, type PerformanceCache } from "../domain/ppc-performance-cache";
 import styles from "./ppc-performance-dashboard.module.css";
 
 type MetricField = "spend" | "ppcSales" | "organicSales" | "totalSales" | "ppcOrders" | "organicOrders" | "totalOrders" | "acos" | "tacos";
@@ -163,6 +163,10 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const [saveNotice, setSaveNotice] = useState("");
   const [performanceLoad, setPerformanceLoad] = useState<PerformanceLoadState>({ key: "", status: "idle", message: "", warnings: [] });
   const [performanceRefresh, setPerformanceRefresh] = useState(0);
+  const [performanceCache, setPerformanceCache] = useState<PerformanceCache>({});
+  const cacheRef = useRef<PerformanceCache>({});
+  const refreshRequest = useRef("");
+  const [cacheReady, setCacheReady] = useState(false);
 
   const loadProducts = useCallback(async (signal?: AbortSignal) => {
     setProductsLoading(true);
@@ -187,6 +191,9 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
       const storedCatalog = parseDashboardCatalogStore(window.localStorage.getItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY));
       setReports(parsePpcDashboardStore(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY)).reports);
       setCatalog(storedCatalog);
+      cacheRef.current = parsePerformanceCache(window.localStorage.getItem(PPC_PERFORMANCE_CACHE_KEY));
+      setPerformanceCache(cacheRef.current);
+      setCacheReady(true);
       setSelectedProductId(current => current || storedCatalog.customProducts[0]?.id || "");
     }, 0);
     const controller = new AbortController();
@@ -257,38 +264,50 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const selectedProductTag = selectedProduct ? catalog.tags.find(tag => tag.id === selectedProduct.tagId) ?? null : null;
   const selectedKey = selectedProductId && selectedWeekStart ? reportKey(selectedProductId, selectedWeekStart) : "";
   const selectedAsin = selectedProduct?.asin?.trim() || "";
+  const snapshotKey = performanceCacheKey(selectedAsin, selectedWeekStart);
+  const cachedPerformance = performanceCache[snapshotKey];
   const dirty = selectedKey ? dirtyReportKeys.has(selectedKey) : false;
   const previousReport = selectedProductId && selectedWeekStart ? reports[reportKey(selectedProductId, addDaysIso(selectedWeekStart, -7))] ?? null : null;
-  const report = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart, previousReport) : null;
+  const savedReport = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart, previousReport) : null;
+  const report = savedReport && cachedPerformance ? { ...savedReport, ...cachedPerformance.metrics } : savedReport;
   const displayedPerformanceLoad: PerformanceLoadState = !selectedKey
     ? { key: "", status: "idle", message: "", warnings: [] }
     : !selectedAsin
       ? { key: selectedKey, status: "idle", message: "Add an ASIN to retrieve Scale Insights performance.", warnings: [] }
-      : performanceLoad.key === selectedKey
+      : performanceLoad.key === snapshotKey
         ? performanceLoad
+        : cachedPerformance
+          ? { key: snapshotKey, status: "ready", message: `Saved Scale Insights data through ${cachedPerformance.freshness.salesDataThrough || cachedPerformance.endDate}. Refresh to update.`, warnings: cachedPerformance.warnings }
         : { key: selectedKey, status: "loading", message: "Retrieving Scale Insights performance…", warnings: [] };
-  const importedMetricsLocked = displayedPerformanceLoad.status === "ready";
+  const importedMetricsLocked = !!cachedPerformance || displayedPerformanceLoad.status === "ready";
   const budgetUsage = report ? percentage(report.spend, report.weeklyBudget) : 0;
   const budgetBalance = report ? report.weeklyBudget - report.spend : 0;
   const isOverspent = budgetBalance < 0;
 
   useEffect(() => {
-    if (!selectedKey || !selectedAsin) return;
+    if (!cacheReady || !selectedKey || !selectedAsin) return;
     const controller = new AbortController();
     const query = new URLSearchParams({ asin: selectedAsin, country: "US", weekStart: selectedWeekStart });
     const requestTimer = window.setTimeout(() => {
-      setPerformanceLoad({ key: selectedKey, status: "loading", message: "Retrieving Scale Insights performance…", warnings: [] });
+      const cached = cacheRef.current[snapshotKey];
+      if (cached && refreshRequest.current !== snapshotKey) {
+        setPerformanceLoad({ key: snapshotKey, status: "ready", message: `Saved Scale Insights data through ${cached.freshness.salesDataThrough || cached.endDate}. Refresh to update.`, warnings: cached.warnings });
+        return;
+      }
+      refreshRequest.current = "";
+      setPerformanceLoad({ key: snapshotKey, status: "loading", message: "Retrieving Scale Insights performance…", warnings: [] });
       void fetch(withPpcBasePath(`/api/dashboard/performance?${query}`), {
         headers: getPipelineAuthorizationHeader(), cache: "no-store", signal: controller.signal,
       }).then(async response => {
         const value: unknown = await response.json();
+        if (controller.signal.aborted) return;
         if (response.status === 409 && value && typeof value === "object") {
           const candidate = value as { authorizationRequired?: unknown; authorizationUrl?: unknown };
           if (candidate.authorizationRequired === true && typeof candidate.authorizationUrl === "string") {
             const authorizationUrl = new URL(candidate.authorizationUrl);
             if (authorizationUrl.protocol === "https:" && (authorizationUrl.hostname === "vercel.com" || authorizationUrl.hostname.endsWith(".vercel.com"))) {
               setPerformanceLoad({
-                key: selectedKey,
+                key: snapshotKey,
                 status: "authorization",
                 message: "Connect Scale Insights once to retrieve weekly performance.",
                 warnings: [],
@@ -304,24 +323,32 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
             : "Scale Insights performance is unavailable.";
           throw new Error(message);
         }
-        const performance = (value as { performance?: unknown }).performance as ScaleInsightsWeeklyPerformance | undefined;
+        const performance = parsePerformanceSnapshot((value as { performance?: unknown }).performance);
         if (!performance?.metrics || performance.asin !== selectedAsin.toUpperCase() || performance.startDate !== selectedWeekStart) {
           throw new Error("Scale Insights returned an invalid performance response.");
         }
         setReports(current => {
-          const currentReport = current[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart, previousReport);
+          const currentReport = current[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart, current[reportKey(selectedProductId, addDaysIso(selectedWeekStart, -7))]);
           return { ...current, [selectedKey]: withCalculatedPerformance({ ...currentReport, ...performance.metrics }) };
         });
+        const nextCache = { ...cacheRef.current, [snapshotKey]: performance };
+        cacheRef.current = nextCache;
+        setPerformanceCache(nextCache);
+        let storageWarning = "";
+        try {
+          const stored = parsePerformanceCache(window.localStorage.getItem(PPC_PERFORMANCE_CACHE_KEY));
+          window.localStorage.setItem(PPC_PERFORMANCE_CACHE_KEY, JSON.stringify({ version: 1, entries: { ...stored, [snapshotKey]: performance } }));
+        } catch { storageWarning = "This browser could not save these metrics. They will be lost when you close or reload the page."; }
         const through = performance.freshness.salesDataThrough || performance.endDate;
-        setPerformanceLoad({ key: selectedKey, status: "ready", message: `Scale Insights synced through ${through}.`, warnings: performance.warnings });
+        setPerformanceLoad({ key: snapshotKey, status: "ready", message: `Scale Insights synced through ${through}.`, warnings: [...performance.warnings, ...(storageWarning ? [storageWarning] : [])] });
       }).catch(error => {
-        if ((error as Error).name !== "AbortError") {
-          setPerformanceLoad({ key: selectedKey, status: "error", message: error instanceof Error ? error.message : "Scale Insights performance is unavailable.", warnings: [] });
+        if (!controller.signal.aborted && (error as Error).name !== "AbortError") {
+          setPerformanceLoad({ key: snapshotKey, status: "error", message: error instanceof Error ? error.message : "Scale Insights performance is unavailable.", warnings: cacheRef.current[snapshotKey] ? ["Refresh failed. Previously saved metrics are still displayed."] : [] });
         }
       });
     }, 0);
     return () => { window.clearTimeout(requestTimer); controller.abort(); };
-  }, [performanceRefresh, previousReport, selectedAsin, selectedKey, selectedProductId, selectedWeekStart]);
+  }, [cacheReady, performanceRefresh, selectedAsin, selectedKey, selectedProductId, selectedWeekStart, snapshotKey]);
 
   const replaceReport = (nextReport: WeeklyPpcReport) => {
     if (!selectedKey) return;
@@ -414,7 +441,9 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         <div className={styles.monthPickerRow}><div className={styles.monthPicker} role="group" aria-label="Month navigation"><button type="button" aria-label="Previous month" onClick={() => monthAnchor && setMonthAnchor(addMonthsIso(monthAnchor, -1))}><ArrowLeft /></button><strong>{formatMonth(monthAnchor)}</strong><button type="button" aria-label="Next month" onClick={() => monthAnchor && setMonthAnchor(addMonthsIso(monthAnchor, 1))}><ArrowRight /></button></div><button type="button" className={styles.calendarPickerButton} aria-label={`Choose reporting month, ${formatMonth(monthAnchor)}`} onClick={openMonthPicker}><CalendarDays aria-hidden="true" /></button></div>
       </div>
       <div className={styles.periodList} aria-label="Reporting periods">{weekStarts.map(weekStart => {
-        const periodReport = selectedProductId ? reports[reportKey(selectedProductId, weekStart)] : null;
+        const periodDraft = selectedProductId ? reports[reportKey(selectedProductId, weekStart)] : null;
+        const periodSnapshot = performanceCache[performanceCacheKey(selectedAsin, weekStart)];
+        const periodReport = periodSnapshot ? { ...periodDraft, ...periodSnapshot.metrics } : periodDraft;
         const isCurrent = weekStart === currentWeekStart;
         const isSelected = weekStart === selectedWeekStart;
         return <button type="button" key={weekStart} aria-pressed={isSelected} className={`${styles.periodCard} ${isSelected ? styles.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
@@ -448,7 +477,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
             </section>
           </div>
 
-          <section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><div className={styles.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? styles.performanceError : ""}>{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}<button type="button" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => setPerformanceRefresh(value => value + 1)}><RefreshCw aria-hidden="true" />Refresh</button></div></div>{displayedPerformanceLoad.warnings.length ? <ul className={styles.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}<div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
+<section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><div className={styles.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? styles.performanceError : ""}>{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}<button type="button" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => { refreshRequest.current = snapshotKey; setPerformanceRefresh(value => value + 1); }}><RefreshCw aria-hidden="true" />Refresh</button></div></div>{displayedPerformanceLoad.warnings.length ? <ul className={styles.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}<div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
 
           <div className={styles.twoColumn}>
             <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}><span className={statusTone(previousReport.status)}>{previousReport.status}</span><strong>{currency(previousReport.totalSales)} total sales · {previousReport.tacos || 0}% TACOS</strong><p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : null}<FormattedTextarea label="Carry-forward result and lessons" value={report.previousWeekResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></section>
