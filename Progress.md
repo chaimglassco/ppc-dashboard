@@ -1,10 +1,23 @@
 # Project Progress
 
-Last updated: September 4, 2026
+Last updated: September 7, 2026
 
 ## Overall status
 
 The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgres-authoritative shared persistence, scoped versioned mutations, read-only outage caching, and cross-account synchronization.
+
+## 2026-09-07 — Current-week Scale Insights date correction
+
+- Reproduced the production scope error with live MCP calls: a September 2–8 request returned September 2–6 from both reports because Scale Insights excludes today and future days.
+- Cap upstream requests at yesterday in UTC, retain strict marketplace/date matching, return the actual end date, and add a partial-week warning. A week with no completed days returns an actionable no-store `404` without querying MCP.
+- Added date-controlled regression coverage for partial weeks, completed weeks, Wednesday, and future weeks. No estimates, new credentials, or storage schema changes.
+
+## 2026-09-07 — Vercel Connect authorization
+
+- Replaced static Scale Insights OAuth/access-token configuration with `@vercel/connect` and the attached `mcp.scaleinsights.com/glassco-scale-insights` connector.
+- Bound every token request to the stable user ID returned by server-side Pipeline session verification, namespaced by the Pipeline issuer.
+- Added a no-store hosted consent response and dashboard `Connect Scale Insights` action for users who have not granted access; returning to the dashboard triggers its existing automatic sync.
+- Added URL allowlisting and regression coverage so OAuth credentials, Vercel OIDC material, Connect tokens, and raw MCP responses never enter browser storage or response payloads.
 
 ## 2026-09-04 — Scale Insights weekly performance
 

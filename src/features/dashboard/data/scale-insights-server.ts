@@ -1,11 +1,16 @@
 import "server-only";
 
 import {
+  ConnectError,
+  NoValidTokenError,
+  UserAuthorizationRequiredError,
+  getToken,
+  startAuthorization,
+} from "@vercel/connect";
+import {
   Client,
-  ClientCredentialsProvider,
   StreamableHTTPClientTransport,
   type AuthProvider,
-  type OAuthClientProvider,
 } from "@modelcontextprotocol/client";
 import {
   loadScaleInsightsWeeklyPerformance,
@@ -14,6 +19,7 @@ import {
 } from "./scale-insights-performance";
 
 const DEFAULT_SCALE_INSIGHTS_MCP_URL = "https://mcp.scaleinsights.com/mcp";
+const DEFAULT_SCALE_INSIGHTS_CONNECTOR = "mcp.scaleinsights.com/glassco-scale-insights";
 const SCALE_INSIGHTS_REQUEST_TIMEOUT_MS = 25_000;
 
 export class ScaleInsightsConfigurationError extends Error {
@@ -23,27 +29,55 @@ export class ScaleInsightsConfigurationError extends Error {
   }
 }
 
-function requiredPair(first: string | undefined, second: string | undefined, names: string) {
-  if (Boolean(first) !== Boolean(second)) throw new ScaleInsightsConfigurationError(`${names} must both be configured.`);
+export class ScaleInsightsAuthorizationRequiredError extends Error {
+  constructor(readonly authorizationUrl: string) {
+    super("Scale Insights authorization is required.");
+    this.name = "ScaleInsightsAuthorizationRequiredError";
+  }
 }
 
-function createAuthProvider(): AuthProvider | OAuthClientProvider {
-  const accessToken = process.env.SCALE_INSIGHTS_MCP_ACCESS_TOKEN?.trim();
-  const clientId = process.env.SCALE_INSIGHTS_OAUTH_CLIENT_ID?.trim();
-  const clientSecret = process.env.SCALE_INSIGHTS_OAUTH_CLIENT_SECRET?.trim();
-  requiredPair(clientId, clientSecret, "Scale Insights OAuth client ID and client secret");
+export type ScaleInsightsRequestIdentity = {
+  userId: string;
+  issuer: string;
+  callbackUrl: string;
+};
 
-  if (clientId && clientSecret) {
-    return new ClientCredentialsProvider({
-      clientId,
-      clientSecret,
-      clientName: "Glassco PPC Dashboard",
-      scope: process.env.SCALE_INSIGHTS_OAUTH_SCOPE?.trim() || undefined,
-      expectedIssuer: process.env.SCALE_INSIGHTS_OAUTH_ISSUER?.trim() || undefined,
-    });
+function getConnector() {
+  return process.env.SCALE_INSIGHTS_CONNECTOR?.trim() || DEFAULT_SCALE_INSIGHTS_CONNECTOR;
+}
+
+function validateAuthorizationUrl(value: string) {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new ScaleInsightsConfigurationError("Scale Insights authorization returned an invalid URL.");
   }
-  if (accessToken) return { token: async () => accessToken };
-  throw new ScaleInsightsConfigurationError("Scale Insights server credentials are not configured.");
+  if (url.protocol !== "https:" || (url.hostname !== "vercel.com" && !url.hostname.endsWith(".vercel.com"))) {
+    throw new ScaleInsightsConfigurationError("Scale Insights authorization returned an untrusted URL.");
+  }
+  return url.toString();
+}
+
+async function createAuthProvider(identity: ScaleInsightsRequestIdentity): Promise<AuthProvider> {
+  const connector = getConnector();
+  const params = {
+    subject: { type: "user" as const, id: identity.userId, issuer: identity.issuer },
+  };
+
+  try {
+    const accessToken = await getToken(connector, params);
+    return { token: async () => accessToken };
+  } catch (error) {
+    if (error instanceof UserAuthorizationRequiredError || error instanceof NoValidTokenError) {
+      const authorization = await startAuthorization(connector, params, { callbackUrl: identity.callbackUrl });
+      throw new ScaleInsightsAuthorizationRequiredError(validateAuthorizationUrl(authorization.url));
+    }
+    if (error instanceof ConnectError) {
+      throw new ScaleInsightsConfigurationError("Vercel Connect could not provide Scale Insights access.");
+    }
+    throw error;
+  }
 }
 
 function getServerUrl() {
@@ -62,9 +96,10 @@ function getServerUrl() {
 
 export async function getScaleInsightsWeeklyPerformance(
   params: ScaleInsightsWeeklyPerformanceParams,
+  identity: ScaleInsightsRequestIdentity,
 ): Promise<ScaleInsightsWeeklyPerformance> {
   const client = new Client({ name: "glassco-ppc-dashboard", version: "0.1.0" });
-  const transport = new StreamableHTTPClientTransport(getServerUrl(), { authProvider: createAuthProvider() });
+  const transport = new StreamableHTTPClientTransport(getServerUrl(), { authProvider: await createAuthProvider(identity) });
 
   try {
     await client.connect(transport);

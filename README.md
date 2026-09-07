@@ -58,7 +58,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 ## Architecture and persistence
 
 - Next.js uses `basePath: "/ppc"` for pages, assets, and API routes.
-- `/ppc/api/dashboard/performance` verifies the Pipeline session before connecting to the Scale Insights MCP server. OAuth client credentials or access tokens remain server-only and are never returned to the browser or written to browser storage.
+- `/ppc/api/dashboard/performance` verifies the Pipeline session before requesting a short-lived Scale Insights token from Vercel Connect for that stable Pipeline user ID. Vercel stores and refreshes the OAuth grant; credentials and tokens are never returned to the browser or written to browser storage.
 - Private shared images are fetched by client previews with the Pipeline bearer token and rendered through temporary browser object URLs; raw private API URLs are never assigned directly to image elements.
 - Pipeline proxies `/ppc/:path*` to the independently deployed PPC Vercel project.
 - Pipeline's Postgres-backed `/api/library-state` endpoint is the only authoritative document and category store. Repository Markdown under `content/library` is bootstrap/compatibility input and is never merged into an initialized catalog.
@@ -98,7 +98,7 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Leave unused credential fields blank and put real secret values only in the ignored `.env.local` file or the deployment platform's encrypted server environment.
+The optional connector and endpoint values in `.env.example` are non-secret identifiers. Local Vercel Connect calls require the project OIDC environment produced by `vercel link` or `vercel env pull`; never copy a returned Scale Insights token into `.env.local`.
 
 Open <http://localhost:3000/ppc/library>.
 
@@ -140,13 +140,13 @@ Production requires the existing private Vercel Blob connection for images and t
 - `PIPELINE_AUTH_ORIGIN` — server-side Pipeline authentication origin; defaults to `https://glasscopipeline.vercel.app`.
 - `NEXT_PUBLIC_PIPELINE_ORIGIN` — browser navigation origin; defaults to `https://glasscopipeline.vercel.app`.
 
-Automatic dashboard metrics additionally require one server-only Scale Insights credential strategy:
+Automatic dashboard metrics use the Vercel Connect connector attached to this project:
 
-- OAuth client credentials: `SCALE_INSIGHTS_OAUTH_CLIENT_ID` and `SCALE_INSIGHTS_OAUTH_CLIENT_SECRET`, with optional `SCALE_INSIGHTS_OAUTH_SCOPE` and `SCALE_INSIGHTS_OAUTH_ISSUER`.
-- Pre-authorized token: `SCALE_INSIGHTS_MCP_ACCESS_TOKEN`.
+- `SCALE_INSIGHTS_CONNECTOR` optionally overrides the non-secret connector UID; it defaults to `mcp.scaleinsights.com/glassco-scale-insights`.
 - `SCALE_INSIGHTS_MCP_URL` optionally overrides the default `https://mcp.scaleinsights.com/mcp`; production endpoints must use HTTPS.
+- Vercel injects the project OIDC credential at runtime. Each stable, server-verified Pipeline user completes hosted Scale Insights consent once when the dashboard prompts them.
 
-Never prefix these variables with `NEXT_PUBLIC_`, embed them in frontend code, or persist them in `localStorage`.
+Never expose the Vercel OIDC credential, Connect-issued access token, or upstream OAuth grant through a `NEXT_PUBLIC_` variable, frontend code, API response, or `localStorage`.
 
 For this persistence rollout, deploy Pipeline's authoritative endpoint before the Library client, then back up and initialize data as described in [deployment.md](deployment.md). For later base-path or gateway-only changes, deploy PPC before Pipeline navigation changes. Pipeline’s rewrite targets the public PPC production alias so it is not blocked by Vercel deployment protection.
 

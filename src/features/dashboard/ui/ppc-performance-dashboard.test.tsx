@@ -104,6 +104,31 @@ describe("PpcPerformanceDashboard", () => {
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
   });
 
+  it("offers hosted Scale Insights consent without storing credentials in the browser", async () => {
+    vi.mocked(fetch).mockImplementation(async input => String(input).includes("/api/dashboard/performance?")
+      ? ({
+        ok: false,
+        status: 409,
+        json: async () => ({
+          error: "Authorize Scale Insights to retrieve weekly performance.",
+          authorizationRequired: true,
+          authorizationUrl: "https://vercel.com/api/v1/connect/authorize/scl_test",
+        }),
+      } as Response)
+      : ({
+        ok: true,
+        status: 200,
+        json: async () => ({ products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }] }),
+      } as Response));
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+
+    const connect = await screen.findByRole("link", { name: "Connect Scale Insights" });
+    expect(connect).toHaveAttribute("href", "https://vercel.com/api/v1/connect/authorize/scl_test");
+    expect(screen.getByText("Connect Scale Insights once to retrieve weekly performance.")).toBeVisible();
+    expect(window.localStorage.getItem("SCALE_INSIGHTS_MCP_ACCESS_TOKEN")).toBeNull();
+  });
+
   it("shows overspend, grouped metrics, formatted notes, and color-coded priorities without dates", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();

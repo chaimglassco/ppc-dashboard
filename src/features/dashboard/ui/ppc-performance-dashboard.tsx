@@ -24,7 +24,13 @@ import styles from "./ppc-performance-dashboard.module.css";
 
 type MetricField = "spend" | "ppcSales" | "organicSales" | "totalSales" | "ppcOrders" | "organicOrders" | "totalOrders" | "acos" | "tacos";
 type MetricDefinition = { field: MetricField; label: string; prefix?: string; suffix?: string; calculated?: boolean; imported?: boolean };
-type PerformanceLoadState = { key: string; status: "idle" | "loading" | "ready" | "error"; message: string; warnings: string[] };
+type PerformanceLoadState = {
+  key: string;
+  status: "idle" | "loading" | "authorization" | "ready" | "error";
+  message: string;
+  warnings: string[];
+  authorizationUrl?: string;
+};
 
 const GOAL_STATUSES: GoalStatus[] = ["On Track", "At Risk", "Achieved", "Missed"];
 const AUTO_SAVE_DELAY_MS = 500;
@@ -276,6 +282,22 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         headers: getPipelineAuthorizationHeader(), cache: "no-store", signal: controller.signal,
       }).then(async response => {
         const value: unknown = await response.json();
+        if (response.status === 409 && value && typeof value === "object") {
+          const candidate = value as { authorizationRequired?: unknown; authorizationUrl?: unknown };
+          if (candidate.authorizationRequired === true && typeof candidate.authorizationUrl === "string") {
+            const authorizationUrl = new URL(candidate.authorizationUrl);
+            if (authorizationUrl.protocol === "https:" && (authorizationUrl.hostname === "vercel.com" || authorizationUrl.hostname.endsWith(".vercel.com"))) {
+              setPerformanceLoad({
+                key: selectedKey,
+                status: "authorization",
+                message: "Connect Scale Insights once to retrieve weekly performance.",
+                warnings: [],
+                authorizationUrl: authorizationUrl.toString(),
+              });
+              return;
+            }
+          }
+        }
         if (!response.ok || !value || typeof value !== "object") {
           const message = value && typeof value === "object" && typeof (value as { error?: unknown }).error === "string"
             ? String((value as { error: string }).error)
@@ -422,7 +444,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
             </section>
           </div>
 
-          <section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><div className={styles.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? styles.performanceError : ""}>{displayedPerformanceLoad.message}</span><button type="button" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => setPerformanceRefresh(value => value + 1)}><RefreshCw aria-hidden="true" />Refresh</button></div></div>{displayedPerformanceLoad.warnings.length ? <ul className={styles.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}<div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
+          <section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><div className={styles.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? styles.performanceError : ""}>{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}<button type="button" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => setPerformanceRefresh(value => value + 1)}><RefreshCw aria-hidden="true" />Refresh</button></div></div>{displayedPerformanceLoad.warnings.length ? <ul className={styles.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}<div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
 
           <div className={styles.twoColumn}>
             <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}><span className={statusTone(previousReport.status)}>{previousReport.status}</span><strong>{currency(previousReport.totalSales)} total sales · {previousReport.tacos || 0}% TACOS</strong><p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : null}<FormattedTextarea label="Carry-forward result and lessons" value={report.previousWeekResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></section>

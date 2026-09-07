@@ -12,7 +12,7 @@ The Library deploys as a Next.js microfrontend under `/ppc`. Pipeline Postgres i
 - A private Vercel Blob store connected to the project
 - A deployed Pipeline project with Postgres configured and `/api/library-state` available
 - An active Pipeline ADMIN account for migration and rollout verification
-- Scale Insights MCP access configured as server-only environment variables when automatic dashboard metrics are enabled
+- The `mcp.scaleinsights.com/glassco-scale-insights` Vercel Connect connector attached to the PPC project for Production, Preview, and Development
 
 ## Pre-deployment validation
 
@@ -103,7 +103,7 @@ The existing `.gitignore` already excludes these paths.
 24. Check the browser console for hydration or runtime errors.
 25. Confirm mobile layout at approximately 390px width.
 26. Confirm the Product Pipeline, Team SOP Library, and PPC Dashboard cards appear separately in the reserved top bar, show white text for the active app, and each open its remembered route in a new browser tab—including the active tab—without changing or overlapping the source page.
-27. Confirm `/ppc/dashboard` renders the authenticated three-panel Weekly PPC Performance workspace, loads the signed-in user’s Pipeline products, preserves a saved local report after refresh, and supports add/edit/delete of dashboard products plus persistent tag creation/filtering without changing Pipeline records. Select an ASIN and verify the exact Wednesday–Tuesday period retrieves the five source metrics from Scale Insights, calculates the four derived metrics, displays freshness, and locks imported inputs.
+27. Confirm `/ppc/dashboard` renders the authenticated three-panel Weekly PPC Performance workspace, loads the signed-in user’s Pipeline products, preserves a saved local report after refresh, and supports add/edit/delete of dashboard products plus persistent tag creation/filtering without changing Pipeline records. Select an ASIN; if prompted, complete the Vercel-hosted `Connect Scale Insights` consent and return to the dashboard. Verify the exact Wednesday–Tuesday period retrieves the five source metrics, calculates the four derived metrics, displays freshness, and locks imported inputs.
 28. From a session-only Pipeline login, open each PPC card and confirm the one-time handoff is consumed without another login. Confirm persistent “Remember me,” expired-session return, external `returnTo` rejection, keyboard focus, hover, and narrow-screen horizontal scrolling.
 
 ## Authoritative persistence rollout
@@ -132,15 +132,19 @@ Optional environment variables:
 - `PIPELINE_AUTH_ORIGIN` — server-to-server Pipeline authentication origin.
 - `NEXT_PUBLIC_PIPELINE_ORIGIN` — browser destination when leaving PPC or when authentication fails.
 
-Scale Insights server variables:
+Scale Insights/Vercel Connect configuration:
 
-- Configure either `SCALE_INSIGHTS_OAUTH_CLIENT_ID` plus `SCALE_INSIGHTS_OAUTH_CLIENT_SECRET`, or `SCALE_INSIGHTS_MCP_ACCESS_TOKEN`.
-- Optionally configure `SCALE_INSIGHTS_OAUTH_SCOPE`, `SCALE_INSIGHTS_OAUTH_ISSUER`, or `SCALE_INSIGHTS_MCP_URL` (default `https://mcp.scaleinsights.com/mcp`).
-- Store every Scale Insights value as a Vercel server environment variable for the required environments. Never use a `NEXT_PUBLIC_` prefix or commit these values to the repository.
+- Attach connector `mcp.scaleinsights.com/glassco-scale-insights` to the PPC project for every deployed environment that may retrieve metrics.
+- `SCALE_INSIGHTS_CONNECTOR` may override that non-secret UID, and `SCALE_INSIGHTS_MCP_URL` may override the default `https://mcp.scaleinsights.com/mcp` endpoint.
+- Do not create static Scale Insights OAuth variables. Vercel injects project OIDC at runtime, and Vercel Connect stores and refreshes each server-verified Pipeline user's grant.
 
 Both default to `https://glasscopipeline.vercel.app`. Roll back PPC and Pipeline independently by promoting their previous production deployments.
 
-After deployment, call `/ppc/api/dashboard/performance` through an authenticated dashboard session and verify `401` without that session, `no-store` on success, exact requested scope, and no credential material in the response or client bundle. If Scale Insights is not configured, the dashboard intentionally retains manual metric entry and shows a configuration error.
+After deployment, call `/ppc/api/dashboard/performance` through an authenticated dashboard session and verify `401` without that session, a no-store `409` plus hosted consent URL before user authorization, `no-store` on success, exact requested scope, and no OIDC/token material in the response or client bundle. If Scale Insights is not configured, the dashboard intentionally retains manual metric entry and shows a configuration error.
+
+## Current-week performance verification
+
+After the September 7 date-cutoff fix, verify a current Wednesday–Tuesday reporting week requests only through yesterday in UTC and displays both the actual through-date and partial-week warning. Verify a completed week still returns its exact Tuesday end date. On Wednesday, the new week must show “no completed days yet” without an MCP request. No environment or data migration is required.
 
 ## Rich-text deployment notes
 
