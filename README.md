@@ -60,7 +60,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 
 - Next.js uses `basePath: "/ppc"` for pages, assets, and API routes.
 - `/ppc/api/dashboard/performance` verifies the Pipeline session before requesting a short-lived Scale Insights token from Vercel Connect for that stable Pipeline user ID. Vercel stores and refreshes the OAuth grant; credentials and tokens are never returned to the browser or written to browser storage.
-- Authenticated `/ppc/api/dashboard/ai-chat` validates bounded product/week context and invokes `openai/gpt-6-astra` through Vercel AI Gateway; model credentials remain server-side and responses are not cached.
+- Authenticated `/ppc/api/dashboard/ai-chat` validates bounded product/week context and invokes the free-tier-compatible `openai/gpt-5.4-mini` model through Vercel AI Gateway; model credentials remain server-side and responses are not cached.
 - Private shared images are fetched by client previews with the Pipeline bearer token and rendered through temporary browser object URLs; raw private API URLs are never assigned directly to image elements.
 - Pipeline proxies `/ppc/:path*` to the independently deployed PPC Vercel project.
 - Pipeline's Postgres-backed `/api/library-state` endpoint is the only authoritative document and category store. Repository Markdown under `content/library` is bootstrap/compatibility input and is never merged into an initialized catalog.

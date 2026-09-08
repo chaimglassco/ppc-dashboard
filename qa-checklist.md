@@ -8,7 +8,7 @@ Use this checklist before merging or deploying changes.
 - [ ] Ask each starter question and a typed question. Confirm the request contains only the selected product, active week, populated visible periods, bounded report planning context, and at most eight prior messages; switching product or week shows its separate conversation.
 - [ ] Confirm answers distinguish Partial, Final, and saved/manual weeks, render as plain text, and refuse to invent campaign/keyword/placement data that is not in the payload.
 - [ ] Confirm `/ppc/api/dashboard/ai-chat` rejects unauthenticated, malformed, oversized, invalid-ASIN, and active-week-missing requests; successful and error responses use `Cache-Control: no-store` and never expose Gateway/OIDC credentials or raw provider errors.
-- [ ] Verify production with Vercel project OIDC and local development with `AI_GATEWAY_API_KEY`. Remove both credentials and confirm the widget shows the bounded configuration message without affecting the rest of the dashboard.
+- [ ] Verify production with Vercel project OIDC and local development with `AI_GATEWAY_API_KEY`. Remove both credentials and confirm the widget shows the bounded configuration message; use an expired local OIDC token and confirm it shows the specific refresh/restart message without attempting a provider request or affecting the rest of the dashboard.
 
 ## Goal history and previous-week comparisons
 

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("ai", () => ({ generateText: vi.fn() }));
+vi.mock("ai", async importOriginal => ({ ...(await importOriginal<typeof import("ai")>()), generateText: vi.fn() }));
 vi.mock("@/lib/pipeline-auth-server", () => ({ verifyPipelineRequest: vi.fn() }));
 
 import { generateText } from "ai";
@@ -63,10 +63,11 @@ describe("PPC performance AI route", () => {
     expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
     await expect(response.json()).resolves.toEqual({ answer: "ACOS improved from 30% to 20% while PPC sales rose by $50." });
     expect(generateText).toHaveBeenCalledWith(expect.objectContaining({
-      model: "openai/gpt-6-astra",
+      model: "openai/gpt-5.4-mini",
       maxOutputTokens: 700,
       instructions: expect.stringContaining("Amazon PPC performance analyst"),
       prompt: expect.stringContaining("Why did ACOS improve?"),
+      providerOptions: { gateway: { user: "user-1", tags: ["feature:ppc-performance-chat"], cacheControl: "max-age=0" } },
     }));
   });
 
@@ -89,5 +90,16 @@ describe("PPC performance AI route", () => {
     response = await POST(request());
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({ error: "The AI performance assistant is temporarily unavailable." });
+  });
+
+  it("identifies an expired local OIDC token without sending it upstream", async () => {
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+    const header = Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1_000) - 60 })).toString("base64url");
+    vi.stubEnv("VERCEL_OIDC_TOKEN", `${header}.${payload}.signature`);
+    const response = await POST(request());
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: "The local AI credential has expired. Refresh the Vercel development environment and restart the app." });
+    expect(generateText).not.toHaveBeenCalled();
   });
 });

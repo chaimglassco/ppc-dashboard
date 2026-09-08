@@ -1,10 +1,10 @@
 # Project Progress
 
-Last updated: September 8, 2026
+Last updated: September 9, 2026
 
 ## Product performance AI assistant
 
-Added a compact floating Performance AI chat to the selected-product dashboard. It can analyze the active week, available prior week, populated visible-period trends, budget/Target ACOS, goals, actions, and notes; it provides starter questions and accepts free-form prompts. Conversations are isolated by product/week and remain session-only. Added an authenticated, no-store, bounded `/ppc/api/dashboard/ai-chat` route using the Vercel AI Gateway with an OpenAI model, server-only credentials, safe error handling, untrusted-context instructions, and route/widget regression tests.
+Added a compact floating Performance AI chat to the selected-product dashboard. It can analyze the active week, available prior week, populated visible-period trends, budget/Target ACOS, goals, actions, and notes; it provides starter questions and accepts free-form prompts. Conversations are isolated by product/week and remain session-only. Added an authenticated, no-store, bounded `/ppc/api/dashboard/ai-chat` route using Vercel AI Gateway with the free-tier-compatible OpenAI GPT-5.4 Mini model, server-only credentials, explicit expired-local-token handling, safe provider errors, untrusted-context instructions, and route/widget regression tests. Refreshed and verified the local project OIDC credential with a successful live model response.
 
 ## Goal history and previous-week metric indicators
 

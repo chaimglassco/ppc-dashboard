@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+import { APICallError, generateText } from "ai";
 import { verifyPipelineRequest } from "@/lib/pipeline-auth-server";
 
 export const runtime = "nodejs";
@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
-const MODEL = "openai/gpt-6-astra";
+const MODEL = "openai/gpt-5.4-mini";
 const MAX_REQUEST_BYTES = 100_000;
 
 type ChatMessage = { role: "user" | "assistant"; text: string };
@@ -142,14 +142,25 @@ export function parsePerformanceChatRequest(value: unknown): PerformanceChatRequ
   };
 }
 
-function configuredForGateway() {
-  return Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
+function gatewayCredentialStatus(): "ready" | "missing" | "expired" {
+  if (process.env.AI_GATEWAY_API_KEY) return "ready";
+  const oidcToken = process.env.VERCEL_OIDC_TOKEN;
+  if (!oidcToken) return "missing";
+  try {
+    const payload = JSON.parse(Buffer.from(oidcToken.split(".")[1], "base64url").toString("utf8")) as { exp?: unknown };
+    return typeof payload.exp === "number" && payload.exp * 1_000 > Date.now() + 30_000 ? "ready" : "expired";
+  } catch {
+    return "expired";
+  }
 }
 
 export async function POST(request: Request) {
   const verified = await verifyPipelineRequest(request);
   if (verified instanceof Response) return verified;
-  if (!configuredForGateway()) return errorResponse("The AI performance assistant is not configured for this environment.", 503);
+  if (!verified.user.id) return errorResponse("The verified Pipeline user is missing a stable identity.", 503);
+  const credentialStatus = gatewayCredentialStatus();
+  if (credentialStatus === "expired") return errorResponse("The local AI credential has expired. Refresh the Vercel development environment and restart the app.", 503);
+  if (credentialStatus === "missing") return errorResponse("The AI performance assistant is not configured for this environment.", 503);
 
   const contentLength = Number(request.headers.get("content-length") || 0);
   if (contentLength > MAX_REQUEST_BYTES) return errorResponse("The performance context is too large.", 413);
@@ -182,11 +193,14 @@ export async function POST(request: Request) {
       ].join(" "),
       prompt,
       maxOutputTokens: 700,
+      providerOptions: { gateway: { user: verified.user.id, tags: ["feature:ppc-performance-chat"], cacheControl: "max-age=0" } },
     });
     const answer = text.trim();
     if (!answer) return errorResponse("The AI assistant returned no answer. Please try again.", 502);
     return Response.json({ answer }, { headers: NO_STORE_HEADERS });
-  } catch {
+  } catch (error) {
+    if (APICallError.isInstance(error) && error.statusCode === 429) return errorResponse("Too many AI questions were sent. Please wait a moment and try again.", 429);
+    if (APICallError.isInstance(error) && error.statusCode === 402) return errorResponse("The AI assistant's usage budget is currently unavailable.", 503);
     return errorResponse("The AI performance assistant is temporarily unavailable.", 502);
   }
 }

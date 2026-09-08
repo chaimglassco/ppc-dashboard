@@ -21,7 +21,7 @@ Structured goals use the existing optional `metric`, `unit`, and history `dataSt
 
 ## AI performance assistant
 
-The assistant route calls `openai/gpt-6-astra` through Vercel AI Gateway. Do not expose `AI_GATEWAY_API_KEY` as a `NEXT_PUBLIC_` value or place it in browser storage. Vercel deployments should use the automatically available project OIDC token. For local development outside `vercel dev`, copy `.env.example` to `.env.local` and set a scoped AI Gateway key. After deployment, ask a question from `/ppc/dashboard`, confirm a no-store `POST /ppc/api/dashboard/ai-chat`, and verify no credential appears in client bundles, browser storage, URLs, or response bodies.
+The assistant route calls the free-tier-compatible `openai/gpt-5.4-mini` model through Vercel AI Gateway. Do not expose `AI_GATEWAY_API_KEY` as a `NEXT_PUBLIC_` value or place it in browser storage. Vercel deployments should use the automatically available project OIDC token. For local development outside `vercel dev`, copy `.env.example` to `.env.local` and set a scoped AI Gateway key. If local development instead uses a pulled OIDC token, refresh it with `vercel env pull .env.local --yes` whenever the widget reports that it expired, then restart the dev server. After deployment, ask a question from `/ppc/dashboard`, confirm a no-store `POST /ppc/api/dashboard/ai-chat`, and verify no credential appears in client bundles, browser storage, URLs, or response bodies.
 
 ## Pre-deployment validation
 
