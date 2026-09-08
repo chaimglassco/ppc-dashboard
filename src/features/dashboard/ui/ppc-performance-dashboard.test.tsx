@@ -322,7 +322,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(headerAsinLink.closest("p")).not.toHaveTextContent("August 26 to September 1");
     expect(headerAsinLink.closest("p")).not.toHaveTextContent("Week 35");
     const asinNavigation = screen.getByRole("navigation", { name: "Scale Insights analysis for ASIN B012345679" });
-    expect(within(asinNavigation).getAllByRole("link")).toHaveLength(8);
+    expect(within(asinNavigation).getAllByRole("link")).toHaveLength(9);
     expect(within(asinNavigation).getByRole("link", { name: "Campaigns" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/Campaigns/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Keyword Targeting" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/Keywords/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Product Targeting" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/ProductAds/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
@@ -331,6 +331,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(asinNavigation).getByRole("link", { name: "Placements" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/Placements/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Ad Types" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/AdTypes/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Main Keywords" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/MainKeywords/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Daily Performance Trend" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=1&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getAllByRole("link").map(link => link.textContent).slice(-3)).toEqual(["Ad Types", "Main Keywords", "Daily Performance Trend"]);
     for (const link of within(asinNavigation).getAllByRole("link")) {
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");

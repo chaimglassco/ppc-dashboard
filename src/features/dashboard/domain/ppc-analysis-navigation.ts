@@ -7,6 +7,7 @@ export const PPC_ANALYSIS_SECTIONS = [
   { slug: "placements", label: "Placements", path: "/Ads/Performance/Placements/Index" },
   { slug: "ad-types", label: "Ad Types", path: "/Ads/Performance/AdTypes/Index" },
   { slug: "main-keywords", label: "Main Keywords", path: "/Ads/MainKeywords/Index" },
+  { slug: "daily-performance-trend", label: "Daily Performance Trend", path: "/Ads/AdvertisingTrend" },
 ] as const;
 
 export type PpcAnalysisSlug = (typeof PPC_ANALYSIS_SECTIONS)[number]["slug"];
@@ -23,7 +24,12 @@ export function getScaleInsightsAnalysisHref(asinValue: string, section: PpcAnal
   if (!asin || !route || !datePattern.test(from) || !datePattern.test(to)) return "https://portal.scaleinsights.com/Ads";
 
   const url = new URL(route.path, "https://portal.scaleinsights.com");
-  url.searchParams.set("from", from);
+  if (section === "daily-performance-trend") {
+    url.searchParams.set("cycles", "7");
+    url.searchParams.set("daysPerCycle", "1");
+  } else {
+    url.searchParams.set("from", from);
+  }
   url.searchParams.set("to", to);
   url.searchParams.set("asinList", asin);
   return url.toString();

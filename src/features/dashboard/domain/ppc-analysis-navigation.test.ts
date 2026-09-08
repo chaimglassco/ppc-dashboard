@@ -10,6 +10,9 @@ describe("PPC analysis navigation", () => {
     expect(getScaleInsightsAnalysisHref("b012345678", "product-targeting", "2026-08-26", "2026-09-01")).toContain(
       "/Ads/Performance/ProductAds/Index?",
     );
+    expect(getScaleInsightsAnalysisHref("b012345678", "daily-performance-trend", "2026-08-26", "2026-09-01")).toBe(
+      "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=1&to=2026-09-01&asinList=B012345678",
+    );
     expect(getScaleInsightsAnalysisHref("not-an-asin", "search-terms", "2026-08-26", "2026-09-01")).toBe(
       "https://portal.scaleinsights.com/Ads",
     );

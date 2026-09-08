@@ -4,7 +4,7 @@
 
 `WeeklyPpcReport.targetAcos` is an optional-compatible finite nonnegative number normalized into the existing version-1 browser report schema. The warning state is derived during render from `targetAcos > 0 && acos > targetAcos`; Scale Insights remains the source of actual ACOS and Target ACOS is never sent upstream.
 
-Analysis destinations are built from a fixed `https://portal.scaleinsights.com` origin and an allowlist of eight verified report paths. The URL builder normalizes a ten-character ASIN and accepts only ISO-shaped dates before adding `asinList`, `from`, and `to`; invalid input falls back to the Scale Insights Ads landing page. Links open with `noopener noreferrer`. The frontend sends no OAuth material, connector token, or raw MCP response to Scale Insights through these URLs.
+Analysis destinations are built from a fixed `https://portal.scaleinsights.com` origin and an allowlist of nine verified report paths. The URL builder normalizes a ten-character ASIN and accepts only ISO-shaped dates. Standard reports receive `asinList`, `from`, and `to`; Daily Performance Trend receives `asinList`, `cycles=7`, `daysPerCycle=1`, and the selected Tuesday as `to`. Invalid input falls back to the Scale Insights Ads landing page. Links open with `noopener noreferrer`. The frontend sends no OAuth material, connector token, or raw MCP response to Scale Insights through these URLs.
 
 ## Budget history and multi-month reporting
 

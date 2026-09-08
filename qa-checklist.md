@@ -6,7 +6,7 @@ Use this checklist before merging or deploying changes.
 
 Set Target ACOS below actual ACOS and verify only the ACOS card turns red; set it equal to or above actual and verify the warning clears. Confirm the entered value is centered. Reload and switch weeks/products to confirm the value follows its product/week report. Verify zero and malformed stored values do not warn.
 
-For each of the eight analysis links, confirm a new Scale Insights tab opens on the correct report and its URL contains the selected ASIN plus active-week `from` and `to` dates. Confirm changing product or week updates all eight links. Verify no connector token or OAuth credential appears in the URL or browser storage. Confirm the selected-product identity row contains ASIN and SKU but no duplicate date/week label, and timeline ACOS values have no decimals.
+For each of the nine analysis links, confirm a new Scale Insights tab opens on the correct report and its URL contains the selected ASIN plus active-week scope. Daily Performance Trend must appear below Ad Types and open Advertising Trend with seven one-day columns ending on the selected Tuesday. Confirm changing product or week updates all nine links. Verify no connector token or OAuth credential appears in the URL or browser storage. Confirm the selected-product identity row contains ASIN and SKU but no duplicate date/week label, and timeline ACOS values have no decimals.
 
 ## Budget history and multi-month timeline
 
