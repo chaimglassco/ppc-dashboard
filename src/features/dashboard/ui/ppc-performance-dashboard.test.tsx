@@ -24,7 +24,7 @@ describe("PpcPerformanceDashboard", () => {
     vi.unstubAllGlobals();
   });
 
-  it("persists fetched weeks, restores timeline totals after reload, and updates only on Refresh", async () => {
+  it("automatically backfills visible weeks, restores them after reload, and updates only the active week on Refresh", async () => {
     let spend = 81.75;
     let fail = false;
     const metricsCalls: string[] = [];
@@ -33,31 +33,40 @@ describe("PpcPerformanceDashboard", () => {
       if (!url.includes("/api/dashboard/performance?")) return { ok: true, status: 200, json: async () => ({ products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }] }) } as Response;
       metricsCalls.push(url);
       const startDate = new URL(url, "http://localhost").searchParams.get("weekStart")!;
+      const end = new Date(`${startDate}T00:00:00Z`);
+      end.setUTCDate(end.getUTCDate() + 6);
+      const endDate = end.toISOString().slice(0, 10);
       if (fail) return { ok: false, status: 502, json: async () => ({ error: "Unavailable" }) } as Response;
       return { ok: true, status: 200, json: async () => ({ performance: {
-        asin: "B012345678", country: "US", startDate, endDate: startDate === "2026-08-26" ? "2026-09-01" : "2026-08-25", currency: "USD",
+        asin: "B012345678", country: "US", startDate, endDate, currency: "USD",
         metrics: { spend, ppcSales: 481.75, ppcOrders: 23, totalSales: 1317.35, totalOrders: 59 },
         freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: startDate }, warnings: [],
       } }) } as Response;
     });
     const view = render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("82"));
+    await waitFor(() => expect(metricsCalls).toHaveLength(5));
+    expect(metricsCalls.map(url => new URL(url, "http://localhost").searchParams.get("weekStart")).sort()).toEqual([
+      "2026-07-29", "2026-08-05", "2026-08-12", "2026-08-19", "2026-08-26",
+    ]);
     expect(JSON.parse(localStorage.getItem(PPC_PERFORMANCE_CACHE_KEY)!).entries["US:B012345678:2026-08-26"].metrics.spend).toBe(81.75);
+    expect(within(screen.getByRole("button", { name: /August 19 to August 25/ })).getByText("$82")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /August 19 to August 25/ }));
-    await waitFor(() => expect(metricsCalls).toHaveLength(2));
+    await screen.findByText(/Saved Scale Insights data/);
+    expect(metricsCalls).toHaveLength(5);
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("82"));
     fireEvent.click(screen.getByRole("button", { name: /August 26 to September 1/ }));
     await screen.findByText(/Saved Scale Insights data/);
-    expect(metricsCalls).toHaveLength(2);
+    expect(metricsCalls).toHaveLength(5);
     view.unmount();
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     await screen.findByText(/Saved Scale Insights data/);
-    expect(metricsCalls).toHaveLength(2);
+    expect(metricsCalls).toHaveLength(5);
     expect(within(screen.getByRole("button", { name: /August 19 to August 25/ })).getByText("$82")).toBeVisible();
     spend = 99;
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("99"));
-    expect(metricsCalls).toHaveLength(3);
+    expect(metricsCalls).toHaveLength(6);
     fail = true;
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     await screen.findByText("Refresh failed. Previously saved metrics are still displayed.");
@@ -74,6 +83,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.queryByRole("button", { name: "Open current week" })).not.toBeInTheDocument();
     const currentPeriod = screen.getByText("Current").closest("button") as HTMLButtonElement;
     expect(within(currentPeriod).getByText("August 26 to September 1")).toBeVisible();
+    expect(within(currentPeriod).getByText("Week 35").parentElement?.className).toMatch(/periodMeta/);
     expect(within(currentPeriod).getByText("Order")).toBeVisible();
     expect(within(currentPeriod).getByText("ACOS")).toBeVisible();
     expect(within(currentPeriod).queryByText("ROAS")).not.toBeInTheDocument();

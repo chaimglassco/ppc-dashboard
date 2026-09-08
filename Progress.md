@@ -12,7 +12,7 @@ Added per-week budget-change rows, removed visible Draft badges and the secondar
 
 ## Saved weekly performance and smaller tags
 
-Fixed fetched metrics disappearing after reload: imports previously updated only React report state and were not included in the dirty-report save flow. Added validated ASIN/week snapshots, timeline hydration, explicit-refresh-only updates for saved weeks, and failure retention. Added a reload/navigation/refresh regression test, compacted portfolio tag badges, and reduced weekly metric cards with whole-number presentation.
+Fixed fetched metrics disappearing after reload: imports previously updated only React report state and were not included in the dirty-report save flow. Added validated ASIN/week snapshots, timeline hydration, active-week-first automatic backfill for every visible uncached week with two-worker concurrency, explicit-refresh-only updates for the active saved week, and failure retention. Added reload/navigation/backfill/refresh regression coverage, moved week numbers into the upper-right of timeline cards, compacted portfolio tag badges, and reduced weekly metric cards with whole-number presentation.
 
 ## Compact product cards
 

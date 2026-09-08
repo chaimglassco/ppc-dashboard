@@ -105,7 +105,7 @@ The existing `.gitignore` already excludes these paths.
 24. Check the browser console for hydration or runtime errors.
 25. Confirm mobile layout at approximately 390px width.
 26. Confirm the Product Pipeline, Team SOP Library, and PPC Dashboard cards appear separately in the reserved top bar, show white text for the active app, and each open its remembered route in a new browser tab—including the active tab—without changing or overlapping the source page.
-27. Confirm `/ppc/dashboard` renders the authenticated three-panel Weekly PPC Performance workspace, loads the signed-in user’s Pipeline products, preserves a saved local report after refresh, and supports add/edit/delete of dashboard products plus persistent tag creation/filtering without changing Pipeline records. Select an ASIN; if prompted, complete the Vercel-hosted `Connect Scale Insights` consent and return to the dashboard. Verify the exact Wednesday–Tuesday period retrieves the five source metrics, calculates the four derived metrics, displays freshness, and locks imported inputs.
+27. Confirm `/ppc/dashboard` renders the authenticated three-panel Weekly PPC Performance workspace, loads the signed-in user’s Pipeline products, preserves a saved local report after refresh, and supports add/edit/delete of dashboard products plus persistent tag creation/filtering without changing Pipeline records. Select an ASIN; if prompted, complete the Vercel-hosted `Connect Scale Insights` consent and return to the dashboard. Verify all visible uncached Wednesday–Tuesday periods populate automatically without week-card clicks, the active week retrieves first, each period calculates the four derived metrics, and the active detail view displays freshness and locks imported inputs.
 28. From a session-only Pipeline login, open each PPC card and confirm the one-time handoff is consumed without another login. Confirm persistent “Remember me,” expired-session return, external `returnTo` rejection, keyboard focus, hover, and narrow-screen horizontal scrolling.
 
 ## Authoritative persistence rollout
@@ -150,7 +150,7 @@ This release keeps the existing version-1 browser report key and needs no server
 
 ## Saved weekly performance and smaller tags
 
-The performance cache, compact badges, and smaller whole-number metric cards need no environment or server data migration. Verify fetching, switching weeks, page reload, explicit Refresh, failed-refresh retention, and rounded presentation without precision loss in the cached DTO. Existing values that were never saved by the previous release need one successful fetch to create their snapshots. Cache persistence is local to this browser, not synchronized across devices.
+The performance cache, compact badges, upper-right week labels, and smaller whole-number metric cards need no environment or server data migration. Verify active-week-first automatic backfill of every visible uncached week, switching weeks without new requests, page reload, active-week-only Refresh, failed-refresh retention, and rounded presentation without precision loss in the cached DTO. Existing values that were never saved by the previous release are populated automatically when their weeks become visible. Cache persistence is local to this browser, not synchronized across devices.
 
 ## Compact product cards
 

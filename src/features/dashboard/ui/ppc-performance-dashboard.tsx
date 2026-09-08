@@ -35,6 +35,7 @@ type PerformanceLoadState = {
 
 const GOAL_STATUSES: GoalStatus[] = ["On Track", "At Risk", "Achieved", "Missed"];
 const AUTO_SAVE_DELAY_MS = 500;
+const PERFORMANCE_BACKFILL_CONCURRENCY = 2;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const METRIC_GROUPS: { title: string; metrics: MetricDefinition[] }[] = [
   { title: "Sales", metrics: [
@@ -290,68 +291,102 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   useEffect(() => {
     if (!cacheReady || !selectedKey || !selectedAsin) return;
     const controller = new AbortController();
-    const query = new URLSearchParams({ asin: selectedAsin, country: "US", weekStart: activeWeekStart });
     const requestTimer = window.setTimeout(() => {
-      const cached = cacheRef.current[snapshotKey];
-      if (cached && refreshRequest.current !== snapshotKey) {
-        setPerformanceLoad({ key: snapshotKey, status: "ready", message: `Saved Scale Insights data through ${cached.freshness.salesDataThrough || cached.endDate}. Refresh to update.`, warnings: cached.warnings });
-        return;
+      const forceActiveRefresh = refreshRequest.current === snapshotKey;
+      if (forceActiveRefresh) refreshRequest.current = "";
+
+      const activeCached = cacheRef.current[snapshotKey];
+      if (activeCached && !forceActiveRefresh) {
+        setPerformanceLoad({ key: snapshotKey, status: "ready", message: `Saved Scale Insights data through ${activeCached.freshness.salesDataThrough || activeCached.endDate}. Refresh to update.`, warnings: activeCached.warnings });
+      } else {
+        setPerformanceLoad({ key: snapshotKey, status: "loading", message: "Retrieving Scale Insights performance…", warnings: [] });
       }
-      refreshRequest.current = "";
-      setPerformanceLoad({ key: snapshotKey, status: "loading", message: "Retrieving Scale Insights performance…", warnings: [] });
-      void fetch(withPpcBasePath(`/api/dashboard/performance?${query}`), {
-        headers: getPipelineAuthorizationHeader(), cache: "no-store", signal: controller.signal,
-      }).then(async response => {
-        const value: unknown = await response.json();
-        if (controller.signal.aborted) return;
-        if (response.status === 409 && value && typeof value === "object") {
-          const candidate = value as { authorizationRequired?: unknown; authorizationUrl?: unknown };
-          if (candidate.authorizationRequired === true && typeof candidate.authorizationUrl === "string") {
-            const authorizationUrl = new URL(candidate.authorizationUrl);
-            if (authorizationUrl.protocol === "https:" && (authorizationUrl.hostname === "vercel.com" || authorizationUrl.hostname.endsWith(".vercel.com"))) {
-              setPerformanceLoad({
-                key: snapshotKey,
-                status: "authorization",
-                message: "Connect Scale Insights once to retrieve weekly performance.",
-                warnings: [],
-                authorizationUrl: authorizationUrl.toString(),
+
+      const orderedWeeks = [activeWeekStart, ...weekStarts.filter(weekStart => weekStart !== activeWeekStart)];
+      const pendingWeeks = orderedWeeks.filter(weekStart => {
+        const key = performanceCacheKey(selectedAsin, weekStart);
+        return (weekStart === activeWeekStart && forceActiveRefresh) || !cacheRef.current[key];
+      });
+      let nextWeekIndex = 0;
+
+      const fetchNextWeek = async () => {
+        while (!controller.signal.aborted) {
+          const weekStart = pendingWeeks[nextWeekIndex];
+          nextWeekIndex += 1;
+          if (!weekStart) return;
+          const key = performanceCacheKey(selectedAsin, weekStart);
+          const isActiveWeek = weekStart === activeWeekStart;
+          const query = new URLSearchParams({ asin: selectedAsin, country: "US", weekStart });
+
+          try {
+            const response = await fetch(withPpcBasePath(`/api/dashboard/performance?${query}`), {
+              headers: getPipelineAuthorizationHeader(), cache: "no-store", signal: controller.signal,
+            });
+            const value: unknown = await response.json();
+            if (controller.signal.aborted) return;
+            if (response.status === 409 && value && typeof value === "object") {
+              const candidate = value as { authorizationRequired?: unknown; authorizationUrl?: unknown };
+              if (candidate.authorizationRequired === true && typeof candidate.authorizationUrl === "string") {
+                const authorizationUrl = new URL(candidate.authorizationUrl);
+                if (authorizationUrl.protocol === "https:" && (authorizationUrl.hostname === "vercel.com" || authorizationUrl.hostname.endsWith(".vercel.com"))) {
+                  if (isActiveWeek) {
+                    setPerformanceLoad({
+                      key: snapshotKey,
+                      status: "authorization",
+                      message: "Connect Scale Insights once to retrieve weekly performance.",
+                      warnings: [],
+                      authorizationUrl: authorizationUrl.toString(),
+                    });
+                  }
+                  continue;
+                }
+              }
+            }
+            if (!response.ok || !value || typeof value !== "object") {
+              const message = value && typeof value === "object" && typeof (value as { error?: unknown }).error === "string"
+                ? String((value as { error: string }).error)
+                : "Scale Insights performance is unavailable.";
+              throw new Error(message);
+            }
+            const performance = parsePerformanceSnapshot((value as { performance?: unknown }).performance);
+            if (!performance?.metrics || performance.asin !== selectedAsin.toUpperCase() || performance.startDate !== weekStart) {
+              throw new Error("Scale Insights returned an invalid performance response.");
+            }
+
+            if (isActiveWeek) {
+              setReports(current => {
+                const currentReport = current[selectedKey] ?? createWeeklyPpcReport(selectedProductId, activeWeekStart, current[reportKey(selectedProductId, addDaysIso(activeWeekStart, -7))]);
+                return { ...current, [selectedKey]: withCalculatedPerformance({ ...currentReport, ...performance.metrics }) };
               });
-              return;
+            }
+
+            const nextCache = { ...cacheRef.current, [key]: performance };
+            cacheRef.current = nextCache;
+            setPerformanceCache(nextCache);
+            let storageWarning = "";
+            try {
+              window.localStorage.setItem(PPC_PERFORMANCE_CACHE_KEY, JSON.stringify({ version: 1, entries: nextCache }));
+            } catch { storageWarning = "This browser could not save these metrics. They will be lost when you close or reload the page."; }
+
+            if (isActiveWeek) {
+              const through = performance.freshness.salesDataThrough || performance.endDate;
+              setPerformanceLoad({ key: snapshotKey, status: "ready", message: `Scale Insights synced through ${through}.`, warnings: [...performance.warnings, ...(storageWarning ? [storageWarning] : [])] });
+            }
+          } catch (error) {
+            if (isActiveWeek && !controller.signal.aborted && (error as Error).name !== "AbortError") {
+              setPerformanceLoad({ key: snapshotKey, status: "error", message: error instanceof Error ? error.message : "Scale Insights performance is unavailable.", warnings: cacheRef.current[snapshotKey] ? ["Refresh failed. Previously saved metrics are still displayed."] : [] });
             }
           }
         }
-        if (!response.ok || !value || typeof value !== "object") {
-          const message = value && typeof value === "object" && typeof (value as { error?: unknown }).error === "string"
-            ? String((value as { error: string }).error)
-            : "Scale Insights performance is unavailable.";
-          throw new Error(message);
-        }
-        const performance = parsePerformanceSnapshot((value as { performance?: unknown }).performance);
-        if (!performance?.metrics || performance.asin !== selectedAsin.toUpperCase() || performance.startDate !== activeWeekStart) {
-          throw new Error("Scale Insights returned an invalid performance response.");
-        }
-        setReports(current => {
-          const currentReport = current[selectedKey] ?? createWeeklyPpcReport(selectedProductId, activeWeekStart, current[reportKey(selectedProductId, addDaysIso(activeWeekStart, -7))]);
-          return { ...current, [selectedKey]: withCalculatedPerformance({ ...currentReport, ...performance.metrics }) };
-        });
-        const nextCache = { ...cacheRef.current, [snapshotKey]: performance };
-        cacheRef.current = nextCache;
-        setPerformanceCache(nextCache);
-        let storageWarning = "";
-        try {
-          const stored = parsePerformanceCache(window.localStorage.getItem(PPC_PERFORMANCE_CACHE_KEY));
-          window.localStorage.setItem(PPC_PERFORMANCE_CACHE_KEY, JSON.stringify({ version: 1, entries: { ...stored, [snapshotKey]: performance } }));
-        } catch { storageWarning = "This browser could not save these metrics. They will be lost when you close or reload the page."; }
-        const through = performance.freshness.salesDataThrough || performance.endDate;
-        setPerformanceLoad({ key: snapshotKey, status: "ready", message: `Scale Insights synced through ${through}.`, warnings: [...performance.warnings, ...(storageWarning ? [storageWarning] : [])] });
-      }).catch(error => {
-        if (!controller.signal.aborted && (error as Error).name !== "AbortError") {
-          setPerformanceLoad({ key: snapshotKey, status: "error", message: error instanceof Error ? error.message : "Scale Insights performance is unavailable.", warnings: cacheRef.current[snapshotKey] ? ["Refresh failed. Previously saved metrics are still displayed."] : [] });
-        }
-      });
+      };
+
+      if (pendingWeeks.length) {
+        const workerCount = Math.min(PERFORMANCE_BACKFILL_CONCURRENCY, pendingWeeks.length);
+        void Promise.all(Array.from({ length: workerCount }, () => fetchNextWeek()));
+      }
     }, 0);
     return () => { window.clearTimeout(requestTimer); controller.abort(); };
-  }, [activeWeekStart, cacheReady, performanceRefresh, selectedAsin, selectedKey, selectedProductId, snapshotKey]);
+  }, [activeWeekStart, cacheReady, performanceRefresh, selectedAsin, selectedKey, selectedProductId, snapshotKey, weekStarts]);
 
   const replaceReport = (nextReport: WeeklyPpcReport) => {
     if (!selectedKey) return;
@@ -489,7 +524,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         const isSelected = weekStart === activeWeekStart;
         return <button type="button" key={weekStart} aria-pressed={isSelected} className={`${styles.periodCard} ${isSelected ? styles.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
           {isCurrent ? <span className={styles.currentBadge}>Current</span> : null}
-          <span className={styles.periodTop}><span><strong>{formatWeekRange(weekStart)}</strong><small>Week {getIsoWeekNumber(weekStart)}</small></span>{periodStatus === "Draft" ? null : <i className={statusTone(periodStatus)}>{periodStatus}</i>}</span>
+          <span className={styles.periodTop}><strong>{formatWeekRange(weekStart)}</strong><span className={styles.periodMeta}><small>Week {getIsoWeekNumber(weekStart)}</small>{periodStatus === "Draft" ? null : <i className={statusTone(periodStatus)}>{periodStatus}</i>}</span></span>
           <span className={styles.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>Sales</small><strong>{currency(periodReport?.totalSales ?? 0)}</strong></span><span><small>Order</small><strong>{periodReport?.totalOrders ?? 0}</strong></span><span><small>ACOS</small><strong>{Math.round(periodReport?.acos ?? 0)}%</strong></span></span>
         </button>;
       })}</div>

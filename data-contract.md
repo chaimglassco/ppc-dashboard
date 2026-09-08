@@ -14,7 +14,7 @@ Selected reporting months are not persisted and do not change report or performa
 
 ## Saved weekly performance and smaller tags
 
-`glassco.ppcPerformanceCache.v1` stores `{ version: 1, entries: { ["US:<ASIN>:<Wednesday date>"]: performance } }` using the minimal performance DTO, never credentials or raw MCP payloads. Restoration validates exact ASIN, US marketplace, real bounded weekly dates, finite nonnegative source numbers and integer orders; it recalculates derived numbers and reconstructs keys. Snapshots include actual end date, freshness and warnings; genuine zero metrics remain valid cache entries. Existing report/catalog keys are unchanged. No automatic expiry or background refresh occurs; Refresh replaces only the selected snapshot. Whole-number metric and timeline ACOS formatting is presentation-only and does not change the stored DTO.
+`glassco.ppcPerformanceCache.v1` stores `{ version: 1, entries: { ["US:<ASIN>:<Wednesday date>"]: performance } }` using the minimal performance DTO, never credentials or raw MCP payloads. Restoration validates exact ASIN, US marketplace, real bounded weekly dates, finite nonnegative source numbers and integer orders; it recalculates derived numbers and reconstructs keys. Snapshots include actual end date, freshness and warnings; genuine zero metrics remain valid cache entries. Existing report/catalog keys are unchanged. Visible weeks without valid entries are automatically backfilled, but saved entries have no automatic expiry or background refresh; Refresh replaces only the selected snapshot. Whole-number metric and timeline ACOS formatting plus upper-right week placement are presentation-only and do not change the stored DTO.
 
 ## Compact product cards
 
