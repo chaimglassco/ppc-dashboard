@@ -10,7 +10,7 @@ Use this checklist before merging or deploying changes.
 - [ ] Confirm answers distinguish Partial, Final, and saved/manual weeks, identify live Scale Insights facts separately from saved dashboard context, render as plain text, and refuse to invent unavailable data.
 - [ ] Test a Pipeline user without a Scale Insights grant. Confirm the widget renders only a validated `Connect Scale Insights` link, hosted consent returns to the dashboard, and retry succeeds without exposing OAuth material.
 - [ ] Confirm `/ppc/api/dashboard/ai-chat` rejects unauthenticated, malformed, oversized, invalid-ASIN, and active-week-missing requests; successful and error responses use `Cache-Control: no-store` and never expose Gateway/OIDC credentials or raw provider errors.
-- [ ] Verify production with Vercel project OIDC and local development with `AI_GATEWAY_API_KEY`. Remove both credentials and confirm the widget shows the bounded configuration message; use an expired local OIDC token and confirm it shows the specific refresh/restart message without attempting a provider request or affecting the rest of the dashboard.
+- [ ] Verify production with Vercel project OIDC and local development with `AI_GATEWAY_API_KEY`. Confirm the route delegates credential resolution to AI Gateway, and that an actual provider 401/403 or missing local key produces the bounded authentication message without exposing provider details or affecting the rest of the dashboard.
 
 ## Goal history and previous-week comparisons
 

@@ -16,7 +16,7 @@ vi.mock("@/features/dashboard/data/scale-insights-server", () => {
   };
 });
 
-import { generateText } from "ai";
+import { LoadAPIKeyError, generateText } from "ai";
 import { verifyPipelineRequest } from "@/lib/pipeline-auth-server";
 import {
   ScaleInsightsAuthorizationRequiredError,
@@ -68,7 +68,6 @@ const adsTool = {
 
 describe("PPC performance AI route", () => {
   beforeEach(() => {
-    vi.stubEnv("AI_GATEWAY_API_KEY", "test-gateway-key");
     vi.mocked(verifyPipelineRequest).mockReset();
     vi.mocked(verifyPipelineRequest).mockResolvedValue({ user: { id: "user-1", email: "user@example.com", name: "User", role: "USER" } });
     vi.mocked(generateText).mockReset();
@@ -100,7 +99,7 @@ describe("PPC performance AI route", () => {
     expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
     await expect(response.json()).resolves.toEqual({ answer: "ACOS improved from 30% to 20% while PPC sales rose by $50." });
     expect(generateText).toHaveBeenCalledWith(expect.objectContaining({
-      model: "openai/gpt-5.4-mini",
+      model: "openai/gpt-5.6-sol",
       maxOutputTokens: 1_000,
       instructions: expect.stringContaining("read-only Scale Insights MCP access"),
       prompt: expect.stringContaining("Why did ACOS improve?"),
@@ -143,28 +142,23 @@ describe("PPC performance AI route", () => {
     expect(generateText).not.toHaveBeenCalled();
   });
 
-  it("returns bounded configuration and provider failures", async () => {
+  it("lets AI Gateway resolve deployment OIDC instead of rejecting build-time environment state", async () => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
     vi.stubEnv("VERCEL_OIDC_TOKEN", "");
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    expect(generateText).toHaveBeenCalledOnce();
+  });
+
+  it("returns bounded authentication and provider failures", async () => {
+    vi.mocked(generateText).mockRejectedValue(new LoadAPIKeyError({ message: "secret provider message" }));
     let response = await POST(request());
     expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toEqual({ error: "The AI performance assistant is not configured for this environment." });
+    await expect(response.json()).resolves.toEqual({ error: "AI Gateway could not authenticate this deployment. Redeploy the Vercel project or configure a server-side AI Gateway key." });
 
-    vi.stubEnv("AI_GATEWAY_API_KEY", "test-gateway-key");
     vi.mocked(generateText).mockRejectedValue(new Error("secret provider message"));
     response = await POST(request());
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({ error: "The AI performance assistant is temporarily unavailable." });
-  });
-
-  it("identifies an expired local OIDC token without sending it upstream", async () => {
-    vi.stubEnv("AI_GATEWAY_API_KEY", "");
-    const header = Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url");
-    const payload = Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1_000) - 60 })).toString("base64url");
-    vi.stubEnv("VERCEL_OIDC_TOKEN", `${header}.${payload}.signature`);
-    const response = await POST(request());
-    expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toEqual({ error: "The local AI credential has expired. Refresh the Vercel development environment and restart the app." });
-    expect(generateText).not.toHaveBeenCalled();
   });
 });

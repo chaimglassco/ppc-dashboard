@@ -1,4 +1,4 @@
-import { APICallError, dynamicTool, generateText, isStepCount, jsonSchema } from "ai";
+import { APICallError, LoadAPIKeyError, dynamicTool, generateText, isStepCount, jsonSchema } from "ai";
 import type { CallToolResult, Tool as McpTool } from "@modelcontextprotocol/client";
 import {
   ScaleInsightsAuthorizationRequiredError,
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
-const MODEL = "openai/gpt-5.4-mini";
+const MODEL = "openai/gpt-5.6-sol";
 const MAX_REQUEST_BYTES = 100_000;
 const MAX_TOOL_RESULT_CHARACTERS = 50_000;
 const KNOWN_READ_ONLY_TOOLS = new Set(["get_ads_performance", "get_sales_data", "get_product_metadata"]);
@@ -228,25 +228,13 @@ export function parsePerformanceChatRequest(value: unknown): PerformanceChatRequ
   };
 }
 
-function gatewayCredentialStatus(): "ready" | "missing" | "expired" {
-  if (process.env.AI_GATEWAY_API_KEY) return "ready";
-  const oidcToken = process.env.VERCEL_OIDC_TOKEN;
-  if (!oidcToken) return "missing";
-  try {
-    const payload = JSON.parse(Buffer.from(oidcToken.split(".")[1], "base64url").toString("utf8")) as { exp?: unknown };
-    return typeof payload.exp === "number" && payload.exp * 1_000 > Date.now() + 30_000 ? "ready" : "expired";
-  } catch {
-    return "expired";
-  }
-}
-
 export async function POST(request: Request) {
+  const startedAt = Date.now();
+  const requestId = request.headers.get("x-vercel-id") || undefined;
   const verified = await verifyPipelineRequest(request);
   if (verified instanceof Response) return verified;
   if (!verified.user.id) return errorResponse("The verified Pipeline user is missing a stable identity.", 503);
-  const credentialStatus = gatewayCredentialStatus();
-  if (credentialStatus === "expired") return errorResponse("The local AI credential has expired. Refresh the Vercel development environment and restart the app.", 503);
-  if (credentialStatus === "missing") return errorResponse("The AI performance assistant is not configured for this environment.", 503);
+  console.log(JSON.stringify({ level: "info", message: "PPC performance AI request started", route: "/api/dashboard/ai-chat", requestId }));
 
   const contentLength = Number(request.headers.get("content-length") || 0);
   if (contentLength > MAX_REQUEST_BYTES) return errorResponse("The performance context is too large.", 413);
@@ -298,8 +286,19 @@ export async function POST(request: Request) {
     });
     const answer = text.trim();
     if (!answer) return errorResponse("The AI assistant returned no answer. Please try again.", 502);
+    console.log(JSON.stringify({ level: "info", message: "PPC performance AI request completed", route: "/api/dashboard/ai-chat", requestId, durationMs: Date.now() - startedAt }));
     return Response.json({ answer }, { headers: NO_STORE_HEADERS });
   } catch (error) {
+    const providerStatus = APICallError.isInstance(error) ? error.statusCode : undefined;
+    console.error(JSON.stringify({
+      level: "error",
+      message: "PPC performance AI request failed",
+      route: "/api/dashboard/ai-chat",
+      requestId,
+      durationMs: Date.now() - startedAt,
+      errorType: error instanceof Error ? error.name : "unknown",
+      providerStatus,
+    }));
     if (error instanceof ScaleInsightsAuthorizationRequiredError) {
       return Response.json({
         error: "Connect Scale Insights before asking a live performance question.",
@@ -308,6 +307,9 @@ export async function POST(request: Request) {
       }, { status: 409, headers: NO_STORE_HEADERS });
     }
     if (error instanceof ScaleInsightsConfigurationError) return errorResponse("Scale Insights is not configured for the performance assistant.", 503);
+    if (LoadAPIKeyError.isInstance(error) || (APICallError.isInstance(error) && (error.statusCode === 401 || error.statusCode === 403))) {
+      return errorResponse("AI Gateway could not authenticate this deployment. Redeploy the Vercel project or configure a server-side AI Gateway key.", 503);
+    }
     if (APICallError.isInstance(error) && error.statusCode === 429) return errorResponse("Too many AI questions were sent. Please wait a moment and try again.", 429);
     if (APICallError.isInstance(error) && error.statusCode === 402) return errorResponse("The AI assistant's usage budget is currently unavailable.", 503);
     return errorResponse("The AI performance assistant is temporarily unavailable.", 502);
