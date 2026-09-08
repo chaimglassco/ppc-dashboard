@@ -6,7 +6,9 @@ Use this checklist before merging or deploying changes.
 
 - [ ] Select a product and confirm a compact `Ask Performance AI` launcher appears at the lower-right without covering primary controls. Open, minimize, and reopen the accessible dialog at desktop and mobile widths.
 - [ ] Ask each starter question and a typed question. Confirm the request contains only the selected product, active week, populated visible periods, bounded report planning context, and at most eight prior messages; switching product or week shows its separate conversation.
-- [ ] Confirm answers distinguish Partial, Final, and saved/manual weeks, render as plain text, and refuse to invent campaign/keyword/placement data that is not in the payload.
+- [ ] Confirm the route opens Scale Insights MCP with the verified Pipeline subject, offers only read-only tools with an ASIN parameter, forcibly scopes calls to the selected ASIN/US/visible completed dates, and closes the session after generation. Attempt to prompt for another ASIN or an account-wide/mutating action and confirm it is not executed.
+- [ ] Confirm answers distinguish Partial, Final, and saved/manual weeks, identify live Scale Insights facts separately from saved dashboard context, render as plain text, and refuse to invent unavailable data.
+- [ ] Test a Pipeline user without a Scale Insights grant. Confirm the widget renders only a validated `Connect Scale Insights` link, hosted consent returns to the dashboard, and retry succeeds without exposing OAuth material.
 - [ ] Confirm `/ppc/api/dashboard/ai-chat` rejects unauthenticated, malformed, oversized, invalid-ASIN, and active-week-missing requests; successful and error responses use `Cache-Control: no-store` and never expose Gateway/OIDC credentials or raw provider errors.
 - [ ] Verify production with Vercel project OIDC and local development with `AI_GATEWAY_API_KEY`. Remove both credentials and confirm the widget shows the bounded configuration message; use an expired local OIDC token and confirm it shows the specific refresh/restart message without attempting a provider request or affecting the rest of the dashboard.
 

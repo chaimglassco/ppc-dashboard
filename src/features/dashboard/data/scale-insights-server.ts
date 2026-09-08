@@ -11,6 +11,8 @@ import {
   Client,
   StreamableHTTPClientTransport,
   type AuthProvider,
+  type CallToolResult,
+  type Tool,
 } from "@modelcontextprotocol/client";
 import {
   loadScaleInsightsWeeklyPerformance,
@@ -40,6 +42,13 @@ export type ScaleInsightsRequestIdentity = {
   userId: string;
   issuer: string;
   callbackUrl: string;
+};
+
+export type ScaleInsightsToolCaller = (name: string, args: Record<string, unknown>) => Promise<CallToolResult>;
+
+export type ScaleInsightsToolSession = {
+  definitions: Tool[];
+  callTool: ScaleInsightsToolCaller;
 };
 
 function getConnector() {
@@ -101,20 +110,41 @@ export async function getScaleInsightsWeeklyPerformance(
   return withScaleInsightsClient(identity, callTool => loadScaleInsightsWeeklyPerformance(params, callTool));
 }
 
-export async function withScaleInsightsClient<T>(
+async function withConnectedScaleInsightsClient<T>(
   identity: ScaleInsightsRequestIdentity,
-  load: (callTool: import("./scale-insights-performance").ScaleInsightsToolCaller) => Promise<T>,
+  load: (client: Client) => Promise<T>,
 ): Promise<T> {
   const client = new Client({ name: "glassco-ppc-dashboard", version: "0.1.0" });
   const transport = new StreamableHTTPClientTransport(getServerUrl(), { authProvider: await createAuthProvider(identity) });
 
   try {
     await client.connect(transport);
-    return await load(async (name, args) => client.callTool(
-      { name, arguments: args },
-      { signal: AbortSignal.timeout(SCALE_INSIGHTS_REQUEST_TIMEOUT_MS) },
-    ));
+    return await load(client);
   } finally {
     await client.close().catch(() => undefined);
   }
+}
+
+function createToolCaller(client: Client): ScaleInsightsToolCaller {
+  return async (name, args) => client.callTool(
+    { name, arguments: args },
+    { signal: AbortSignal.timeout(SCALE_INSIGHTS_REQUEST_TIMEOUT_MS) },
+  );
+}
+
+export async function withScaleInsightsClient<T>(
+  identity: ScaleInsightsRequestIdentity,
+  load: (callTool: import("./scale-insights-performance").ScaleInsightsToolCaller) => Promise<T>,
+): Promise<T> {
+  return withConnectedScaleInsightsClient(identity, client => load(createToolCaller(client)));
+}
+
+export async function withScaleInsightsToolSession<T>(
+  identity: ScaleInsightsRequestIdentity,
+  load: (session: ScaleInsightsToolSession) => Promise<T>,
+): Promise<T> {
+  return withConnectedScaleInsightsClient(identity, async client => {
+    const listed = await client.listTools(undefined, { signal: AbortSignal.timeout(SCALE_INSIGHTS_REQUEST_TIMEOUT_MS) });
+    return load({ definitions: listed.tools, callTool: createToolCaller(client) });
+  });
 }

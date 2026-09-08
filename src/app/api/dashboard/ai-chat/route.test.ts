@@ -1,11 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("ai", async importOriginal => ({ ...(await importOriginal<typeof import("ai")>()), generateText: vi.fn() }));
-vi.mock("@/lib/pipeline-auth-server", () => ({ verifyPipelineRequest: vi.fn() }));
+vi.mock("@/lib/pipeline-auth-server", () => ({ getPipelineOrigin: () => "https://glasscopipeline.vercel.app", verifyPipelineRequest: vi.fn() }));
+vi.mock("@/features/dashboard/data/scale-insights-server", () => {
+  class ScaleInsightsAuthorizationRequiredError extends Error {
+    constructor(readonly authorizationUrl: string) {
+      super("authorization required");
+    }
+  }
+  class ScaleInsightsConfigurationError extends Error {}
+  return {
+    ScaleInsightsAuthorizationRequiredError,
+    ScaleInsightsConfigurationError,
+    withScaleInsightsToolSession: vi.fn(),
+  };
+});
 
 import { generateText } from "ai";
 import { verifyPipelineRequest } from "@/lib/pipeline-auth-server";
-import { POST, parsePerformanceChatRequest } from "./route";
+import {
+  ScaleInsightsAuthorizationRequiredError,
+  withScaleInsightsToolSession,
+} from "@/features/dashboard/data/scale-insights-server";
+import { POST, createScaleInsightsAssistantTools, parsePerformanceChatRequest } from "./route";
 
 const body = {
   question: "Why did ACOS improve?",
@@ -34,6 +51,21 @@ function request(value: unknown = body) {
   });
 }
 
+const adsTool = {
+  name: "get_ads_performance",
+  description: "Read advertising performance for selected ASINs.",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      asin_list: { type: "array", items: { type: "string" } },
+      country: { type: "string" },
+      start_date: { type: "string" },
+      end_date: { type: "string" },
+    },
+  },
+  annotations: { readOnlyHint: true, destructiveHint: false },
+};
+
 describe("PPC performance AI route", () => {
   beforeEach(() => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "test-gateway-key");
@@ -41,6 +73,11 @@ describe("PPC performance AI route", () => {
     vi.mocked(verifyPipelineRequest).mockResolvedValue({ user: { id: "user-1", email: "user@example.com", name: "User", role: "USER" } });
     vi.mocked(generateText).mockReset();
     vi.mocked(generateText).mockResolvedValue({ text: "ACOS improved from 30% to 20% while PPC sales rose by $50." } as Awaited<ReturnType<typeof generateText>>);
+    vi.mocked(withScaleInsightsToolSession).mockReset();
+    vi.mocked(withScaleInsightsToolSession).mockImplementation(async (_identity, load) => load({
+      definitions: [adsTool],
+      callTool: vi.fn().mockResolvedValue({ content: [{ type: "text", text: "Scale Insights data" }] }),
+    }));
   });
 
   afterEach(() => vi.unstubAllEnvs());
@@ -57,18 +94,46 @@ describe("PPC performance AI route", () => {
     expect(() => parsePerformanceChatRequest({ ...body, context: { ...body.context, periods: body.context.periods.slice(1) } })).toThrow(/active reporting week/i);
   });
 
-  it("authenticates and asks the configured OpenAI model with no-store output", async () => {
+  it("authenticates and asks the configured OpenAI model with ASIN-scoped Scale Insights tools", async () => {
     const response = await POST(request());
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
     await expect(response.json()).resolves.toEqual({ answer: "ACOS improved from 30% to 20% while PPC sales rose by $50." });
     expect(generateText).toHaveBeenCalledWith(expect.objectContaining({
       model: "openai/gpt-5.4-mini",
-      maxOutputTokens: 700,
-      instructions: expect.stringContaining("Amazon PPC performance analyst"),
+      maxOutputTokens: 1_000,
+      instructions: expect.stringContaining("read-only Scale Insights MCP access"),
       prompt: expect.stringContaining("Why did ACOS improve?"),
-      providerOptions: { gateway: { user: "user-1", tags: ["feature:ppc-performance-chat"], cacheControl: "max-age=0" } },
+      tools: expect.objectContaining({ get_ads_performance: expect.any(Object) }),
+      stopWhen: expect.any(Function),
+      providerOptions: { gateway: { user: "user-1", tags: ["feature:ppc-performance-chat", "source:scale-insights-mcp"], cacheControl: "max-age=0" } },
     }));
+  });
+
+  it("forces every MCP tool call to the selected ASIN and reporting range", async () => {
+    const callTool = vi.fn().mockResolvedValue({ content: [{ type: "text", text: "ok" }] });
+    const tools = createScaleInsightsAssistantTools([
+      adsTool,
+      { ...adsTool, name: "update_bid", annotations: { readOnlyHint: false, destructiveHint: true } },
+    ], callTool, { asin: "B012345678", country: "US", startDate: "2026-08-26", endDate: "2026-09-08" });
+    expect(tools).not.toHaveProperty("update_bid");
+    const executable = tools.get_ads_performance as unknown as { execute: (input: unknown) => Promise<unknown> };
+    await executable.execute({ asin_list: ["B099999999"], country: "CA", start_date: "2020-01-01", end_date: "2030-01-01" });
+    expect(callTool).toHaveBeenCalledWith("get_ads_performance", {
+      asin_list: ["B012345678"], country: "US", start_date: "2026-08-26", end_date: "2026-09-08",
+    });
+  });
+
+  it("returns hosted Scale Insights consent when the verified user has no connector grant", async () => {
+    vi.mocked(withScaleInsightsToolSession).mockRejectedValue(new ScaleInsightsAuthorizationRequiredError("https://vercel.com/api/v1/connect/authorize/scl_test"));
+    const response = await POST(request());
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: "Connect Scale Insights before asking a live performance question.",
+      authorizationRequired: true,
+      authorizationUrl: "https://vercel.com/api/v1/connect/authorize/scl_test",
+    });
+    expect(generateText).not.toHaveBeenCalled();
   });
 
   it("does not call the model when Pipeline authentication fails", async () => {

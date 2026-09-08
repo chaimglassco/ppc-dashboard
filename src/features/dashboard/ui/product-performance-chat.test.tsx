@@ -46,4 +46,20 @@ describe("ProductPerformanceChat", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("not configured"));
     expect(screen.getByText("How are sales doing?")).toBeVisible();
   });
+
+  it("offers the hosted Scale Insights consent link when authorization is required", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({
+        error: "Connect Scale Insights before asking a live performance question.",
+        authorizationRequired: true,
+        authorizationUrl: "https://vercel.com/api/v1/connect/authorize/scl_test",
+      }),
+    } as Response);
+    render(<ProductPerformanceChat product={product} activeWeekStart="2026-09-02" periods={[{ weekStart: "2026-09-02", dataState: "Partial", report: current }]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open AI performance assistant" }));
+    fireEvent.click(screen.getByRole("button", { name: "Why did ACOS change?" }));
+    expect(await screen.findByRole("link", { name: "Connect Scale Insights" })).toHaveAttribute("href", "https://vercel.com/api/v1/connect/authorize/scl_test");
+  });
 });
