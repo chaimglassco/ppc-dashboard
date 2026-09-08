@@ -2,6 +2,10 @@
 
 Last updated: September 8, 2026
 
+## Budget history, cleaner report controls, and multi-month timeline
+
+Added per-week budget-change rows, removed visible Draft badges and the secondary Save Draft action, and introduced an apply-based multi-month/year picker with boundary-week inclusion, future-week exclusion, deduplication, and coverage-aware labels. Added parser, date-range, selection, persistence, and UI regression coverage.
+
 ## Saved weekly performance and smaller tags
 
 Fixed fetched metrics disappearing after reload: imports previously updated only React report state and were not included in the dirty-report save flow. Added validated ASIN/week snapshots, timeline hydration, explicit-refresh-only updates for saved weeks, and failure retention. Added a reload/navigation/refresh regression test, compacted portfolio tag badges, and reduced weekly metric cards with whole-number presentation.

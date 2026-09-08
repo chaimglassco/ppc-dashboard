@@ -1,5 +1,11 @@
 # Glassco Back Office Library — Product Specification
 
+## Budget history, report controls, and multi-month timeline
+
+Each product/week report shows a compact budget-history table with `Date of Change`, `From`, and `To` columns. One entry is recorded when a Weekly limit edit is committed by blur or Enter; intermediate keystrokes do not create rows. Draft badges and the Save Draft button are hidden, while automatic saving and the primary Weekly Report/Save Changes control remain available.
+
+The reporting-period picker supports multiple selected months across years, plus a one-click full-year selection. The timeline displays the unique Wednesday–Tuesday weeks that intersect a selected month, includes weeks crossing a month boundary, omits future weeks, and labels the header with the months actually covered.
+
 ## Saved weekly performance and smaller tags
 
 Fetched performance is saved in this browser per US ASIN and reporting week. Selecting a week without a snapshot fetches once; returning to a saved week or reloading displays its saved metrics and coverage. Only Refresh updates an existing snapshot; pending/failed refreshes preserve the last values. Weekly metric cards show whole-number values in a compact layout while retaining exact source values in storage. Portfolio tag badges use compact 7px text and reduced padding.

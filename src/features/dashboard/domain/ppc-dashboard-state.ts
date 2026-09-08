@@ -5,8 +5,10 @@ export type GoalStatus = "On Track" | "At Risk" | "Achieved" | "Missed";
 export type ReportStatus = "Draft" | "In Progress" | "Completed" | "Needs Review";
 export type WeeklyGoal = { id: string; title: string; target: string; actual: string; status: GoalStatus };
 export type ActionItem = { id: string; title: string; priority: "High" | "Medium" | "Low"; dueDate: string; done: boolean };
+export type BudgetChange = { id: string; changedAt: string; from: number; to: number };
 export type WeeklyPpcReport = {
   productId: string; weekStart: string; status: ReportStatus; weeklyBudget: number; dailyBudget: number;
+  budgetHistory: BudgetChange[];
   spend: number; ppcSales: number; organicSales: number; totalSales: number;
   ppcOrders: number; organicOrders: number; totalOrders: number; acos: number; tacos: number;
   goals: WeeklyGoal[]; previousWeekResult: string; notes: string; actions: ActionItem[]; updatedAt: string | null;
@@ -45,7 +47,7 @@ export function createWeeklyPpcReport(productId: string, weekStart: string, prev
     }))
     : DEFAULT_GOALS.map(goal => ({ ...goal }));
   return {
-    productId, weekStart, status: "Draft", weeklyBudget: 0, dailyBudget: 0, spend: 0,
+    productId, weekStart, status: "Draft", weeklyBudget: 0, dailyBudget: 0, budgetHistory: [], spend: 0,
     ppcSales: 0, organicSales: 0, totalSales: 0, ppcOrders: 0, organicOrders: 0, totalOrders: 0,
     acos: 0, tacos: 0, goals: carriedGoals, previousWeekResult: "",
     notes: "", actions: DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt: null,
@@ -87,6 +89,15 @@ function normalizeAction(value: unknown, index: number): ActionItem | null {
   return { id: String(value.id ?? `action-${index}`), title, priority: priorities.includes(value.priority as ActionItem["priority"]) ? value.priority as ActionItem["priority"] : "Medium", dueDate: String(value.dueDate ?? ""), done: value.done === true };
 }
 
+function normalizeBudgetChange(value: unknown, index: number): BudgetChange | null {
+  if (!isRecord(value)) return null;
+  const changedAt = typeof value.changedAt === "string" ? value.changedAt : "";
+  const from = Number(value.from);
+  const to = Number(value.to);
+  if (!changedAt || Number.isNaN(new Date(changedAt).getTime()) || !Number.isFinite(from) || from < 0 || !Number.isFinite(to) || to < 0 || from === to) return null;
+  return { id: String(value.id ?? `budget-change-${index}`).slice(0, 100), changedAt: new Date(changedAt).toISOString(), from, to };
+}
+
 function normalizeReport(value: unknown): WeeklyPpcReport | null {
   if (!isRecord(value)) return null;
   const productId = String(value.productId ?? "").trim();
@@ -98,13 +109,16 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
   const statuses: ReportStatus[] = ["Draft", "In Progress", "Completed", "Needs Review"];
   const goals = Array.isArray(value.goals) ? value.goals.map(normalizeGoal).filter((goal): goal is WeeklyGoal => Boolean(goal)) : [];
   const actions = Array.isArray(value.actions) ? value.actions.map(normalizeAction).filter((action): action is ActionItem => Boolean(action)) : [];
+  const budgetHistory = Array.isArray(value.budgetHistory)
+    ? value.budgetHistory.map(normalizeBudgetChange).filter((change): change is BudgetChange => Boolean(change)).slice(0, 100)
+    : [];
   const ppcSales = finiteNumber(value.ppcSales ?? value.sales);
   const organicSales = finiteNumber(value.organicSales);
   const ppcOrders = finiteNumber(value.ppcOrders ?? value.orders);
   const organicOrders = finiteNumber(value.organicOrders);
   return withCalculatedPerformance({
     productId, weekStart, status: statuses.includes(value.status as ReportStatus) ? value.status as ReportStatus : "Draft",
-    weeklyBudget: finiteNumber(value.weeklyBudget), dailyBudget: finiteNumber(value.dailyBudget), spend: finiteNumber(value.spend),
+    weeklyBudget: finiteNumber(value.weeklyBudget), dailyBudget: finiteNumber(value.dailyBudget), budgetHistory, spend: finiteNumber(value.spend),
     ppcSales, organicSales, totalSales: value.totalSales == null ? ppcSales + organicSales : finiteNumber(value.totalSales),
     ppcOrders, organicOrders, totalOrders: value.totalOrders == null ? ppcOrders + organicOrders : finiteNumber(value.totalOrders),
     acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
@@ -137,6 +151,33 @@ export function getMonthWeekStarts(monthIso: string) {
   let cursor = startOfWeekIso(toIsoDate(new Date(month.getFullYear(), month.getMonth(), 1, 12)));
   while (dateFromIso(cursor) <= last) { starts.push(cursor); cursor = addDaysIso(cursor, 7); }
   return starts.reverse();
+}
+export function getSelectedMonthWeekStarts(monthKeys: string[], maximumWeekStart?: string) {
+  const selectedMonths = [...new Set(monthKeys)]
+    .filter(monthKey => /^\d{4}-\d{2}$/.test(monthKey) && toIsoDate(dateFromIso(`${monthKey}-01`)).slice(0, 7) === monthKey);
+  return [...new Set(selectedMonths.flatMap(monthKey => getMonthWeekStarts(`${monthKey}-01`)))]
+    .filter(weekStart => !maximumWeekStart || weekStart <= maximumWeekStart)
+    .sort((first, second) => second.localeCompare(first));
+}
+export function formatReportingMonthRange(weekStarts: string[]) {
+  const monthKeys = [...new Set(weekStarts.flatMap(weekStart => [weekStart.slice(0, 7), addDaysIso(weekStart, 6).slice(0, 7)]))].sort();
+  if (!monthKeys.length) return "No months selected";
+  const monthName = (monthKey: string, style: "long" | "short", includeYear = true) => new Intl.DateTimeFormat("en-US", {
+    month: style, ...(includeYear ? { year: "numeric" as const } : {}),
+  }).format(dateFromIso(`${monthKey}-01`));
+  if (monthKeys.length === 1) return monthName(monthKeys[0], "long");
+  if (monthKeys.length === 2) {
+    const sameYear = monthKeys[0].slice(0, 4) === monthKeys[1].slice(0, 4);
+    return sameYear
+      ? `${monthName(monthKeys[0], "long", false)} & ${monthName(monthKeys[1], "long")}`
+      : `${monthName(monthKeys[0], "long")} & ${monthName(monthKeys[1], "long")}`;
+  }
+  const consecutive = monthKeys.every((monthKey, index) => addMonthsIso(`${monthKeys[0]}-01`, index).slice(0, 7) === monthKey);
+  const sameYear = monthKeys[0].slice(0, 4) === monthKeys.at(-1)?.slice(0, 4);
+  if (consecutive) return sameYear
+    ? `${monthName(monthKeys[0], "long", false)}–${monthName(monthKeys.at(-1)!, "long")}`
+    : `${monthName(monthKeys[0], "short")}–${monthName(monthKeys.at(-1)!, "short")}`;
+  return `${monthKeys.length} months · ${monthName(monthKeys[0], "short")}–${monthName(monthKeys.at(-1)!, "short")}`;
 }
 export function formatMonth(iso: string) { return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(dateFromIso(iso)); }
 export function formatWeekRange(weekStart: string) {

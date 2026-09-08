@@ -142,6 +142,10 @@ Both default to `https://glasscopipeline.vercel.app`. Roll back PPC and Pipeline
 
 After deployment, call `/ppc/api/dashboard/performance` through an authenticated dashboard session and verify `401` without that session, a no-store `409` plus hosted consent URL before user authorization, `no-store` on success, exact requested scope, and no OIDC/token material in the response or client bundle. If Scale Insights is not configured, the dashboard intentionally retains manual metric entry and shows a configuration error.
 
+## Budget history and multi-month timeline
+
+This release keeps the existing version-1 browser report key and needs no server migration or environment change. Existing reports receive an empty budget history during validation. After deployment, verify a budget change persists after reload, Draft UI is absent, multiple months and Select Year work, overlap weeks are deduplicated, and current/future cutoffs still prevent requests for weeks with no completed days.
+
 ## Saved weekly performance and smaller tags
 
 The performance cache, compact badges, and smaller whole-number metric cards need no environment or server data migration. Verify fetching, switching weeks, page reload, explicit Refresh, failed-refresh retention, and rounded presentation without precision loss in the cached DTO. Existing values that were never saved by the previous release need one successful fetch to create their snapshots. Cache persistence is local to this browser, not synchronized across devices.

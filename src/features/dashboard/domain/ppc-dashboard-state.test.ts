@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatWeekRange, getMonthWeekStarts, parsePpcDashboardStore, reportKey, startOfWeekIso, withCalculatedPerformance } from "./ppc-dashboard-state";
+import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatReportingMonthRange, formatWeekRange, getMonthWeekStarts, getSelectedMonthWeekStarts, parsePpcDashboardStore, reportKey, startOfWeekIso, withCalculatedPerformance } from "./ppc-dashboard-state";
 
 describe("PPC dashboard state", () => {
   it("creates stable product/week report keys for Wednesday through Tuesday periods", () => {
@@ -21,6 +21,34 @@ describe("PPC dashboard state", () => {
     expect(parsed.reports["product-1:2026-08-26"].weeklyBudget).toBe(2000);
     expect(parsed.reports["product-1:2026-08-26"].notes).toBe("Keep this");
     expect(parsePpcDashboardStore("not json")).toEqual({ version: 1, reports: {} });
+  });
+
+  it("validates budget history while keeping older reports backward compatible", () => {
+    const parsed = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { report: {
+      ...createWeeklyPpcReport("product-1", "2026-08-26"),
+      budgetHistory: [
+        { id: "valid", changedAt: "2026-09-08T01:00:00.000Z", from: 30, to: 50 },
+        { id: "same", changedAt: "2026-09-08T01:00:00.000Z", from: 50, to: 50 },
+        { id: "invalid", changedAt: "not-a-date", from: 50, to: 80 },
+      ],
+    } } }));
+
+    expect(parsed.reports["product-1:2026-08-26"].budgetHistory).toEqual([
+      { id: "valid", changedAt: "2026-09-08T01:00:00.000Z", from: 30, to: 50 },
+    ]);
+    expect(parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { legacy: {
+      productId: "legacy-product", weekStart: "2026-08-26",
+    } } })).reports["legacy-product:2026-08-26"].budgetHistory).toEqual([]);
+  });
+
+  it("unions selected months, includes boundary weeks, and describes their full coverage", () => {
+    expect(getSelectedMonthWeekStarts(["2026-09"], "2026-09-02")).toEqual(["2026-09-02", "2026-08-26"]);
+    expect(formatReportingMonthRange(["2026-09-02", "2026-08-26"])).toBe("August & September 2026");
+
+    const augustAndSeptember = getSelectedMonthWeekStarts(["2026-08", "2026-09"], "2026-09-02");
+    expect(augustAndSeptember).toEqual(["2026-09-02", "2026-08-26", "2026-08-19", "2026-08-12", "2026-08-05", "2026-07-29"]);
+    expect(formatReportingMonthRange(augustAndSeptember)).toBe("July–September 2026");
+    expect(getSelectedMonthWeekStarts(["invalid", "2026-13"], "2026-09-02")).toEqual([]);
   });
 
   it("migrates legacy sales and order metrics into the expanded performance report", () => {

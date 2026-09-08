@@ -1,5 +1,11 @@
 # Data Contract
 
+## Budget history and reporting-period selection
+
+The existing version-1 `glassco.ppcPerformanceNotes.v1` report accepts optional `budgetHistory: Array<{ id, changedAt, from, to }>` in newest-first order. Older reports restore with an empty array. Parsing rejects invalid dates, negative/non-finite values, and no-op changes, normalizes timestamps to ISO, limits IDs to 100 characters, and keeps at most 100 entries per product/week. Draft status values remain supported for backward compatibility even though Draft badges and the Save Draft action are no longer shown.
+
+Selected reporting months are not persisted and do not change report or performance-cache keys. They only filter which existing weekly records are visible; overlap weeks remain represented by their stable Wednesday `weekStart`.
+
 ## Saved weekly performance and smaller tags
 
 `glassco.ppcPerformanceCache.v1` stores `{ version: 1, entries: { ["US:<ASIN>:<Wednesday date>"]: performance } }` using the minimal performance DTO, never credentials or raw MCP payloads. Restoration validates exact ASIN, US marketplace, real bounded weekly dates, finite nonnegative source numbers and integer orders; it recalculates derived numbers and reconstructs keys. Snapshots include actual end date, freshness and warnings; genuine zero metrics remain valid cache entries. Existing report/catalog keys are unchanged. No automatic expiry or background refresh occurs; Refresh replaces only the selected snapshot. Whole-number formatting is presentation-only and does not change the stored DTO.

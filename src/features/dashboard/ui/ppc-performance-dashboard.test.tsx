@@ -80,21 +80,35 @@ describe("PpcPerformanceDashboard", () => {
     expect(currentPeriod).toHaveAttribute("aria-pressed", "true");
     expect(within(screen.getByLabelText("Reporting periods")).getAllByRole("button")[0]).toBe(currentPeriod);
 
-    const monthTrigger = screen.getByRole("button", { name: "Choose reporting month, August 2026" });
+    expect(screen.queryByText("Draft", { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save Draft" })).not.toBeInTheDocument();
+    const monthTrigger = screen.getByRole("button", { name: "Choose reporting months, July–September 2026" });
     expect(monthTrigger.querySelector("svg")).not.toBeNull();
-    expect(within(screen.getByRole("group", { name: "Month navigation" })).queryByRole("button", { name: /Choose reporting month/i })).not.toBeInTheDocument();
+    expect(within(screen.getByRole("group", { name: "Month navigation" })).queryByRole("button", { name: /Choose reporting months/i })).not.toBeInTheDocument();
     fireEvent.click(monthTrigger);
-    const monthDialog = screen.getByRole("dialog", { name: "Choose a month" });
+    const monthDialog = screen.getByRole("dialog", { name: "Choose months" });
     expect(within(monthDialog).getByRole("button", { name: "August 2026" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(within(monthDialog).getByRole("button", { name: "July 2026" }));
-    expect(screen.getByRole("button", { name: "Choose reporting month, July 2026" })).toBeVisible();
+    expect(within(monthDialog).getByRole("button", { name: "July 2026" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("dialog", { name: "Choose months" })).toBeVisible();
+    fireEvent.click(within(monthDialog).getByRole("button", { name: "Apply months" }));
+    expect(screen.getByRole("button", { name: "Choose reporting months, July–September 2026" })).toBeVisible();
     expect(within(screen.getByLabelText("Reporting periods")).getAllByRole("button")[0]).toHaveTextContent("Current");
-    fireEvent.click(screen.getByRole("button", { name: "Choose reporting month, July 2026" }));
+    fireEvent.click(screen.getByRole("button", { name: /Choose reporting months/i }));
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByRole("dialog", { name: "Choose a month" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Choose months" })).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole("textbox", { name: /Weekly limit/i }), { target: { value: "1500" } });
+    const weeklyLimit = screen.getByRole("textbox", { name: "Weekly limit" });
+    fireEvent.focus(weeklyLimit);
+    fireEvent.change(weeklyLimit, { target: { value: "1500" } });
+    fireEvent.blur(weeklyLimit);
     expect(screen.getByText("$214.29")).toBeVisible();
+    const budgetHistory = screen.getByRole("table", { name: "Budget change history" });
+    expect(within(budgetHistory).getByRole("columnheader", { name: "Date of Change" })).toBeVisible();
+    expect(within(budgetHistory).getByRole("columnheader", { name: "From" })).toBeVisible();
+    expect(within(budgetHistory).getByRole("columnheader", { name: "To" })).toBeVisible();
+    expect(within(budgetHistory).getByText("$0")).toBeVisible();
+    expect(within(budgetHistory).getByText("$1,500")).toBeVisible();
     fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "350" } });
     expect(screen.getByText("$1,150")).toBeVisible();
     expect(screen.getByText("23% of the weekly budget used")).toBeVisible();
@@ -111,6 +125,7 @@ describe("PpcPerformanceDashboard", () => {
       weekStart: "2026-08-26",
       weeklyBudget: 1500,
       dailyBudget: 214.29,
+      budgetHistory: [expect.objectContaining({ from: 0, to: 1500 })],
       spend: 350,
       notes: "Scale the best converting exact-match campaign.",
       status: "Draft",
@@ -233,14 +248,16 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
   });
 
-  it("lists the current week first and follows it with earlier weeks", async () => {
+  it("shows only selected-month weeks, including their boundary overlap", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-09-03" />);
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
 
     const periods = within(screen.getByLabelText("Reporting periods")).getAllByRole("button");
     expect(periods[0]).toHaveTextContent("September 2 to September 8");
     expect(periods[1]).toHaveTextContent("August 26 to September 1");
-    expect(periods[2]).toHaveTextContent("August 19 to August 25");
+    expect(periods).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Choose reporting months, August & September 2026" })).toBeVisible();
+    expect(screen.queryByText("August 19 to August 25")).not.toBeInTheDocument();
     expect(screen.queryByText("September 30 to October 6")).not.toBeInTheDocument();
   });
 

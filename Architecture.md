@@ -1,5 +1,11 @@
 # Glassco Back Office Library — Architecture
 
+## Budget history and multi-month reporting
+
+`WeeklyPpcReport` adds a backward-compatible `budgetHistory` array. Budget edit focus captures the original weekly limit; blur or Enter appends one validated change and lets the existing dirty-report auto-save persist it. Parsed rows require a valid timestamp, distinct finite nonnegative values, and are capped at 100 per report.
+
+Multi-month selection is transient client UI state. Pure domain helpers validate and union selected `YYYY-MM` keys into deduplicated Wednesday week starts, cap the result at the current week, and calculate a human-readable label from every month touched by the resulting Wednesday–Tuesday ranges. Changing the selection immediately moves an out-of-range active week to the newest visible week.
+
 ## Saved weekly performance and smaller tags
 
 A versioned local performance snapshot cache is independent of editable weekly reports, keyed by US marketplace, normalized ASIN, and Wednesday start. Hydration completes before automatic fetches. Five source values are validated and derived metrics recalculated when restoring snapshots; no OAuth material is stored. Successful fetches persist immediately, week cards and detail metrics overlay the matching snapshot, and explicit Refresh bypasses the cache. Canceled requests cannot update state; failed refreshes preserve cached values and read-only imported inputs. The metrics input layer rounds only its rendered value, leaving cached and calculated numbers exact.

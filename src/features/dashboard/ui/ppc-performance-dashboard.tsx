@@ -9,9 +9,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent a
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
-  PPC_DASHBOARD_STORAGE_KEY, addDaysIso, addMonthsIso, createWeeklyPpcReport, currency, formatMonth,
-  formatWeekRange, getIsoWeekNumber, getMonthWeekStarts, parsePpcDashboardStore, percentage, reportKey,
-  startOfWeekIso, withCalculatedPerformance, type ActionItem, type DashboardProduct, type GoalStatus, type ReportStatus,
+  PPC_DASHBOARD_STORAGE_KEY, addDaysIso, addMonthsIso, createWeeklyPpcReport, currency,
+  formatReportingMonthRange, formatWeekRange, getIsoWeekNumber, getSelectedMonthWeekStarts, parsePpcDashboardStore, percentage, reportKey,
+  startOfWeekIso, withCalculatedPerformance, type ActionItem, type DashboardProduct, type GoalStatus,
   type WeeklyGoal, type WeeklyPpcReport,
 } from "../domain/ppc-dashboard-state";
 import {
@@ -152,13 +152,15 @@ function priorityTone(priority: ActionItem["priority"]) {
 
 export function PpcPerformanceDashboard({ initialToday }: { initialToday: string }) {
   const initialWeekStart = startOfWeekIso(initialToday);
+  const initialMonthKey = initialToday.slice(0, 7);
   const [pipelineProducts, setPipelineProducts] = useState<DashboardProduct[]>([]);
   const [catalog, setCatalog] = useState<DashboardCatalogStore>(emptyDashboardCatalog);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedWeekStart, setSelectedWeekStart] = useState(initialWeekStart);
-  const [monthAnchor, setMonthAnchor] = useState(initialToday);
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([initialMonthKey]);
+  const [draftSelectedMonths, setDraftSelectedMonths] = useState<string[]>([initialMonthKey]);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [monthPickerYear, setMonthPickerYear] = useState(Number(initialToday.slice(0, 4)));
   const currentWeekStart = initialWeekStart;
@@ -170,6 +172,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const [performanceCache, setPerformanceCache] = useState<PerformanceCache>({});
   const cacheRef = useRef<PerformanceCache>({});
   const refreshRequest = useRef("");
+  const budgetEditStartRef = useRef<{ key: string; value: number } | null>(null);
   const [cacheReady, setCacheReady] = useState(false);
 
   const loadProducts = useCallback(async (signal?: AbortSignal) => {
@@ -239,7 +242,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         });
         setSaveNotice("Changes saved automatically");
       } catch {
-        setSaveNotice("Auto-save failed — use Save Draft");
+        setSaveNotice("Auto-save failed — use Save Changes");
       }
     }, AUTO_SAVE_DELAY_MS);
 
@@ -254,25 +257,18 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   }, [monthPickerOpen]);
 
   const products = useMemo(() => mergeDashboardProducts(pipelineProducts, catalog), [catalog, pipelineProducts]);
-  const weekStarts = useMemo(() => {
-    if (monthAnchor.slice(0, 7) === initialToday.slice(0, 7)) {
-      return Array.from({ length: 6 }, (_, index) => addDaysIso(currentWeekStart, index * -7));
-    }
-    const monthWeekStarts = monthAnchor ? getMonthWeekStarts(monthAnchor) : [];
-    const previousWeekStarts = monthWeekStarts
-      .filter(weekStart => weekStart < currentWeekStart)
-      .sort((first, second) => second.localeCompare(first));
-    return [currentWeekStart, ...previousWeekStarts];
-  }, [currentWeekStart, initialToday, monthAnchor]);
+  const weekStarts = useMemo(() => getSelectedMonthWeekStarts(selectedMonths, currentWeekStart), [currentWeekStart, selectedMonths]);
+  const reportingMonthLabel = useMemo(() => formatReportingMonthRange(weekStarts), [weekStarts]);
+  const activeWeekStart = weekStarts.includes(selectedWeekStart) ? selectedWeekStart : weekStarts[0] ?? selectedWeekStart;
   const selectedProduct = products.find(product => product.id === selectedProductId) ?? null;
   const selectedProductTag = selectedProduct ? catalog.tags.find(tag => tag.id === selectedProduct.tagId) ?? null : null;
-  const selectedKey = selectedProductId && selectedWeekStart ? reportKey(selectedProductId, selectedWeekStart) : "";
+  const selectedKey = selectedProductId && activeWeekStart ? reportKey(selectedProductId, activeWeekStart) : "";
   const selectedAsin = selectedProduct?.asin?.trim() || "";
-  const snapshotKey = performanceCacheKey(selectedAsin, selectedWeekStart);
+  const snapshotKey = performanceCacheKey(selectedAsin, activeWeekStart);
   const cachedPerformance = performanceCache[snapshotKey];
   const dirty = selectedKey ? dirtyReportKeys.has(selectedKey) : false;
-  const previousReport = selectedProductId && selectedWeekStart ? reports[reportKey(selectedProductId, addDaysIso(selectedWeekStart, -7))] ?? null : null;
-  const savedReport = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart, previousReport) : null;
+  const previousReport = selectedProductId && activeWeekStart ? reports[reportKey(selectedProductId, addDaysIso(activeWeekStart, -7))] ?? null : null;
+  const savedReport = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, activeWeekStart, previousReport) : null;
   const report = savedReport && cachedPerformance ? { ...savedReport, ...cachedPerformance.metrics } : savedReport;
   const displayedPerformanceLoad: PerformanceLoadState = !selectedKey
     ? { key: "", status: "idle", message: "", warnings: [] }
@@ -291,7 +287,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   useEffect(() => {
     if (!cacheReady || !selectedKey || !selectedAsin) return;
     const controller = new AbortController();
-    const query = new URLSearchParams({ asin: selectedAsin, country: "US", weekStart: selectedWeekStart });
+    const query = new URLSearchParams({ asin: selectedAsin, country: "US", weekStart: activeWeekStart });
     const requestTimer = window.setTimeout(() => {
       const cached = cacheRef.current[snapshotKey];
       if (cached && refreshRequest.current !== snapshotKey) {
@@ -328,11 +324,11 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
           throw new Error(message);
         }
         const performance = parsePerformanceSnapshot((value as { performance?: unknown }).performance);
-        if (!performance?.metrics || performance.asin !== selectedAsin.toUpperCase() || performance.startDate !== selectedWeekStart) {
+        if (!performance?.metrics || performance.asin !== selectedAsin.toUpperCase() || performance.startDate !== activeWeekStart) {
           throw new Error("Scale Insights returned an invalid performance response.");
         }
         setReports(current => {
-          const currentReport = current[selectedKey] ?? createWeeklyPpcReport(selectedProductId, selectedWeekStart, current[reportKey(selectedProductId, addDaysIso(selectedWeekStart, -7))]);
+          const currentReport = current[selectedKey] ?? createWeeklyPpcReport(selectedProductId, activeWeekStart, current[reportKey(selectedProductId, addDaysIso(activeWeekStart, -7))]);
           return { ...current, [selectedKey]: withCalculatedPerformance({ ...currentReport, ...performance.metrics }) };
         });
         const nextCache = { ...cacheRef.current, [snapshotKey]: performance };
@@ -352,7 +348,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
       });
     }, 0);
     return () => { window.clearTimeout(requestTimer); controller.abort(); };
-  }, [cacheReady, performanceRefresh, selectedAsin, selectedKey, selectedProductId, selectedWeekStart, snapshotKey]);
+  }, [activeWeekStart, cacheReady, performanceRefresh, selectedAsin, selectedKey, selectedProductId, snapshotKey]);
 
   const replaceReport = (nextReport: WeeklyPpcReport) => {
     if (!selectedKey) return;
@@ -363,8 +359,45 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const patchReport = (patch: Partial<WeeklyPpcReport>) => { if (report) replaceReport(withCalculatedPerformance({ ...report, ...patch })); };
   const selectProduct = (productId: string) => { setSelectedProductId(productId); setSaveNotice(""); };
   const selectWeek = (weekStart: string) => { setSelectedWeekStart(weekStart); setSaveNotice(""); };
-  const openMonthPicker = () => { setMonthPickerYear(Number(monthAnchor.slice(0, 4))); setMonthPickerOpen(true); };
-  const selectMonth = (monthIndex: number) => { setMonthAnchor(`${monthPickerYear}-${String(monthIndex + 1).padStart(2, "0")}-01`); setMonthPickerOpen(false); };
+  const commitSelectedMonths = (monthKeys: string[]) => {
+    const nextMonths = [...new Set(monthKeys)].sort();
+    const nextWeekStarts = getSelectedMonthWeekStarts(nextMonths, currentWeekStart);
+    setSelectedMonths(nextMonths);
+    setSelectedWeekStart(current => nextWeekStarts.includes(current) ? current : nextWeekStarts[0] ?? current);
+  };
+  const shiftReportingMonths = (months: number) => commitSelectedMonths(selectedMonths.map(monthKey => addMonthsIso(`${monthKey}-01`, months).slice(0, 7)));
+  const openMonthPicker = () => {
+    setMonthPickerYear(Number(selectedMonths.at(-1)?.slice(0, 4) || initialToday.slice(0, 4)));
+    setDraftSelectedMonths(selectedMonths);
+    setMonthPickerOpen(true);
+  };
+  const toggleDraftMonth = (monthIndex: number) => {
+    const monthKey = `${monthPickerYear}-${String(monthIndex + 1).padStart(2, "0")}`;
+    setDraftSelectedMonths(current => current.includes(monthKey) ? current.filter(candidate => candidate !== monthKey) : [...current, monthKey].sort());
+  };
+  const selectPickerYear = () => setDraftSelectedMonths(current => [...new Set([
+    ...current,
+    ...MONTH_NAMES.map((_, monthIndex) => `${monthPickerYear}-${String(monthIndex + 1).padStart(2, "0")}`),
+  ])].sort());
+  const applySelectedMonths = () => {
+    if (!draftSelectedMonths.length) return;
+    commitSelectedMonths(draftSelectedMonths);
+    setMonthPickerOpen(false);
+  };
+
+  const finishBudgetEdit = (rawValue: string) => {
+    if (!report || !selectedKey) return;
+    const to = numericValue(rawValue);
+    const from = budgetEditStartRef.current?.key === selectedKey ? budgetEditStartRef.current.value : report.weeklyBudget;
+    budgetEditStartRef.current = null;
+    if (from === to) return;
+    const suffix = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : String(Date.now());
+    patchReport({
+      weeklyBudget: to,
+      dailyBudget: dailyLimitFromWeekly(to),
+      budgetHistory: [{ id: `budget-change-${suffix}`, changedAt: new Date().toISOString(), from, to }, ...report.budgetHistory].slice(0, 100),
+    });
+  };
 
   const persistCatalog = (nextCatalog: DashboardCatalogStore) => {
     try {
@@ -426,14 +459,14 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   };
   const removeAction = (actionId: string) => { if (report) patchReport({ actions: report.actions.filter(action => action.id !== actionId) }); };
 
-  const saveReport = (status: ReportStatus) => {
+  const saveReport = () => {
     if (!report || !selectedKey) return;
-    const saved = { ...report, status, updatedAt: new Date().toISOString() };
+    const saved = { ...report, status: "Completed" as const, updatedAt: new Date().toISOString() };
     const storedReports = parsePpcDashboardStore(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY)).reports;
     window.localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({ version: 1, reports: { ...storedReports, [selectedKey]: saved } }));
     setReports(current => ({ ...current, [selectedKey]: saved }));
     setDirtyReportKeys(current => { const next = new Set(current); next.delete(selectedKey); return next; });
-    setSaveNotice(status === "Completed" ? "Weekly report saved" : "Draft saved");
+    setSaveNotice("Weekly report saved");
   };
 
   return <section className={styles.dashboard} aria-label="Weekly PPC Performance Notes">
@@ -442,17 +475,18 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     <aside className={styles.periodsPanel} aria-labelledby="periods-heading">
       <div className={styles.panelHeader}>
         <div className={styles.headingRow}><div><span className={styles.eyebrow}>TIMELINE</span><h2 id="periods-heading">Reporting Periods</h2></div></div>
-        <div className={styles.monthPickerRow}><div className={styles.monthPicker} role="group" aria-label="Month navigation"><button type="button" aria-label="Previous month" onClick={() => monthAnchor && setMonthAnchor(addMonthsIso(monthAnchor, -1))}><ArrowLeft /></button><strong>{formatMonth(monthAnchor)}</strong><button type="button" aria-label="Next month" onClick={() => monthAnchor && setMonthAnchor(addMonthsIso(monthAnchor, 1))}><ArrowRight /></button></div><button type="button" className={styles.calendarPickerButton} aria-label={`Choose reporting month, ${formatMonth(monthAnchor)}`} onClick={openMonthPicker}><CalendarDays aria-hidden="true" /></button></div>
+        <div className={styles.monthPickerRow}><div className={styles.monthPicker} role="group" aria-label="Month navigation"><button type="button" aria-label="Previous selected month range" onClick={() => shiftReportingMonths(-1)}><ArrowLeft /></button><strong>{reportingMonthLabel}</strong><button type="button" aria-label="Next selected month range" onClick={() => shiftReportingMonths(1)}><ArrowRight /></button></div><button type="button" className={styles.calendarPickerButton} aria-label={`Choose reporting months, ${reportingMonthLabel}`} onClick={openMonthPicker}><CalendarDays aria-hidden="true" /></button></div>
       </div>
       <div className={styles.periodList} aria-label="Reporting periods">{weekStarts.map(weekStart => {
         const periodDraft = selectedProductId ? reports[reportKey(selectedProductId, weekStart)] : null;
         const periodSnapshot = performanceCache[performanceCacheKey(selectedAsin, weekStart)];
         const periodReport = periodSnapshot ? { ...periodDraft, ...periodSnapshot.metrics } : periodDraft;
+        const periodStatus = periodReport?.status ?? "Draft";
         const isCurrent = weekStart === currentWeekStart;
-        const isSelected = weekStart === selectedWeekStart;
+        const isSelected = weekStart === activeWeekStart;
         return <button type="button" key={weekStart} aria-pressed={isSelected} className={`${styles.periodCard} ${isSelected ? styles.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
           {isCurrent ? <span className={styles.currentBadge}>Current</span> : null}
-          <span className={styles.periodTop}><span><strong>{formatWeekRange(weekStart)}</strong><small>Week {getIsoWeekNumber(weekStart)}</small></span><i className={statusTone(periodReport?.status ?? "Draft")}>{periodReport?.status ?? "Draft"}</i></span>
+          <span className={styles.periodTop}><span><strong>{formatWeekRange(weekStart)}</strong><small>Week {getIsoWeekNumber(weekStart)}</small></span>{periodStatus === "Draft" ? null : <i className={statusTone(periodStatus)}>{periodStatus}</i>}</span>
           <span className={styles.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>Sales</small><strong>{currency(periodReport?.totalSales ?? 0)}</strong></span><span><small>Order</small><strong>{periodReport?.totalOrders ?? 0}</strong></span><span><small>ACOS</small><strong>{periodReport?.acos ?? 0}%</strong></span></span>
         </button>;
       })}</div>
@@ -461,8 +495,8 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     <main className={styles.workspace}>
       {!selectedProduct || !report ? <div className={styles.workspaceEmpty}><BarChart3 aria-hidden="true" /><h2>Select a product</h2><p>Choose a Pipeline product to start its weekly PPC documentation.</p></div> : <>
         <header className={styles.workspaceHeader}>
-          <div className={styles.workspaceProduct}>{selectedProduct.imageDataUrl ? <span className={styles.workspaceProductImage}><Image src={selectedProduct.imageDataUrl} alt={`${selectedProduct.name} product`} width={62} height={62} unoptimized /></span> : null}<div><span className={styles.eyebrow}>WEEKLY PPC PERFORMANCE</span><div className={styles.titleRow}><h2>{selectedProduct.name}</h2>{selectedProductTag ? <span>{selectedProductTag.name}</span> : null}</div><p>ASIN: {selectedProduct.asin ? <a href={`https://www.amazon.com/dp/${encodeURIComponent(selectedProduct.asin)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product ASIN ${selectedProduct.asin} on Amazon`}>{selectedProduct.asin}</a> : <strong>N/A</strong>}<i />SKU: {selectedProduct.sku ? <a href={`https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=${encodeURIComponent(selectedProduct.sku)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product SKU ${selectedProduct.sku} in Seller Central`}>{selectedProduct.sku}</a> : <strong>N/A</strong>}<i /><CalendarDays />{formatWeekRange(selectedWeekStart)} · Week {getIsoWeekNumber(selectedWeekStart)}</p></div></div>
-          <div className={styles.saveArea}><div><button type="button" className={styles.secondaryButton} onClick={() => saveReport("Draft")}><FileText />Save Draft</button><button type="button" className={styles.primaryButton} onClick={() => saveReport("Completed")}><Save />{dirty ? "Save Changes" : "Weekly Report"}</button></div><small className={dirty ? styles.unsaved : styles.saved}>{dirty ? saveNotice || "Saving changes…" : saveNotice || (report.updatedAt ? `Saved ${new Date(report.updatedAt).toLocaleString()}` : "Local draft not saved yet")}</small></div>
+          <div className={styles.workspaceProduct}>{selectedProduct.imageDataUrl ? <span className={styles.workspaceProductImage}><Image src={selectedProduct.imageDataUrl} alt={`${selectedProduct.name} product`} width={62} height={62} unoptimized /></span> : null}<div><span className={styles.eyebrow}>WEEKLY PPC PERFORMANCE</span><div className={styles.titleRow}><h2>{selectedProduct.name}</h2>{selectedProductTag ? <span>{selectedProductTag.name}</span> : null}</div><p>ASIN: {selectedProduct.asin ? <a href={`https://www.amazon.com/dp/${encodeURIComponent(selectedProduct.asin)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product ASIN ${selectedProduct.asin} on Amazon`}>{selectedProduct.asin}</a> : <strong>N/A</strong>}<i />SKU: {selectedProduct.sku ? <a href={`https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=${encodeURIComponent(selectedProduct.sku)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product SKU ${selectedProduct.sku} in Seller Central`}>{selectedProduct.sku}</a> : <strong>N/A</strong>}<i /><CalendarDays />{formatWeekRange(activeWeekStart)} · Week {getIsoWeekNumber(activeWeekStart)}</p></div></div>
+          <div className={styles.saveArea}><div><button type="button" className={styles.primaryButton} onClick={saveReport}><Save />{dirty ? "Save Changes" : "Weekly Report"}</button></div><small className={dirty ? styles.unsaved : styles.saved}>{dirty ? saveNotice || "Saving changes…" : saveNotice || (report.updatedAt ? `Saved ${new Date(report.updatedAt).toLocaleString()}` : "Not saved yet")}</small></div>
         </header>
 
         <div className={styles.workspaceScroll}>
@@ -472,19 +506,26 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
             <section className={styles.card} aria-labelledby="budget-heading">
               <div className={styles.cardTitle}><h3 id="budget-heading"><DollarSign />Budget Tracking</h3></div>
               <div className={styles.budgetGrid}>
-                <label><span>Weekly limit</span><span className={styles.moneyInput}><i>$</i><input inputMode="decimal" value={report.weeklyBudget || ""} placeholder="0" onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} /></span></label>
+                <label><span>Weekly limit</span><span className={styles.moneyInput}><i>$</i><input aria-label="Weekly limit" inputMode="decimal" value={report.weeklyBudget || ""} placeholder="0" onFocus={() => { budgetEditStartRef.current = { key: selectedKey, value: report.weeklyBudget }; }} onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} onBlur={event => finishBudgetEdit(event.currentTarget.value)} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span></label>
                 <div><span>Daily limit</span><strong>{preciseCurrency(dailyLimitFromWeekly(report.weeklyBudget))}</strong></div>
                 <label><span>Actual spend</span><span className={styles.moneyInput}><i>$</i><input aria-label="Actual spend" aria-readonly={importedMetricsLocked || undefined} readOnly={importedMetricsLocked} inputMode="decimal" value={report.spend || ""} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span></label>
                 <div className={isOverspent ? styles.budgetOver : ""}><span>{isOverspent ? "Overspent" : "Remaining"}</span><strong>{currency(Math.abs(budgetBalance))}</strong></div>
               </div>
               <div className={styles.progressTrack} aria-label={`${budgetUsage}% of weekly budget used`}><span className={budgetUsage >= 100 ? styles.progressDanger : budgetUsage >= 80 ? styles.progressWarning : ""} style={{ width: `${Math.min(100, budgetUsage)}%` }} /></div><small>{budgetUsage}% of the weekly budget used</small>
+              <div className={styles.budgetHistory}>
+                <h4>Budget History</h4>
+                <table aria-label="Budget change history">
+                  <thead><tr><th>Date of Change</th><th>From</th><th>To</th></tr></thead>
+                  <tbody>{report.budgetHistory.length ? report.budgetHistory.map(change => <tr key={change.id}><td>{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(change.changedAt))}</td><td>{preciseCurrency(change.from)}</td><td>{preciseCurrency(change.to)}</td></tr>) : <tr><td colSpan={3}>No budget changes recorded yet.</td></tr>}</tbody>
+                </table>
+              </div>
             </section>
           </div>
 
 <section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><div className={styles.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? styles.performanceError : ""}>{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}<button type="button" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => { refreshRequest.current = snapshotKey; setPerformanceRefresh(value => value + 1); }}><RefreshCw aria-hidden="true" />Refresh</button></div></div>{displayedPerformanceLoad.warnings.length ? <ul className={styles.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}<div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
 
           <div className={styles.twoColumn}>
-            <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}><span className={statusTone(previousReport.status)}>{previousReport.status}</span><strong>{currency(previousReport.totalSales)} total sales · {previousReport.tacos || 0}% TACOS</strong><p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : null}<FormattedTextarea label="Carry-forward result and lessons" value={report.previousWeekResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></section>
+            <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}>{previousReport.status === "Draft" ? null : <span className={statusTone(previousReport.status)}>{previousReport.status}</span>}<strong>{currency(previousReport.totalSales)} total sales · {previousReport.tacos || 0}% TACOS</strong><p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : null}<FormattedTextarea label="Carry-forward result and lessons" value={report.previousWeekResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></section>
             <section className={styles.card} aria-labelledby="notes-heading"><div className={styles.cardTitle}><h3 id="notes-heading"><FileText />Weekly Summary & Notes</h3></div><FormattedTextarea label="Performance documentation" value={report.notes} onChange={notes => patchReport({ notes })} placeholder="Executive summary, wins, underperformance, bid changes, negative keywords, learnings, and priorities for next week..." /></section>
           </div>
 
@@ -495,14 +536,15 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
 
     {monthPickerOpen ? <div className={styles.monthDialogBackdrop} onMouseDown={event => { if (event.target === event.currentTarget) setMonthPickerOpen(false); }}>
       <section className={styles.monthDialog} role="dialog" aria-modal="true" aria-labelledby="month-dialog-heading">
-        <header><div><span className={styles.eyebrow}>REPORTING PERIOD</span><h2 id="month-dialog-heading">Choose a month</h2></div><button type="button" aria-label="Close month picker" onClick={() => setMonthPickerOpen(false)}><X aria-hidden="true" /></button></header>
+        <header><div><span className={styles.eyebrow}>REPORTING PERIOD</span><h2 id="month-dialog-heading">Choose months</h2><p>Select every month you want to display. Boundary weeks are included.</p></div><button type="button" aria-label="Close month picker" onClick={() => setMonthPickerOpen(false)}><X aria-hidden="true" /></button></header>
         <div className={styles.monthDialogYear}><button type="button" aria-label="Previous year" onClick={() => setMonthPickerYear(year => year - 1)}><ArrowLeft aria-hidden="true" /></button><strong>{monthPickerYear}</strong><button type="button" aria-label="Next year" onClick={() => setMonthPickerYear(year => year + 1)}><ArrowRight aria-hidden="true" /></button></div>
         <div className={styles.monthGrid}>{MONTH_NAMES.map((monthName, monthIndex) => {
           const monthValue = `${monthPickerYear}-${String(monthIndex + 1).padStart(2, "0")}`;
-          const isSelectedMonth = monthAnchor.startsWith(monthValue);
+          const isSelectedMonth = draftSelectedMonths.includes(monthValue);
           const isCurrentMonth = initialToday.startsWith(monthValue);
-          return <button type="button" key={monthName} className={`${styles.monthOption} ${isSelectedMonth ? styles.monthOptionSelected : ""} ${isCurrentMonth ? styles.monthOptionCurrent : ""}`} aria-label={`${monthName} ${monthPickerYear}`} aria-pressed={isSelectedMonth} aria-current={isCurrentMonth ? "date" : undefined} autoFocus={isSelectedMonth} onClick={() => selectMonth(monthIndex)}><span>{monthName}</span>{isCurrentMonth ? <small>Current</small> : null}</button>;
+          return <button type="button" key={monthName} className={`${styles.monthOption} ${isSelectedMonth ? styles.monthOptionSelected : ""} ${isCurrentMonth ? styles.monthOptionCurrent : ""}`} aria-label={`${monthName} ${monthPickerYear}`} aria-pressed={isSelectedMonth} aria-current={isCurrentMonth ? "date" : undefined} onClick={() => toggleDraftMonth(monthIndex)}><span>{monthName}</span>{isCurrentMonth ? <small>Current</small> : null}</button>;
         })}</div>
+        <footer className={styles.monthDialogFooter}><span>{draftSelectedMonths.length} month{draftSelectedMonths.length === 1 ? "" : "s"} selected</span><div><button type="button" onClick={() => setDraftSelectedMonths([])}>Clear</button><button type="button" onClick={selectPickerYear}>Select {monthPickerYear}</button><button type="button" className={styles.applyMonths} disabled={!draftSelectedMonths.length} onClick={applySelectedMonths}>Apply months</button></div></footer>
       </section>
     </div> : null}
   </section>;
