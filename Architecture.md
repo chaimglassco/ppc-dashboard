@@ -1,5 +1,11 @@
 # Glassco Back Office Library — Architecture
 
+## Goal resolution and previous-week comparisons
+
+`WeeklyPpcReport.goalHistory` is a backward-compatible, validated array of at most 100 resolved goals per product/week. Achieved/Missed actions atomically remove an item from `goals`, prepend a terminal history entry with an ISO timestamp, and use the existing dirty-report auto-save. The product-level history dialog derives a newest-first view across saved reports without duplicating data. Parser migration moves legacy terminal goals out of the active list, using the report update time or reporting-week start as a deterministic resolution timestamp; malformed history entries are discarded.
+
+The previous-week comparison layer overlays the matching validated performance snapshot on the prior local report, then passes those metrics to the existing metric renderer. Display formatting rounds and adds thousands separators without modifying cached precision. Direction is derived only from current minus previous value; it does not infer whether a metric change is strategically good or bad. Budget alignment and removal of the redundant summary are presentation-only.
+
 ## Target ACOS and ASIN-scoped Scale Insights links
 
 `WeeklyPpcReport.targetAcos` is an optional-compatible finite nonnegative number normalized into the existing version-1 browser report schema. The warning state is derived during render from `targetAcos > 0 && acos > targetAcos`; Scale Insights remains the source of actual ACOS and Target ACOS is never sent upstream.

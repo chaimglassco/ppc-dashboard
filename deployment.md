@@ -4,6 +4,8 @@
 
 The Library deploys as a Next.js microfrontend under `/ppc`. Pipeline Postgres is authoritative for documents, categories, tombstones, versions, audit records, and shared backups after the protected one-time legacy Blob migration. Private Vercel Blob remains required for uploaded images and the immutable legacy migration artifact. Repository Markdown is bootstrap/compatibility content only; bookmarks, history, completion, and last-read position remain browser-local.
 
+Goal History extends the existing version-1 browser report value with an optional array and requires no environment variable, database, or server migration. After deployment, verify resolving one Achieved and one Missed goal survives reload, is scoped to the selected product, and does not reappear in the active list. Also verify previous-week indicators, comma-formatted whole metrics, centered budget values, and removal of the redundant previous sales/TACOS summary.
+
 ## Prerequisites
 
 - Node.js 20.9 or newer

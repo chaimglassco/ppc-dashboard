@@ -1,5 +1,11 @@
 # Glassco Back Office Library — Product Specification
 
+## Goal history and previous-week metric comparisons
+
+Each active weekly goal has explicit Achieved and Missed actions beside Delete. Resolving a goal removes it from the active list and records its title, target, actual, outcome, completion time, and reporting week in the selected product's Goal History. The history button sits beside Add Goal and shows resolved goals across that product's saved weeks. Active status choices remain On Track or At Risk. Older terminal goals are migrated into history when restored.
+
+Weekly Performance cards show the previous week's rounded value in small text at the lower-right when a prior snapshot or report exists. A green up arrow means the current value increased, a red down arrow means it decreased, and an unchanged value has no arrow. Whole-number metric presentation uses thousands separators. Budget Weekly limit and Actual spend values are centered; Actual spend is displayed as a rounded whole number. The duplicate previous-week sales/TACOS summary is removed from Previous Week Result while its outcome notes remain.
+
 ## Target ACOS and ASIN analysis navigation
 
 Each product/week report includes an editable Target ACOS beside Weekly Performance. When Target ACOS is greater than zero and actual ACOS exceeds it, the ACOS metric card changes to a red warning treatment; meeting the target or leaving it unset uses the normal card treatment.

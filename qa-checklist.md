@@ -2,6 +2,12 @@
 
 Use this checklist before merging or deploying changes.
 
+## Goal history and previous-week comparisons
+
+Create or edit a goal, then use the circle-check Achieved action and verify it immediately leaves the active list and appears in Goal History with its target, actual, outcome, reporting week, and recorded date. Repeat with the X Missed action. Reload and switch weeks to confirm product-wide history persists. Verify Delete still removes without creating history, active status choices are limited to On Track/At Risk, malformed history is dropped, legacy terminal goals migrate, Escape/backdrop/Close dismiss the dialog, and other products do not expose this product's history.
+
+With adjacent weeks containing data, verify each Weekly Performance card shows the prior value in small text at the lower-right, increased values use a green up arrow, decreased values use a red down arrow, unchanged values show no arrow, and missing prior data shows no comparison. Confirm values such as 1667 display as 1,667 while stored precision remains unchanged. Verify Weekly limit and rounded Actual spend are centered, and the redundant previous total-sales/TACOS line no longer appears.
+
 ## Target ACOS and ASIN-scoped Scale Insights navigation
 
 Set Target ACOS below actual ACOS and verify only the ACOS card turns red; set it equal to or above actual and verify the warning clears. Confirm the entered value is centered. Reload and switch weeks/products to confirm the value follows its product/week report. Verify zero and malformed stored values do not warn.

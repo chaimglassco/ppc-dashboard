@@ -1,5 +1,11 @@
 # Data Contract
 
+## Goal history and comparison presentation
+
+The existing version-1 `glassco.ppcPerformanceNotes.v1` report accepts optional `goalHistory: Array<{ id, title, target, actual, status, resolvedAt }>` per product/week. `status` must be `Achieved` or `Missed`; `resolvedAt` must be a valid timestamp normalized to ISO. Malformed entries are discarded, duplicate IDs within a report are removed, and at most 100 newest entries are retained. Older reports restore with an empty history. Legacy terminal entries found in `goals` migrate into history and use valid `updatedAt`, or the normalized reporting-week start when no valid update timestamp exists. Active goals retain only `On Track` and `At Risk` states.
+
+Product-wide Goal History is a derived view over these per-week entries and creates no separate storage key. Previous-week metric values, directional arrows, whole-number rounding, thousands separators, centered budget values, and the removed prior sales/TACOS line are presentation-only; exact report and performance-cache numbers remain unchanged.
+
 ## Target ACOS and Scale Insights analysis URLs
 
 The existing version-1 `glassco.ppcPerformanceNotes.v1` report accepts optional `targetAcos: number`. Missing, negative, non-finite, or malformed values normalize to `0`, meaning no warning threshold. A positive value is local product/week planning data and does not alter imported Scale Insights metrics.

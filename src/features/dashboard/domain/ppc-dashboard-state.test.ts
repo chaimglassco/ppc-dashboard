@@ -42,6 +42,31 @@ describe("PPC dashboard state", () => {
     } } })).reports["legacy-product:2026-08-26"].budgetHistory).toEqual([]);
   });
 
+  it("validates goal history and migrates terminal legacy goals out of the active list", () => {
+    const parsed = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { report: {
+      ...createWeeklyPpcReport("product-1", "2026-08-26"),
+      updatedAt: "2026-09-02T01:00:00.000Z",
+      goals: [
+        { id: "active", title: "Active goal", target: "10", actual: "8", status: "At Risk" },
+        { id: "legacy-done", title: "Legacy completed goal", target: "10", actual: "10", status: "Achieved" },
+      ],
+      goalHistory: [
+        { id: "missed", title: "Missed goal", target: "20", actual: "12", status: "Missed", resolvedAt: "2026-09-01T01:00:00.000Z" },
+        { id: "invalid", title: "Invalid history", target: "", actual: "", status: "On Track", resolvedAt: "not-a-date" },
+      ],
+    } } }));
+
+    const report = parsed.reports["product-1:2026-08-26"];
+    expect(report.goals.map(goal => goal.id)).toEqual(["active"]);
+    expect(report.goalHistory).toEqual([
+      { id: "missed", title: "Missed goal", target: "20", actual: "12", status: "Missed", resolvedAt: "2026-09-01T01:00:00.000Z" },
+      { id: "legacy-done", title: "Legacy completed goal", target: "10", actual: "10", status: "Achieved", resolvedAt: "2026-09-02T01:00:00.000Z" },
+    ]);
+    expect(parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { legacy: {
+      productId: "legacy-product", weekStart: "2026-08-26",
+    } } })).reports["legacy-product:2026-08-26"].goalHistory).toEqual([]);
+  });
+
   it("unions selected months, includes boundary weeks, and describes their full coverage", () => {
     expect(getSelectedMonthWeekStarts(["2026-09"], "2026-09-02")).toEqual(["2026-09-02", "2026-08-26"]);
     expect(formatReportingMonthRange(["2026-09-02", "2026-08-26"])).toBe("August & September 2026");
@@ -104,7 +129,6 @@ describe("PPC dashboard state", () => {
 
     expect(next.goals.map(goal => ({ title: goal.title, actual: goal.actual, status: goal.status }))).toEqual([
       { title: "Improve ACOS", actual: "", status: "On Track" },
-      { title: "Increase sales", actual: "", status: "On Track" },
     ]);
   });
 });

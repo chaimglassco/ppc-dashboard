@@ -2,6 +2,10 @@
 
 Last updated: September 8, 2026
 
+## Goal history and previous-week metric indicators
+
+Added Achieved and Missed goal actions that remove resolved goals from the active list and persist them in a product-wide Goal History dialog. Added backward-compatible parser migration and validation for terminal legacy goals. Weekly Performance now shows small prior-week values with green increase/red decrease arrows, rounded comma-formatted metrics, centered budget inputs, rounded Actual spend, and no redundant prior sales/TACOS summary.
+
 ## Target ACOS warnings and product-scoped Scale Insights navigation
 
 Added an auto-saved, centered Target ACOS to every weekly report and a red ACOS-card warning when actual efficiency exceeds the configured target. Eleven compact header links now open their real Scale Insights reports with the selected ASIN and active week applied. Daily, Weekly, and Monthly Performance Trend are isolated in a third column and open seven-column Advertising Trend views using 1-, 7-, and 30-day aggregation. The temporary internal report pages were removed, the header's duplicate date/week label was removed, and timeline ACOS is rendered as a whole number.

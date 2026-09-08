@@ -2,8 +2,10 @@ export const PPC_DASHBOARD_STORAGE_KEY = "glassco.ppcPerformanceNotes.v1";
 
 export type DashboardProduct = { id: string; name: string; asin: string; sku: string; stageId: string; status: "Active" | "Paused" };
 export type GoalStatus = "On Track" | "At Risk" | "Achieved" | "Missed";
+export type GoalOutcome = Extract<GoalStatus, "Achieved" | "Missed">;
 export type ReportStatus = "Draft" | "In Progress" | "Completed" | "Needs Review";
 export type WeeklyGoal = { id: string; title: string; target: string; actual: string; status: GoalStatus };
+export type GoalHistoryEntry = WeeklyGoal & { status: GoalOutcome; resolvedAt: string };
 export type ActionItem = { id: string; title: string; priority: "High" | "Medium" | "Low"; dueDate: string; done: boolean };
 export type BudgetChange = { id: string; changedAt: string; from: number; to: number };
 export type WeeklyPpcReport = {
@@ -11,7 +13,7 @@ export type WeeklyPpcReport = {
   budgetHistory: BudgetChange[];
   spend: number; ppcSales: number; organicSales: number; totalSales: number;
   ppcOrders: number; organicOrders: number; totalOrders: number; targetAcos: number; acos: number; tacos: number;
-  goals: WeeklyGoal[]; previousWeekResult: string; notes: string; actions: ActionItem[]; updatedAt: string | null;
+  goals: WeeklyGoal[]; goalHistory: GoalHistoryEntry[]; previousWeekResult: string; notes: string; actions: ActionItem[]; updatedAt: string | null;
 };
 export type WeeklyPerformanceSourceMetrics = {
   spend: number;
@@ -42,14 +44,14 @@ export function reportKey(productId: string, weekStart: string) { return `${prod
 
 export function createWeeklyPpcReport(productId: string, weekStart: string, previousReport?: WeeklyPpcReport | null): WeeklyPpcReport {
   const carriedGoals = previousReport
-    ? previousReport.goals.filter(goal => goal.status !== "Achieved").map((goal, index) => ({
+    ? previousReport.goals.filter(goal => goal.status !== "Achieved" && goal.status !== "Missed").map((goal, index) => ({
       ...goal, id: `${goal.id}-carried-${weekStart}-${index}`, actual: "", status: "On Track" as GoalStatus,
     }))
     : DEFAULT_GOALS.map(goal => ({ ...goal }));
   return {
     productId, weekStart, status: "Draft", weeklyBudget: 0, dailyBudget: 0, budgetHistory: [], spend: 0,
     ppcSales: 0, organicSales: 0, totalSales: 0, ppcOrders: 0, organicOrders: 0, totalOrders: 0, targetAcos: 0,
-    acos: 0, tacos: 0, goals: carriedGoals, previousWeekResult: "",
+    acos: 0, tacos: 0, goals: carriedGoals, goalHistory: [], previousWeekResult: "",
     notes: "", actions: DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt: null,
   };
 }
@@ -81,6 +83,14 @@ function normalizeGoal(value: unknown, index: number): WeeklyGoal | null {
   return { id: String(value.id ?? `goal-${index}`), title, target: String(value.target ?? ""), actual: String(value.actual ?? ""), status: statuses.includes(value.status as GoalStatus) ? value.status as GoalStatus : "On Track" };
 }
 
+function normalizeGoalHistoryEntry(value: unknown, index: number): GoalHistoryEntry | null {
+  const goal = normalizeGoal(value, index);
+  if (!goal || (goal.status !== "Achieved" && goal.status !== "Missed") || !isRecord(value)) return null;
+  const resolvedAt = typeof value.resolvedAt === "string" ? value.resolvedAt : "";
+  if (!resolvedAt || Number.isNaN(new Date(resolvedAt).getTime())) return null;
+  return { ...goal, status: goal.status, resolvedAt: new Date(resolvedAt).toISOString() };
+}
+
 function normalizeAction(value: unknown, index: number): ActionItem | null {
   if (!isRecord(value)) return null;
   const title = String(value.title ?? "").trim();
@@ -107,7 +117,18 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
   if (Number.isNaN(storedWeekDate.getTime())) return null;
   const weekStart = storedWeekDate.getDay() === LEGACY_REPORTING_WEEK_START_DAY ? addDaysIso(storedWeekStart, 2) : storedWeekStart;
   const statuses: ReportStatus[] = ["Draft", "In Progress", "Completed", "Needs Review"];
-  const goals = Array.isArray(value.goals) ? value.goals.map(normalizeGoal).filter((goal): goal is WeeklyGoal => Boolean(goal)) : [];
+  const parsedGoals = Array.isArray(value.goals) ? value.goals.map(normalizeGoal).filter((goal): goal is WeeklyGoal => Boolean(goal)) : [];
+  const goals = parsedGoals.filter(goal => goal.status !== "Achieved" && goal.status !== "Missed");
+  const updatedAt = typeof value.updatedAt === "string" && !Number.isNaN(new Date(value.updatedAt).getTime()) ? new Date(value.updatedAt).toISOString() : null;
+  const storedGoalHistory = Array.isArray(value.goalHistory)
+    ? value.goalHistory.map(normalizeGoalHistoryEntry).filter((goal): goal is GoalHistoryEntry => Boolean(goal))
+    : [];
+  const legacyGoalHistory: GoalHistoryEntry[] = parsedGoals.flatMap(goal => goal.status === "Achieved" || goal.status === "Missed"
+    ? [{ ...goal, status: goal.status, resolvedAt: updatedAt ?? new Date(`${weekStart}T12:00:00.000Z`).toISOString() }]
+    : []);
+  const goalHistory = [...storedGoalHistory, ...legacyGoalHistory]
+    .filter((goal, index, entries) => entries.findIndex(candidate => candidate.id === goal.id) === index)
+    .slice(0, 100);
   const actions = Array.isArray(value.actions) ? value.actions.map(normalizeAction).filter((action): action is ActionItem => Boolean(action)) : [];
   const budgetHistory = Array.isArray(value.budgetHistory)
     ? value.budgetHistory.map(normalizeBudgetChange).filter((change): change is BudgetChange => Boolean(change)).slice(0, 100)
@@ -122,8 +143,8 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
     ppcSales, organicSales, totalSales: value.totalSales == null ? ppcSales + organicSales : finiteNumber(value.totalSales),
     ppcOrders, organicOrders, totalOrders: value.totalOrders == null ? ppcOrders + organicOrders : finiteNumber(value.totalOrders),
     targetAcos: finiteNumber(value.targetAcos), acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
-    goals: Array.isArray(value.goals) ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), previousWeekResult: String(value.previousWeekResult ?? ""), notes: String(value.notes ?? ""),
-    actions: actions.length ? actions : DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : null,
+    goals: Array.isArray(value.goals) ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), goalHistory, previousWeekResult: String(value.previousWeekResult ?? ""), notes: String(value.notes ?? ""),
+    actions: actions.length ? actions : DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt,
   });
 }
 

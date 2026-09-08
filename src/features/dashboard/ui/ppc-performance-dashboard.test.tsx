@@ -143,21 +143,31 @@ describe("PpcPerformanceDashboard", () => {
   }, 10_000);
 
   it("retrieves the selected week from Scale Insights and locks the imported metrics", async () => {
-    vi.mocked(fetch).mockImplementation(async input => String(input).includes("/api/dashboard/performance?")
-      ? ({
+    vi.mocked(fetch).mockImplementation(async input => {
+      const url = String(input);
+      if (url.includes("/api/dashboard/performance?")) {
+        const startDate = new URL(url, "http://localhost").searchParams.get("weekStart")!;
+        const activeWeek = startDate === "2026-08-26";
+        const end = new Date(`${startDate}T00:00:00Z`);
+        end.setUTCDate(end.getUTCDate() + 6);
+        return {
         ok: true,
         status: 200,
         json: async () => ({ performance: {
-          asin: "B012345678", country: "US", startDate: "2026-08-26", endDate: "2026-09-01", currency: "USD",
-          metrics: { spend: 81.75, ppcSales: 481.75, ppcOrders: 23, totalSales: 1317.35, totalOrders: 59, organicSales: 835.6, organicOrders: 36, acos: 16.97, tacos: 6.21 },
-          freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: "2026-09-01" }, warnings: [],
+          asin: "B012345678", country: "US", startDate, endDate: end.toISOString().slice(0, 10), currency: "USD",
+          metrics: activeWeek
+            ? { spend: 81.75, ppcSales: 481.75, ppcOrders: 23, totalSales: 1317.35, totalOrders: 59, organicSales: 835.6, organicOrders: 36, acos: 16.97, tacos: 6.21 }
+            : { spend: 90, ppcSales: 450, ppcOrders: 20, totalSales: 1200, totalOrders: 55, organicSales: 750, organicOrders: 35, acos: 20, tacos: 7.5 },
+          freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: end.toISOString().slice(0, 10) }, warnings: [],
         } }),
-      } as Response)
-      : ({
+      } as Response;
+      }
+      return {
         ok: true,
         status: 200,
         json: async () => ({ products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }] }),
-      } as Response));
+      } as Response;
+    });
 
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
@@ -166,12 +176,19 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(performanceCard).getByRole("textbox", { name: "Spend" })).toHaveValue("82");
     expect(within(performanceCard).getByRole("textbox", { name: "PPC Sales" })).toHaveValue("482");
     expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveValue("836");
-    expect(within(performanceCard).getByRole("textbox", { name: "Total Sales" })).toHaveValue("1317");
+    expect(within(performanceCard).getByRole("textbox", { name: "Total Sales" })).toHaveValue("1,317");
     expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveValue("17");
     expect(within(performanceCard).getByRole("textbox", { name: "TACOS" })).toHaveValue("6");
     expect(within(screen.getByRole("button", { name: /August 26 to September 1/ })).getByText("17%")).toBeVisible();
     expect(within(performanceCard).getByRole("textbox", { name: "PPC Sales" })).toHaveAttribute("readonly");
+    expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveValue("82");
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveAttribute("readonly");
+    const previousSales = await within(performanceCard).findByLabelText("Previous Total Sales: $1,200, increased");
+    expect(previousSales).toHaveTextContent("$1,200");
+    expect(previousSales.className).toMatch(/metricIncrease/);
+    const previousSpend = within(performanceCard).getByLabelText("Previous Spend: $90, decreased");
+    expect(previousSpend.className).toMatch(/metricDecrease/);
+    expect(screen.queryByText(/total sales ·/i)).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
   });
 
@@ -235,7 +252,18 @@ describe("PpcPerformanceDashboard", () => {
     expect(goalStatus.className).toMatch(/success/);
     fireEvent.change(goalStatus, { target: { value: "At Risk" } });
     expect(goalStatus.className).toMatch(/warning/);
-    expect(within(goalStatus).getByRole("option", { name: "Missed" }).className).toMatch(/danger/);
+    expect(within(goalStatus).queryByRole("option", { name: "Missed" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Mark Reduce ACOS achieved" }));
+    expect(screen.queryByRole("combobox", { name: "Reduce ACOS status" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Mark Increase ROAS missed" }));
+    fireEvent.click(screen.getByRole("button", { name: "Goal History" }));
+    const goalHistory = screen.getByRole("dialog", { name: "Goal History" });
+    expect(within(goalHistory).getByText("Reduce ACOS")).toBeVisible();
+    expect(within(goalHistory).getByText("Increase ROAS")).toBeVisible();
+    expect(within(goalHistory).getByText("Achieved")).toBeVisible();
+    expect(within(goalHistory).getByText("Missed")).toBeVisible();
+    fireEvent.click(within(goalHistory).getByRole("button", { name: "Close goal history" }));
+    expect(screen.queryByRole("dialog", { name: "Goal History" })).not.toBeInTheDocument();
     expect(screen.queryByText(/Previous week:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/No saved report exists/i)).not.toBeInTheDocument();
 
