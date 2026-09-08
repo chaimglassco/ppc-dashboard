@@ -35,6 +35,7 @@ type PerformanceLoadState = {
 
 const ACTIVE_GOAL_STATUSES: GoalStatus[] = ["On Track", "At Risk"];
 const AUTO_SAVE_DELAY_MS = 500;
+const BUDGET_HISTORY_PAGE_SIZE = 5;
 const PERFORMANCE_BACKFILL_CONCURRENCY = 2;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const METRIC_GROUPS: { title: string; metrics: MetricDefinition[] }[] = [
@@ -81,7 +82,7 @@ function MetricInput({ metric, report, previousValue, importedLocked, warning, o
     <span className={styles.metricComparison}>
       <span className={`${styles.metricComparisonValue} ${styles.metricCurrent} ${comparison > 0 ? styles.metricIncrease : comparison < 0 ? styles.metricDecrease : ""}`}>
         <small>Current</small>
-        <span className={styles.metricInputWrap}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : comparison < 0 ? <ArrowDown aria-hidden="true" /> : null}{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-describedby={warning ? "acos-target-warning" : undefined} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" value={roundedMetricValue(report[metric.field])} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
+        <span className={`${styles.metricInputWrap} ${metric.suffix ? styles.metricPercentWrap : ""}`}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : comparison < 0 ? <ArrowDown aria-hidden="true" /> : null}{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-describedby={warning ? "acos-target-warning" : undefined} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" value={roundedMetricValue(report[metric.field])} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
       </span>
       <i className={styles.metricComparisonDivider} aria-hidden="true" />
       <span className={`${styles.metricComparisonValue} ${styles.metricPrevious}`} aria-label={previousValue == null ? `Previous ${metric.label}: unavailable` : `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}, ${comparisonDirection}`}>
@@ -205,6 +206,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const [draftSelectedMonths, setDraftSelectedMonths] = useState<string[]>([initialMonthKey]);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [goalHistoryOpen, setGoalHistoryOpen] = useState(false);
+  const [budgetHistoryView, setBudgetHistoryView] = useState({ key: "", page: 1 });
   const [monthPickerYear, setMonthPickerYear] = useState(Number(initialToday.slice(0, 4)));
   const currentWeekStart = initialWeekStart;
   const [reports, setReports] = useState<Record<string, WeeklyPpcReport>>({});
@@ -325,6 +327,9 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     : previousDraft;
   const savedReport = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, activeWeekStart, previousReport) : null;
   const report = savedReport && cachedPerformance ? { ...savedReport, ...cachedPerformance.metrics } : savedReport;
+  const budgetHistoryPageCount = Math.max(1, Math.ceil((report?.budgetHistory.length ?? 0) / BUDGET_HISTORY_PAGE_SIZE));
+  const budgetHistoryPage = budgetHistoryView.key === selectedKey ? Math.min(budgetHistoryView.page, budgetHistoryPageCount) : 1;
+  const visibleBudgetHistory = report?.budgetHistory.slice((budgetHistoryPage - 1) * BUDGET_HISTORY_PAGE_SIZE, budgetHistoryPage * BUDGET_HISTORY_PAGE_SIZE) ?? [];
   const productGoalHistory = useMemo(() => Object.values(reports)
     .filter(candidate => candidate.productId === selectedProductId)
     .flatMap(candidate => candidate.goalHistory.map(goal => ({ ...goal, weekStart: candidate.weekStart })))
@@ -491,6 +496,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
       dailyBudget: dailyLimitFromWeekly(to),
       budgetHistory: [{ id: `budget-change-${suffix}`, changedAt: new Date().toISOString(), from, to }, ...report.budgetHistory].slice(0, 100),
     });
+    setBudgetHistoryView({ key: selectedKey, page: 1 });
   };
 
   const persistCatalog = (nextCatalog: DashboardCatalogStore) => {
@@ -591,7 +597,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         return <button type="button" key={weekStart} aria-pressed={isSelected} className={`${styles.periodCard} ${isSelected ? styles.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
           {isCurrent ? <span className={styles.currentBadge}>Current</span> : null}
           <span className={styles.periodTop}><strong>{formatWeekRange(weekStart)}</strong><span className={styles.periodMeta}><small>Week {getIsoWeekNumber(weekStart)}</small>{periodStatus === "Draft" ? null : <i className={statusTone(periodStatus)}>{periodStatus}</i>}</span></span>
-          <span className={styles.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>Sales</small><strong>{currency(periodReport?.totalSales ?? 0)}</strong></span><span><small>Order</small><strong>{periodReport?.totalOrders ?? 0}</strong></span><span><small>ACOS</small><strong>{Math.round(periodReport?.acos ?? 0)}%</strong></span></span>
+          <span className={styles.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>PPC Sales</small><strong>{currency(periodReport?.ppcSales ?? 0)}</strong></span><span><small>PPC Order</small><strong>{periodReport?.ppcOrders ?? 0}</strong></span><span><small>ACOS</small><strong>{Math.round(periodReport?.acos ?? 0)}%</strong></span></span>
         </button>;
       })}</div>
     </aside>
@@ -621,8 +627,13 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
                 <h4>Budget History</h4>
                 <table aria-label="Budget change history">
                   <thead><tr><th>Date of Change</th><th>From</th><th>To</th></tr></thead>
-                  <tbody>{report.budgetHistory.length ? report.budgetHistory.map(change => <tr key={change.id}><td>{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(change.changedAt))}</td><td>{preciseCurrency(change.from)}</td><td>{preciseCurrency(change.to)}</td></tr>) : <tr><td colSpan={3}>No budget changes recorded yet.</td></tr>}</tbody>
+                  <tbody>{visibleBudgetHistory.length ? visibleBudgetHistory.map(change => <tr key={change.id}><td>{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(change.changedAt))}</td><td>{preciseCurrency(change.from)}</td><td>{preciseCurrency(change.to)}</td></tr>) : <tr><td colSpan={3}>No budget changes recorded yet.</td></tr>}</tbody>
                 </table>
+                {budgetHistoryPageCount > 1 ? <nav className={styles.budgetHistoryPagination} aria-label="Budget history pages">
+                  <button type="button" aria-label="Previous budget history page" disabled={budgetHistoryPage === 1} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage - 1 })}><ArrowLeft aria-hidden="true" /></button>
+                  {Array.from({ length: budgetHistoryPageCount }, (_, index) => index + 1).map(page => <button type="button" key={page} aria-label={`Budget history page ${page}`} aria-current={page === budgetHistoryPage ? "page" : undefined} onClick={() => setBudgetHistoryView({ key: selectedKey, page })}>{page}</button>)}
+                  <button type="button" aria-label="Next budget history page" disabled={budgetHistoryPage === budgetHistoryPageCount} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage + 1 })}><ArrowRight aria-hidden="true" /></button>
+                </nav> : null}
               </div>
             </section>
           </div>

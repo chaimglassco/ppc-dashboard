@@ -348,3 +348,5 @@ Shared Library responses may include `snapshotAt`, `recoveryDocumentCount`, and 
 ## Weekly comparison projection
 
 Current-versus-previous direction, display color, compact typography, and column labels are derived UI values and are not persisted. The selected report and immediately preceding weekly report continue to use the existing `WeeklyPpcReport` metric fields without contract changes. Removing “Trend” from performance-link labels does not change their Scale Insights routes, slugs, or query parameters.
+
+Navigation column membership, Timeline PPC-only labels, percentage suffix spacing, and the five-row Budget History page are presentation rules only. Pagination does not truncate or rewrite the validated `budgetHistory` array, which retains its existing newest-first order and 100-entry cap.

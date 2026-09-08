@@ -1,13 +1,13 @@
 export const PPC_ANALYSIS_COLUMNS = [
   { key: "performance-primary", label: "Performance reports", sections: [
     { slug: "campaigns", label: "Campaigns", path: "/Ads/Performance/Campaigns/Index" },
+    { slug: "keyword-targeting", label: "Keyword Targeting", path: "/Ads/Performance/Keywords/Index" },
     { slug: "product-targeting", label: "Product Targeting", path: "/Ads/Performance/ProductAds/Index" },
-    { slug: "match-types", label: "Match Types", path: "/Ads/Performance/MatchTypes/Index" },
-    { slug: "ad-types", label: "Ad Types", path: "/Ads/Performance/AdTypes/Index" },
+    { slug: "search-terms", label: "Search Terms", path: "/Ads/SearchTerms/Index" },
   ] },
   { key: "performance-secondary", label: "Targeting reports", sections: [
-    { slug: "keyword-targeting", label: "Keyword Targeting", path: "/Ads/Performance/Keywords/Index" },
-    { slug: "search-terms", label: "Search Terms", path: "/Ads/SearchTerms/Index" },
+    { slug: "ad-types", label: "Ad Types", path: "/Ads/Performance/AdTypes/Index" },
+    { slug: "match-types", label: "Match Types", path: "/Ads/Performance/MatchTypes/Index" },
     { slug: "placements", label: "Placements", path: "/Ads/Performance/Placements/Index" },
     { slug: "main-keywords", label: "Main Keywords", path: "/Ads/MainKeywords/Index" },
   ] },

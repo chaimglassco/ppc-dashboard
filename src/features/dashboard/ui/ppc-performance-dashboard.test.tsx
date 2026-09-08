@@ -84,7 +84,8 @@ describe("PpcPerformanceDashboard", () => {
     const currentPeriod = screen.getByText("August 26 to September 1").closest("button") as HTMLButtonElement;
     expect(within(currentPeriod).getByText("August 26 to September 1")).toBeVisible();
     expect(within(currentPeriod).getByText("Week 35").parentElement?.className).toMatch(/periodMeta/);
-    expect(within(currentPeriod).getByText("Order")).toBeVisible();
+    expect(within(currentPeriod).getByText("PPC Sales")).toBeVisible();
+    expect(within(currentPeriod).getByText("PPC Order")).toBeVisible();
     expect(within(currentPeriod).getByText("ACOS")).toBeVisible();
     expect(within(currentPeriod).queryByText("ROAS")).not.toBeInTheDocument();
     expect(currentPeriod).toHaveAttribute("aria-pressed", "true");
@@ -141,6 +142,37 @@ describe("PpcPerformanceDashboard", () => {
       status: "Draft",
     });
   }, 10_000);
+
+  it("shows five budget changes per page and paginates the remaining history", async () => {
+    const budgetHistory = Array.from({ length: 7 }, (_, index) => ({
+      id: `change-${index + 1}`,
+      changedAt: `2026-08-${String(28 - index).padStart(2, "0")}T12:00:00.000Z`,
+      from: index * 10,
+      to: (index + 1) * 10,
+    }));
+    window.localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      reports: {
+        "product-1:2026-08-26": { productId: "product-1", weekStart: "2026-08-26", budgetHistory },
+      },
+    }));
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+
+    expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
+    const table = screen.getByRole("table", { name: "Budget change history" });
+    expect(within(table).getAllByRole("row")).toHaveLength(6);
+    expect(within(table).getAllByText("$10")).toHaveLength(2);
+    expect(within(table).getByText("$50")).toBeVisible();
+    expect(within(table).queryByText("$70")).not.toBeInTheDocument();
+
+    const secondPage = screen.getByRole("button", { name: "Budget history page 2" });
+    fireEvent.click(secondPage);
+    expect(secondPage).toHaveAttribute("aria-current", "page");
+    expect(within(table).getAllByRole("row")).toHaveLength(3);
+    expect(within(table).getByText("$70")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Next budget history page" })).toBeDisabled();
+  });
 
   it("retrieves the selected week from Scale Insights and locks the imported metrics", async () => {
     vi.mocked(fetch).mockImplementation(async input => {
@@ -403,6 +435,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(headerAsinLink.closest("p")).not.toHaveTextContent("Week 35");
     const asinNavigation = screen.getByRole("navigation", { name: "Scale Insights analysis for ASIN B012345679" });
     expect(within(asinNavigation).getAllByRole("link")).toHaveLength(11);
+    expect(within(within(asinNavigation).getByRole("group", { name: "Performance reports" })).getAllByRole("link").map(link => link.textContent)).toEqual(["Campaigns", "Keyword Targeting", "Product Targeting", "Search Terms"]);
+    expect(within(within(asinNavigation).getByRole("group", { name: "Targeting reports" })).getAllByRole("link").map(link => link.textContent)).toEqual(["Ad Types", "Match Types", "Placements", "Main Keywords"]);
     expect(within(asinNavigation).getByRole("link", { name: "Campaigns" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/Campaigns/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Keyword Targeting" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/Keywords/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Product Targeting" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/ProductAds/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");

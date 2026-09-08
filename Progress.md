@@ -12,6 +12,8 @@ Added structured Spend, Sales, PPC Order, Organic Order, and ACOS goal selection
 
 Added an auto-saved, centered Target ACOS to every weekly report and a red ACOS-card warning when actual efficiency exceeds the configured target. Eleven compact header links now open their real Scale Insights reports with the selected ASIN and active week applied. Daily, Weekly, and Monthly Performance Trend are isolated in a third column and open seven-column Advertising Trend views using 1-, 7-, and 30-day aggregation. The temporary internal report pages were removed, the header's duplicate date/week label was removed, and timeline ACOS is rendered as a whole number.
 
+Reordered the first two Scale Insights columns into the requested workflow, tightened Current percentage suffix spacing, changed timeline summaries to PPC Sales/PPC Order, and paginated Budget History at five rows per page without altering stored history.
+
 ## Budget history, cleaner report controls, and multi-month timeline
 
 Added per-week budget-change rows, removed visible Draft badges and the secondary Save Draft action, and introduced an apply-based multi-month/year picker with boundary-week inclusion, future-week exclusion, deduplication, and coverage-aware labels. Added parser, date-range, selection, persistence, and UI regression coverage.
