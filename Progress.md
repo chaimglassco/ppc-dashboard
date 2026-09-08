@@ -4,7 +4,7 @@ Last updated: September 8, 2026
 
 ## Target ACOS warnings and product-scoped Scale Insights navigation
 
-Added an auto-saved, centered Target ACOS to every weekly report and a red ACOS-card warning when actual efficiency exceeds the configured target. Nine compact header links now open their real Scale Insights reports with the selected ASIN and active week applied, including a seven-column Daily Performance Trend below Ad Types; the temporary internal report pages were removed. The header's duplicate date/week label was removed and timeline ACOS is rendered as a whole number.
+Added an auto-saved, centered Target ACOS to every weekly report and a red ACOS-card warning when actual efficiency exceeds the configured target. Eleven compact header links now open their real Scale Insights reports with the selected ASIN and active week applied. Daily, Weekly, and Monthly Performance Trend are isolated in a third column and open seven-column Advertising Trend views using 1-, 7-, and 30-day aggregation. The temporary internal report pages were removed, the header's duplicate date/week label was removed, and timeline ACOS is rendered as a whole number.
 
 ## Budget history, cleaner report controls, and multi-month timeline
 

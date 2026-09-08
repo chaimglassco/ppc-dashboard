@@ -4,7 +4,7 @@
 
 The existing version-1 `glassco.ppcPerformanceNotes.v1` report accepts optional `targetAcos: number`. Missing, negative, non-finite, or malformed values normalize to `0`, meaning no warning threshold. A positive value is local product/week planning data and does not alter imported Scale Insights metrics.
 
-Analysis URLs use the fixed `https://portal.scaleinsights.com` origin and an allowlisted path for Campaigns, Keyword Targeting, Product Targeting, Search Terms, Match Types, Placements, Ad Types, Main Keywords, or Daily Performance Trend. `<ASIN>` must normalize to exactly ten uppercase alphanumeric characters, and supplied week dates must be ISO-shaped. Standard reports serialize only `asinList`, `from`, and `to`; Daily Performance Trend serializes `asinList`, fixed `cycles=7`, fixed `daysPerCycle=1`, and `to`. Invalid input resolves to the Scale Insights Ads landing page; OAuth credentials and MCP tokens are never included.
+Analysis URLs use the fixed `https://portal.scaleinsights.com` origin and allowlisted definitions for Campaigns, Keyword Targeting, Product Targeting, Search Terms, Match Types, Placements, Ad Types, Main Keywords, Daily Performance Trend, Weekly Performance Trend, and Monthly Performance Trend. `<ASIN>` must normalize to exactly ten uppercase alphanumeric characters, and supplied week dates must be ISO-shaped. Standard reports serialize only `asinList`, `from`, and `to`; all trend reports serialize `asinList`, fixed `cycles=7`, `to`, and fixed `daysPerCycle` values of `1`, `7`, or `30` respectively. Invalid input resolves to the Scale Insights Ads landing page; OAuth credentials and MCP tokens are never included.
 
 ## Budget history and reporting-period selection
 

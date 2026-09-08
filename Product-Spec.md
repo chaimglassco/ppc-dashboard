@@ -4,7 +4,7 @@
 
 Each product/week report includes an editable Target ACOS beside Weekly Performance. When Target ACOS is greater than zero and actual ACOS exceeds it, the ACOS metric card changes to a red warning treatment; meeting the target or leaving it unset uses the normal card treatment.
 
-The selected-product header provides links to Campaigns, Keyword Targeting, Product Targeting, Search Terms, Match Types, Placements, Ad Types, Main Keywords, and Daily Performance Trend. Each opens the matching Scale Insights page in a new tab with the validated ten-character ASIN and active Wednesday–Tuesday week. Daily Performance Trend opens Scale Insights' Advertising Trend with seven one-day columns ending on the selected Tuesday. The compact product identity row keeps ASIN and SKU but omits the duplicate active-week date, and the Target ACOS value is centered in its field.
+The selected-product header provides links to Campaigns, Keyword Targeting, Product Targeting, Search Terms, Match Types, Placements, Ad Types, Main Keywords, and three Scale Insights trends. The links are arranged in three columns: two report columns and a visually separated trend column containing Daily, Weekly, and Monthly Performance Trend. Each opens the matching Scale Insights page in a new tab with the validated ten-character ASIN and active Wednesday–Tuesday week. Trend links open Scale Insights' Advertising Trend with seven columns of 1, 7, or 30 days respectively, ending on the selected Tuesday. The compact product identity row keeps ASIN and SKU but omits the duplicate active-week date, and the Target ACOS value is centered in its field.
 
 ## Budget history, report controls, and multi-month timeline
 

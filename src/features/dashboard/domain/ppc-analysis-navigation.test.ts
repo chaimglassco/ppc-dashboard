@@ -13,6 +13,12 @@ describe("PPC analysis navigation", () => {
     expect(getScaleInsightsAnalysisHref("b012345678", "daily-performance-trend", "2026-08-26", "2026-09-01")).toBe(
       "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=1&to=2026-09-01&asinList=B012345678",
     );
+    expect(getScaleInsightsAnalysisHref("b012345678", "weekly-performance-trend", "2026-08-26", "2026-09-01")).toBe(
+      "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=7&to=2026-09-01&asinList=B012345678",
+    );
+    expect(getScaleInsightsAnalysisHref("b012345678", "monthly-performance-trend", "2026-08-26", "2026-09-01")).toBe(
+      "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=30&to=2026-09-01&asinList=B012345678",
+    );
     expect(getScaleInsightsAnalysisHref("not-an-asin", "search-terms", "2026-08-26", "2026-09-01")).toBe(
       "https://portal.scaleinsights.com/Ads",
     );

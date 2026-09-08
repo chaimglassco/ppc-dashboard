@@ -152,6 +152,8 @@ This release keeps the existing version-1 browser report key and needs no server
 
 The performance cache, compact badges, upper-right week labels, and smaller whole-number metric cards need no environment or server data migration. Verify active-week-first automatic backfill of every visible uncached week, switching weeks without new requests, page reload, active-week-only Refresh, failed-refresh retention, and rounded presentation without precision loss in the cached DTO. Existing values that were never saved by the previous release are populated automatically when their weeks become visible. Cache persistence is local to this browser, not synchronized across devices.
 
+The three-column Scale Insights navigation requires no environment or migration change. Verify the isolated trend column opens Daily, Weekly, and Monthly Advertising Trend views with the selected ASIN, selected Tuesday, seven columns, and 1-, 7-, and 30-day aggregation respectively.
+
 ## Compact product cards
 
 Portfolio cards display the image, product name, and tag without ASIN/SKU rows. View-mode cards use a compact 66px minimum height; edit mode retains room for Edit, Delete, and Reorder controls. ASIN/SKU remain in the selected-product header, edit form, search index, and existing storage; this is presentation-only with no data migration. Verify both identifier links remain in the detail header after selecting a product.

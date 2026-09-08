@@ -1,13 +1,27 @@
+export const PPC_ANALYSIS_COLUMNS = [
+  { key: "performance-primary", label: "Performance reports", sections: [
+    { slug: "campaigns", label: "Campaigns", path: "/Ads/Performance/Campaigns/Index" },
+    { slug: "product-targeting", label: "Product Targeting", path: "/Ads/Performance/ProductAds/Index" },
+    { slug: "match-types", label: "Match Types", path: "/Ads/Performance/MatchTypes/Index" },
+    { slug: "ad-types", label: "Ad Types", path: "/Ads/Performance/AdTypes/Index" },
+  ] },
+  { key: "performance-secondary", label: "Targeting reports", sections: [
+    { slug: "keyword-targeting", label: "Keyword Targeting", path: "/Ads/Performance/Keywords/Index" },
+    { slug: "search-terms", label: "Search Terms", path: "/Ads/SearchTerms/Index" },
+    { slug: "placements", label: "Placements", path: "/Ads/Performance/Placements/Index" },
+    { slug: "main-keywords", label: "Main Keywords", path: "/Ads/MainKeywords/Index" },
+  ] },
+  { key: "trends", label: "Trend reports", sections: [
+    { slug: "daily-performance-trend", label: "Daily Performance Trend", path: "/Ads/AdvertisingTrend", daysPerCycle: 1 },
+    { slug: "weekly-performance-trend", label: "Weekly Performance Trend", path: "/Ads/AdvertisingTrend", daysPerCycle: 7 },
+    { slug: "monthly-performance-trend", label: "Monthly Performance Trend", path: "/Ads/AdvertisingTrend", daysPerCycle: 30 },
+  ] },
+] as const;
+
 export const PPC_ANALYSIS_SECTIONS = [
-  { slug: "campaigns", label: "Campaigns", path: "/Ads/Performance/Campaigns/Index" },
-  { slug: "keyword-targeting", label: "Keyword Targeting", path: "/Ads/Performance/Keywords/Index" },
-  { slug: "product-targeting", label: "Product Targeting", path: "/Ads/Performance/ProductAds/Index" },
-  { slug: "search-terms", label: "Search Terms", path: "/Ads/SearchTerms/Index" },
-  { slug: "match-types", label: "Match Types", path: "/Ads/Performance/MatchTypes/Index" },
-  { slug: "placements", label: "Placements", path: "/Ads/Performance/Placements/Index" },
-  { slug: "ad-types", label: "Ad Types", path: "/Ads/Performance/AdTypes/Index" },
-  { slug: "main-keywords", label: "Main Keywords", path: "/Ads/MainKeywords/Index" },
-  { slug: "daily-performance-trend", label: "Daily Performance Trend", path: "/Ads/AdvertisingTrend" },
+  ...PPC_ANALYSIS_COLUMNS[0].sections,
+  ...PPC_ANALYSIS_COLUMNS[1].sections,
+  ...PPC_ANALYSIS_COLUMNS[2].sections,
 ] as const;
 
 export type PpcAnalysisSlug = (typeof PPC_ANALYSIS_SECTIONS)[number]["slug"];
@@ -24,9 +38,9 @@ export function getScaleInsightsAnalysisHref(asinValue: string, section: PpcAnal
   if (!asin || !route || !datePattern.test(from) || !datePattern.test(to)) return "https://portal.scaleinsights.com/Ads";
 
   const url = new URL(route.path, "https://portal.scaleinsights.com");
-  if (section === "daily-performance-trend") {
+  if ("daysPerCycle" in route) {
     url.searchParams.set("cycles", "7");
-    url.searchParams.set("daysPerCycle", "1");
+    url.searchParams.set("daysPerCycle", String(route.daysPerCycle));
   } else {
     url.searchParams.set("from", from);
   }
