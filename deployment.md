@@ -188,4 +188,4 @@ Deploy the Pipeline Library API first because the reordered IDs require the scal
 
 ## Weekly comparison rollout
 
-The side-by-side Weekly Performance comparison is a presentation-only Library deployment. It requires no environment variable, API, storage-schema, or data migration. Verify equal-width Current and Previous values, the vertical divider, neutral prior values, and direction color on current values at desktop and mobile widths.
+The side-by-side Weekly Performance comparison is a presentation-only Library deployment. It requires no environment variable, API, storage-schema, or data migration. Verify equal-width Current and Previous values, the vertical divider, neutral prior values, compact non-overflowing symbols, direction color on current values, and shortened Daily/Weekly/Monthly Performance links at desktop and mobile widths.

@@ -343,4 +343,4 @@ Shared Library responses may include `snapshotAt`, `recoveryDocumentCount`, and 
 
 ## Weekly comparison projection
 
-Current-versus-previous direction, display color, and column labels are derived UI values and are not persisted. The selected report and immediately preceding weekly report continue to use the existing `WeeklyPpcReport` metric fields without contract changes.
+Current-versus-previous direction, display color, compact typography, and column labels are derived UI values and are not persisted. The selected report and immediately preceding weekly report continue to use the existing `WeeklyPpcReport` metric fields without contract changes. Removing “Trend” from performance-link labels does not change their Scale Insights routes, slugs, or query parameters.

@@ -181,4 +181,4 @@ Formatting writes use `document.update` with `updateScope: "content"`. The Pipel
 
 ## Weekly metric comparison rendering
 
-The dashboard derives each comparison from the selected report and the immediately preceding saved or cached weekly report. This is presentation-only: both values retain the existing report schema, while direction classes are applied only to the current value and the prior value remains neutral.
+The dashboard derives each comparison from the selected report and the immediately preceding saved or cached weekly report. This is presentation-only: both values retain the existing report schema, while direction classes are applied only to the current value and the prior value remains neutral. Compact clipping and fixed input widths keep symbols within each half-card. Scale Insights trend routes retain their slugs and query parameters while their visible labels omit the redundant “Trend” suffix.

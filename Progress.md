@@ -218,3 +218,4 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 - Replaced the corner-sized previous-week annotation with equal-size Current and Previous columns in every Weekly Performance metric card.
 - Added a center divider and moved red/green direction styling to the current value and arrow only.
+- Tightened the shared comparison typography to prevent percentage overflow and shortened the three Scale Insights performance-link labels.

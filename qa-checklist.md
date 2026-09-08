@@ -234,3 +234,4 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] Confirm an approved record absent from the current snapshot can be discovered from a checksum-addressed legacy archive without exposing or restoring unapproved records.
 - [ ] Open a report with a saved previous week and confirm every Weekly Performance card shows equal-size Current and Previous values separated by a divider; only the current value and arrow change green/red according to direction.
 - [ ] Open the earliest available report and confirm the Previous column displays a neutral unavailable marker without changing the current value color.
+- [ ] Verify three-digit currency and percentage comparisons remain inside their Current and Previous columns, and confirm the Scale Insights links read Daily Performance, Weekly Performance, and Monthly Performance.

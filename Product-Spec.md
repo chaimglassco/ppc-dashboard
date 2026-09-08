@@ -165,3 +165,5 @@ These require a separately approved milestone and must preserve the current shar
 
 - Every Weekly Performance metric presents the current and previous week side by side at equal visual weight, separated by a vertical divider.
 - The previous value remains neutral. The current value and direction arrow are green when it increased, red when it decreased, and neutral when unchanged or when no previous week is available.
+- Compact metric typography must keep currency and percentage symbols inside their corresponding Current or Previous column.
+- Scale Insights trend destinations are labeled Daily Performance, Weekly Performance, and Monthly Performance without a redundant “Trend” suffix.

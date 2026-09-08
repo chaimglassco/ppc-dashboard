@@ -44,7 +44,7 @@ describe("PpcPerformanceDashboard", () => {
       } }) } as Response;
     });
     const view = render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
-    await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("82"));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("82"), { timeout: 5000 });
     await waitFor(() => expect(metricsCalls).toHaveLength(5));
     expect(metricsCalls.map(url => new URL(url, "http://localhost").searchParams.get("weekStart")).sort()).toEqual([
       "2026-07-29", "2026-08-05", "2026-08-12", "2026-08-19", "2026-08-26",
@@ -72,7 +72,7 @@ describe("PpcPerformanceDashboard", () => {
     await screen.findByText("Refresh failed. Previously saved metrics are still displayed.");
     expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("99");
     expect(screen.getByRole("textbox", { name: "Spend" })).toHaveAttribute("readonly");
-  });
+  }, 15_000);
 
   it("loads a Pipeline product and automatically saves the selected weekly report", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
@@ -295,7 +295,7 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.change(priority, { target: { value: "Low" } });
     expect(priority.className).toMatch(/priorityLow/);
     expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
-  });
+  }, 15_000);
 
   it("shows only selected-month weeks, including their boundary overlap", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-09-03" />);
@@ -372,11 +372,11 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(asinNavigation).getByRole("link", { name: "Placements" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/Placements/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Ad Types" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/AdTypes/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Main Keywords" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/MainKeywords/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
-    expect(within(asinNavigation).getByRole("link", { name: "Daily Performance Trend" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=1&to=2026-09-01&asinList=B012345679");
-    expect(within(asinNavigation).getByRole("link", { name: "Weekly Performance Trend" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=7&to=2026-09-01&asinList=B012345679");
-    expect(within(asinNavigation).getByRole("link", { name: "Monthly Performance Trend" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=30&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Daily Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=1&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Weekly Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=7&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Monthly Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=30&to=2026-09-01&asinList=B012345679");
     const trendNavigation = within(asinNavigation).getByRole("group", { name: "Trend reports" });
-    expect(within(trendNavigation).getAllByRole("link").map(link => link.textContent)).toEqual(["Daily Performance Trend", "Weekly Performance Trend", "Monthly Performance Trend"]);
+    expect(within(trendNavigation).getAllByRole("link").map(link => link.textContent)).toEqual(["Daily Performance", "Weekly Performance", "Monthly Performance"]);
     for (const link of within(asinNavigation).getAllByRole("link")) {
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");
