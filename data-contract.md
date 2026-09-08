@@ -1,5 +1,11 @@
 # Data Contract
 
+## Product performance AI request
+
+`POST /ppc/api/dashboard/ai-chat` accepts an authenticated transient request containing `question`, up to eight `{ role, text }` history items, and a selected-product context. Context includes bounded product identity, one active Wednesday, active-week planning fields, and up to sixty `{ weekStart, weekEnd, dataState, metrics }` summaries. ASIN is empty or exactly ten uppercase alphanumeric characters; dates must be real ISO dates; metrics are finite nonnegative numbers no greater than one billion; `dataState` is `Partial`, `Final`, or normalized to `Saved/manual`. The body is capped at 100 KB. Unknown fields are ignored and malformed scope returns `400`.
+
+The success response is `{ answer: string }`; configuration and provider failures return bounded `{ error: string }` objects. All route responses are no-store. Neither request nor response is persisted by the application, and the widget keeps messages only in React memory keyed by product/week. The route does not change existing dashboard report, catalog, or performance-cache schemas. `AI_GATEWAY_API_KEY`, Vercel OIDC, raw provider errors, and model metadata are server-only and excluded from this contract.
+
 ## Goal history and comparison presentation
 
 The existing version-1 `glassco.ppcPerformanceNotes.v1` report accepts optional goal `metric` (`increaseSpend`, `decreaseSpend`, `ppcSales`, `totalSales`, `ppcOrders`, `organicOrders`, `totalOrders`, `acos`, or `tacos`) and `unit` (`currency`, `number`, or `percentage`). Unit is canonicalized by metric: Spend and Sales goals use currency, order goals use number, ACOS/TACOS use percentage, and Organic Order accepts number or percentage. Legacy stored `spend` maps to `increaseSpend` only when the title includes Increase and otherwise to `decreaseSpend`; legacy `sales` maps to `ppcSales`. Recognizable legacy titles infer a metric; unknown legacy goals remain valid without one. The active goal's stored `actual` remains compatibility data and is not used as an editable source. Target strings remain backward-compatible; two-decimal currency/percentage formatting is derived UI and is not required in storage.

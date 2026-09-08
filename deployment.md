@@ -17,6 +17,11 @@ Structured goals use the existing optional `metric`, `unit`, and history `dataSt
 - A deployed Pipeline project with Postgres configured and `/api/library-state` available
 - An active Pipeline ADMIN account for migration and rollout verification
 - The `mcp.scaleinsights.com/glassco-scale-insights` Vercel Connect connector attached to the PPC project for Production, Preview, and Development
+- Vercel AI Gateway available to the PPC project; deployments use project OIDC, while local standalone development requires `AI_GATEWAY_API_KEY`
+
+## AI performance assistant
+
+The assistant route calls `openai/gpt-6-astra` through Vercel AI Gateway. Do not expose `AI_GATEWAY_API_KEY` as a `NEXT_PUBLIC_` value or place it in browser storage. Vercel deployments should use the automatically available project OIDC token. For local development outside `vercel dev`, copy `.env.example` to `.env.local` and set a scoped AI Gateway key. After deployment, ask a question from `/ppc/dashboard`, confirm a no-store `POST /ppc/api/dashboard/ai-chat`, and verify no credential appears in client bundles, browser storage, URLs, or response bodies.
 
 ## Pre-deployment validation
 

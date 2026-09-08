@@ -20,6 +20,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - PPC verifies the existing Pipeline session through Pipeline’s `/api/auth/session` endpoint.
 - PPC Dashboard loads the authenticated user’s compact Pipeline product catalog and provides a three-panel product, reporting-period, and weekly documentation workspace.
 - For products with an ASIN, the selected Wednesday–Tuesday period automatically loads Spend, PPC Sales, PPC Orders, Total Sales, and Total Orders from Scale Insights through an authenticated server route. Organic Sales, Organic Orders, ACOS, and TACOS are calculated by this application.
+- A session-only Performance AI widget answers free-form questions from the selected product, active week, and populated visible reporting periods without changing the saved report schema.
 - The Products panel can add dashboard-only products, apply local edits and images, create reusable tags, filter by tag, and remove dashboard-added products. These catalog customizations use the validated `glassco.ppcDashboardCatalog.v1` browser record and do not mutate Product Pipeline records.
 - Weekly goals, budget limits, performance figures, prior-week outcomes, notes, and action items save to the versioned `glassco.ppcPerformanceNotes.v1` browser record in this initial UI milestone; they are not yet shared across browsers.
 - ADMIN users have full document, category, attributed recovery, reorder, snapshot, version, protected-archive, and integrity-incident access. Document content is never physically deleted through the application.
@@ -59,6 +60,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 
 - Next.js uses `basePath: "/ppc"` for pages, assets, and API routes.
 - `/ppc/api/dashboard/performance` verifies the Pipeline session before requesting a short-lived Scale Insights token from Vercel Connect for that stable Pipeline user ID. Vercel stores and refreshes the OAuth grant; credentials and tokens are never returned to the browser or written to browser storage.
+- Authenticated `/ppc/api/dashboard/ai-chat` validates bounded product/week context and invokes `openai/gpt-6-astra` through Vercel AI Gateway; model credentials remain server-side and responses are not cached.
 - Private shared images are fetched by client previews with the Pipeline bearer token and rendered through temporary browser object URLs; raw private API URLs are never assigned directly to image elements.
 - Pipeline proxies `/ppc/:path*` to the independently deployed PPC Vercel project.
 - Pipeline's Postgres-backed `/api/library-state` endpoint is the only authoritative document and category store. Repository Markdown under `content/library` is bootstrap/compatibility input and is never merged into an initialized catalog.
@@ -98,7 +100,7 @@ copy .env.example .env.local
 npm run dev
 ```
 
-The optional connector and endpoint values in `.env.example` are non-secret identifiers. Local Vercel Connect calls require the project OIDC environment produced by `vercel link` or `vercel env pull`; never copy a returned Scale Insights token into `.env.local`.
+The optional connector and endpoint values in `.env.example` are non-secret identifiers. Local Vercel Connect calls require the project OIDC environment produced by `vercel link` or `vercel env pull`; never copy a returned Scale Insights token into `.env.local`. Vercel deployments use project OIDC for AI Gateway; standalone local AI chat requires a server-only `AI_GATEWAY_API_KEY` in `.env.local`.
 
 Open <http://localhost:3000/ppc/library>.
 

@@ -19,6 +19,7 @@ import {
   parseDashboardCatalogStore, reorderVisibleProducts, type DashboardCatalogProduct, type DashboardCatalogStore, type ManagedDashboardProduct,
 } from "../domain/ppc-dashboard-catalog";
 import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfolio-panel";
+import { ProductPerformanceChat, type PerformanceChatPeriod } from "./product-performance-chat";
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, type PerformanceCache } from "../domain/ppc-performance-cache";
 import { getScaleInsightsAnalysisHref, PPC_ANALYSIS_COLUMNS } from "../domain/ppc-analysis-navigation";
 import styles from "./ppc-performance-dashboard.module.css";
@@ -328,6 +329,15 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     : previousDraft;
   const savedReport = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, activeWeekStart, previousReport) : null;
   const report = savedReport && cachedPerformance ? { ...savedReport, ...cachedPerformance.metrics } : savedReport;
+  const chatPeriods: PerformanceChatPeriod[] = [...new Set([activeWeekStart, previousWeekStart, ...weekStarts])].slice(0, 60).flatMap(weekStart => {
+    if (weekStart === activeWeekStart && report) return [{ weekStart, dataState: goalDataState, report }];
+    const storedReport = selectedProductId ? reports[reportKey(selectedProductId, weekStart)] : null;
+    const snapshot = performanceCache[performanceCacheKey(selectedAsin, weekStart)];
+    if (!storedReport && !snapshot) return [];
+    const periodReport = { ...(storedReport ?? createWeeklyPpcReport(selectedProductId, weekStart)), ...(snapshot?.metrics ?? {}) };
+    const dataState: GoalDataState | null = snapshot ? snapshot.endDate >= addDaysIso(weekStart, 6) ? "Final" : "Partial" : null;
+    return [{ weekStart, dataState, report: periodReport }];
+  });
   const carryForwardResult = report?.previousWeekResult || previousReport?.previousWeekResult || "";
   const budgetHistoryPageCount = Math.max(1, Math.ceil((report?.budgetHistory.length ?? 0) / BUDGET_HISTORY_PAGE_SIZE));
   const budgetHistoryPage = budgetHistoryView.key === selectedKey ? Math.min(budgetHistoryView.page, budgetHistoryPageCount) : 1;
@@ -651,6 +661,8 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         </div>
       </>}
     </main>
+
+    {selectedProduct && report ? <ProductPerformanceChat product={selectedProduct} activeWeekStart={activeWeekStart} periods={chatPeriods} /> : null}
 
     {monthPickerOpen ? <div className={styles.monthDialogBackdrop} onMouseDown={event => { if (event.target === event.currentTarget) setMonthPickerOpen(false); }}>
       <section className={styles.monthDialog} role="dialog" aria-modal="true" aria-labelledby="month-dialog-heading">

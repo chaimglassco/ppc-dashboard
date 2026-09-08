@@ -2,6 +2,14 @@
 
 Use this checklist before merging or deploying changes.
 
+## Product performance AI assistant
+
+- [ ] Select a product and confirm a compact `Ask Performance AI` launcher appears at the lower-right without covering primary controls. Open, minimize, and reopen the accessible dialog at desktop and mobile widths.
+- [ ] Ask each starter question and a typed question. Confirm the request contains only the selected product, active week, populated visible periods, bounded report planning context, and at most eight prior messages; switching product or week shows its separate conversation.
+- [ ] Confirm answers distinguish Partial, Final, and saved/manual weeks, render as plain text, and refuse to invent campaign/keyword/placement data that is not in the payload.
+- [ ] Confirm `/ppc/api/dashboard/ai-chat` rejects unauthenticated, malformed, oversized, invalid-ASIN, and active-week-missing requests; successful and error responses use `Cache-Control: no-store` and never expose Gateway/OIDC credentials or raw provider errors.
+- [ ] Verify production with Vercel project OIDC and local development with `AI_GATEWAY_API_KEY`. Remove both credentials and confirm the widget shows the bounded configuration message without affecting the rest of the dashboard.
+
 ## Goal history and previous-week comparisons
 
 Create or edit a goal, then use the circle-check Achieved action and verify it immediately leaves the active list and appears in Goal History with its target, actual, outcome, reporting week, and recorded date. Repeat with the X Missed action. Reload and switch weeks to confirm product-wide history persists. Verify Delete still removes without creating history, active status choices are limited to On Track/At Risk, malformed history is dropped, legacy terminal goals migrate, Escape/backdrop/Close dismiss the dialog, and other products do not expose this product's history.

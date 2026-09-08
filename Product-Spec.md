@@ -1,5 +1,11 @@
 # Glassco Back Office Library — Product Specification
 
+## Product performance AI assistant
+
+The PPC dashboard provides a compact bottom-right Performance AI widget whenever a product is selected. It answers questions using the selected ASIN/product, active reporting week, available previous week, every populated reporting period in the current month selection, weekly budget and Target ACOS, active goals, action items, and saved notes. Suggested questions cover summary, ACOS movement, and next priorities; users can also type free-form performance questions. Every answer must distinguish Partial, Final, and saved/manual values and acknowledge when requested campaign-, keyword-, placement-, or traffic-level data is not present.
+
+Chat conversations are separated by product and active week and remain only in component memory for the current page session. They are not added to the browser report schema. The browser sends bounded context only after the user asks a question; an authenticated server route invokes the OpenAI model through Vercel AI Gateway. AI credentials, provider errors, and model internals are never returned to the client.
+
 ## Goal history and previous-week metric comparisons
 
 Each active weekly goal has explicit Achieved and Missed actions beside Delete. Resolving a goal removes it from the active list and records its title, target, actual, outcome, completion time, and reporting week in the selected product's Goal History. The history button sits beside Add Goal and shows resolved goals across that product's saved weeks. Active status choices remain On Track or At Risk. Older terminal goals are migrated into history when restored.

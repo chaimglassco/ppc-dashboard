@@ -23,6 +23,7 @@
     "@tiptap/static-renderer": "3.28.0",
     "@vercel/blob": "^2.6.1",
     "@vercel/connect": "^2.0.2",
+    "ai": "^7.0.93",
     "gray-matter": "^4.0.3",
     "lucide-react": "^0.468.0",
     "next": "16.2.10",

@@ -2,6 +2,10 @@
 
 Last updated: September 8, 2026
 
+## Product performance AI assistant
+
+Added a compact floating Performance AI chat to the selected-product dashboard. It can analyze the active week, available prior week, populated visible-period trends, budget/Target ACOS, goals, actions, and notes; it provides starter questions and accepts free-form prompts. Conversations are isolated by product/week and remain session-only. Added an authenticated, no-store, bounded `/ppc/api/dashboard/ai-chat` route using the Vercel AI Gateway with an OpenAI model, server-only credentials, safe error handling, untrusted-context instructions, and route/widget regression tests.
+
 ## Goal history and previous-week metric indicators
 
 Added Achieved and Missed goal actions that remove resolved goals from the active list and persist them in a product-wide Goal History dialog. Added backward-compatible parser migration and validation for terminal legacy goals. Weekly Performance now shows small prior-week values with green increase/red decrease arrows, rounded comma-formatted metrics, centered budget inputs, rounded Actual spend, and no redundant prior sales/TACOS summary.

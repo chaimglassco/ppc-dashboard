@@ -1,5 +1,11 @@
 # Glassco Back Office Library — Architecture
 
+## Product performance AI boundary
+
+`ProductPerformanceChat` is a dashboard-only Client Component rendered for the selected product. It keeps separate in-memory message arrays keyed by product ID and active Wednesday, and sends at most eight prior messages plus sixty populated period summaries. The active report additionally contributes its bounded budget, Target ACOS, notes, carry-forward text, goals, and actions. Text output is rendered as plain text with preserved line breaks; no model-generated HTML is enabled and no chat state enters `glassco.ppcPerformanceNotes.v1` or another browser key.
+
+Authenticated `POST /ppc/api/dashboard/ai-chat` is the sole model boundary. It validates and bounds every client-provided product, date, metric, goal, action, and message field, rejects requests over 100 KB, and returns only `{ answer }` with `Cache-Control: no-store`. The route uses AI SDK `generateText` with `openai/gpt-6-astra` through Vercel AI Gateway, relies on project OIDC in Vercel or `AI_GATEWAY_API_KEY` for local development, caps output at 700 tokens, and converts configuration/provider failures into non-secret errors. Its instructions treat report text as untrusted data, prohibit invented metrics, and require Partial/Final/source qualification.
+
 ## Goal resolution and previous-week comparisons
 
 `WeeklyPpcReport.goalHistory` is a backward-compatible, validated array of at most 100 resolved goals per product/week. Achieved/Missed actions atomically remove an item from `goals`, prepend a terminal history entry with an ISO timestamp, and use the existing dirty-report auto-save. The product-level history dialog derives a newest-first view across saved reports without duplicating data. Parser migration moves legacy terminal goals out of the active list, using the report update time or reporting-week start as a deterministic resolution timestamp; malformed history entries are discarded.
