@@ -178,3 +178,7 @@ Formatting writes use `document.update` with `updateScope: "content"`. The Pipel
 - Confirmed catalog and per-document caches remain separate, read-only outage fallbacks. Each cache records its snapshot time and revision and is never uploaded to Pipeline.
 - Focus, visibility, `pageshow`, and browser history restoration trigger immediate authoritative refreshes. Only an explicit `deleted` or `archived` manifest lifecycle invalidates a missing document cache; a verified record-version change invalidates a still-active cache. Formatting-save responses are handled separately and never evict a cache unless they explicitly report a lifecycle transition.
 - Slug reads expose `active`, `deleted`, `purged`, or `not_found` status so stale routes render an explanation instead of silently reconciling to an empty reader.
+
+## Weekly metric comparison rendering
+
+The dashboard derives each comparison from the selected report and the immediately preceding saved or cached weekly report. This is presentation-only: both values retain the existing report schema, while direction classes are applied only to the current value and the prior value remains neutral.

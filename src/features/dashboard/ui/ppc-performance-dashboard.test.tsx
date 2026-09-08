@@ -81,7 +81,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/dashboard/products"), expect.any(Object));
     expect(screen.getByRole("button", { name: "Weekly Report" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Open current week" })).not.toBeInTheDocument();
-    const currentPeriod = screen.getByText("Current").closest("button") as HTMLButtonElement;
+    const currentPeriod = screen.getByText("August 26 to September 1").closest("button") as HTMLButtonElement;
     expect(within(currentPeriod).getByText("August 26 to September 1")).toBeVisible();
     expect(within(currentPeriod).getByText("Week 35").parentElement?.className).toMatch(/periodMeta/);
     expect(within(currentPeriod).getByText("Order")).toBeVisible();
@@ -185,9 +185,12 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveAttribute("readonly");
     const previousSales = await within(performanceCard).findByLabelText("Previous Total Sales: $1,200, increased");
     expect(previousSales).toHaveTextContent("$1,200");
-    expect(previousSales.className).toMatch(/metricIncrease/);
+    expect(previousSales.className).toMatch(/metricPrevious/);
+    expect(previousSales.className).not.toMatch(/metricIncrease|metricDecrease/);
+    expect(within(performanceCard).getByRole("textbox", { name: "Total Sales" }).closest("span")?.parentElement?.className).toMatch(/metricIncrease/);
     const previousSpend = within(performanceCard).getByLabelText("Previous Spend: $90, decreased");
-    expect(previousSpend.className).toMatch(/metricDecrease/);
+    expect(previousSpend.className).not.toMatch(/metricIncrease|metricDecrease/);
+    expect(within(performanceCard).getByRole("textbox", { name: "Spend" }).closest("span")?.parentElement?.className).toMatch(/metricDecrease/);
     expect(screen.queryByText(/total sales ·/i)).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
   });

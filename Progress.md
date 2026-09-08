@@ -213,3 +213,8 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Kept verified formatting saves in the reader and per-document cache while rejecting incomplete mutation confirmations.
 - Added regression coverage for partial HTTP 200 responses, lifecycle reconciliation, formatting saves, refresh omission, and legacy cache fallback.
 - Pipeline and Library automated gates pass locally; production deployment and authenticated multi-account verification remain pending.
+
+## Weekly comparison layout
+
+- Replaced the corner-sized previous-week annotation with equal-size Current and Previous columns in every Weekly Performance metric card.
+- Added a center divider and moved red/green direction styling to the current value and arrow only.

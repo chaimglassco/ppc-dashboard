@@ -232,3 +232,5 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] Click Recovery with both requests delayed; confirm the modal shell appears immediately, each source shows independent loading/error state, and Try again works without closing the modal.
 - [ ] Confirm protected restore lists only the approved bQool and Check Spend records as restorable, requires confirmation, preserves each original ID/slug/content, and leaves every other intentionally purged document unchanged.
 - [ ] Confirm an approved record absent from the current snapshot can be discovered from a checksum-addressed legacy archive without exposing or restoring unapproved records.
+- [ ] Open a report with a saved previous week and confirm every Weekly Performance card shows equal-size Current and Previous values separated by a divider; only the current value and arrow change green/red according to direction.
+- [ ] Open the earliest available report and confirm the Previous column displays a neutral unavailable marker without changing the current value color.

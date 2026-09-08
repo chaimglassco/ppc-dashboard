@@ -78,8 +78,17 @@ function MetricInput({ metric, report, previousValue, importedLocked, warning, o
   const comparisonDirection = comparison > 0 ? "increased" : comparison < 0 ? "decreased" : "unchanged";
   return <label className={`${styles.metricCard} ${readOnly ? styles.calculatedMetric : ""} ${warning ? styles.metricWarning : ""}`} data-warning={warning || undefined}>
     <span>{metric.label}</span>
-    <span className={styles.metricInputWrap}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-describedby={warning ? "acos-target-warning" : undefined} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" value={roundedMetricValue(report[metric.field])} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
-    {previousValue == null ? null : <small className={`${styles.metricPrevious} ${comparison > 0 ? styles.metricIncrease : comparison < 0 ? styles.metricDecrease : ""}`} aria-label={`Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}, ${comparisonDirection}`}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : comparison < 0 ? <ArrowDown aria-hidden="true" /> : null}{previousMetricValue(metric, previousValue)}</small>}
+    <span className={styles.metricComparison}>
+      <span className={`${styles.metricComparisonValue} ${styles.metricCurrent} ${comparison > 0 ? styles.metricIncrease : comparison < 0 ? styles.metricDecrease : ""}`}>
+        <small>Current</small>
+        <span className={styles.metricInputWrap}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : comparison < 0 ? <ArrowDown aria-hidden="true" /> : null}{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-describedby={warning ? "acos-target-warning" : undefined} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" value={roundedMetricValue(report[metric.field])} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
+      </span>
+      <i className={styles.metricComparisonDivider} aria-hidden="true" />
+      <span className={`${styles.metricComparisonValue} ${styles.metricPrevious}`} aria-label={previousValue == null ? `Previous ${metric.label}: unavailable` : `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}, ${comparisonDirection}`}>
+        <small>Previous</small>
+        <strong>{previousValue == null ? "—" : previousMetricValue(metric, previousValue)}</strong>
+      </span>
+    </span>
     {warning ? <span id="acos-target-warning" className={styles.metricWarningText}>Actual ACOS is above Target ACOS.</span> : null}
   </label>;
 }

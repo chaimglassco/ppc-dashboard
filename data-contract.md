@@ -340,3 +340,7 @@ The corresponding legacy body/text fields remain required search and compatibili
 Shared Library responses may include `snapshotAt`, `recoveryDocumentCount`, and `documentStatus`. `documentStatus.status` is `active`, `deleted`, `archived`, `purged`, or `not_found`; deleted responses may include record version and ADMIN-only deletion attribution.
 
 `GET /ppc/api/library?summary=1` returns active catalog documents and the recoverable count without tombstone content. `recovery=1` explicitly includes recoverable tombstones and ADMIN deletion audit metadata. `slug=<slug>` returns the requested active document plus its structured status. `recordManifest` and `catalogCompleteness` are mandatory for live reads and mutation confirmations but optional when parsing an older confirmed cache. A missing record without an explicit deleted/archived/purged lifecycle is never interpreted as deletion.
+
+## Weekly comparison projection
+
+Current-versus-previous direction, display color, and column labels are derived UI values and are not persisted. The selected report and immediately preceding weekly report continue to use the existing `WeeklyPpcReport` metric fields without contract changes.

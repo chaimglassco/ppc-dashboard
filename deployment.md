@@ -185,3 +185,7 @@ For an approved protected-document repair, deploy only this repository. Open ADM
 ## Reorder, Recovery, bookmark, and empty-catalog rollout
 
 Deploy the Pipeline Library API first because the reordered IDs require the scalar-safe PostgreSQL expansion before the UI can reliably persist them. Verify a revision-guarded `documents.reorder` request succeeds and that Pipeline runtime logs contain no PostgreSQL `22023` errors. Then deploy this Library UI and verify Save order progress/close/toast behavior, the reconciled bookmark badge, immediate Recovery loading and retry, and confirmed deletion/recovery of the final active document. This rollout requires no schema or data migration and must not modify Pipeline UI code.
+
+## Weekly comparison rollout
+
+The side-by-side Weekly Performance comparison is a presentation-only Library deployment. It requires no environment variable, API, storage-schema, or data migration. Verify equal-width Current and Previous values, the vertical divider, neutral prior values, and direction color on current values at desktop and mobile widths.

@@ -160,3 +160,8 @@ These require a separately approved milestone and must preserve the current shar
 - A stale deleted-document link explains when and how it was deleted and offers ADMIN recovery while its tombstone exists.
 - A permanently purged link explains that recovery is unavailable.
 - Reorder states whether it is blocked by connectivity or fewer than two active documents. Recovery remains enabled while connected and opens a fresh view of tombstones plus permanent-deletion history.
+
+## Weekly metric comparison
+
+- Every Weekly Performance metric presents the current and previous week side by side at equal visual weight, separated by a vertical divider.
+- The previous value remains neutral. The current value and direction arrow are green when it increased, red when it decreased, and neutral when unchanged or when no previous week is available.
