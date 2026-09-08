@@ -2,9 +2,9 @@
 
 Last updated: September 8, 2026
 
-## Target ACOS warnings and product-scoped navigation
+## Target ACOS warnings and product-scoped Scale Insights navigation
 
-Added an auto-saved Target ACOS to every weekly report and a red ACOS-card warning when actual efficiency exceeds the configured target. Added compact header links plus validated ASIN-in-path destination pages for Campaigns, Keyword Targeting, Product Targeting, Search Terms, Match Types, Placements, Ad Types, and Main Keywords.
+Added an auto-saved, centered Target ACOS to every weekly report and a red ACOS-card warning when actual efficiency exceeds the configured target. The eight compact header links now open their real Scale Insights reports with the selected ASIN and active week applied; the temporary internal report pages were removed. The header's duplicate date/week label was removed and timeline ACOS is rendered as a whole number.
 
 ## Budget history, cleaner report controls, and multi-month timeline
 

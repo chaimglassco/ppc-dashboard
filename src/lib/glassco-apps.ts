@@ -8,7 +8,6 @@ export const GLASSCO_DEFAULT_APP_ROUTES: Record<GlasscoAppId, string> = {
   ppc: "/ppc/library",
   ppcDashboard: "/ppc/dashboard",
 };
-const PPC_ANALYSIS_ROUTE_PATTERN = /^\/ppc\/dashboard\/products\/[A-Z0-9]{10}\/(?:campaigns|keyword-targeting|product-targeting|search-terms|match-types|placements|ad-types|main-keywords)$/;
 
 export function withPpcBasePath(path: string) {
   const normalized = path.startsWith("/") ? path : `/${path}`;
@@ -37,11 +36,11 @@ export function isValidSopLibraryRoute(value: unknown): value is string {
 
 export function isValidPpcDashboardRoute(value: unknown): value is string {
   const parsed = parseSameOriginRoute(value);
-  return Boolean(parsed && (parsed.pathname === "/ppc/dashboard" || PPC_ANALYSIS_ROUTE_PATTERN.test(parsed.pathname)));
+  return Boolean(parsed && parsed.pathname === "/ppc/dashboard");
 }
 
 export function isPpcDashboardPathname(pathname: string) {
-  return pathname === "/dashboard" || pathname.startsWith("/dashboard/") || pathname === "/ppc/dashboard" || pathname.startsWith("/ppc/dashboard/");
+  return pathname === "/dashboard" || pathname === "/ppc/dashboard";
 }
 
 export function getSafeGlasscoReturnRoute(value: unknown): string | null {

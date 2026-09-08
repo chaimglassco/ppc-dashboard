@@ -1,10 +1,10 @@
 # Glassco Back Office Library — Architecture
 
-## Target ACOS and ASIN-scoped analysis routes
+## Target ACOS and ASIN-scoped Scale Insights links
 
 `WeeklyPpcReport.targetAcos` is an optional-compatible finite nonnegative number normalized into the existing version-1 browser report schema. The warning state is derived during render from `targetAcos > 0 && acos > targetAcos`; Scale Insights remains the source of actual ACOS and Target ACOS is never sent upstream.
 
-Analysis destinations use the canonical `/ppc/dashboard/products/[asin]/[view]` route. A shared allowlist owns the eight supported view slugs, labels, descriptions, ASIN normalization, and URL construction. The Server Component awaits Next.js 16 dynamic params and rejects invalid ASINs or view slugs with `notFound()`. No OAuth material or raw MCP response is placed in the route.
+Analysis destinations are built from a fixed `https://portal.scaleinsights.com` origin and an allowlist of eight verified report paths. The URL builder normalizes a ten-character ASIN and accepts only ISO-shaped dates before adding `asinList`, `from`, and `to`; invalid input falls back to the Scale Insights Ads landing page. Links open with `noopener noreferrer`. The frontend sends no OAuth material, connector token, or raw MCP response to Scale Insights through these URLs.
 
 ## Budget history and multi-month reporting
 
@@ -14,7 +14,7 @@ Multi-month selection is transient client UI state. Pure domain helpers validate
 
 ## Saved weekly performance and smaller tags
 
-A versioned local performance snapshot cache is independent of editable weekly reports, keyed by US marketplace, normalized ASIN, and Wednesday start. Hydration completes before automatic fetches. Five source values are validated and derived metrics recalculated when restoring snapshots; no OAuth material is stored. Successful fetches persist immediately, week cards and detail metrics overlay the matching snapshot, and explicit Refresh bypasses the cache. Canceled requests cannot update state; failed refreshes preserve cached values and read-only imported inputs. The metrics input layer rounds only its rendered value, leaving cached and calculated numbers exact.
+A versioned local performance snapshot cache is independent of editable weekly reports, keyed by US marketplace, normalized ASIN, and Wednesday start. Hydration completes before automatic fetches. Five source values are validated and derived metrics recalculated when restoring snapshots; no OAuth material is stored. Successful fetches persist immediately, week cards and detail metrics overlay the matching snapshot, and explicit Refresh bypasses the cache. Canceled requests cannot update state; failed refreshes preserve cached values and read-only imported inputs. The metrics input layer and timeline ACOS presentation round only rendered values, leaving cached and calculated numbers exact.
 
 ## Compact product cards
 

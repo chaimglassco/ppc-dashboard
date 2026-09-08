@@ -1,12 +1,12 @@
 export const PPC_ANALYSIS_SECTIONS = [
-  { slug: "campaigns", label: "Campaigns", description: "Campaign-level performance and structure." },
-  { slug: "keyword-targeting", label: "Keyword Targeting", description: "Keyword bids, sales, orders, and efficiency." },
-  { slug: "product-targeting", label: "Product Targeting", description: "ASIN and category targeting performance." },
-  { slug: "search-terms", label: "Search Terms", description: "Customer queries and their attributed results." },
-  { slug: "match-types", label: "Match Types", description: "Performance grouped by broad, phrase, and exact match." },
-  { slug: "placements", label: "Placements", description: "Top-of-search, rest-of-search, and product-page results." },
-  { slug: "ad-types", label: "Ad Types", description: "Sponsored Products, Brands, and Display performance." },
-  { slug: "main-keywords", label: "Main Keywords", description: "Priority keyword coverage and performance." },
+  { slug: "campaigns", label: "Campaigns", path: "/Ads/Performance/Campaigns/Index" },
+  { slug: "keyword-targeting", label: "Keyword Targeting", path: "/Ads/Performance/Keywords/Index" },
+  { slug: "product-targeting", label: "Product Targeting", path: "/Ads/Performance/ProductAds/Index" },
+  { slug: "search-terms", label: "Search Terms", path: "/Ads/SearchTerms/Index" },
+  { slug: "match-types", label: "Match Types", path: "/Ads/Performance/MatchTypes/Index" },
+  { slug: "placements", label: "Placements", path: "/Ads/Performance/Placements/Index" },
+  { slug: "ad-types", label: "Ad Types", path: "/Ads/Performance/AdTypes/Index" },
+  { slug: "main-keywords", label: "Main Keywords", path: "/Ads/MainKeywords/Index" },
 ] as const;
 
 export type PpcAnalysisSlug = (typeof PPC_ANALYSIS_SECTIONS)[number]["slug"];
@@ -16,11 +16,15 @@ export function normalizeDashboardAsin(value: string) {
   return /^[A-Z0-9]{10}$/.test(asin) ? asin : "";
 }
 
-export function getPpcAnalysisSection(value: string) {
-  return PPC_ANALYSIS_SECTIONS.find(section => section.slug === value) ?? null;
-}
-
-export function getPpcAnalysisHref(asinValue: string, section: PpcAnalysisSlug) {
+export function getScaleInsightsAnalysisHref(asinValue: string, section: PpcAnalysisSlug, from: string, to: string) {
   const asin = normalizeDashboardAsin(asinValue);
-  return asin ? `/dashboard/products/${encodeURIComponent(asin)}/${section}` : "/dashboard";
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  const route = PPC_ANALYSIS_SECTIONS.find(candidate => candidate.slug === section);
+  if (!asin || !route || !datePattern.test(from) || !datePattern.test(to)) return "https://portal.scaleinsights.com/Ads";
+
+  const url = new URL(route.path, "https://portal.scaleinsights.com");
+  url.searchParams.set("from", from);
+  url.searchParams.set("to", to);
+  url.searchParams.set("asinList", asin);
+  return url.toString();
 }

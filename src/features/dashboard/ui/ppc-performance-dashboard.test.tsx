@@ -159,6 +159,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(performanceCard).getByRole("textbox", { name: "Total Sales" })).toHaveValue("1317");
     expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveValue("17");
     expect(within(performanceCard).getByRole("textbox", { name: "TACOS" })).toHaveValue("6");
+    expect(within(screen.getByRole("button", { name: /August 26 to September 1/ })).getByText("17%")).toBeVisible();
     expect(within(performanceCard).getByRole("textbox", { name: "PPC Sales" })).toHaveAttribute("readonly");
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveAttribute("readonly");
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
@@ -318,16 +319,22 @@ describe("PpcPerformanceDashboard", () => {
     expect(headerSkuLink).toHaveAttribute("href", "https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=POLISH-01");
     expect(headerAsinLink).toHaveAttribute("target", "_blank");
     expect(headerSkuLink).toHaveAttribute("rel", "noopener noreferrer");
-    const asinNavigation = screen.getByRole("navigation", { name: "Analysis for ASIN B012345679" });
+    expect(headerAsinLink.closest("p")).not.toHaveTextContent("August 26 to September 1");
+    expect(headerAsinLink.closest("p")).not.toHaveTextContent("Week 35");
+    const asinNavigation = screen.getByRole("navigation", { name: "Scale Insights analysis for ASIN B012345679" });
     expect(within(asinNavigation).getAllByRole("link")).toHaveLength(8);
-    expect(within(asinNavigation).getByRole("link", { name: "Campaigns" })).toHaveAttribute("href", "/dashboard/products/B012345679/campaigns");
-    expect(within(asinNavigation).getByRole("link", { name: "Keyword Targeting" })).toHaveAttribute("href", "/dashboard/products/B012345679/keyword-targeting");
-    expect(within(asinNavigation).getByRole("link", { name: "Product Targeting" })).toHaveAttribute("href", "/dashboard/products/B012345679/product-targeting");
-    expect(within(asinNavigation).getByRole("link", { name: "Search Terms" })).toHaveAttribute("href", "/dashboard/products/B012345679/search-terms");
-    expect(within(asinNavigation).getByRole("link", { name: "Match Types" })).toHaveAttribute("href", "/dashboard/products/B012345679/match-types");
-    expect(within(asinNavigation).getByRole("link", { name: "Placements" })).toHaveAttribute("href", "/dashboard/products/B012345679/placements");
-    expect(within(asinNavigation).getByRole("link", { name: "Ad Types" })).toHaveAttribute("href", "/dashboard/products/B012345679/ad-types");
-    expect(within(asinNavigation).getByRole("link", { name: "Main Keywords" })).toHaveAttribute("href", "/dashboard/products/B012345679/main-keywords");
+    expect(within(asinNavigation).getByRole("link", { name: "Campaigns" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/Campaigns/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Keyword Targeting" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/Keywords/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Product Targeting" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/ProductAds/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Search Terms" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Match Types" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/MatchTypes/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Placements" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/Placements/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Ad Types" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/AdTypes/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Main Keywords" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/MainKeywords/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
+    for (const link of within(asinNavigation).getAllByRole("link")) {
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    }
     expect(screen.getAllByText("Launch group").length).toBeGreaterThan(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Enable product editing" }));

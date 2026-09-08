@@ -4,7 +4,7 @@
 
 Each product/week report includes an editable Target ACOS beside Weekly Performance. When Target ACOS is greater than zero and actual ACOS exceeds it, the ACOS metric card changes to a red warning treatment; meeting the target or leaving it unset uses the normal card treatment.
 
-The selected-product header provides links to Campaigns, Keyword Targeting, Product Targeting, Search Terms, Match Types, Placements, Ad Types, and Main Keywords. Every destination embeds the validated ten-character ASIN in its route and identifies that ASIN on the page, so analysis navigation cannot silently switch product scope.
+The selected-product header provides links to Campaigns, Keyword Targeting, Product Targeting, Search Terms, Match Types, Placements, Ad Types, and Main Keywords. Each opens the matching Scale Insights page in a new tab with the validated ten-character ASIN and active Wednesday–Tuesday week in Scale Insights' `asinList`, `from`, and `to` filters. The compact product identity row keeps ASIN and SKU but omits the duplicate active-week date, and the Target ACOS value is centered in its field.
 
 ## Budget history, report controls, and multi-month timeline
 
@@ -14,7 +14,7 @@ The reporting-period picker supports multiple selected months across years, plus
 
 ## Saved weekly performance and smaller tags
 
-Fetched performance is saved in this browser per US ASIN and reporting week. Selecting a week without a snapshot fetches once; returning to a saved week or reloading displays its saved metrics and coverage. Only Refresh updates an existing snapshot; pending/failed refreshes preserve the last values. Weekly metric cards show whole-number values in a compact layout while retaining exact source values in storage. Portfolio tag badges use compact 7px text and reduced padding.
+Fetched performance is saved in this browser per US ASIN and reporting week. Selecting a week without a snapshot fetches once; returning to a saved week or reloading displays its saved metrics and coverage. Only Refresh updates an existing snapshot; pending/failed refreshes preserve the last values. Weekly metric cards and timeline ACOS values show whole numbers in a compact layout while retaining exact source values in storage. Portfolio tag badges use compact 7px text and reduced padding.
 
 ## Compact product cards
 

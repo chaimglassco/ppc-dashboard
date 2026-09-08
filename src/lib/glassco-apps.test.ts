@@ -58,7 +58,6 @@ describe("Glassco app routing", () => {
     "/ppc/library/example?mode=read#topic",
     "/ppc/dashboard",
     "/ppc/dashboard?range=30d#summary",
-    "/ppc/dashboard/products/B012345678/campaigns",
   ])("accepts the safe return destination %s", route => {
     expect(getSafeGlasscoReturnRoute(route)).toBe(route);
     expect(getPipelineLoginUrl(route)).toContain(`returnTo=${encodeURIComponent(route)}`);
@@ -69,6 +68,7 @@ describe("Glassco app routing", () => {
     "//evil.example/ppc/library",
     "/ppc/library\\evil",
     "/ppc/dashboard/extra",
+    "/ppc/dashboard/products/B012345678/campaigns",
     "/ppc/other",
     "not-a-route",
   ])("rejects the unsafe return destination %s", route => {

@@ -35,7 +35,7 @@ npm run start
 
 Open [http://localhost:3000/ppc/library](http://localhost:3000/ppc/library).
 
-Also verify `/ppc/dashboard`, set a Target ACOS below the selected product's actual ACOS, and open at least one `/ppc/dashboard/products/<ASIN>/<view>` destination. The destination must retain the exact selected ASIN in its path and page scope.
+Also verify `/ppc/dashboard`, set a Target ACOS below the selected product's actual ACOS, and open at least one header analysis link. It must open `portal.scaleinsights.com` in a new tab with the selected ASIN and active-week dates in its filters, without credentials in the URL.
 
 ## Deploy with Vercel
 

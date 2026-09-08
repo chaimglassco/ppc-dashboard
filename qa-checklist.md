@@ -2,11 +2,11 @@
 
 Use this checklist before merging or deploying changes.
 
-## Target ACOS and ASIN-scoped navigation
+## Target ACOS and ASIN-scoped Scale Insights navigation
 
-Set Target ACOS below actual ACOS and verify only the ACOS card turns red; set it equal to or above actual and verify the warning clears. Reload and switch weeks/products to confirm the value follows its product/week report. Verify zero and malformed stored values do not warn.
+Set Target ACOS below actual ACOS and verify only the ACOS card turns red; set it equal to or above actual and verify the warning clears. Confirm the entered value is centered. Reload and switch weeks/products to confirm the value follows its product/week report. Verify zero and malformed stored values do not warn.
 
-For each of the eight analysis links, confirm the URL contains the selected ASIN and correct allowlisted view slug. Confirm every destination displays the same ASIN, its active navigation state, and links only to sibling views under that ASIN. Invalid ASINs and view slugs must return Not Found.
+For each of the eight analysis links, confirm a new Scale Insights tab opens on the correct report and its URL contains the selected ASIN plus active-week `from` and `to` dates. Confirm changing product or week updates all eight links. Verify no connector token or OAuth credential appears in the URL or browser storage. Confirm the selected-product identity row contains ASIN and SKU but no duplicate date/week label, and timeline ACOS values have no decimals.
 
 ## Budget history and multi-month timeline
 
@@ -16,7 +16,7 @@ Select adjacent, non-adjacent, and cross-year months; apply the selection and ve
 
 ## Saved weekly performance and smaller tags
 
-Fetch two weeks, switch between them, reload, and verify both timeline cards and the selected metrics retain their values without another performance request. Refresh must update only the selected ASIN/week and retain the last values on error. Verify zero-valued snapshots are reusable, malformed snapshots are ignored, storage failure is reported, compact tags remain readable, and all metric cards display rounded whole numbers in the smaller layout.
+Fetch two weeks, switch between them, reload, and verify both timeline cards and the selected metrics retain their values without another performance request. Refresh must update only the selected ASIN/week and retain the last values on error. Verify zero-valued snapshots are reusable, malformed snapshots are ignored, storage failure is reported, compact tags remain readable, and all metric cards plus timeline ACOS values display rounded whole numbers in the smaller layout.
 
 ## Compact product cards
 
@@ -34,7 +34,7 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 
 - [x] `npm run lint`
 - [x] `npm run typecheck`
-- [x] `npm test` — 267 tests passing and 6 skipped across 46 test files
+- [x] `npm test` — 266 tests passing and 6 skipped across 45 test files
 - [x] `npm run build`
 
 ## Catalog and navigation

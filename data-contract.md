@@ -1,10 +1,10 @@
 # Data Contract
 
-## Target ACOS and analysis routes
+## Target ACOS and Scale Insights analysis URLs
 
 The existing version-1 `glassco.ppcPerformanceNotes.v1` report accepts optional `targetAcos: number`. Missing, negative, non-finite, or malformed values normalize to `0`, meaning no warning threshold. A positive value is local product/week planning data and does not alter imported Scale Insights metrics.
 
-Analysis URLs follow `/ppc/dashboard/products/<ASIN>/<view>`. `<ASIN>` must normalize to exactly ten uppercase alphanumeric characters. `<view>` must be one of `campaigns`, `keyword-targeting`, `product-targeting`, `search-terms`, `match-types`, `placements`, `ad-types`, or `main-keywords`. Invalid route values render Not Found.
+Analysis URLs use the fixed `https://portal.scaleinsights.com` origin and an allowlisted path for Campaigns, Keyword Targeting, Product Targeting, Search Terms, Match Types, Placements, Ad Types, or Main Keywords. `<ASIN>` must normalize to exactly ten uppercase alphanumeric characters, and `from`/`to` must be ISO-shaped active-week dates. Only these three filter values are serialized. Invalid input resolves to the Scale Insights Ads landing page; OAuth credentials and MCP tokens are never included.
 
 ## Budget history and reporting-period selection
 
@@ -14,7 +14,7 @@ Selected reporting months are not persisted and do not change report or performa
 
 ## Saved weekly performance and smaller tags
 
-`glassco.ppcPerformanceCache.v1` stores `{ version: 1, entries: { ["US:<ASIN>:<Wednesday date>"]: performance } }` using the minimal performance DTO, never credentials or raw MCP payloads. Restoration validates exact ASIN, US marketplace, real bounded weekly dates, finite nonnegative source numbers and integer orders; it recalculates derived numbers and reconstructs keys. Snapshots include actual end date, freshness and warnings; genuine zero metrics remain valid cache entries. Existing report/catalog keys are unchanged. No automatic expiry or background refresh occurs; Refresh replaces only the selected snapshot. Whole-number formatting is presentation-only and does not change the stored DTO.
+`glassco.ppcPerformanceCache.v1` stores `{ version: 1, entries: { ["US:<ASIN>:<Wednesday date>"]: performance } }` using the minimal performance DTO, never credentials or raw MCP payloads. Restoration validates exact ASIN, US marketplace, real bounded weekly dates, finite nonnegative source numbers and integer orders; it recalculates derived numbers and reconstructs keys. Snapshots include actual end date, freshness and warnings; genuine zero metrics remain valid cache entries. Existing report/catalog keys are unchanged. No automatic expiry or background refresh occurs; Refresh replaces only the selected snapshot. Whole-number metric and timeline ACOS formatting is presentation-only and does not change the stored DTO.
 
 ## Compact product cards
 
