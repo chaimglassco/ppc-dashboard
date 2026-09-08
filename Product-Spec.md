@@ -1,5 +1,11 @@
 # Glassco Back Office Library — Product Specification
 
+## Target ACOS and ASIN analysis navigation
+
+Each product/week report includes an editable Target ACOS beside Weekly Performance. When Target ACOS is greater than zero and actual ACOS exceeds it, the ACOS metric card changes to a red warning treatment; meeting the target or leaving it unset uses the normal card treatment.
+
+The selected-product header provides links to Campaigns, Keyword Targeting, Product Targeting, Search Terms, Match Types, Placements, Ad Types, and Main Keywords. Every destination embeds the validated ten-character ASIN in its route and identifies that ASIN on the page, so analysis navigation cannot silently switch product scope.
+
 ## Budget history, report controls, and multi-month timeline
 
 Each product/week report shows a compact budget-history table with `Date of Change`, `From`, and `To` columns. One entry is recorded when a Weekly limit edit is committed by blur or Enter; intermediate keystrokes do not create rows. Draft badges and the Save Draft button are hidden, while automatic saving and the primary Weekly Report/Save Changes control remain available.

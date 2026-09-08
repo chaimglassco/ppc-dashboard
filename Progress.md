@@ -2,6 +2,10 @@
 
 Last updated: September 8, 2026
 
+## Target ACOS warnings and product-scoped navigation
+
+Added an auto-saved Target ACOS to every weekly report and a red ACOS-card warning when actual efficiency exceeds the configured target. Added compact header links plus validated ASIN-in-path destination pages for Campaigns, Keyword Targeting, Product Targeting, Search Terms, Match Types, Placements, Ad Types, and Main Keywords.
+
 ## Budget history, cleaner report controls, and multi-month timeline
 
 Added per-week budget-change rows, removed visible Draft badges and the secondary Save Draft action, and introduced an apply-based multi-month/year picker with boundary-week inclusion, future-week exclusion, deduplication, and coverage-aware labels. Added parser, date-range, selection, persistence, and UI regression coverage.

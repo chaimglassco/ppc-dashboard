@@ -1,5 +1,11 @@
 # Glassco Back Office Library — Architecture
 
+## Target ACOS and ASIN-scoped analysis routes
+
+`WeeklyPpcReport.targetAcos` is an optional-compatible finite nonnegative number normalized into the existing version-1 browser report schema. The warning state is derived during render from `targetAcos > 0 && acos > targetAcos`; Scale Insights remains the source of actual ACOS and Target ACOS is never sent upstream.
+
+Analysis destinations use the canonical `/ppc/dashboard/products/[asin]/[view]` route. A shared allowlist owns the eight supported view slugs, labels, descriptions, ASIN normalization, and URL construction. The Server Component awaits Next.js 16 dynamic params and rejects invalid ASINs or view slugs with `notFound()`. No OAuth material or raw MCP response is placed in the route.
+
 ## Budget history and multi-month reporting
 
 `WeeklyPpcReport` adds a backward-compatible `budgetHistory` array. Budget edit focus captures the original weekly limit; blur or Enter appends one validated change and lets the existing dirty-report auto-save persist it. Parsed rows require a valid timestamp, distinct finite nonnegative values, and are capped at 100 per report.

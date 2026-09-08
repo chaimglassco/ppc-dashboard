@@ -60,8 +60,8 @@ describe("Glassco application tabs", () => {
   });
 
   it("marks PPC Weekly Goals current without activating the Library navigation", () => {
-    navigation.pathname = "/dashboard";
-    window.history.replaceState({}, "", "/ppc/dashboard");
+    navigation.pathname = "/dashboard/products/B012345678/campaigns";
+    window.history.replaceState({}, "", "/ppc/dashboard/products/B012345678/campaigns");
     render(<AppShell><div>Dashboard content</div></AppShell>);
 
     expect(screen.getByRole("link", { name: "PPC Weekly Goals" })).toHaveAttribute("aria-current", "page");

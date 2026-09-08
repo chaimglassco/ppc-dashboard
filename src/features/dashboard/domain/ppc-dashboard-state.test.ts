@@ -19,6 +19,7 @@ describe("PPC dashboard state", () => {
     expect(Object.keys(parsed.reports)).toEqual(["product-1:2026-08-26"]);
     expect(parsed.reports["product-1:2026-08-26"].weekStart).toBe("2026-08-26");
     expect(parsed.reports["product-1:2026-08-26"].weeklyBudget).toBe(2000);
+    expect(parsed.reports["product-1:2026-08-26"].targetAcos).toBe(0);
     expect(parsed.reports["product-1:2026-08-26"].notes).toBe("Keep this");
     expect(parsePpcDashboardStore("not json")).toEqual({ version: 1, reports: {} });
   });
@@ -70,6 +71,15 @@ describe("PPC dashboard state", () => {
     });
 
     expect(calculated).toMatchObject({ organicSales: 200, organicOrders: 5, acos: 75, tacos: 25 });
+  });
+
+  it("validates and preserves a weekly Target ACOS", () => {
+    const report = { ...createWeeklyPpcReport("product-1", "2026-08-26"), targetAcos: 24.5 };
+    const parsed = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { report } }));
+    expect(parsed.reports["product-1:2026-08-26"].targetAcos).toBe(24.5);
+
+    const invalid = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { report: { ...report, targetAcos: -1 } } }));
+    expect(invalid.reports["product-1:2026-08-26"].targetAcos).toBe(0);
   });
 
   it("rounds currency differences and handles zero denominators without invalid percentages", () => {

@@ -2,6 +2,12 @@
 
 Use this checklist before merging or deploying changes.
 
+## Target ACOS and ASIN-scoped navigation
+
+Set Target ACOS below actual ACOS and verify only the ACOS card turns red; set it equal to or above actual and verify the warning clears. Reload and switch weeks/products to confirm the value follows its product/week report. Verify zero and malformed stored values do not warn.
+
+For each of the eight analysis links, confirm the URL contains the selected ASIN and correct allowlisted view slug. Confirm every destination displays the same ASIN, its active navigation state, and links only to sibling views under that ASIN. Invalid ASINs and view slugs must return Not Found.
+
 ## Budget history and multi-month timeline
 
 Change a Weekly limit using multiple keystrokes, blur or press Enter, and verify exactly one newest-first history row appears with `Date of Change`, `From`, and `To`. Reload and confirm the row persists. Verify invalid stored rows are dropped and older reports without history still load. Confirm no Draft badge or Save Draft button is visible.
@@ -28,7 +34,7 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 
 - [x] `npm run lint`
 - [x] `npm run typecheck`
-- [x] `npm test` — 124 tests passing across 22 test files
+- [x] `npm test` — 267 tests passing and 6 skipped across 46 test files
 - [x] `npm run build`
 
 ## Catalog and navigation

@@ -35,6 +35,8 @@ npm run start
 
 Open [http://localhost:3000/ppc/library](http://localhost:3000/ppc/library).
 
+Also verify `/ppc/dashboard`, set a Target ACOS below the selected product's actual ACOS, and open at least one `/ppc/dashboard/products/<ASIN>/<view>` destination. The destination must retain the exact selected ASIN in its path and page scope.
+
 ## Deploy with Vercel
 
 1. Push the complete repository to GitHub.

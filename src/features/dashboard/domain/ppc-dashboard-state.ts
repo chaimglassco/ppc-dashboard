@@ -10,7 +10,7 @@ export type WeeklyPpcReport = {
   productId: string; weekStart: string; status: ReportStatus; weeklyBudget: number; dailyBudget: number;
   budgetHistory: BudgetChange[];
   spend: number; ppcSales: number; organicSales: number; totalSales: number;
-  ppcOrders: number; organicOrders: number; totalOrders: number; acos: number; tacos: number;
+  ppcOrders: number; organicOrders: number; totalOrders: number; targetAcos: number; acos: number; tacos: number;
   goals: WeeklyGoal[]; previousWeekResult: string; notes: string; actions: ActionItem[]; updatedAt: string | null;
 };
 export type WeeklyPerformanceSourceMetrics = {
@@ -48,7 +48,7 @@ export function createWeeklyPpcReport(productId: string, weekStart: string, prev
     : DEFAULT_GOALS.map(goal => ({ ...goal }));
   return {
     productId, weekStart, status: "Draft", weeklyBudget: 0, dailyBudget: 0, budgetHistory: [], spend: 0,
-    ppcSales: 0, organicSales: 0, totalSales: 0, ppcOrders: 0, organicOrders: 0, totalOrders: 0,
+    ppcSales: 0, organicSales: 0, totalSales: 0, ppcOrders: 0, organicOrders: 0, totalOrders: 0, targetAcos: 0,
     acos: 0, tacos: 0, goals: carriedGoals, previousWeekResult: "",
     notes: "", actions: DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt: null,
   };
@@ -121,7 +121,7 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
     weeklyBudget: finiteNumber(value.weeklyBudget), dailyBudget: finiteNumber(value.dailyBudget), budgetHistory, spend: finiteNumber(value.spend),
     ppcSales, organicSales, totalSales: value.totalSales == null ? ppcSales + organicSales : finiteNumber(value.totalSales),
     ppcOrders, organicOrders, totalOrders: value.totalOrders == null ? ppcOrders + organicOrders : finiteNumber(value.totalOrders),
-    acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
+    targetAcos: finiteNumber(value.targetAcos), acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
     goals: Array.isArray(value.goals) ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), previousWeekResult: String(value.previousWeekResult ?? ""), notes: String(value.notes ?? ""),
     actions: actions.length ? actions : DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : null,
   });

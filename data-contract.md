@@ -1,5 +1,11 @@
 # Data Contract
 
+## Target ACOS and analysis routes
+
+The existing version-1 `glassco.ppcPerformanceNotes.v1` report accepts optional `targetAcos: number`. Missing, negative, non-finite, or malformed values normalize to `0`, meaning no warning threshold. A positive value is local product/week planning data and does not alter imported Scale Insights metrics.
+
+Analysis URLs follow `/ppc/dashboard/products/<ASIN>/<view>`. `<ASIN>` must normalize to exactly ten uppercase alphanumeric characters. `<view>` must be one of `campaigns`, `keyword-targeting`, `product-targeting`, `search-terms`, `match-types`, `placements`, `ad-types`, or `main-keywords`. Invalid route values render Not Found.
+
 ## Budget history and reporting-period selection
 
 The existing version-1 `glassco.ppcPerformanceNotes.v1` report accepts optional `budgetHistory: Array<{ id, changedAt, from, to }>` in newest-first order. Older reports restore with an empty array. Parsing rejects invalid dates, negative/non-finite values, and no-op changes, normalizes timestamps to ISO, limits IDs to 100 characters, and keeps at most 100 entries per product/week. Draft status values remain supported for backward compatibility even though Draft badges and the Save Draft action are no longer shown.

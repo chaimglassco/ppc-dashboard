@@ -5,14 +5,14 @@ import Link from "next/link";
 import { CircleUserRound, Library, LogOut } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, type MouseEvent, type ReactNode } from "react";
-import { GLASSCO_DEFAULT_APP_ROUTES, getPipelineLoginUrl, getPipelineProfileUrl, PIPELINE_HOME, readGlasscoAppRoutes, rememberGlasscoAppRoute } from "@/lib/glassco-apps";
+import { GLASSCO_DEFAULT_APP_ROUTES, getPipelineLoginUrl, getPipelineProfileUrl, isPpcDashboardPathname, PIPELINE_HOME, readGlasscoAppRoutes, rememberGlasscoAppRoute } from "@/lib/glassco-apps";
 import { clearAndBroadcastGlasscoSession, createBrowserPipelineSessionHandoff, type GlasscoAuthTarget } from "@/lib/pipeline-session";
 import { useGlasscoSession } from "./glassco-session";
 
 type PreparedTab = "pipeline" | "ppc" | "ppcDashboard";
 
 function AppTabs({ pathname }: { pathname: string }) {
-  const isDashboard = pathname === "/dashboard" || pathname === "/ppc/dashboard";
+  const isDashboard = isPpcDashboardPathname(pathname);
   const currentApp: PreparedTab = isDashboard ? "ppcDashboard" : "ppc";
 
   const prepareTab = (event: MouseEvent<HTMLAnchorElement>, destination: PreparedTab, authTarget: GlasscoAuthTarget) => {
@@ -57,7 +57,7 @@ function AccountActions() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isDashboard = pathname === "/dashboard" || pathname === "/ppc/dashboard";
+  const isDashboard = isPpcDashboardPathname(pathname);
   const isLibrary = pathname === "/library" || pathname.startsWith("/library/");
   const section = isDashboard ? "PPC Weekly Goals" : pathname.includes("bookmarks") ? "Bookmarks" : pathname.includes("recent") ? "Recent" : "Team SOP Library";
 

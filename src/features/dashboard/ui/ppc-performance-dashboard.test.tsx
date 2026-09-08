@@ -201,7 +201,7 @@ describe("PpcPerformanceDashboard", () => {
 
     const performanceCard = screen.getByRole("region", { name: "Weekly Performance" });
     expect(within(performanceCard).getAllByRole("textbox").map(input => input.getAttribute("aria-label"))).toEqual([
-      "Spend", "PPC Sales", "Organic Sales", "Total Sales", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
+      "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
     ]);
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Sales" }), { target: { value: "100" } });
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "Total Sales" }), { target: { value: "300" } });
@@ -212,6 +212,13 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveValue("75");
     expect(within(performanceCard).getByRole("textbox", { name: "TACOS" })).toHaveValue("25");
     expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveAttribute("readonly");
+    const targetAcos = within(performanceCard).getByRole("textbox", { name: "Target ACOS" });
+    const acosCard = within(performanceCard).getByRole("textbox", { name: "ACOS" }).closest("label");
+    fireEvent.change(targetAcos, { target: { value: "25" } });
+    expect(acosCard).toHaveAttribute("data-warning", "true");
+    expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveAccessibleDescription("Actual ACOS is above Target ACOS.");
+    fireEvent.change(targetAcos, { target: { value: "80" } });
+    expect(acosCard).not.toHaveAttribute("data-warning");
 
     const goalStatus = screen.getByRole("combobox", { name: "Reduce ACOS status" });
     expect(goalStatus.className).toMatch(/success/);
@@ -311,6 +318,16 @@ describe("PpcPerformanceDashboard", () => {
     expect(headerSkuLink).toHaveAttribute("href", "https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=POLISH-01");
     expect(headerAsinLink).toHaveAttribute("target", "_blank");
     expect(headerSkuLink).toHaveAttribute("rel", "noopener noreferrer");
+    const asinNavigation = screen.getByRole("navigation", { name: "Analysis for ASIN B012345679" });
+    expect(within(asinNavigation).getAllByRole("link")).toHaveLength(8);
+    expect(within(asinNavigation).getByRole("link", { name: "Campaigns" })).toHaveAttribute("href", "/dashboard/products/B012345679/campaigns");
+    expect(within(asinNavigation).getByRole("link", { name: "Keyword Targeting" })).toHaveAttribute("href", "/dashboard/products/B012345679/keyword-targeting");
+    expect(within(asinNavigation).getByRole("link", { name: "Product Targeting" })).toHaveAttribute("href", "/dashboard/products/B012345679/product-targeting");
+    expect(within(asinNavigation).getByRole("link", { name: "Search Terms" })).toHaveAttribute("href", "/dashboard/products/B012345679/search-terms");
+    expect(within(asinNavigation).getByRole("link", { name: "Match Types" })).toHaveAttribute("href", "/dashboard/products/B012345679/match-types");
+    expect(within(asinNavigation).getByRole("link", { name: "Placements" })).toHaveAttribute("href", "/dashboard/products/B012345679/placements");
+    expect(within(asinNavigation).getByRole("link", { name: "Ad Types" })).toHaveAttribute("href", "/dashboard/products/B012345679/ad-types");
+    expect(within(asinNavigation).getByRole("link", { name: "Main Keywords" })).toHaveAttribute("href", "/dashboard/products/B012345679/main-keywords");
     expect(screen.getAllByText("Launch group").length).toBeGreaterThan(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Enable product editing" }));
