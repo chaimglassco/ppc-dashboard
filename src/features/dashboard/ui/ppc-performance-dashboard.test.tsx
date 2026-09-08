@@ -217,11 +217,27 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveAttribute("readonly");
     expect(screen.getByRole("textbox", { name: "ACOS actual" })).toHaveValue("17%");
     expect(within(screen.getByRole("textbox", { name: "ACOS actual" }).closest("label")!).getByText("Final")).toBeVisible();
-    expect(screen.getByRole("textbox", { name: "Sales actual" })).toHaveValue("$1,317");
-    expect(screen.getByRole("textbox", { name: "Sales actual" })).toHaveAttribute("readonly");
+    expect(screen.getByRole("textbox", { name: "PPC Sales actual" })).toHaveValue("$482");
+    expect(screen.getByRole("textbox", { name: "PPC Sales actual" })).toHaveAttribute("readonly");
     fireEvent.click(screen.getByRole("button", { name: "Add Goal" }));
     const addedGoalMetric = screen.getAllByRole("combobox", { name: /Goal metric/ }).at(-1)!;
-    expect(within(addedGoalMetric).getAllByRole("option").map(option => option.textContent)).toEqual(["Choose goal", "Spend", "Sales", "PPC Order", "Organic Order", "ACOS"]);
+    expect(within(addedGoalMetric).getAllByRole("option").map(option => option.textContent)).toEqual(["Choose goal", "Increase Spend", "Decrease Spend", "PPC Sales", "Total Sales", "PPC Order", "Organic Order", "Total Orders", "ACOS", "TACOS"]);
+    fireEvent.change(addedGoalMetric, { target: { value: "increaseSpend" } });
+    expect(screen.getByRole("textbox", { name: "Increase Spend actual" })).toHaveValue("$82");
+    fireEvent.change(addedGoalMetric, { target: { value: "decreaseSpend" } });
+    expect(screen.getByRole("textbox", { name: "Decrease Spend actual" })).toHaveValue("$82");
+    fireEvent.change(addedGoalMetric, { target: { value: "ppcSales" } });
+    expect(screen.getAllByRole("textbox", { name: "PPC Sales actual" }).at(-1)).toHaveValue("$482");
+    fireEvent.change(addedGoalMetric, { target: { value: "totalSales" } });
+    expect(screen.getByRole("textbox", { name: "Total Sales actual" })).toHaveValue("$1,317");
+    fireEvent.change(addedGoalMetric, { target: { value: "ppcOrders" } });
+    expect(screen.getByRole("textbox", { name: "PPC Order actual" })).toHaveValue("23");
+    fireEvent.change(addedGoalMetric, { target: { value: "totalOrders" } });
+    expect(screen.getByRole("textbox", { name: "Total Orders actual" })).toHaveValue("59");
+    fireEvent.change(addedGoalMetric, { target: { value: "acos" } });
+    expect(screen.getAllByRole("textbox", { name: "ACOS actual" }).at(-1)).toHaveValue("17%");
+    fireEvent.change(addedGoalMetric, { target: { value: "tacos" } });
+    expect(screen.getByRole("textbox", { name: "TACOS actual" })).toHaveValue("6%");
     fireEvent.change(addedGoalMetric, { target: { value: "organicOrders" } });
     const organicMeasurement = screen.getByRole("combobox", { name: "Organic Order measurement" });
     expect(screen.getByRole("textbox", { name: "Organic Order actual" })).toHaveValue("36");
@@ -329,11 +345,17 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(goalStatus).queryByRole("option", { name: "Missed" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Mark ACOS achieved" }));
     expect(screen.queryByRole("combobox", { name: "ACOS status" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Mark Sales missed" }));
+    const ppcSalesTarget = screen.getByRole("textbox", { name: "PPC Sales target" });
+    fireEvent.focus(ppcSalesTarget);
+    fireEvent.change(ppcSalesTarget, { target: { value: "2000" } });
+    fireEvent.blur(ppcSalesTarget);
+    expect(ppcSalesTarget).toHaveValue("$2,000.00");
+    fireEvent.click(screen.getByRole("button", { name: "Mark PPC Sales missed" }));
     fireEvent.click(screen.getByRole("button", { name: "Goal History" }));
     const goalHistory = screen.getByRole("dialog", { name: "Goal History" });
     expect(within(goalHistory).getByText("ACOS")).toBeVisible();
-    expect(within(goalHistory).getByText("Sales")).toBeVisible();
+    expect(within(goalHistory).getByText("PPC Sales")).toBeVisible();
+    expect(within(goalHistory).getByText(/Target \$2,000\.00/)).toBeVisible();
     expect(within(goalHistory).getByText("Achieved")).toBeVisible();
     expect(within(goalHistory).getByText("Missed")).toBeVisible();
     fireEvent.click(within(goalHistory).getByRole("button", { name: "Close goal history" }));
@@ -367,6 +389,21 @@ describe("PpcPerformanceDashboard", () => {
     expect(priority.className).toMatch(/priorityLow/);
     expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
   }, 15_000);
+
+  it("carries the previous week's result documentation into an existing blank next week", async () => {
+    window.localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      reports: {
+        "product-1:2026-08-19": { productId: "product-1", weekStart: "2026-08-19", previousWeekResult: "Keep the winning exact campaign." },
+        "product-1:2026-08-26": { productId: "product-1", weekStart: "2026-08-26", previousWeekResult: "" },
+      },
+    }));
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+
+    expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Carry-forward result and lessons" })).toHaveValue("Keep the winning exact campaign.");
+  });
 
   it("shows only selected-month weeks, including their boundary overlap", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-09-03" />);

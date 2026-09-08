@@ -6,7 +6,7 @@ The Library deploys as a Next.js microfrontend under `/ppc`. Pipeline Postgres i
 
 Goal History extends the existing version-1 browser report value with an optional array and requires no environment variable, database, or server migration. After deployment, verify resolving one Achieved and one Missed goal survives reload, is scoped to the selected product, and does not reappear in the active list. Also verify previous-week indicators, comma-formatted whole metrics, centered budget values, and removal of the redundant previous sales/TACOS summary.
 
-Structured goals add only optional `metric`, `unit`, and history `dataState` fields to the existing version-1 browser value. No backend, environment, storage-key, or database migration is required. After rollout, verify every goal type against a live Scale Insights week, Organic Order's two measures, read-only Actual fields, Partial/Final transitions after refresh, and preservation of derived actuals in Goal History.
+Structured goals use the existing optional `metric`, `unit`, and history `dataState` fields in the version-1 browser value. No backend, environment, storage-key, or database migration is required. The parser maps legacy `spend`/`sales` values into the expanded taxonomy. After rollout, verify all nine goal choices against a live Scale Insights week, Organic Order's two measures, two-decimal currency/percentage Targets, read-only Actual fields, Partial/Final transitions after refresh, preservation of derived values in Goal History, and previous-result carry-forward into the following week.
 
 ## Prerequisites
 

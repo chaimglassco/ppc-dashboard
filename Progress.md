@@ -6,7 +6,7 @@ Last updated: September 8, 2026
 
 Added Achieved and Missed goal actions that remove resolved goals from the active list and persist them in a product-wide Goal History dialog. Added backward-compatible parser migration and validation for terminal legacy goals. Weekly Performance now shows small prior-week values with green increase/red decrease arrows, rounded comma-formatted metrics, centered budget inputs, rounded Actual spend, and no redundant prior sales/TACOS summary.
 
-Added structured Spend, Sales, PPC Order, Organic Order, and ACOS goal selection. Organic Order can be measured as a count or percentage of total orders. Goal Actual fields are now read-only live projections of cached/imported weekly performance and display Waiting, Partial, or Final completeness; resolved history captures the derived actual and completeness state.
+Expanded structured goals to Increase Spend, Decrease Spend, PPC Sales, Total Sales, PPC Order, Organic Order, Total Orders, ACOS, and TACOS. Organic Order can be measured as a count or percentage of total orders. Goal Actual fields are read-only live projections of cached/imported weekly performance and display Waiting, Partial, or Final completeness; resolved history captures the derived actual and completeness state. Currency/percentage Targets show two decimals, legacy Spend/Sales goals migrate safely, and preceding Previous Week Result documentation automatically carries into the following week's field.
 
 ## Target ACOS warnings and product-scoped Scale Insights navigation
 

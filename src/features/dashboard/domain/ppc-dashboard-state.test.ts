@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatReportingMonthRange, formatWeekRange, formatWeeklyGoalValue, getMonthWeekStarts, getSelectedMonthWeekStarts, parsePpcDashboardStore, reportKey, startOfWeekIso, weeklyGoalActualValue, weeklyGoalUnit, withCalculatedPerformance } from "./ppc-dashboard-state";
+import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatReportingMonthRange, formatWeekRange, formatWeeklyGoalTarget, formatWeeklyGoalValue, getMonthWeekStarts, getSelectedMonthWeekStarts, parsePpcDashboardStore, reportKey, startOfWeekIso, weeklyGoalActualValue, weeklyGoalUnit, withCalculatedPerformance } from "./ppc-dashboard-state";
 
 describe("PPC dashboard state", () => {
   it("creates stable product/week report keys for Wednesday through Tuesday periods", () => {
@@ -75,20 +75,31 @@ describe("PPC dashboard state", () => {
     const organicGoal = { id: "organic", title: "Organic Order", metric: "organicOrders" as const, unit: "percentage" as const, target: "65", actual: "", status: "On Track" as const };
 
     expect(formatWeeklyGoalValue(report.goals[0], weeklyGoalActualValue(report.goals[0], report))).toBe("16%");
-    expect(formatWeeklyGoalValue(report.goals[1], weeklyGoalActualValue(report.goals[1], report))).toBe("$1,200");
+    expect(formatWeeklyGoalValue(report.goals[1], weeklyGoalActualValue(report.goals[1], report))).toBe("$500");
     expect(formatWeeklyGoalValue(organicGoal, weeklyGoalActualValue(organicGoal, report))).toBe("60%");
     expect(weeklyGoalUnit("organicOrders", "number")).toBe("number");
+    expect(formatWeeklyGoalTarget({ ...report.goals[1], target: "2000" })).toBe("$2,000.00");
+    expect(formatWeeklyGoalTarget({ ...report.goals[0], target: "25" })).toBe("25.00%");
+    expect(formatWeeklyGoalTarget({ id: "legacy", title: "Legacy", target: "$500", actual: "", status: "On Track" })).toBe("$500");
+    expect(weeklyGoalActualValue({ ...report.goals[1], metric: "totalSales" }, report)).toBe(1200);
+    expect(weeklyGoalActualValue({ ...report.goals[0], metric: "tacos" }, report)).toBe(6.87);
 
     const parsed = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { report: {
       ...report,
       goals: [
         { id: "legacy-acos", title: "Reduce ACOS", target: "25%", actual: "", status: "On Track" },
         { id: "bad-unit", title: "Spend", metric: "spend", unit: "percentage", target: "100", actual: "", status: "On Track" },
+        { id: "legacy-sales", title: "Sales", metric: "sales", unit: "currency", target: "500", actual: "", status: "On Track" },
+        { id: "total-orders", title: "Total Orders", target: "50", actual: "", status: "On Track" },
+        { id: "tacos", title: "TACOS", target: "10", actual: "", status: "On Track" },
       ],
     } } }));
     expect(parsed.reports["product-1:2026-08-26"].goals).toEqual([
       expect.objectContaining({ id: "legacy-acos", metric: "acos", unit: "percentage" }),
-      expect.objectContaining({ id: "bad-unit", metric: "spend", unit: "currency" }),
+      expect.objectContaining({ id: "bad-unit", metric: "decreaseSpend", unit: "currency" }),
+      expect.objectContaining({ id: "legacy-sales", metric: "ppcSales", unit: "currency" }),
+      expect.objectContaining({ id: "total-orders", metric: "totalOrders", unit: "number" }),
+      expect.objectContaining({ id: "tacos", metric: "tacos", unit: "percentage" }),
     ]);
   });
 
@@ -149,11 +160,13 @@ describe("PPC dashboard state", () => {
         { id: "risk", title: "Improve ACOS", target: "25%", actual: "32%", status: "At Risk" as const },
         { id: "missed", title: "Increase sales", target: "$500", actual: "$300", status: "Missed" as const },
       ],
+      previousWeekResult: "Carry this result into next week.",
     };
     const next = createWeeklyPpcReport("product-1", "2026-09-02", previous);
 
     expect(next.goals.map(goal => ({ title: goal.title, actual: goal.actual, status: goal.status }))).toEqual([
       { title: "Improve ACOS", actual: "", status: "On Track" },
     ]);
+    expect(next.previousWeekResult).toBe("Carry this result into next week.");
   });
 });
