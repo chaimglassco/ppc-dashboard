@@ -2,7 +2,7 @@
 
 ## Saved weekly performance and smaller tags
 
-Fetched performance is saved in this browser per US ASIN and reporting week. Selecting a week without a snapshot fetches once; returning to a saved week or reloading displays its exact saved metrics and coverage. Only Refresh updates an existing snapshot; pending/failed refreshes preserve the last values. Portfolio tag badges use compact 7px text and reduced padding.
+Fetched performance is saved in this browser per US ASIN and reporting week. Selecting a week without a snapshot fetches once; returning to a saved week or reloading displays its saved metrics and coverage. Only Refresh updates an existing snapshot; pending/failed refreshes preserve the last values. Weekly metric cards show whole-number values in a compact layout while retaining exact source values in storage. Portfolio tag badges use compact 7px text and reduced padding.
 
 ## Compact product cards
 

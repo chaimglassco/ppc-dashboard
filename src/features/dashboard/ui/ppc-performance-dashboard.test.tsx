@@ -41,11 +41,11 @@ describe("PpcPerformanceDashboard", () => {
       } }) } as Response;
     });
     const view = render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
-    await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("81.75"));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("82"));
     expect(JSON.parse(localStorage.getItem(PPC_PERFORMANCE_CACHE_KEY)!).entries["US:B012345678:2026-08-26"].metrics.spend).toBe(81.75);
     fireEvent.click(screen.getByRole("button", { name: /August 19 to August 25/ }));
     await waitFor(() => expect(metricsCalls).toHaveLength(2));
-    await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("81.75"));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("82"));
     fireEvent.click(screen.getByRole("button", { name: /August 26 to September 1/ }));
     await screen.findByText(/Saved Scale Insights data/);
     expect(metricsCalls).toHaveLength(2);
@@ -138,9 +138,12 @@ describe("PpcPerformanceDashboard", () => {
 
     expect(await screen.findByText("Scale Insights synced through 2026-09-01.")).toBeVisible();
     const performanceCard = screen.getByRole("region", { name: "Weekly Performance" });
-    expect(within(performanceCard).getByRole("textbox", { name: "Spend" })).toHaveValue("81.75");
-    expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveValue("835.6");
-    expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveValue("16.97");
+    expect(within(performanceCard).getByRole("textbox", { name: "Spend" })).toHaveValue("82");
+    expect(within(performanceCard).getByRole("textbox", { name: "PPC Sales" })).toHaveValue("482");
+    expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveValue("836");
+    expect(within(performanceCard).getByRole("textbox", { name: "Total Sales" })).toHaveValue("1317");
+    expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveValue("17");
+    expect(within(performanceCard).getByRole("textbox", { name: "TACOS" })).toHaveValue("6");
     expect(within(performanceCard).getByRole("textbox", { name: "PPC Sales" })).toHaveAttribute("readonly");
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveAttribute("readonly");
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));

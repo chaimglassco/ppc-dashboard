@@ -144,7 +144,7 @@ After deployment, call `/ppc/api/dashboard/performance` through an authenticated
 
 ## Saved weekly performance and smaller tags
 
-The performance cache and compact badges need no environment or server data migration. Verify fetching, switching weeks, page reload, explicit Refresh, and failed-refresh retention. Existing values that were never saved by the previous release need one successful fetch to create their snapshots. Cache persistence is local to this browser, not synchronized across devices.
+The performance cache, compact badges, and smaller whole-number metric cards need no environment or server data migration. Verify fetching, switching weeks, page reload, explicit Refresh, failed-refresh retention, and rounded presentation without precision loss in the cached DTO. Existing values that were never saved by the previous release need one successful fetch to create their snapshots. Cache persistence is local to this browser, not synchronized across devices.
 
 ## Compact product cards
 

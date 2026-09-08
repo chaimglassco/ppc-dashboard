@@ -2,7 +2,7 @@
 
 ## Saved weekly performance and smaller tags
 
-A versioned local performance snapshot cache is independent of editable weekly reports, keyed by US marketplace, normalized ASIN, and Wednesday start. Hydration completes before automatic fetches. Five source values are validated and derived metrics recalculated when restoring snapshots; no OAuth material is stored. Successful fetches persist immediately, week cards and detail metrics overlay the matching snapshot, and explicit Refresh bypasses the cache. Canceled requests cannot update state; failed refreshes preserve cached values and read-only imported inputs.
+A versioned local performance snapshot cache is independent of editable weekly reports, keyed by US marketplace, normalized ASIN, and Wednesday start. Hydration completes before automatic fetches. Five source values are validated and derived metrics recalculated when restoring snapshots; no OAuth material is stored. Successful fetches persist immediately, week cards and detail metrics overlay the matching snapshot, and explicit Refresh bypasses the cache. Canceled requests cannot update state; failed refreshes preserve cached values and read-only imported inputs. The metrics input layer rounds only its rendered value, leaving cached and calculated numbers exact.
 
 ## Compact product cards
 

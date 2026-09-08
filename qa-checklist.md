@@ -4,7 +4,7 @@ Use this checklist before merging or deploying changes.
 
 ## Saved weekly performance and smaller tags
 
-Fetch two weeks, switch between them, reload, and verify both timeline cards and the selected metrics retain their values without another performance request. Refresh must update only the selected ASIN/week and retain the last values on error. Verify zero-valued snapshots are reusable, malformed snapshots are ignored, storage failure is reported, and compact tags remain readable.
+Fetch two weeks, switch between them, reload, and verify both timeline cards and the selected metrics retain their values without another performance request. Refresh must update only the selected ASIN/week and retain the last values on error. Verify zero-valued snapshots are reusable, malformed snapshots are ignored, storage failure is reported, compact tags remain readable, and all metric cards display rounded whole numbers in the smaller layout.
 
 ## Compact product cards
 

@@ -53,6 +53,10 @@ function numericValue(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
+function roundedMetricValue(value: number) {
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : "";
+}
+
 function dailyLimitFromWeekly(weeklyLimit: number) {
   return Math.round((weeklyLimit / 7) * 100) / 100;
 }
@@ -65,7 +69,7 @@ function MetricInput({ metric, report, importedLocked, onChange }: { metric: Met
   const readOnly = Boolean(metric.calculated || (metric.imported && importedLocked));
   return <label className={`${styles.metricCard} ${readOnly ? styles.calculatedMetric : ""}`}>
     <span>{metric.label}</span>
-    <span className={styles.metricInputWrap}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="decimal" value={report[metric.field] || ""} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
+    <span className={styles.metricInputWrap}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" value={roundedMetricValue(report[metric.field])} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
   </label>;
 }
 

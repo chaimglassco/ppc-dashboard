@@ -1,10 +1,10 @@
 # Project Progress
 
-Last updated: September 7, 2026
+Last updated: September 8, 2026
 
 ## Saved weekly performance and smaller tags
 
-Fixed fetched metrics disappearing after reload: imports previously updated only React report state and were not included in the dirty-report save flow. Added validated ASIN/week snapshots, timeline hydration, explicit-refresh-only updates for saved weeks, and failure retention. Added a reload/navigation/refresh regression test and compacted portfolio tag badges.
+Fixed fetched metrics disappearing after reload: imports previously updated only React report state and were not included in the dirty-report save flow. Added validated ASIN/week snapshots, timeline hydration, explicit-refresh-only updates for saved weeks, and failure retention. Added a reload/navigation/refresh regression test, compacted portfolio tag badges, and reduced weekly metric cards with whole-number presentation.
 
 ## Compact product cards
 
