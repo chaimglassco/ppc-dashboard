@@ -10,9 +10,9 @@ import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
   PPC_DASHBOARD_STORAGE_KEY, addDaysIso, addMonthsIso, createWeeklyPpcReport, currency,
-  formatReportingMonthRange, formatWeekRange, getIsoWeekNumber, getSelectedMonthWeekStarts, parsePpcDashboardStore, percentage, reportKey,
+  formatReportingMonthRange, formatWeekRange, formatWeeklyGoalValue, getIsoWeekNumber, getSelectedMonthWeekStarts, parsePpcDashboardStore, percentage, reportKey,
   startOfWeekIso, withCalculatedPerformance, type ActionItem, type DashboardProduct, type GoalOutcome, type GoalStatus,
-  type WeeklyGoal, type WeeklyPpcReport,
+  WEEKLY_GOAL_OPTIONS, weeklyGoalActualValue, weeklyGoalLabel, weeklyGoalUnit, type GoalDataState, type WeeklyGoal, type WeeklyGoalMetric, type WeeklyPpcReport,
 } from "../domain/ppc-dashboard-state";
 import {
   PPC_DASHBOARD_CATALOG_STORAGE_KEY, createDashboardTagId, emptyDashboardCatalog, mergeDashboardProducts,
@@ -91,6 +91,28 @@ function MetricInput({ metric, report, previousValue, importedLocked, warning, o
     </span>
     {warning ? <span id="acos-target-warning" className={styles.metricWarningText}>Actual ACOS is above Target ACOS.</span> : null}
   </label>;
+}
+
+function WeeklyGoalRow({ goal, report, dataState, onUpdate, onResolve, onRemove }: { goal: WeeklyGoal; report: WeeklyPpcReport; dataState: GoalDataState | null; onUpdate: (patch: Partial<WeeklyGoal>) => void; onResolve: (status: GoalOutcome) => void; onRemove: () => void }) {
+  const label = goal.metric ? weeklyGoalLabel(goal.metric) : goal.title || "Choose goal";
+  const actualState = goal.metric ? dataState : null;
+  const actual = actualState ? formatWeeklyGoalValue(goal, weeklyGoalActualValue(goal, report)) : "";
+  const selectMetric = (metric: WeeklyGoalMetric) => onUpdate({
+    metric, title: weeklyGoalLabel(metric), unit: weeklyGoalUnit(metric), target: "", actual: "",
+  });
+
+  return <div className={styles.goalRow}>
+    <div className={styles.goalDefinition}>
+      <label>Goal<select aria-label={`Goal metric ${goal.id}`} value={goal.metric ?? ""} onChange={event => selectMetric(event.target.value as WeeklyGoalMetric)}><option value="" disabled>Choose goal</option>{WEEKLY_GOAL_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+      {goal.metric === "organicOrders" ? <label>Measure<select aria-label="Organic Order measurement" value={weeklyGoalUnit(goal.metric, goal.unit)} onChange={event => onUpdate({ unit: event.target.value as "number" | "percentage", target: "", actual: "" })}><option value="number">Number</option><option value="percentage">Percentage</option></select></label> : null}
+    </div>
+    <div className={styles.goalMetrics}>
+      <label>Target<input aria-label={`${label} target`} inputMode="decimal" value={goal.target} onChange={event => onUpdate({ target: event.target.value })} /></label>
+      <label>Actual<span className={styles.goalActualField}><input aria-label={`${label} actual`} aria-readonly="true" readOnly value={actual} placeholder="—" /><small className={actualState === "Final" ? styles.goalActualFinal : actualState === "Partial" ? styles.goalActualPartial : styles.goalActualWaiting}>{actualState ?? (goal.metric ? "Waiting" : "Select goal")}</small></span></label>
+      <label>Status<select aria-label={`${label} status`} className={statusTone(goal.status)} value={goal.status} onChange={event => onUpdate({ status: event.target.value as GoalStatus })}>{ACTIVE_GOAL_STATUSES.map(status => <option className={statusTone(status)} key={status}>{status}</option>)}</select></label>
+      <div className={styles.goalOutcomeActions}><button type="button" className={styles.goalAchievedButton} aria-label={`Mark ${label} achieved`} title="Mark achieved" onClick={() => onResolve("Achieved")}><CheckCircle2 aria-hidden="true" /></button><button type="button" className={styles.goalMissedButton} aria-label={`Mark ${label} missed`} title="Mark missed" onClick={() => onResolve("Missed")}><X aria-hidden="true" /></button><button type="button" className={styles.goalDeleteButton} aria-label={`Remove ${label}`} onClick={onRemove}><Trash2 aria-hidden="true" /></button></div>
+    </div>
+  </div>;
 }
 
 function FormattedTextarea({ label, value, placeholder, onChange }: { label: string; value: string; placeholder: string; onChange: (value: string) => void }) {
@@ -291,6 +313,9 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const selectedAsin = selectedProduct?.asin?.trim() || "";
   const snapshotKey = performanceCacheKey(selectedAsin, activeWeekStart);
   const cachedPerformance = performanceCache[snapshotKey];
+  const goalDataState: GoalDataState | null = cachedPerformance
+    ? cachedPerformance.endDate >= addDaysIso(activeWeekStart, 6) ? "Final" : "Partial"
+    : null;
   const dirty = selectedKey ? dirtyReportKeys.has(selectedKey) : false;
   const previousWeekStart = addDaysIso(activeWeekStart, -7);
   const previousDraft = selectedProductId && activeWeekStart ? reports[reportKey(selectedProductId, previousWeekStart)] ?? null : null;
@@ -516,15 +541,16 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   };
   const addGoal = () => {
     if (!report) return;
-    patchReport({ goals: [...report.goals, { id: `goal-${Date.now()}`, title: "New weekly goal", target: "", actual: "", status: "On Track" }] });
+    patchReport({ goals: [...report.goals, { id: `goal-${Date.now()}`, title: "Choose goal", target: "", actual: "", status: "On Track" }] });
   };
   const resolveGoal = (goalId: string, status: GoalOutcome) => {
     if (!report) return;
     const goal = report.goals.find(candidate => candidate.id === goalId);
     if (!goal) return;
+    const actual = goalDataState ? formatWeeklyGoalValue(goal, weeklyGoalActualValue(goal, report)) : "";
     patchReport({
       goals: report.goals.filter(candidate => candidate.id !== goalId),
-      goalHistory: [{ ...goal, status, resolvedAt: new Date().toISOString() }, ...report.goalHistory].slice(0, 100),
+      goalHistory: [{ ...goal, actual, status, resolvedAt: new Date().toISOString(), ...(goalDataState ? { dataState: goalDataState } : {}) }, ...report.goalHistory].slice(0, 100),
     });
   };
   const removeGoal = (goalId: string) => { if (report) patchReport({ goals: report.goals.filter(goal => goal.id !== goalId) }); };
@@ -580,7 +606,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
 
         <div className={styles.workspaceScroll}>
           <div className={styles.twoColumn}>
-            <section className={styles.card} aria-labelledby="goals-heading"><div className={styles.cardTitle}><h3 id="goals-heading"><Flag />Weekly Goals</h3><div className={styles.goalHeaderActions}><button type="button" onClick={() => setGoalHistoryOpen(true)}>Goal History</button><button type="button" onClick={addGoal}><Plus />Add Goal</button></div></div><div className={styles.goalList}>{report.goals.map(goal => <div className={styles.goalRow} key={goal.id}><input className={styles.goalTitleInput} aria-label="Goal title" value={goal.title} onChange={event => updateGoal(goal.id, { title: event.target.value })} /><div className={styles.goalMetrics}><label>Target<input value={goal.target} onChange={event => updateGoal(goal.id, { target: event.target.value })} /></label><label>Actual<input value={goal.actual} onChange={event => updateGoal(goal.id, { actual: event.target.value })} /></label><label>Status<select aria-label={`${goal.title} status`} className={statusTone(goal.status)} value={goal.status} onChange={event => updateGoal(goal.id, { status: event.target.value as GoalStatus })}>{ACTIVE_GOAL_STATUSES.map(status => <option className={statusTone(status)} key={status}>{status}</option>)}</select></label><div className={styles.goalOutcomeActions}><button type="button" className={styles.goalAchievedButton} aria-label={`Mark ${goal.title} achieved`} title="Mark achieved" onClick={() => resolveGoal(goal.id, "Achieved")}><CheckCircle2 aria-hidden="true" /></button><button type="button" className={styles.goalMissedButton} aria-label={`Mark ${goal.title} missed`} title="Mark missed" onClick={() => resolveGoal(goal.id, "Missed")}><X aria-hidden="true" /></button><button type="button" className={styles.goalDeleteButton} aria-label={`Remove ${goal.title}`} onClick={() => removeGoal(goal.id)}><Trash2 aria-hidden="true" /></button></div></div></div>)}</div></section>
+            <section className={styles.card} aria-labelledby="goals-heading"><div className={styles.cardTitle}><h3 id="goals-heading"><Flag />Weekly Goals</h3><div className={styles.goalHeaderActions}><button type="button" onClick={() => setGoalHistoryOpen(true)}>Goal History</button><button type="button" onClick={addGoal}><Plus />Add Goal</button></div></div><div className={styles.goalList}>{report.goals.map(goal => <WeeklyGoalRow key={goal.id} goal={goal} report={report} dataState={goalDataState} onUpdate={patch => updateGoal(goal.id, patch)} onResolve={status => resolveGoal(goal.id, status)} onRemove={() => removeGoal(goal.id)} />)}</div></section>
 
             <section className={styles.card} aria-labelledby="budget-heading">
               <div className={styles.cardTitle}><h3 id="budget-heading"><DollarSign />Budget Tracking</h3></div>
@@ -629,7 +655,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     {goalHistoryOpen ? <div className={styles.monthDialogBackdrop} onMouseDown={event => { if (event.target === event.currentTarget) setGoalHistoryOpen(false); }}>
       <section className={styles.goalHistoryDialog} role="dialog" aria-modal="true" aria-labelledby="goal-history-heading">
         <header><div><span className={styles.eyebrow}>WEEKLY GOALS</span><h2 id="goal-history-heading">Goal History</h2><p>Achieved and missed goals for {selectedProduct?.name ?? "this product"}.</p></div><button type="button" aria-label="Close goal history" onClick={() => setGoalHistoryOpen(false)}><X aria-hidden="true" /></button></header>
-        <div className={styles.goalHistoryList}>{productGoalHistory.length ? productGoalHistory.map(goal => <article key={`${goal.weekStart}:${goal.id}:${goal.resolvedAt}`}><div><strong>{goal.title}</strong><small>{formatWeekRange(goal.weekStart)} · Target {goal.target || "—"} · Actual {goal.actual || "—"}</small><small>Recorded {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(goal.resolvedAt))}</small></div><span className={statusTone(goal.status)}>{goal.status}</span></article>) : <p className={styles.goalHistoryEmpty}>No achieved or missed goals yet.</p>}</div>
+        <div className={styles.goalHistoryList}>{productGoalHistory.length ? productGoalHistory.map(goal => <article key={`${goal.weekStart}:${goal.id}:${goal.resolvedAt}`}><div><strong>{goal.metric ? weeklyGoalLabel(goal.metric) : goal.title}</strong><small>{formatWeekRange(goal.weekStart)} · Target {goal.target || "—"} · Actual {goal.actual || "—"}{goal.dataState ? ` · ${goal.dataState}` : ""}</small><small>Recorded {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(goal.resolvedAt))}</small></div><span className={statusTone(goal.status)}>{goal.status}</span></article>) : <p className={styles.goalHistoryEmpty}>No achieved or missed goals yet.</p>}</div>
       </section>
     </div> : null}
   </section>;

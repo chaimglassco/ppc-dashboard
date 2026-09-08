@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PPC_DASHBOARD_CATALOG_STORAGE_KEY } from "../domain/ppc-dashboard-catalog";
-import { PPC_DASHBOARD_STORAGE_KEY } from "../domain/ppc-dashboard-state";
+import { PPC_DASHBOARD_STORAGE_KEY, addDaysIso } from "../domain/ppc-dashboard-state";
 import { PPC_PERFORMANCE_CACHE_KEY } from "../domain/ppc-performance-cache";
 import { PpcPerformanceDashboard } from "./ppc-performance-dashboard";
 
@@ -183,6 +183,18 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(performanceCard).getByRole("textbox", { name: "PPC Sales" })).toHaveAttribute("readonly");
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveValue("82");
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveAttribute("readonly");
+    expect(screen.getByRole("textbox", { name: "ACOS actual" })).toHaveValue("17%");
+    expect(within(screen.getByRole("textbox", { name: "ACOS actual" }).closest("label")!).getByText("Final")).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Sales actual" })).toHaveValue("$1,317");
+    expect(screen.getByRole("textbox", { name: "Sales actual" })).toHaveAttribute("readonly");
+    fireEvent.click(screen.getByRole("button", { name: "Add Goal" }));
+    const addedGoalMetric = screen.getAllByRole("combobox", { name: /Goal metric/ }).at(-1)!;
+    expect(within(addedGoalMetric).getAllByRole("option").map(option => option.textContent)).toEqual(["Choose goal", "Spend", "Sales", "PPC Order", "Organic Order", "ACOS"]);
+    fireEvent.change(addedGoalMetric, { target: { value: "organicOrders" } });
+    const organicMeasurement = screen.getByRole("combobox", { name: "Organic Order measurement" });
+    expect(screen.getByRole("textbox", { name: "Organic Order actual" })).toHaveValue("36");
+    fireEvent.change(organicMeasurement, { target: { value: "percentage" } });
+    expect(screen.getByRole("textbox", { name: "Organic Order actual" })).toHaveValue("61%");
     const previousSales = await within(performanceCard).findByLabelText("Previous Total Sales: $1,200, increased");
     expect(previousSales).toHaveTextContent("$1,200");
     expect(previousSales.className).toMatch(/metricPrevious/);
@@ -194,6 +206,33 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.queryByText(/total sales ·/i)).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
   });
+
+  it("marks live goal actuals partial while the reporting week is incomplete", async () => {
+    vi.mocked(fetch).mockImplementation(async input => {
+      const url = String(input);
+      if (!url.includes("/api/dashboard/performance?")) return {
+        ok: true, status: 200,
+        json: async () => ({ products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }] }),
+      } as Response;
+      const startDate = new URL(url, "http://localhost").searchParams.get("weekStart")!;
+      const isActiveWeek = startDate === "2026-08-26";
+      const endDate = isActiveWeek ? "2026-08-28" : addDaysIso(startDate, 6);
+      return {
+        ok: true, status: 200,
+        json: async () => ({ performance: {
+          asin: "B012345678", country: "US", startDate, endDate, currency: "USD",
+          metrics: { spend: 50, ppcSales: 200, ppcOrders: 10, totalSales: 500, totalOrders: 25 },
+          freshness: { adsDataAsOf: endDate, salesDataAsOf: endDate, salesDataThrough: endDate }, warnings: [],
+        } }),
+      } as Response;
+    });
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+
+    expect(await screen.findByText("Scale Insights synced through 2026-08-28.")).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "ACOS actual" })).toHaveValue("25%");
+    expect(within(screen.getByRole("textbox", { name: "ACOS actual" }).closest("label")!).getByText("Partial")).toBeVisible();
+  }, 10_000);
 
   it("offers hosted Scale Insights consent without storing credentials in the browser", async () => {
     vi.mocked(fetch).mockImplementation(async input => String(input).includes("/api/dashboard/performance?")
@@ -251,18 +290,18 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.change(targetAcos, { target: { value: "80" } });
     expect(acosCard).not.toHaveAttribute("data-warning");
 
-    const goalStatus = screen.getByRole("combobox", { name: "Reduce ACOS status" });
+    const goalStatus = screen.getByRole("combobox", { name: "ACOS status" });
     expect(goalStatus.className).toMatch(/success/);
     fireEvent.change(goalStatus, { target: { value: "At Risk" } });
     expect(goalStatus.className).toMatch(/warning/);
     expect(within(goalStatus).queryByRole("option", { name: "Missed" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Mark Reduce ACOS achieved" }));
-    expect(screen.queryByRole("combobox", { name: "Reduce ACOS status" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Mark Increase ROAS missed" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mark ACOS achieved" }));
+    expect(screen.queryByRole("combobox", { name: "ACOS status" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Mark Sales missed" }));
     fireEvent.click(screen.getByRole("button", { name: "Goal History" }));
     const goalHistory = screen.getByRole("dialog", { name: "Goal History" });
-    expect(within(goalHistory).getByText("Reduce ACOS")).toBeVisible();
-    expect(within(goalHistory).getByText("Increase ROAS")).toBeVisible();
+    expect(within(goalHistory).getByText("ACOS")).toBeVisible();
+    expect(within(goalHistory).getByText("Sales")).toBeVisible();
     expect(within(goalHistory).getByText("Achieved")).toBeVisible();
     expect(within(goalHistory).getByText("Missed")).toBeVisible();
     fireEvent.click(within(goalHistory).getByRole("button", { name: "Close goal history" }));

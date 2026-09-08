@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatReportingMonthRange, formatWeekRange, getMonthWeekStarts, getSelectedMonthWeekStarts, parsePpcDashboardStore, reportKey, startOfWeekIso, withCalculatedPerformance } from "./ppc-dashboard-state";
+import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatReportingMonthRange, formatWeekRange, formatWeeklyGoalValue, getMonthWeekStarts, getSelectedMonthWeekStarts, parsePpcDashboardStore, reportKey, startOfWeekIso, weeklyGoalActualValue, weeklyGoalUnit, withCalculatedPerformance } from "./ppc-dashboard-state";
 
 describe("PPC dashboard state", () => {
   it("creates stable product/week report keys for Wednesday through Tuesday periods", () => {
@@ -65,6 +65,31 @@ describe("PPC dashboard state", () => {
     expect(parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { legacy: {
       productId: "legacy-product", weekStart: "2026-08-26",
     } } })).reports["legacy-product:2026-08-26"].goalHistory).toEqual([]);
+  });
+
+  it("validates structured goal metrics and derives their actual values from weekly performance", () => {
+    const report = withCalculatedPerformance({
+      ...createWeeklyPpcReport("product-1", "2026-08-26"),
+      spend: 82.4, ppcSales: 500, totalSales: 1200, ppcOrders: 20, totalOrders: 50,
+    });
+    const organicGoal = { id: "organic", title: "Organic Order", metric: "organicOrders" as const, unit: "percentage" as const, target: "65", actual: "", status: "On Track" as const };
+
+    expect(formatWeeklyGoalValue(report.goals[0], weeklyGoalActualValue(report.goals[0], report))).toBe("16%");
+    expect(formatWeeklyGoalValue(report.goals[1], weeklyGoalActualValue(report.goals[1], report))).toBe("$1,200");
+    expect(formatWeeklyGoalValue(organicGoal, weeklyGoalActualValue(organicGoal, report))).toBe("60%");
+    expect(weeklyGoalUnit("organicOrders", "number")).toBe("number");
+
+    const parsed = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { report: {
+      ...report,
+      goals: [
+        { id: "legacy-acos", title: "Reduce ACOS", target: "25%", actual: "", status: "On Track" },
+        { id: "bad-unit", title: "Spend", metric: "spend", unit: "percentage", target: "100", actual: "", status: "On Track" },
+      ],
+    } } }));
+    expect(parsed.reports["product-1:2026-08-26"].goals).toEqual([
+      expect.objectContaining({ id: "legacy-acos", metric: "acos", unit: "percentage" }),
+      expect.objectContaining({ id: "bad-unit", metric: "spend", unit: "currency" }),
+    ]);
   });
 
   it("unions selected months, includes boundary weeks, and describes their full coverage", () => {

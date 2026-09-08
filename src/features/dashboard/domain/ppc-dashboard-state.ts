@@ -3,9 +3,12 @@ export const PPC_DASHBOARD_STORAGE_KEY = "glassco.ppcPerformanceNotes.v1";
 export type DashboardProduct = { id: string; name: string; asin: string; sku: string; stageId: string; status: "Active" | "Paused" };
 export type GoalStatus = "On Track" | "At Risk" | "Achieved" | "Missed";
 export type GoalOutcome = Extract<GoalStatus, "Achieved" | "Missed">;
+export type WeeklyGoalMetric = "spend" | "sales" | "ppcOrders" | "organicOrders" | "acos";
+export type WeeklyGoalUnit = "currency" | "number" | "percentage";
+export type GoalDataState = "Partial" | "Final";
 export type ReportStatus = "Draft" | "In Progress" | "Completed" | "Needs Review";
-export type WeeklyGoal = { id: string; title: string; target: string; actual: string; status: GoalStatus };
-export type GoalHistoryEntry = WeeklyGoal & { status: GoalOutcome; resolvedAt: string };
+export type WeeklyGoal = { id: string; title: string; target: string; actual: string; status: GoalStatus; metric?: WeeklyGoalMetric; unit?: WeeklyGoalUnit };
+export type GoalHistoryEntry = WeeklyGoal & { status: GoalOutcome; resolvedAt: string; dataState?: GoalDataState };
 export type ActionItem = { id: string; title: string; priority: "High" | "Medium" | "Low"; dueDate: string; done: boolean };
 export type BudgetChange = { id: string; changedAt: string; from: number; to: number };
 export type WeeklyPpcReport = {
@@ -30,9 +33,17 @@ export type WeeklyPerformanceCalculatedMetrics = WeeklyPerformanceSourceMetrics 
 };
 export type PpcDashboardStore = { version: 1; reports: Record<string, WeeklyPpcReport> };
 
+export const WEEKLY_GOAL_OPTIONS: ReadonlyArray<{ value: WeeklyGoalMetric; label: string }> = [
+  { value: "spend", label: "Spend" },
+  { value: "sales", label: "Sales" },
+  { value: "ppcOrders", label: "PPC Order" },
+  { value: "organicOrders", label: "Organic Order" },
+  { value: "acos", label: "ACOS" },
+];
+
 const DEFAULT_GOALS: WeeklyGoal[] = [
-  { id: "goal-acos", title: "Reduce ACOS", target: "25%", actual: "", status: "On Track" },
-  { id: "goal-roas", title: "Increase ROAS", target: "6.5", actual: "", status: "On Track" },
+  { id: "goal-acos", title: "ACOS", metric: "acos", unit: "percentage", target: "25", actual: "", status: "On Track" },
+  { id: "goal-sales", title: "Sales", metric: "sales", unit: "currency", target: "", actual: "", status: "On Track" },
 ];
 const DEFAULT_ACTIONS: ActionItem[] = [
   { id: "action-negatives", title: "Review search terms and add negative exact keywords", priority: "High", dueDate: "", done: false },
@@ -72,6 +83,36 @@ export function withCalculatedPerformance(report: WeeklyPpcReport): WeeklyPpcRep
   return { ...report, ...calculateWeeklyPerformance(report) };
 }
 
+export function weeklyGoalLabel(metric: WeeklyGoalMetric) {
+  return WEEKLY_GOAL_OPTIONS.find(option => option.value === metric)?.label ?? "Goal";
+}
+
+export function weeklyGoalUnit(metric: WeeklyGoalMetric, preferred?: WeeklyGoalUnit): WeeklyGoalUnit {
+  if (metric === "spend" || metric === "sales") return "currency";
+  if (metric === "acos") return "percentage";
+  if (metric === "organicOrders" && preferred === "percentage") return "percentage";
+  return "number";
+}
+
+export function weeklyGoalActualValue(goal: WeeklyGoal, report: WeeklyPpcReport): number | null {
+  if (!goal.metric) return null;
+  if (goal.metric === "spend") return report.spend;
+  if (goal.metric === "sales") return report.totalSales;
+  if (goal.metric === "ppcOrders") return report.ppcOrders;
+  if (goal.metric === "acos") return report.acos;
+  if (weeklyGoalUnit(goal.metric, goal.unit) === "percentage") {
+    return report.totalOrders ? (report.organicOrders / report.totalOrders) * 100 : 0;
+  }
+  return report.organicOrders;
+}
+
+export function formatWeeklyGoalValue(goal: WeeklyGoal, value: number | null) {
+  if (value == null) return "";
+  const formatted = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(value));
+  const unit = goal.metric ? weeklyGoalUnit(goal.metric, goal.unit) : goal.unit;
+  return unit === "currency" ? `$${formatted}` : unit === "percentage" ? `${formatted}%` : formatted;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
 function finiteNumber(value: unknown) { const number = Number(value); return Number.isFinite(number) && number >= 0 ? number : 0; }
 
@@ -80,7 +121,22 @@ function normalizeGoal(value: unknown, index: number): WeeklyGoal | null {
   const title = String(value.title ?? "").trim();
   if (!title) return null;
   const statuses: GoalStatus[] = ["On Track", "At Risk", "Achieved", "Missed"];
-  return { id: String(value.id ?? `goal-${index}`), title, target: String(value.target ?? ""), actual: String(value.actual ?? ""), status: statuses.includes(value.status as GoalStatus) ? value.status as GoalStatus : "On Track" };
+  const metrics: WeeklyGoalMetric[] = ["spend", "sales", "ppcOrders", "organicOrders", "acos"];
+  const storedMetric = metrics.includes(value.metric as WeeklyGoalMetric) ? value.metric as WeeklyGoalMetric : undefined;
+  const normalizedTitle = title.toLowerCase();
+  const inferredMetric: WeeklyGoalMetric | undefined = normalizedTitle.includes("organic") && normalizedTitle.includes("order") ? "organicOrders"
+    : normalizedTitle.includes("ppc") && normalizedTitle.includes("order") ? "ppcOrders"
+      : normalizedTitle.includes("acos") ? "acos"
+        : normalizedTitle.includes("spend") ? "spend"
+          : normalizedTitle.includes("sales") ? "sales"
+            : undefined;
+  const metric = storedMetric ?? inferredMetric;
+  const preferredUnit = value.unit === "percentage" || value.unit === "number" || value.unit === "currency" ? value.unit : undefined;
+  return {
+    id: String(value.id ?? `goal-${index}`), title, target: String(value.target ?? ""), actual: String(value.actual ?? ""),
+    status: statuses.includes(value.status as GoalStatus) ? value.status as GoalStatus : "On Track",
+    ...(metric ? { metric, unit: weeklyGoalUnit(metric, preferredUnit) } : {}),
+  };
 }
 
 function normalizeGoalHistoryEntry(value: unknown, index: number): GoalHistoryEntry | null {
@@ -88,7 +144,8 @@ function normalizeGoalHistoryEntry(value: unknown, index: number): GoalHistoryEn
   if (!goal || (goal.status !== "Achieved" && goal.status !== "Missed") || !isRecord(value)) return null;
   const resolvedAt = typeof value.resolvedAt === "string" ? value.resolvedAt : "";
   if (!resolvedAt || Number.isNaN(new Date(resolvedAt).getTime())) return null;
-  return { ...goal, status: goal.status, resolvedAt: new Date(resolvedAt).toISOString() };
+  const dataState = value.dataState === "Partial" || value.dataState === "Final" ? value.dataState : undefined;
+  return { ...goal, status: goal.status, resolvedAt: new Date(resolvedAt).toISOString(), ...(dataState ? { dataState } : {}) };
 }
 
 function normalizeAction(value: unknown, index: number): ActionItem | null {
