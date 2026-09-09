@@ -4,7 +4,7 @@ Last updated: September 9, 2026
 
 ## Third-panel workspace redesign
 
-Restyled the selected-product workspace using the supplied neutral, compact reference while preserving every existing interaction. Weekly Goals and Budget Utilization now lead the panel as a two-column row with active-goal and pacing summaries, and the renamed Weekly Performance Metrics section sits directly below them. Later notes and action sections retain their order. The third panel now uses flatter neutral cards, monochrome section icons, tighter spacing, and a responsive single-column fallback without changing stored data.
+Rebuilt the selected-product workspace into a visibly separate `Goals & Budget` control surface using the supplied monochrome reference while preserving every existing interaction. Weekly Goals and Budget Utilization lead the panel as high-contrast cards with active-goal and pacing summaries, and Weekly Performance Metrics sits in a separate full-width card directly below them. The stronger redesign adds a shaded planning shell, dark card caps, white-on-black icon tiles, accented goal rows, two-column budget tiles, black primary actions, and clearer surface elevation. Later notes and action sections retain their order, and the layout has a responsive single-column fallback without changing stored data.
 
 ## Larger Weekly Performance metrics
 

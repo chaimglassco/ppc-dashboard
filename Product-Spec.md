@@ -8,7 +8,7 @@ Chat conversations are separated by product and active week and remain only in c
 
 ## Third-panel workspace hierarchy
 
-The selected-product workspace uses a clean neutral card system inspired by the supplied reference while retaining the Glassco dashboard's existing controls and data. Weekly Goals and Budget Utilization form the first two-column row. Weekly Performance Metrics spans the full row directly beneath them, followed by Previous Week Result/Weekly Summary and the action plan. Section headings use compact monochrome icons and uppercase labels; active-goal and budget-pacing badges summarize the two leading cards. The layout collapses to one column on narrow screens without changing report behavior.
+The selected-product workspace uses a visibly distinct monochrome control-center design inspired by the supplied reference while retaining the Glassco dashboard's existing controls and data. A shaded `Goals & Budget` planning surface contains Weekly Goals and Budget Utilization as high-contrast cards in the first two-column row. Weekly Performance Metrics is a separate full-width card directly beneath it, followed by Previous Week Result/Weekly Summary and the action plan. Section headings use white-on-black icon tiles and uppercase labels; active-goal and budget-pacing badges summarize the two leading cards. Goal rows use a dark leading accent, budget values use a two-column utilization grid, and primary planning/refresh actions use black controls. The layout collapses to one column on narrow screens without changing report behavior.
 
 ## Goal history and previous-week metric comparisons
 

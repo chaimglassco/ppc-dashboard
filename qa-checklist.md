@@ -5,8 +5,8 @@ Use this checklist before merging or deploying changes.
 ## Third-panel workspace hierarchy
 
 - [ ] Open a selected product and confirm Weekly Goals and Budget Utilization are the first two cards in the third panel, with Weekly Performance Metrics spanning the row directly below both.
-- [ ] Confirm the active-goal count and Healthy/Watch/Over Budget pacing badge reflect the current report, and that all existing goal actions, budget inputs/history, Refresh, Target ACOS, and metric controls still work.
-- [ ] Verify neutral flat cards, monochrome section icons, compact spacing, and full-width content remain aligned at desktop width; at mobile width confirm the top row collapses to Goals, then Budget, then Metrics.
+- [ ] Confirm Weekly Goals and Budget Utilization are both contained by the labeled `Goals & Budget` planning surface. Verify the active-goal count and Healthy/Watch/Over Budget pacing badge reflect the current report, and that all existing goal actions, budget inputs/history, Refresh, Target ACOS, and metric controls still work.
+- [ ] Verify the shaded planning shell, dark card caps, white-on-black section icons, accented goal rows, two-column budget tiles, black primary actions, and separate full-width metrics surface are visibly distinct and aligned at desktop width; at mobile width confirm the top row collapses to Goals, then Budget, then Metrics.
 
 ## Product performance AI assistant
 

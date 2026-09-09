@@ -343,6 +343,9 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "75" } });
     const goalsCard = screen.getByRole("region", { name: "Weekly Goals" });
     const budgetCard = screen.getByRole("region", { name: "Budget Utilization" });
+    const planningSection = screen.getByRole("region", { name: "Goals & Budget" });
+    expect(planningSection).toContainElement(goalsCard);
+    expect(planningSection).toContainElement(budgetCard);
     expect(within(budgetCard).getByText("Overspent")).toBeVisible();
     expect(within(budgetCard).getByText("$25")).toBeVisible();
 
