@@ -12,7 +12,7 @@ Each active weekly goal has explicit Achieved and Missed actions beside Delete. 
 
 Add Goal creates a structured selector with Increase Spend, Decrease Spend, PPC Sales, Total Sales, PPC Order, Organic Order, Total Orders, ACOS, and TACOS. Organic Order additionally supports Number or Percentage, where Percentage is organic orders divided by total orders. Actual is read-only and follows the matching selected-report metric; both Spend directions use actual spend. Currency and percentage Targets display two decimal places outside edit mode, while count Targets remain whole numbers. An available snapshot is labeled Partial until it covers the full Wednesday–Tuesday period and Final once complete; before data is available the field shows Waiting. Resolving a goal snapshots its current actual value and data state into Goal History.
 
-Weekly Performance cards show the previous week's rounded value in small text at the lower-right when a prior snapshot or report exists. A green up arrow means the current value increased, a red down arrow means it decreased, and an unchanged value has no arrow. Whole-number metric presentation uses thousands separators. Budget Weekly limit and Actual spend values are centered; Actual spend is displayed as a rounded whole number. The duplicate previous-week sales/TACOS summary is removed from Previous Week Result while its outcome notes remain.
+Weekly Performance uses large grouped cards: four Sales Metrics cards across the first row, then three Order Volume cards and two Efficiency & Targets cards beneath them. Each card emphasizes the current rounded value, shows a compact percentage-change badge, and places the prior rounded value in a full-width `Prev. Week` footer. Favorable movement is green and unfavorable movement is red: lower is favorable for Spend, ACOS, and TACOS, while higher is favorable for sales and orders. Whole-number metric presentation uses thousands separators. The ACOS warning card also shows how far it is above Target ACOS; TACOS identifies itself as the total advertising ratio. Budget Weekly limit and Actual spend values remain centered, and the duplicate previous-week sales/TACOS summary remains removed from Previous Week Result.
 
 When a user opens the following week, its Carry-forward result and lessons field starts with the preceding report's Previous Week Result documentation. Existing text in the newer week takes priority and is never overwritten.
 
@@ -32,7 +32,7 @@ The reporting-period picker supports multiple selected months across years, plus
 
 ## Saved weekly performance and smaller tags
 
-Fetched performance is saved in this browser per US ASIN and reporting week. Selecting or revisiting a product automatically retrieves every visible reporting week that does not already have a valid snapshot, prioritizing the active week. Returning to a saved week or reloading displays its saved metrics and coverage without another request. Only Refresh updates the active saved snapshot; pending/failed refreshes preserve the last values. Week numbers sit at the upper-right of their cards, and weekly metric cards plus timeline ACOS values show whole numbers in a compact layout while retaining exact source values in storage. Portfolio tag badges use compact 7px text and reduced padding.
+Fetched performance is saved in this browser per US ASIN and reporting week. Selecting or revisiting a product automatically retrieves every visible reporting week that does not already have a valid snapshot, prioritizing the active week. Returning to a saved week or reloading displays its saved metrics and coverage without another request. Only Refresh updates the active saved snapshot; pending/failed refreshes preserve the last values. Week numbers sit at the upper-right of their cards, and the large grouped weekly metric cards plus timeline ACOS values show rounded whole numbers while retaining exact source values in storage. Portfolio tag badges use compact 7px text and reduced padding.
 
 ## Compact product cards
 
@@ -175,7 +175,7 @@ These require a separately approved milestone and must preserve the current shar
 
 ## Weekly metric comparison
 
-- Every Weekly Performance metric presents the current and previous week side by side at equal visual weight, separated by a vertical divider.
+- Every Weekly Performance metric emphasizes the current value and places the previous value in a separate footer row, with a percentage-change badge at the upper right.
 - The previous value remains neutral. The current value and direction arrow are green when it increased, red when it decreased, and neutral when unchanged or when no previous week is available.
 - Compact metric typography must keep currency and percentage symbols inside their corresponding Current or Previous column.
 - Scale Insights trend destinations are labeled Daily Performance, Weekly Performance, and Monthly Performance without a redundant “Trend” suffix.

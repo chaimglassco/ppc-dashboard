@@ -3,7 +3,7 @@
 import Image from "next/image";
 import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, ClipboardList, DollarSign,
-  FileText, Flag, Italic, List, ListOrdered, Plus, RefreshCw, Save, Trash2, X,
+  FileText, Flag, Italic, List, ListOrdered, Plus, RefreshCw, Save, ShoppingCart, SlidersHorizontal, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
@@ -39,15 +39,15 @@ const AUTO_SAVE_DELAY_MS = 500;
 const BUDGET_HISTORY_PAGE_SIZE = 5;
 const PERFORMANCE_BACKFILL_CONCURRENCY = 2;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const METRIC_GROUPS: { title: string; metrics: MetricDefinition[] }[] = [
-  { title: "Sales", metrics: [
+const METRIC_GROUPS: { title: string; displayTitle: string; metrics: MetricDefinition[] }[] = [
+  { title: "Sales", displayTitle: "Sales Metrics", metrics: [
     { field: "spend", label: "Spend", prefix: "$", imported: true }, { field: "ppcSales", label: "PPC Sales", prefix: "$", imported: true },
     { field: "organicSales", label: "Organic Sales", prefix: "$", calculated: true }, { field: "totalSales", label: "Total Sales", prefix: "$", imported: true },
   ] },
-  { title: "Orders", metrics: [
+  { title: "Orders", displayTitle: "Order Volume", metrics: [
     { field: "ppcOrders", label: "PPC Orders", imported: true }, { field: "organicOrders", label: "Organic Orders", calculated: true }, { field: "totalOrders", label: "Total Orders", imported: true },
   ] },
-  { title: "Efficiency", metrics: [
+  { title: "Efficiency", displayTitle: "Efficiency & Targets", metrics: [
     { field: "acos", label: "ACOS", suffix: "%", calculated: true }, { field: "tacos", label: "TACOS", suffix: "%", calculated: true },
   ] },
 ];
@@ -66,6 +66,15 @@ function previousMetricValue(metric: MetricDefinition, value: number) {
   return `${metric.prefix ?? ""}${formatted}${metric.suffix ?? ""}`;
 }
 
+function metricDeltaPercentage(current: number, previous?: number) {
+  if (previous == null || previous === 0) return null;
+  return Math.round(Math.abs(((current - previous) / previous) * 100));
+}
+
+function lowerIsBetter(field: MetricField) {
+  return field === "spend" || field === "acos" || field === "tacos";
+}
+
 function dailyLimitFromWeekly(weeklyLimit: number) {
   return Math.round((weeklyLimit / 7) * 100) / 100;
 }
@@ -74,24 +83,23 @@ function preciseCurrency(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: Number.isInteger(value) ? 0 : 2, maximumFractionDigits: 2 }).format(value || 0);
 }
 
-function MetricInput({ metric, report, previousValue, importedLocked, warning, onChange }: { metric: MetricDefinition; report: WeeklyPpcReport; previousValue?: number; importedLocked: boolean; warning?: boolean; onChange: (field: MetricField, value: number) => void }) {
+function MetricInput({ metric, report, previousValue, importedLocked, warning, targetAcos, onChange }: { metric: MetricDefinition; report: WeeklyPpcReport; previousValue?: number; importedLocked: boolean; warning?: boolean; targetAcos?: number; onChange: (field: MetricField, value: number) => void }) {
   const readOnly = Boolean(metric.calculated || (metric.imported && importedLocked));
   const comparison = previousValue == null ? 0 : report[metric.field] - previousValue;
   const comparisonDirection = comparison > 0 ? "increased" : comparison < 0 ? "decreased" : "unchanged";
+  const deltaPercentage = metricDeltaPercentage(report[metric.field], previousValue);
+  const favorable = comparison !== 0 && (lowerIsBetter(metric.field) ? comparison < 0 : comparison > 0);
+  const trendTone = comparison === 0 ? styles.metricNeutral : favorable ? styles.metricIncrease : styles.metricDecrease;
+  const trendLabel = deltaPercentage == null ? "New" : `${deltaPercentage}%`;
+  const targetDifference = warning && targetAcos ? Math.round(Math.max(0, report.acos - targetAcos)) : 0;
   return <label className={`${styles.metricCard} ${readOnly ? styles.calculatedMetric : ""} ${warning ? styles.metricWarning : ""}`} data-warning={warning || undefined}>
-    <span>{metric.label}</span>
-    <span className={styles.metricComparison}>
-      <span className={`${styles.metricComparisonValue} ${styles.metricCurrent} ${comparison > 0 ? styles.metricIncrease : comparison < 0 ? styles.metricDecrease : ""}`}>
-        <small>Current</small>
-        <span className={`${styles.metricInputWrap} ${metric.suffix ? styles.metricPercentWrap : ""}`}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : comparison < 0 ? <ArrowDown aria-hidden="true" /> : null}{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-describedby={warning ? "acos-target-warning" : undefined} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" value={roundedMetricValue(report[metric.field])} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
-      </span>
-      <i className={styles.metricComparisonDivider} aria-hidden="true" />
-      <span className={`${styles.metricComparisonValue} ${styles.metricPrevious}`} aria-label={previousValue == null ? `Previous ${metric.label}: unavailable` : `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}, ${comparisonDirection}`}>
-        <small>Previous</small>
-        <strong>{previousValue == null ? "—" : previousMetricValue(metric, previousValue)}</strong>
-      </span>
+    <span className={styles.metricCardHeader}><span>{metric.label}</span>{previousValue != null && comparison !== 0 ? <span className={`${styles.metricDelta} ${trendTone}`} aria-label={`${metric.label} ${comparisonDirection} by ${trendLabel} from previous week`}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}{trendLabel}</span> : null}</span>
+    <span className={`${styles.metricInputWrap} ${metric.suffix ? styles.metricPercentWrap : ""}`}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-describedby={warning ? "acos-target-warning" : undefined} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" value={roundedMetricValue(report[metric.field])} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
+    {warning ? <span id="acos-target-warning" className={styles.metricCardHint}>+{targetDifference}% above target ({new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(targetAcos || 0)}%)</span> : metric.field === "tacos" ? <span className={styles.metricCardHint}>Total advertising ratio</span> : <span className={styles.metricCardHint} aria-hidden="true">&nbsp;</span>}
+    <span className={`${styles.metricPreviousRow} ${styles.metricPrevious}`} aria-label={previousValue == null ? `Previous ${metric.label}: unavailable` : `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}, ${comparisonDirection}`}>
+      <small>Prev. Week</small>
+      <strong>{previousValue == null ? "—" : previousMetricValue(metric, previousValue)}</strong>
     </span>
-    {warning ? <span id="acos-target-warning" className={styles.metricWarningText}>Actual ACOS is above Target ACOS.</span> : null}
   </label>;
 }
 
@@ -650,7 +658,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
             </section>
           </div>
 
-<section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><div className={styles.performanceHeading}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><label className={styles.targetAcosField}><span>Target ACOS</span><span><input aria-label="Target ACOS" inputMode="decimal" value={report.targetAcos || ""} placeholder="0" onChange={event => patchReport({ targetAcos: numericValue(event.target.value) })} /><i>%</i></span></label></div><div className={styles.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? styles.performanceError : ""}>{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}<button type="button" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => { refreshRequest.current = snapshotKey; setPerformanceRefresh(value => value + 1); }}><RefreshCw aria-hidden="true" />Refresh</button></div></div>{displayedPerformanceLoad.warnings.length ? <ul className={styles.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}<div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} importedLocked={importedMetricsLocked} warning={metric.field === "acos" && isAcosAboveTarget} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
+<section className={styles.card} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><div className={styles.performanceHeading}><h3 id="metrics-heading"><BarChart3 />Weekly Performance</h3><label className={styles.targetAcosField}><span>Target ACOS</span><span><input aria-label="Target ACOS" inputMode="decimal" value={report.targetAcos || ""} placeholder="0" onChange={event => patchReport({ targetAcos: numericValue(event.target.value) })} /><i>%</i></span></label></div><div className={styles.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? styles.performanceError : ""}>{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}<button type="button" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => { refreshRequest.current = snapshotKey; setPerformanceRefresh(value => value + 1); }}><RefreshCw aria-hidden="true" />Refresh</button></div></div>{displayedPerformanceLoad.warnings.length ? <ul className={styles.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}<div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title === "Sales" ? <DollarSign aria-hidden="true" /> : group.title === "Orders" ? <ShoppingCart aria-hidden="true" /> : <SlidersHorizontal aria-hidden="true" />}{group.displayTitle}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} importedLocked={importedMetricsLocked} warning={metric.field === "acos" && isAcosAboveTarget} targetAcos={metric.field === "acos" ? report.targetAcos : undefined} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
 
           <div className={styles.twoColumn}>
             <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}>{previousReport.status === "Draft" ? null : <span className={statusTone(previousReport.status)}>{previousReport.status}</span>}<p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : null}<FormattedTextarea label="Carry-forward result and lessons" value={carryForwardResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></section>

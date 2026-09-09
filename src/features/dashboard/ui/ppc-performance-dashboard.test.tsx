@@ -247,10 +247,11 @@ describe("PpcPerformanceDashboard", () => {
     expect(previousSales).toHaveTextContent("$1,200");
     expect(previousSales.className).toMatch(/metricPrevious/);
     expect(previousSales.className).not.toMatch(/metricIncrease|metricDecrease/);
-    expect(within(performanceCard).getByRole("textbox", { name: "Total Sales" }).closest("span")?.parentElement?.className).toMatch(/metricIncrease/);
+    expect(within(performanceCard).getByLabelText("Total Sales increased by 10% from previous week").className).toMatch(/metricIncrease/);
     const previousSpend = within(performanceCard).getByLabelText("Previous Spend: $90, decreased");
     expect(previousSpend.className).not.toMatch(/metricIncrease|metricDecrease/);
-    expect(within(performanceCard).getByRole("textbox", { name: "Spend" }).closest("span")?.parentElement?.className).toMatch(/metricDecrease/);
+    expect(within(performanceCard).getByLabelText("Spend decreased by 9% from previous week").className).toMatch(/metricIncrease/);
+    expect(within(performanceCard).getAllByText("Prev. Week")).toHaveLength(9);
     expect(screen.queryByText(/total sales ·/i)).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
   });
@@ -334,7 +335,7 @@ describe("PpcPerformanceDashboard", () => {
     const acosCard = within(performanceCard).getByRole("textbox", { name: "ACOS" }).closest("label");
     fireEvent.change(targetAcos, { target: { value: "25" } });
     expect(acosCard).toHaveAttribute("data-warning", "true");
-    expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveAccessibleDescription("Actual ACOS is above Target ACOS.");
+    expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveAccessibleDescription("+50% above target (25%)");
     fireEvent.change(targetAcos, { target: { value: "80" } });
     expect(acosCard).not.toHaveAttribute("data-warning");
 
