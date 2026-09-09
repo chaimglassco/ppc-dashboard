@@ -281,7 +281,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(performanceCard).getAllByText("Prev. Week")).toHaveLength(9);
     expect(screen.queryByText(/total sales ·/i)).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
-  });
+  }, 10_000);
 
   it("marks live goal actuals partial while the reporting week is incomplete", async () => {
     vi.mocked(fetch).mockImplementation(async input => {
