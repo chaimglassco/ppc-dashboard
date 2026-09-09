@@ -4,7 +4,7 @@ Last updated: September 9, 2026
 
 ## Larger Weekly Performance metrics
 
-Redesigned Weekly Performance into two spacious rows matching the requested visual hierarchy: Sales Metrics spans four cards, while Order Volume and Efficiency & Targets share the second row. Current values are substantially larger, percentage-change badges communicate favorable/unfavorable movement, and each card has a clear `Prev. Week` footer. ACOS retains its red target warning and now states the target gap; TACOS includes a total-advertising-ratio hint. The change is responsive and does not alter stored metric precision or report schemas.
+Redesigned Weekly Performance into two structured rows matching the requested visual hierarchy: Sales Metrics spans four cards, while Order Volume and Efficiency & Targets share the second row. A follow-up tightened the card height and typography, restored the intended vertical content flow, rendered current zero values beside their symbols, and suppressed false 100% comparison badges while current-period data is unavailable. Each card retains a clear `Prev. Week` footer. ACOS retains its red target warning and states the target gap; TACOS includes a total-advertising-ratio hint. The change is responsive and does not alter stored metric precision or report schemas.
 
 ## Product performance AI assistant
 

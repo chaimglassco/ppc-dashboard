@@ -174,6 +174,33 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.getByRole("button", { name: "Next budget history page" })).toBeDisabled();
   });
 
+  it("keeps unavailable current metrics orderly without showing false 100% comparisons", async () => {
+    window.localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      reports: {
+        "product-1:2026-08-19": {
+          productId: "product-1",
+          weekStart: "2026-08-19",
+          spend: 56,
+          ppcSales: 163,
+          totalSales: 339,
+          ppcOrders: 14,
+          totalOrders: 24,
+          acos: 34,
+          tacos: 16,
+        },
+      },
+    }));
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+
+    const performanceCard = await screen.findByRole("region", { name: "Weekly Performance" });
+    expect(within(performanceCard).getByRole("textbox", { name: "Spend" })).toHaveValue("0");
+    expect(within(performanceCard).getByLabelText("Previous Spend: $56")).toBeVisible();
+    expect(within(performanceCard).queryByLabelText(/Spend decreased by/)).not.toBeInTheDocument();
+    expect(within(performanceCard).queryByLabelText(/100% from previous week/)).not.toBeInTheDocument();
+  });
+
   it("retrieves the selected week from Scale Insights and locks the imported metrics", async () => {
     vi.mocked(fetch).mockImplementation(async input => {
       const url = String(input);

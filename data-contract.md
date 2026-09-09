@@ -16,7 +16,7 @@ The report accepts optional `goalHistory: Array<{ id, title, target, actual, sta
 
 Active Actual values are derived from the selected validated performance snapshot. Sales maps to `totalSales`; Organic Order percentage is `organicOrders / totalOrders * 100` with a zero-denominator result of zero. Partial means the snapshot ends before `weekStart + 6 days`; Final means it covers that full date. These derived active values are not persisted until goal resolution snapshots the formatted actual and optional completeness state into history.
 
-Product-wide Goal History is a derived view over these per-week entries and creates no separate storage key. Large grouped metric cards, percentage-change badges, metric-specific favorable colors, `Prev. Week` footer values, ACOS target-gap copy, whole-number rounding, thousands separators, centered budget values, and the removed prior sales/TACOS line are presentation-only; exact report and performance-cache numbers remain unchanged.
+Product-wide Goal History is a derived view over these per-week entries and creates no separate storage key. Compact grouped metric cards, current-data availability gating for percentage-change badges, metric-specific favorable colors, `Prev. Week` footer values, ACOS target-gap copy, whole-number rounding, thousands separators, centered budget values, and the removed prior sales/TACOS line are presentation-only; exact report and performance-cache numbers remain unchanged.
 
 ## Target ACOS and Scale Insights analysis URLs
 
