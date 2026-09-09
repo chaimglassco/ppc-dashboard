@@ -29,3 +29,107 @@
 .metricsGroups{gap:10px}.metricGroup h4{margin-bottom:5px}.metricGroupGrid{gap:7px}.metricCard{min-height:74px;flex-direction:column;align-items:center;gap:2px;border-radius:9px;padding:7px 9px;text-align:center}.metricCardHeader{width:100%;justify-content:center;padding:0 34px;box-sizing:border-box;font-size:7px;text-align:center}.metricCardHeader>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.metricDelta{position:absolute;top:7px;right:8px;padding:2px 4px;font-size:6px}.metricDelta svg{width:7px;height:7px}.metricInputWrap,.metricComparison .metricInputWrap{width:auto;max-width:100%;justify-content:center}.metricInputWrap input,.metricComparison .metricInputWrap input,.metricComparison .metricPercentWrap input{width:auto;max-width:100%;flex:0 1 auto;font-size:16px;text-align:center}.metricInputWrap i,.metricComparison .metricInputWrap i{font-size:15px}.metricPercentWrap i,.metricComparison .metricPercentWrap i{font-size:14px}.metricCardHint{min-height:7px;font-size:6px;text-align:center}.metricPreviousRow{width:100%;justify-content:center;gap:10px;padding-top:4px;text-align:center}.metricPreviousRow small{font-size:6px}.metricPreviousRow strong{font-size:7px}@media(max-width:760px){.metricsGroups{gap:9px}.metricCard{min-height:72px;padding:7px 8px}.metricInputWrap input,.metricComparison .metricInputWrap input,.metricComparison .metricPercentWrap input{font-size:15px}.metricInputWrap i,.metricComparison .metricInputWrap i{font-size:14px}}
 .workspaceScroll{gap:12px;background:#fafafa;padding:14px 16px 40px}.workspaceScroll>*{width:100%;max-width:1180px;margin-inline:auto}.workspaceTopGrid{align-items:start;gap:12px}.workspace .card{border-color:#e4e4e7;border-radius:10px;box-shadow:none}.workspace .cardTitle{margin-bottom:10px;padding-bottom:9px;border-color:#e4e4e7}.workspace .cardTitle h3{color:#18181b;font-size:10px;font-weight:900;letter-spacing:.055em;text-transform:uppercase}.workspace .cardTitle h3 svg{width:15px;height:15px;color:#18181b;stroke-width:2.2}.sectionTitleGroup{display:flex;align-items:center;gap:8px}.sectionTitleGroup>span,.budgetCard .cardTitle>span{border:1px solid #d4d4d8;border-radius:5px;background:#f4f4f5;padding:3px 6px;color:#3f3f46;font-size:7px;font-weight:800;letter-spacing:.035em;text-transform:uppercase;white-space:nowrap}.budgetCard .cardTitle>span.pacingHealthy{border-color:#bbf7d0;background:#f0fdf4;color:#087443}.budgetCard .cardTitle>span.pacingWarning{border-color:#fde68a;background:#fffbeb;color:#986000}.budgetCard .cardTitle>span.pacingDanger{border-color:#fecaca;background:#fef2f2;color:#b42318}.goalCard .goalRow{border-color:#e4e4e7;border-radius:8px;background:#fafafa}.goalCard .goalHeaderActions button{border-color:#d4d4d8;border-radius:6px;color:#27272a}.goalCard .goalHeaderActions button:hover{border-color:#18181b;color:#18181b}.budgetCard .budgetGrid>label,.budgetCard .budgetGrid>div{border-color:#e4e4e7;border-radius:8px;background:#fafafa}.budgetCard .progressTrack{height:6px;background:#e4e4e7}.budgetCard .progressTrack>span{background:#18181b}.budgetCard .progressTrack .progressWarning{background:#d97706}.budgetCard .progressTrack .progressDanger{background:#dc2626}.budgetCard .budgetHistory{border-color:#e4e4e7}.performanceCard .metricCard{border-color:#e4e4e7;background:#fafafa;box-shadow:none}.performanceCard .metricGroup h4{color:#27272a}.performanceCard .metricGroup h4 svg{color:#18181b}.performanceCard .targetAcosField>span:last-child{border-color:#d4d4d8;background:#fafafa}.performanceCard .performanceSync button{border-color:#d4d4d8;border-radius:6px;color:#27272a}.performanceCard .performanceSync button:hover:not(:disabled){border-color:#18181b;color:#18181b}@media(max-width:760px){.workspaceScroll{padding:12px 10px 32px}.sectionTitleGroup{align-items:flex-start;flex-direction:column;gap:5px}.workspaceTopGrid{gap:10px}}
 .workspace{background:#f4f4f5!important}.workspaceHeader{border-bottom-color:#d4d4d8;background:#fff!important;box-shadow:0 1px 0 rgba(24,24,27,.04)}.workspaceHeader .eyebrow{color:#52525b}.workspaceHeader .titleRow>span{background:#18181b;color:#fff}.workspaceHeader .asinNavigation a{color:#27272a}.workspaceHeader .asinNavigation a:hover{color:#000}.workspaceScroll{gap:16px;background:linear-gradient(180deg,#f4f4f5 0%,#fafafa 100%);padding:18px 20px 44px}.workspacePlanning{border:1px solid #d4d4d8;border-radius:14px;background:#e9e9eb;padding:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}.workspaceSectionHeader{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:14px}.workspaceSectionHeader>div{display:grid;gap:2px}.workspaceSectionHeader span{color:#71717a;font-size:7px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.workspaceSectionHeader h2{margin:0;color:#09090b;font-size:17px;font-weight:850;letter-spacing:-.025em}.workspaceSectionHeader p{max-width:390px;margin:0;color:#52525b;font-size:8px;line-height:1.45;text-align:right}.workspaceTopGrid{grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);gap:14px}.workspaceTopGrid .card,.performanceCard{border:1px solid #c9c9ce!important;border-top:3px solid #18181b!important;border-radius:12px!important;background:#fff!important;padding:17px!important;box-shadow:0 8px 20px rgba(24,24,27,.07)!important}.workspace .cardTitle{min-height:29px;margin-bottom:13px;padding-bottom:11px}.workspace .cardTitle h3{font-size:11px;letter-spacing:.07em}.workspace .cardTitle h3 svg{width:15px;height:15px;box-sizing:content-box;border-radius:5px;background:#18181b;padding:5px;color:#fff}.sectionTitleGroup{gap:10px}.sectionTitleGroup>span{border-color:#18181b;background:#18181b;color:#fff}.goalCard .goalList{gap:9px}.goalCard .goalRow{border:1px solid #d4d4d8;border-left:3px solid #18181b;border-radius:9px;background:#f4f4f5;padding:11px}.goalCard .goalRow input,.goalCard .goalRow select{border-color:#d4d4d8;background:#fff}.goalCard .goalHeaderActions button{min-height:30px;padding-inline:10px;font-size:8px}.goalCard .goalHeaderActions button:last-child{border-color:#18181b;background:#18181b;color:#fff}.goalCard .goalHeaderActions button:last-child:hover{background:#27272a;color:#fff}.budgetCard .cardTitle>span.pacingHealthy{border-color:#18181b;background:#18181b;color:#fff}.budgetCard .budgetGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.budgetCard .budgetGrid>label,.budgetCard .budgetGrid>div{min-height:64px;align-content:center;border-color:#d4d4d8;border-radius:9px;background:#f4f4f5;padding:11px}.budgetCard .budgetGrid strong,.budgetCard .moneyInput input,.budgetCard .moneyInput i{color:#09090b;font-size:17px}.budgetCard .progressTrack{height:8px;margin-top:12px}.budgetCard .budgetHistory{margin-top:12px;border:1px solid #e4e4e7;border-radius:9px;background:#fafafa;padding:10px}.performanceCard{padding:17px!important}.performanceCard .cardTitle{align-items:center}.performanceCard .targetAcosField>span:last-child{border-color:#18181b;background:#18181b}.performanceCard .targetAcosField input,.performanceCard .targetAcosField i{color:#fff}.performanceCard .performanceSync button{border-color:#18181b;background:#18181b;color:#fff}.performanceCard .performanceSync button:hover:not(:disabled){background:#27272a;color:#fff}.performanceCard .metricGroup h4{font-size:8px;letter-spacing:.09em}.performanceCard .metricCard{border-color:#d4d4d8;background:#f4f4f5;box-shadow:0 1px 2px rgba(24,24,27,.04)}.workspaceScroll>.twoColumn .card,.workspaceScroll>section.card{border-color:#d4d4d8;background:#fff;box-shadow:0 3px 12px rgba(24,24,27,.04)}@media(max-width:1250px){.workspaceTopGrid{grid-template-columns:1fr}.workspaceSectionHeader{align-items:flex-start;flex-direction:column;gap:5px}.workspaceSectionHeader p{text-align:left}}@media(max-width:760px){.workspaceScroll{gap:12px;padding:12px 10px 32px}.workspacePlanning{padding:11px}.workspaceTopGrid .card,.performanceCard{padding:12px!important}.workspaceSectionHeader h2{font-size:15px}.workspaceSectionHeader p{display:none}}
+
+/* Exact monochrome weekly performance reference. */
+.workspaceScroll{gap:14px;background:#fafafa;padding:14px 18px 40px}
+.workspaceScroll>*{max-width:1240px}
+.workspace .card,.workspaceTopGrid .card,.workspaceScroll>section.card{border:1px solid #d4d4d8!important;border-top:1px solid #d4d4d8!important;border-radius:9px!important;background:#fff!important;padding:14px!important;box-shadow:none!important;transform:none!important}
+.performanceCard{display:grid;gap:12px;padding:15px!important}
+.performanceTitleBar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-bottom:1px solid #e4e4e7;padding-bottom:10px}
+.performanceTitleBar>div:first-child{min-width:0;display:grid;gap:4px}
+.performanceTitleBar p{margin:0;color:#71717a;font-size:7px;line-height:1.35}
+.performanceTitleBar p strong{color:#18181b}
+.performanceHeading{display:flex;align-items:center;gap:8px}
+.performanceHeading h3{display:flex;align-items:center;gap:6px;margin:0;color:#09090b;font-size:11px;font-weight:900;letter-spacing:-.01em}
+.performanceHeading h3 svg{width:18px;height:18px;box-sizing:content-box;border-radius:3px;background:#09090b;padding:3px;color:#fff;stroke-width:2}
+.targetAcosField{display:flex;align-items:center;gap:4px;border-radius:4px;background:#09090b;padding:3px 6px;color:#fff;font-size:7px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.targetAcosField>span:last-child{display:flex!important;align-items:center!important;gap:1px!important;border:0!important;background:transparent!important;padding:0!important}
+.targetAcosField input{width:22px;border:0;background:transparent;color:#fff!important;padding:0;font-size:7px;font-weight:900;text-align:right;outline:0}
+.targetAcosField i{color:#fff!important;font-size:7px;font-style:normal}
+.performanceSync{align-self:center;gap:7px}
+.performanceSync span{display:flex;align-items:center;gap:5px;max-width:290px;color:#52525b;font-size:7px}
+.performanceSync span>i{width:5px;height:5px;flex:none;border-radius:50%;background:#09090b}
+.performanceSync a,.performanceSync button{min-height:27px;border:1px solid #d4d4d8!important;border-radius:5px!important;background:#fff!important;padding:0 8px;color:#18181b!important;font-size:7px}
+.performanceSync button:hover:not(:disabled){border-color:#09090b!important;background:#fafafa!important}
+.metricGroup{min-width:0}
+.metricGroupHeading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:7px}
+.metricGroupHeading h4{display:flex;align-items:center;gap:5px;margin:0;color:#09090b;font-size:8px;font-weight:900;letter-spacing:.045em;text-transform:uppercase}
+.metricGroupHeading h4 svg{width:11px;height:11px;color:#09090b;stroke-width:2.25}
+.metricGroupHeading>span{color:#52525b;font-size:7px;font-weight:500;letter-spacing:.025em}
+.metricGroupHeading>span strong{color:#09090b;font-weight:900}
+.salesMetricGroup .metricGroupGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.performanceLowerGrid{display:grid;grid-template-columns:minmax(0,7fr) minmax(300px,5fr);gap:14px}
+.orderMetricGrid{display:grid;grid-template-columns:minmax(112px,.72fr) repeat(2,minmax(0,1fr));gap:9px}
+.efficiencyMetricGroup .metricGroupGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.performanceCard .metricCard{position:relative;min-height:113px;display:flex;align-items:center;justify-content:space-between;gap:3px;border:1px solid #e4e4e7!important;border-radius:7px;background:#fafafa!important;padding:10px;text-align:center;box-shadow:none!important}
+.performanceCard .metricFeatured{border:1.5px solid #18181b!important;background:#fff!important}
+.performanceCard .metricWarning{border:1.5px solid #18181b!important;background:#fafafa!important}
+.metricCardHeader{width:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;padding:0;color:#52525b;font-size:7px;font-weight:900;letter-spacing:.08em;line-height:1.15;text-align:center;text-transform:uppercase}
+.metricFeatured .metricCardHeader,.metricWarning .metricCardHeader{color:#09090b!important}
+.metricDelta{position:static;display:inline-flex;align-items:center;gap:1px;border:1px solid #d4d4d8;border-radius:4px!important;background:#fff!important;padding:2px 5px!important;color:#27272a!important;font-size:6px!important;line-height:1}
+.metricFeatured .metricDelta,.metricWarning .metricDelta{border-color:#09090b;background:#09090b!important;color:#fff!important}
+.metricDelta svg{width:7px;height:7px}
+.metricInputWrap,.metricComparison .metricInputWrap{width:auto;max-width:100%;display:flex;align-items:baseline;justify-content:center;gap:2px}
+.metricInputWrap input,.metricComparison .metricInputWrap input,.metricComparison .metricPercentWrap input{width:auto;max-width:92px;flex:0 1 auto;color:#09090b!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:20px;font-weight:900;letter-spacing:-.055em;line-height:1;text-align:center}
+.metricInputWrap i,.metricComparison .metricInputWrap i,.metricPercentWrap i,.metricComparison .metricPercentWrap i{color:#09090b!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;font-weight:900}
+.metricMiniTrack{width:min(80px,75%);height:4px;display:flex;gap:2px;margin:2px auto 0}
+.metricMiniTrack i,.metricMiniTrack b{height:100%;display:block;border-radius:99px}
+.metricMiniTrack i{max-width:100%;background:#09090b}
+.metricMiniTrack b{width:18px;background:#d4d4d8}
+.metricCardHint{min-height:8px;color:#71717a!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:6px;font-weight:500;line-height:1.25;text-align:center}
+.metricPreviousRow{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;margin-top:auto;border-top:1px solid #e4e4e7;padding-top:5px;color:#71717a;text-align:center}
+.metricPreviousRow small{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:6px;font-weight:500}
+.metricPreviousRow strong{color:#09090b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7px;font-weight:900}
+.efficiencyMetric{min-height:150px!important}
+.radialGauge{position:relative;width:42px;height:42px;display:grid;flex:none;place-items:center}
+.radialGauge svg{width:100%;height:100%;overflow:visible;transform:rotate(-90deg)}
+.radialGauge svg circle{fill:none;stroke:#e4e4e7;stroke-width:3.6}
+.radialGauge svg circle+circle{stroke:#09090b;stroke-linecap:round}
+.radialGauge svg circle.radialGaugeMuted{stroke:#71717a}
+.radialGauge>strong{position:absolute;color:#09090b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:6px;font-weight:900}
+.efficiencyMetric .metricInputWrap input,.efficiencyMetric .metricInputWrap i{font-size:16px}
+.orderVolumeSummary{min-height:150px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;border:1px solid #e4e4e7;border-radius:7px;background:#fafafa;padding:9px}
+.orderDonut{position:relative;width:68px;height:68px;display:grid;place-items:center}
+.orderDonut svg{width:100%;height:100%;overflow:visible;transform:rotate(-90deg)}
+.orderDonut svg circle{fill:none;stroke:#e4e4e7;stroke-width:3.6}
+.orderDonut svg circle+circle{stroke:#09090b;stroke-linecap:round}
+.orderDonut svg circle.orderDonutOrganic{stroke:#71717a}
+.orderDonut>span{position:absolute;display:grid;justify-items:center}
+.orderDonut input{width:48px;border:0;background:transparent;color:#09090b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;font-weight:900;line-height:1;text-align:center;outline:0}
+.orderDonut small{color:#71717a;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:6px;letter-spacing:.08em;text-transform:uppercase}
+.orderLegend{width:100%;display:grid;gap:4px}
+.orderLegend>span{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:4px;color:#18181b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:6px}
+.orderLegend i{width:5px;height:5px;border-radius:50%;background:#09090b}
+.orderLegend>span+span{color:#52525b}.orderLegend>span+span i{background:#71717a}
+.orderLegend strong{color:#09090b;font-size:7px}
+.workspaceTopGrid{grid-template-columns:minmax(0,1fr) minmax(350px,1fr);gap:14px;align-items:start}
+.workspace .cardTitle{min-height:25px;margin-bottom:9px;padding-bottom:8px;border-color:#e4e4e7}
+.workspace .cardTitle h3{font-size:9px;letter-spacing:.045em}
+.workspace .cardTitle h3 svg{width:13px;height:13px;box-sizing:border-box;border-radius:0;background:transparent;padding:0;color:#09090b}
+.sectionTitleGroup{gap:7px}.sectionTitleGroup>span,.budgetCard .cardTitle>span{border:1px solid #d4d4d8;border-radius:4px;background:#fafafa;padding:2px 5px;color:#18181b;font-size:6px;letter-spacing:.035em}
+.budgetCard .cardTitle>span.pacingHealthy,.budgetCard .cardTitle>span.pacingWarning,.budgetCard .cardTitle>span.pacingDanger{border-color:#d4d4d8;background:#fafafa;color:#18181b}
+.goalHeaderActions{gap:4px}.goalCard .goalHeaderActions button{min-height:24px;border-color:#d4d4d8;border-radius:4px;background:#fff!important;padding:0 7px;color:#18181b!important;font-size:6px}
+.goalCard .goalList{gap:6px}
+.goalCard .goalRow{gap:6px;border:1px solid #e4e4e7;border-left:1px solid #e4e4e7;border-radius:7px;background:#fafafa;padding:8px}
+.goalDefinition select{height:28px;border-color:#d4d4d8;border-radius:5px;background:#fff;padding-block:0;font-size:8px}
+.goalDefinition label,.goalMetrics label{font-size:6px}
+.goalMetrics{grid-template-columns:minmax(62px,1fr) minmax(82px,1fr) minmax(82px,1fr) auto;gap:5px}
+.goalMetrics input,.goalMetrics select{height:27px;border-color:#d4d4d8;border-radius:5px;font-size:7px}
+.goalOutcomeActions{gap:2px}.goalOutcomeActions button{width:24px;height:24px;border-radius:5px}.goalOutcomeActions button svg{width:11px}
+.goalProgress{display:flex;align-items:center;gap:8px}
+.goalProgress>span{height:5px;flex:1;overflow:hidden;border-radius:99px;background:#e4e4e7}
+.goalProgress>span i{height:100%;display:block;border-radius:99px;background:#09090b}
+.goalProgress strong{color:#09090b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:7px;white-space:nowrap}
+.goalProgress small{color:#71717a;font-size:6px;font-weight:500}
+.budgetPrimaryGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.budgetPrimaryGrid>label{min-height:61px;display:grid;align-content:center;justify-items:center;gap:3px;border:1px solid #e4e4e7;border-radius:7px;background:#fafafa;padding:8px;text-align:center}
+.budgetPrimaryGrid>label>span:first-child{color:#71717a;font-size:6px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.budgetPrimaryGrid .moneyInput input,.budgetPrimaryGrid .moneyInput i{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px!important;font-weight:900}
+.budgetPrimaryGrid small{color:#71717a;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:6px}
+.budgetSecondaryStats{display:flex;justify-content:space-between;gap:10px;margin-top:6px;padding-inline:2px;color:#71717a;font-size:6px}
+.budgetSecondaryStats strong{color:#18181b}
+.budgetBurnRate{display:flex;align-items:center;gap:10px;margin-top:7px;border:1px solid #e4e4e7;border-radius:7px;background:#fafafa;padding:8px}
+.budgetBurnRate>.radialGauge{width:40px;height:40px}
+.budgetBurnRate>div{min-width:0;flex:1}.budgetBurnRate p{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;color:#18181b;font-size:7px}.budgetBurnRate p span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#52525b;font-size:6px}.budgetBurnRate .progressTrack{height:5px;margin:5px 0;background:#e4e4e7}.budgetBurnRate .progressTrack>span{background:#09090b}.budgetBurnRate>div>small{display:flex;justify-content:space-between;gap:8px;margin:0;color:#71717a;font-size:6px}.budgetBurnRate>div>small strong{color:#18181b;font-weight:700}.budgetCard .budgetHistory{margin-top:8px;border:0;border-top:1px solid #e4e4e7;border-radius:0;background:transparent;padding:7px 0 0}.budgetHistory h4{font-size:6px}.budgetHistory table{font-size:6px}.budgetHistory th,.budgetHistory td{padding:3px 4px;font-size:6px}
+@media(max-width:1250px){.performanceLowerGrid{grid-template-columns:1fr}.workspaceTopGrid{grid-template-columns:1fr}.orderMetricGrid{grid-template-columns:minmax(112px,.72fr) repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.performanceTitleBar{align-items:stretch;flex-direction:column}.performanceSync{align-items:flex-start;align-self:stretch;flex-direction:row;flex-wrap:wrap;justify-content:flex-start}.performanceSync span{text-align:left}.salesMetricGroup .metricGroupGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.orderMetricGrid{grid-template-columns:1fr 1fr}.orderVolumeSummary{grid-column:1/-1}.efficiencyMetricGroup .metricGroupGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace .card,.workspaceTopGrid .card,.workspaceScroll>section.card{padding:10px!important}.performanceHeading{align-items:flex-start;flex-direction:column}.goalMetrics{grid-template-columns:1fr 1fr}.goalOutcomeActions{align-self:end}.budgetBurnRate p,.budgetBurnRate>div>small{align-items:flex-start;flex-direction:column;gap:2px}}

@@ -81,7 +81,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/dashboard/products"), expect.any(Object));
     expect(screen.getByRole("button", { name: "Weekly Report" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Open current week" })).not.toBeInTheDocument();
-    const currentPeriod = screen.getByText("August 26 to September 1").closest("button") as HTMLButtonElement;
+    const currentPeriod = within(screen.getByLabelText("Reporting periods")).getAllByRole("button").find(button => button.textContent?.includes("August 26 to September 1")) as HTMLButtonElement;
     expect(within(currentPeriod).getByText("August 26 to September 1")).toBeVisible();
     expect(within(currentPeriod).getByText("Week 35").parentElement?.className).toMatch(/periodMeta/);
     expect(within(currentPeriod).getByText("PPC Sales")).toBeVisible();
@@ -122,7 +122,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(budgetHistory).getByText("$1,500")).toBeVisible();
     fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "350" } });
     expect(screen.getByText("$1,150")).toBeVisible();
-    expect(screen.getByText("23% of the weekly budget used")).toBeVisible();
+    expect(screen.getByLabelText("23% of weekly budget used")).toBeVisible();
     fireEvent.change(screen.getByRole("textbox", { name: "Performance documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
     expect(screen.getByRole("button", { name: "Save Changes" })).toBeVisible();
     expect(screen.getByText("Saving changes…")).toBeVisible();
@@ -194,7 +194,7 @@ describe("PpcPerformanceDashboard", () => {
 
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
-    const performanceCard = await screen.findByRole("region", { name: "Weekly Performance Metrics" });
+    const performanceCard = await screen.findByRole("region", { name: "Weekly PPC Performance" });
     expect(within(performanceCard).getByRole("textbox", { name: "Spend" })).toHaveValue("0");
     expect(within(performanceCard).getByLabelText("Previous Spend: $56")).toBeVisible();
     expect(within(performanceCard).queryByLabelText(/Spend decreased by/)).not.toBeInTheDocument();
@@ -231,7 +231,7 @@ describe("PpcPerformanceDashboard", () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
     expect(await screen.findByText("Scale Insights synced through 2026-09-01.")).toBeVisible();
-    const performanceCard = screen.getByRole("region", { name: "Weekly Performance Metrics" });
+    const performanceCard = screen.getByRole("region", { name: "Weekly PPC Performance" });
     expect(within(performanceCard).getByRole("textbox", { name: "Spend" })).toHaveValue("82");
     expect(within(performanceCard).getByRole("textbox", { name: "PPC Sales" })).toHaveValue("482");
     expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveValue("836");
@@ -278,7 +278,7 @@ describe("PpcPerformanceDashboard", () => {
     const previousSpend = within(performanceCard).getByLabelText("Previous Spend: $90, decreased");
     expect(previousSpend.className).not.toMatch(/metricIncrease|metricDecrease/);
     expect(within(performanceCard).getByLabelText("Spend decreased by 9% from previous week").className).toMatch(/metricIncrease/);
-    expect(within(performanceCard).getAllByText("Prev. Week")).toHaveLength(9);
+    expect(within(performanceCard).getAllByText("Prev. Week")).toHaveLength(8);
     expect(screen.queryByText(/total sales ·/i)).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
   }, 10_000);
@@ -343,17 +343,14 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "75" } });
     const goalsCard = screen.getByRole("region", { name: "Weekly Goals" });
     const budgetCard = screen.getByRole("region", { name: "Budget Utilization" });
-    const planningSection = screen.getByRole("region", { name: "Goals & Budget" });
-    expect(planningSection).toContainElement(goalsCard);
-    expect(planningSection).toContainElement(budgetCard);
     expect(within(budgetCard).getByText("Overspent")).toBeVisible();
     expect(within(budgetCard).getByText("$25")).toBeVisible();
 
-    const performanceCard = screen.getByRole("region", { name: "Weekly Performance Metrics" });
-    expect(goalsCard.compareDocumentPosition(performanceCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(budgetCard.compareDocumentPosition(performanceCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const performanceCard = screen.getByRole("region", { name: "Weekly PPC Performance" });
+    expect(performanceCard.compareDocumentPosition(goalsCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(performanceCard.compareDocumentPosition(budgetCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(performanceCard).getAllByRole("textbox").map(input => input.getAttribute("aria-label"))).toEqual([
-      "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
+      "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "Total Orders", "PPC Orders", "Organic Orders", "ACOS", "TACOS",
     ]);
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Sales" }), { target: { value: "100" } });
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "Total Sales" }), { target: { value: "300" } });
@@ -368,7 +365,7 @@ describe("PpcPerformanceDashboard", () => {
     const acosCard = within(performanceCard).getByRole("textbox", { name: "ACOS" }).closest("label");
     fireEvent.change(targetAcos, { target: { value: "25" } });
     expect(acosCard).toHaveAttribute("data-warning", "true");
-    expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveAccessibleDescription("+50% above target (25%)");
+    expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveAccessibleDescription("Target: 25% · +50% over limit");
     fireEvent.change(targetAcos, { target: { value: "80" } });
     expect(acosCard).not.toHaveAttribute("data-warning");
 

@@ -8,7 +8,7 @@ The success response is `{ answer: string }`; configuration and provider failure
 
 For a valid ten-character ASIN, the route discovers the connected Scale Insights MCP tools at request time. Only tool definitions with a top-level ASIN argument and explicit read-only/non-destructive annotation, or the fixed known reporting allowlist, are eligible; mutation-shaped names are rejected. Before every call, supported ASIN fields are replaced with the selected ASIN, marketplace fields with `US`, and date fields with the visible period range capped at yesterday. Tool output supplied to the model omits binary blocks and is capped at 50,000 characters per result.
 
-The third-panel `Goals & Budget` planning region, order, monochrome/high-contrast card treatment, Weekly Goals active-count badge, Budget Utilization pacing badge, two-column budget presentation, and Weekly Performance Metrics label are presentation-only. They add no fields to `glassco.ppcPerformanceNotes.v1`, the performance cache, or the dashboard catalog. Pacing is derived from existing weekly budget usage and overspend values during render.
+The third-panel metrics-first order, compact monochrome cards, sales comparison bars, PPC/organic order donut, ACOS/TACOS radial gauges, Strategic Weekly Goals progress, and Budget Utilization burn-rate view are presentation-only. They add no fields to `glassco.ppcPerformanceNotes.v1`, the performance cache, or the dashboard catalog. Revenue, order share, goal progress, expected week pacing, budget usage, and overspend are derived from existing values during render.
 
 ## Goal history and comparison presentation
 

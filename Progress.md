@@ -4,7 +4,7 @@ Last updated: September 9, 2026
 
 ## Third-panel workspace redesign
 
-Rebuilt the selected-product workspace into a visibly separate `Goals & Budget` control surface using the supplied monochrome reference while preserving every existing interaction. Weekly Goals and Budget Utilization lead the panel as high-contrast cards with active-goal and pacing summaries, and Weekly Performance Metrics sits in a separate full-width card directly below them. The stronger redesign adds a shaded planning shell, dark card caps, white-on-black icon tiles, accented goal rows, two-column budget tiles, black primary actions, and clearer surface elevation. Later notes and action sections retain their order, and the layout has a responsive single-column fallback without changing stored data.
+Rebuilt the selected-product workspace to closely reproduce the supplied compact monochrome reference while preserving every existing interaction. Weekly PPC Performance now leads with the reference date-comparison header, Target ACOS badge, live-sync control, four sales cards, PPC/organic order donut, order-share cards, and ACOS/TACOS radial gauges. Strategic Weekly Goals and Budget Utilization now follow as paired cards with progress rows, allocation/spend tiles, burn-rate pacing, and the existing paginated history. Thin neutral borders, centered metric typography, restrained black accents, and responsive fallbacks replace the earlier oversized control-center treatment without changing stored data.
 
 ## Larger Weekly Performance metrics
 

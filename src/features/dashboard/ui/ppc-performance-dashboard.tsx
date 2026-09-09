@@ -83,7 +83,17 @@ function preciseCurrency(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: Number.isInteger(value) ? 0 : 2, maximumFractionDigits: 2 }).format(value || 0);
 }
 
-function MetricInput({ metric, report, previousValue, comparisonAvailable, importedLocked, warning, targetAcos, onChange }: { metric: MetricDefinition; report: WeeklyPpcReport; previousValue?: number; comparisonAvailable: boolean; importedLocked: boolean; warning?: boolean; targetAcos?: number; onChange: (field: MetricField, value: number) => void }) {
+function RadialGauge({ value, label, muted = false }: { value: number; label: string; muted?: boolean }) {
+  const circumference = 87.96;
+  const progress = Math.min(100, Math.max(0, value));
+  const dash = (progress / 100) * circumference;
+  return <span className={styles.radialGauge} aria-hidden="true">
+    <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" /><circle className={muted ? styles.radialGaugeMuted : ""} cx="18" cy="18" r="14" strokeDasharray={`${dash} ${circumference}`} /></svg>
+    <strong>{label}</strong>
+  </span>;
+}
+
+function MetricInput({ metric, report, previousValue, comparisonAvailable, importedLocked, warning, targetAcos, volumeShare, onChange }: { metric: MetricDefinition; report: WeeklyPpcReport; previousValue?: number; comparisonAvailable: boolean; importedLocked: boolean; warning?: boolean; targetAcos?: number; volumeShare?: number; onChange: (field: MetricField, value: number) => void }) {
   const readOnly = Boolean(metric.calculated || (metric.imported && importedLocked));
   const displayValue = roundedMetricValue(report[metric.field]);
   const comparison = previousValue == null ? 0 : report[metric.field] - previousValue;
@@ -93,10 +103,15 @@ function MetricInput({ metric, report, previousValue, comparisonAvailable, impor
   const trendTone = comparison === 0 ? styles.metricNeutral : favorable ? styles.metricIncrease : styles.metricDecrease;
   const trendLabel = deltaPercentage == null ? "New" : `${deltaPercentage}%`;
   const targetDifference = warning && targetAcos ? Math.round(Math.max(0, report.acos - targetAcos)) : 0;
-  return <label className={`${styles.metricCard} ${readOnly ? styles.calculatedMetric : ""} ${warning ? styles.metricWarning : ""}`} data-warning={warning || undefined}>
+  const isEfficiency = metric.field === "acos" || metric.field === "tacos";
+  const isSalesMetric = ["spend", "ppcSales", "organicSales", "totalSales"].includes(metric.field);
+  const currentShare = previousValue && report[metric.field] ? Math.round((report[metric.field] / Math.max(report[metric.field], previousValue)) * 100) : report[metric.field] ? 100 : 0;
+  return <label className={`${styles.metricCard} ${readOnly ? styles.calculatedMetric : ""} ${warning ? styles.metricWarning : ""} ${metric.field === "totalSales" ? styles.metricFeatured : ""} ${isEfficiency ? styles.efficiencyMetric : ""}`} data-warning={warning || undefined}>
     <span className={styles.metricCardHeader}><span>{metric.label}</span>{comparisonAvailable && previousValue != null && comparison !== 0 ? <span className={`${styles.metricDelta} ${trendTone}`} aria-label={`${metric.label} ${comparisonDirection} by ${trendLabel} from previous week`}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}{trendLabel}</span> : null}</span>
+    {isEfficiency ? <RadialGauge value={report[metric.field]} label={`${displayValue}%`} muted={metric.field === "tacos"} /> : null}
     <span className={`${styles.metricInputWrap} ${metric.suffix ? styles.metricPercentWrap : ""}`}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-describedby={warning ? "acos-target-warning" : undefined} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" size={Math.max(1, displayValue.length)} value={displayValue} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
-    {warning ? <span id="acos-target-warning" className={styles.metricCardHint}>+{targetDifference}% above target ({new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(targetAcos || 0)}%)</span> : metric.field === "tacos" ? <span className={styles.metricCardHint}>Total advertising ratio</span> : <span className={styles.metricCardHint} aria-hidden="true">&nbsp;</span>}
+    {isSalesMetric ? <span className={styles.metricMiniTrack} aria-hidden="true"><i style={{ width: `${currentShare}%` }} /><b /></span> : null}
+    {warning ? <span id="acos-target-warning" className={styles.metricCardHint}>Target: {new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(targetAcos || 0)}% · +{targetDifference}% over limit</span> : metric.field === "tacos" ? <span className={styles.metricCardHint}>Healthy · Target &lt; 30%</span> : volumeShare != null ? <span className={styles.metricCardHint}>{volumeShare}% of total volume</span> : <span className={styles.metricCardHint} aria-hidden="true">&nbsp;</span>}
     <span className={`${styles.metricPreviousRow} ${styles.metricPrevious}`} aria-label={previousValue == null ? `Previous ${metric.label}: unavailable` : comparisonAvailable ? `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}, ${comparisonDirection}` : `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}`}>
       <small>Prev. Week</small>
       <strong>{previousValue == null ? "—" : previousMetricValue(metric, previousValue)}</strong>
@@ -104,11 +119,29 @@ function MetricInput({ metric, report, previousValue, comparisonAvailable, impor
   </label>;
 }
 
+function OrderVolumeSummary({ report, importedLocked, onChange }: { report: WeeklyPpcReport; importedLocked: boolean; onChange: (field: MetricField, value: number) => void }) {
+  const total = Math.max(0, report.totalOrders);
+  const ppcShare = total ? Math.min(100, Math.round((report.ppcOrders / total) * 100)) : 0;
+  const circumference = 87.96;
+  const ppcDash = (ppcShare / 100) * circumference;
+  const organicDash = circumference - ppcDash;
+  const displayValue = roundedMetricValue(total);
+  return <label className={styles.orderVolumeSummary}>
+    <span className={styles.orderDonut}><svg aria-hidden="true" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" /><circle cx="18" cy="18" r="14" strokeDasharray={`${ppcDash} ${circumference}`} /><circle className={styles.orderDonutOrganic} cx="18" cy="18" r="14" strokeDasharray={`${organicDash} ${circumference}`} strokeDashoffset={-ppcDash} /></svg><span><input aria-label="Total Orders" aria-readonly={importedLocked || undefined} readOnly={importedLocked} inputMode="numeric" size={Math.max(1, displayValue.length)} value={displayValue} onChange={event => { if (!importedLocked) onChange("totalOrders", numericValue(event.target.value)); }} /><small>Units</small></span></span>
+    <span className={styles.orderLegend}><span><i />PPC ({ppcShare}%)<strong>{roundedMetricValue(report.ppcOrders)}</strong></span><span><i />Org ({Math.max(0, 100 - ppcShare)}%)<strong>{roundedMetricValue(report.organicOrders)}</strong></span></span>
+  </label>;
+}
+
 function WeeklyGoalRow({ goal, report, dataState, onUpdate, onResolve, onRemove }: { goal: WeeklyGoal; report: WeeklyPpcReport; dataState: GoalDataState | null; onUpdate: (patch: Partial<WeeklyGoal>) => void; onResolve: (status: GoalOutcome) => void; onRemove: () => void }) {
   const [targetEditing, setTargetEditing] = useState(false);
   const label = goal.metric ? weeklyGoalLabel(goal.metric) : goal.title || "Choose goal";
   const actualState = goal.metric ? dataState : null;
-  const actual = actualState ? formatWeeklyGoalValue(goal, weeklyGoalActualValue(goal, report)) : "";
+  const actualValue = weeklyGoalActualValue(goal, report);
+  const actual = actualState ? formatWeeklyGoalValue(goal, actualValue) : "";
+  const targetValue = numericValue(goal.target);
+  const goalProgress = targetValue > 0 && actualValue != null
+    ? Math.min(100, Math.round((actualValue / targetValue) * 100))
+    : 0;
   const selectMetric = (metric: WeeklyGoalMetric) => onUpdate({
     metric, title: weeklyGoalLabel(metric), unit: weeklyGoalUnit(metric), target: "", actual: "",
   });
@@ -124,6 +157,7 @@ function WeeklyGoalRow({ goal, report, dataState, onUpdate, onResolve, onRemove 
       <label>Status<select aria-label={`${label} status`} className={statusTone(goal.status)} value={goal.status} onChange={event => onUpdate({ status: event.target.value as GoalStatus })}>{ACTIVE_GOAL_STATUSES.map(status => <option className={statusTone(status)} key={status}>{status}</option>)}</select></label>
       <div className={styles.goalOutcomeActions}><button type="button" className={styles.goalAchievedButton} aria-label={`Mark ${label} achieved`} title="Mark achieved" onClick={() => onResolve("Achieved")}><CheckCircle2 aria-hidden="true" /></button><button type="button" className={styles.goalMissedButton} aria-label={`Mark ${label} missed`} title="Mark missed" onClick={() => onResolve("Missed")}><X aria-hidden="true" /></button><button type="button" className={styles.goalDeleteButton} aria-label={`Remove ${label}`} onClick={onRemove}><Trash2 aria-hidden="true" /></button></div>
     </div>
+    <div className={styles.goalProgress}><span><i style={{ width: `${goalProgress}%` }} /></span><strong>{actual || "—"} <small>/ target {formatWeeklyGoalTarget(goal) || "—"}</small></strong></div>
   </div>;
 }
 
@@ -370,6 +404,12 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const budgetBalance = report ? report.weeklyBudget - report.spend : 0;
   const isOverspent = budgetBalance < 0;
   const isAcosAboveTarget = Boolean(report && report.targetAcos > 0 && report.acos > report.targetAcos);
+  const totalOrderVolume = report?.totalOrders ?? 0;
+  const ppcOrderShare = totalOrderVolume ? Math.round(((report?.ppcOrders ?? 0) / totalOrderVolume) * 100) : 0;
+  const organicOrderShare = Math.max(0, 100 - ppcOrderShare);
+  const activeWeekDay = Math.min(7, Math.max(0, Math.floor((Date.parse(initialToday) - Date.parse(activeWeekStart)) / 86400000) + 1));
+  const expectedBudgetUsage = Math.round((activeWeekDay / 7) * 100);
+  const budgetPacingDelta = budgetUsage - expectedBudgetUsage;
 
   useEffect(() => {
     if (!cacheReady || !selectedKey || !selectedAsin) return;
@@ -633,37 +673,37 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         </header>
 
         <div className={styles.workspaceScroll}>
-          <section className={styles.workspacePlanning} aria-labelledby="planning-heading">
-            <header className={styles.workspaceSectionHeader}><div><span>Weekly Control Center</span><h2 id="planning-heading">Goals &amp; Budget</h2></div><p>Set this week&apos;s targets and monitor budget pacing before reviewing performance.</p></header>
+          <section className={`${styles.card} ${styles.performanceCard}`} aria-labelledby="metrics-heading">
+            <div className={styles.performanceTitleBar}>
+              <div><div className={styles.performanceHeading}><h3 id="metrics-heading"><BarChart3 />Weekly PPC Performance</h3><label className={styles.targetAcosField}><span>Target ACOS:</span><span><input aria-label="Target ACOS" inputMode="decimal" value={report.targetAcos || ""} placeholder="0" onChange={event => patchReport({ targetAcos: numericValue(event.target.value) })} /><i>%</i></span></label></div><p>Performance overview for <strong>{formatWeekRange(activeWeekStart)}</strong>, compared against previous week ({formatWeekRange(previousWeekStart)})</p></div>
+              <div className={styles.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? styles.performanceError : ""}><i />{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}<button type="button" aria-label="Refresh" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => { refreshRequest.current = snapshotKey; setPerformanceRefresh(value => value + 1); }}><RefreshCw aria-hidden="true" />Refresh Data</button></div>
+            </div>
+            {displayedPerformanceLoad.warnings.length ? <ul className={styles.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}
+            <section className={`${styles.metricGroup} ${styles.salesMetricGroup}`} aria-label="Sales metrics"><div className={styles.metricGroupHeading}><h4><DollarSign aria-hidden="true" />Sales &amp; Spend Metrics</h4><span>Total Revenue: <strong>{preciseCurrency(report.totalSales)}</strong></span></div><div className={styles.metricGroupGrid}>{METRIC_GROUPS[0].metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>
+            <div className={styles.performanceLowerGrid}>
+              <section className={`${styles.metricGroup} ${styles.orderMetricGroup}`} aria-label="Orders metrics"><div className={styles.metricGroupHeading}><h4><ShoppingCart aria-hidden="true" />Order Volume</h4><span>{roundedMetricValue(report.totalOrders)} Units Sold</span></div><div className={styles.orderMetricGrid}><OrderVolumeSummary report={report} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />{METRIC_GROUPS[1].metrics.filter(metric => metric.field !== "totalOrders").map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} volumeShare={metric.field === "ppcOrders" ? ppcOrderShare : organicOrderShare} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>
+              <section className={`${styles.metricGroup} ${styles.efficiencyMetricGroup}`} aria-label="Efficiency metrics"><div className={styles.metricGroupHeading}><h4><SlidersHorizontal aria-hidden="true" />Efficiency &amp; Targets</h4><span>{isAcosAboveTarget ? "ACOS Attention Req." : "Efficiency Healthy"}</span></div><div className={styles.metricGroupGrid}>{METRIC_GROUPS[2].metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} warning={metric.field === "acos" && isAcosAboveTarget} targetAcos={metric.field === "acos" ? report.targetAcos : undefined} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>
+            </div>
+          </section>
+
           <div className={`${styles.twoColumn} ${styles.workspaceTopGrid}`}>
-            <section className={`${styles.card} ${styles.goalCard}`} aria-labelledby="goals-heading"><div className={styles.cardTitle}><div className={styles.sectionTitleGroup}><h3 id="goals-heading"><Flag />Weekly Goals</h3><span>{report.goals.length} Goal{report.goals.length === 1 ? "" : "s"} Active</span></div><div className={styles.goalHeaderActions}><button type="button" onClick={() => setGoalHistoryOpen(true)}>Goal History</button><button type="button" onClick={addGoal}><Plus />Add Goal</button></div></div><div className={styles.goalList}>{report.goals.map(goal => <WeeklyGoalRow key={goal.id} goal={goal} report={report} dataState={goalDataState} onUpdate={patch => updateGoal(goal.id, patch)} onResolve={status => resolveGoal(goal.id, status)} onRemove={() => removeGoal(goal.id)} />)}</div></section>
+            <section className={`${styles.card} ${styles.goalCard}`} aria-label="Weekly Goals"><div className={styles.cardTitle}><div className={styles.sectionTitleGroup}><h3><Flag />Strategic Weekly Goals</h3><span>{report.goals.length} Goal{report.goals.length === 1 ? "" : "s"} Active</span></div><div className={styles.goalHeaderActions}><button type="button" onClick={() => setGoalHistoryOpen(true)}>Goal History</button><button type="button" onClick={addGoal}><Plus />Add Goal</button></div></div><div className={styles.goalList}>{report.goals.map(goal => <WeeklyGoalRow key={goal.id} goal={goal} report={report} dataState={goalDataState} onUpdate={patch => updateGoal(goal.id, patch)} onResolve={status => resolveGoal(goal.id, status)} onRemove={() => removeGoal(goal.id)} />)}</div></section>
 
             <section className={`${styles.card} ${styles.budgetCard}`} aria-labelledby="budget-heading">
-              <div className={styles.cardTitle}><h3 id="budget-heading"><DollarSign />Budget Utilization</h3><span className={isOverspent ? styles.pacingDanger : budgetUsage >= 80 ? styles.pacingWarning : styles.pacingHealthy}>{isOverspent ? "Over Budget" : budgetUsage >= 80 ? "Watch Pacing" : "Pacing Healthy"}</span></div>
-              <div className={styles.budgetGrid}>
-                <label><span>Weekly limit</span><span className={styles.moneyInput}><i>$</i><input aria-label="Weekly limit" inputMode="decimal" value={report.weeklyBudget || ""} placeholder="0" onFocus={() => { budgetEditStartRef.current = { key: selectedKey, value: report.weeklyBudget }; }} onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} onBlur={event => finishBudgetEdit(event.currentTarget.value)} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span></label>
-                <div><span>Daily limit</span><strong>{preciseCurrency(dailyLimitFromWeekly(report.weeklyBudget))}</strong></div>
-                <label><span>Actual spend</span><span className={styles.moneyInput}><i>$</i><input aria-label="Actual spend" aria-readonly={importedMetricsLocked || undefined} readOnly={importedMetricsLocked} inputMode="numeric" value={roundedMetricValue(report.spend)} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span></label>
-                <div className={isOverspent ? styles.budgetOver : ""}><span>{isOverspent ? "Overspent" : "Remaining"}</span><strong>{currency(Math.abs(budgetBalance))}</strong></div>
+              <div className={styles.cardTitle}><h3 id="budget-heading"><DollarSign />Budget Utilization</h3><span className={isOverspent ? styles.pacingDanger : budgetUsage >= 80 ? styles.pacingWarning : styles.pacingHealthy}>{isOverspent ? "Over Budget" : budgetUsage >= 80 ? "Watch Pacing" : "Pacing Optimal"}</span></div>
+              <div className={styles.budgetPrimaryGrid}>
+                <label><span>Weekly Limit</span><span className={styles.moneyInput}><i>$</i><input aria-label="Weekly limit" inputMode="decimal" value={report.weeklyBudget || ""} placeholder="0" onFocus={() => { budgetEditStartRef.current = { key: selectedKey, value: report.weeklyBudget }; }} onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} onBlur={event => finishBudgetEdit(event.currentTarget.value)} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span><small>Allocated cap</small></label>
+                <label className={isOverspent ? styles.budgetOver : ""}><span>Spent ({budgetUsage}%)</span><span className={styles.moneyInput}><i>$</i><input aria-label="Actual spend" aria-readonly={importedMetricsLocked || undefined} readOnly={importedMetricsLocked} inputMode="numeric" value={roundedMetricValue(report.spend)} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span><small>{currency(Math.abs(budgetBalance))} {isOverspent ? "overspent" : "remaining"}</small></label>
               </div>
-              <div className={styles.progressTrack} aria-label={`${budgetUsage}% of weekly budget used`}><span className={budgetUsage >= 100 ? styles.progressDanger : budgetUsage >= 80 ? styles.progressWarning : ""} style={{ width: `${Math.min(100, budgetUsage)}%` }} /></div><small>{budgetUsage}% of the weekly budget used</small>
+              <div className={styles.budgetSecondaryStats}><span>Daily limit <strong>{preciseCurrency(dailyLimitFromWeekly(report.weeklyBudget))}</strong></span><span>{isOverspent ? "Overspent" : "Remaining"} <strong>{currency(Math.abs(budgetBalance))}</strong></span></div>
+              <div className={styles.budgetBurnRate}><RadialGauge value={budgetUsage} label={`${budgetUsage}%`} /><div><p><strong>Burn Rate Progress</strong><span>{preciseCurrency(report.spend)} / {preciseCurrency(report.weeklyBudget)}</span></p><div className={styles.progressTrack} aria-label={`${budgetUsage}% of weekly budget used`}><span className={budgetUsage >= 100 ? styles.progressDanger : budgetUsage >= 80 ? styles.progressWarning : ""} style={{ width: `${Math.min(100, budgetUsage)}%` }} /></div><small><span>Expected at day {activeWeekDay}: {expectedBudgetUsage}%</span><strong>{budgetPacingDelta === 0 ? "On pace" : `${budgetPacingDelta > 0 ? "Over" : "Under"}-pacing by ${Math.abs(budgetPacingDelta)}%`}</strong></small></div></div>
               <div className={styles.budgetHistory}>
                 <h4>Budget History</h4>
-                <table aria-label="Budget change history">
-                  <thead><tr><th>Date of Change</th><th>From</th><th>To</th></tr></thead>
-                  <tbody>{visibleBudgetHistory.length ? visibleBudgetHistory.map(change => <tr key={change.id}><td>{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(change.changedAt))}</td><td>{preciseCurrency(change.from)}</td><td>{preciseCurrency(change.to)}</td></tr>) : <tr><td colSpan={3}>No budget changes recorded yet.</td></tr>}</tbody>
-                </table>
-                {budgetHistoryPageCount > 1 ? <nav className={styles.budgetHistoryPagination} aria-label="Budget history pages">
-                  <button type="button" aria-label="Previous budget history page" disabled={budgetHistoryPage === 1} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage - 1 })}><ArrowLeft aria-hidden="true" /></button>
-                  {Array.from({ length: budgetHistoryPageCount }, (_, index) => index + 1).map(page => <button type="button" key={page} aria-label={`Budget history page ${page}`} aria-current={page === budgetHistoryPage ? "page" : undefined} onClick={() => setBudgetHistoryView({ key: selectedKey, page })}>{page}</button>)}
-                  <button type="button" aria-label="Next budget history page" disabled={budgetHistoryPage === budgetHistoryPageCount} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage + 1 })}><ArrowRight aria-hidden="true" /></button>
-                </nav> : null}
+                <table aria-label="Budget change history"><thead><tr><th>Date of Change</th><th>From</th><th>To</th></tr></thead><tbody>{visibleBudgetHistory.length ? visibleBudgetHistory.map(change => <tr key={change.id}><td>{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(change.changedAt))}</td><td>{preciseCurrency(change.from)}</td><td>{preciseCurrency(change.to)}</td></tr>) : <tr><td colSpan={3}>No budget changes recorded yet.</td></tr>}</tbody></table>
+                {budgetHistoryPageCount > 1 ? <nav className={styles.budgetHistoryPagination} aria-label="Budget history pages"><button type="button" aria-label="Previous budget history page" disabled={budgetHistoryPage === 1} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage - 1 })}><ArrowLeft aria-hidden="true" /></button>{Array.from({ length: budgetHistoryPageCount }, (_, index) => index + 1).map(page => <button type="button" key={page} aria-label={`Budget history page ${page}`} aria-current={page === budgetHistoryPage ? "page" : undefined} onClick={() => setBudgetHistoryView({ key: selectedKey, page })}>{page}</button>)}<button type="button" aria-label="Next budget history page" disabled={budgetHistoryPage === budgetHistoryPageCount} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage + 1 })}><ArrowRight aria-hidden="true" /></button></nav> : null}
               </div>
             </section>
           </div>
-          </section>
-
-<section className={`${styles.card} ${styles.performanceCard}`} aria-labelledby="metrics-heading"><div className={styles.cardTitle}><div className={styles.performanceHeading}><h3 id="metrics-heading"><BarChart3 />Weekly Performance Metrics</h3><label className={styles.targetAcosField}><span>Target ACOS</span><span><input aria-label="Target ACOS" inputMode="decimal" value={report.targetAcos || ""} placeholder="0" onChange={event => patchReport({ targetAcos: numericValue(event.target.value) })} /><i>%</i></span></label></div><div className={styles.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? styles.performanceError : ""}>{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}<button type="button" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => { refreshRequest.current = snapshotKey; setPerformanceRefresh(value => value + 1); }}><RefreshCw aria-hidden="true" />Refresh</button></div></div>{displayedPerformanceLoad.warnings.length ? <ul className={styles.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}<div className={styles.metricsGroups}>{METRIC_GROUPS.map(group => <section className={styles.metricGroup} key={group.title} aria-label={`${group.title} metrics`}><h4>{group.title === "Sales" ? <DollarSign aria-hidden="true" /> : group.title === "Orders" ? <ShoppingCart aria-hidden="true" /> : <SlidersHorizontal aria-hidden="true" />}{group.displayTitle}</h4><div className={styles.metricGroupGrid}>{group.metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} warning={metric.field === "acos" && isAcosAboveTarget} targetAcos={metric.field === "acos" ? report.targetAcos : undefined} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>)}</div></section>
 
           <div className={styles.twoColumn}>
             <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}>{previousReport.status === "Draft" ? null : <span className={statusTone(previousReport.status)}>{previousReport.status}</span>}<p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : null}<FormattedTextarea label="Carry-forward result and lessons" value={carryForwardResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></section>

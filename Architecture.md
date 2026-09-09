@@ -10,7 +10,7 @@ The same verified Pipeline identity opens a short-lived Scale Insights MCP sessi
 
 ## Third-panel presentation layer
 
-The workspace keeps the existing component and state boundaries but wraps its leading goal and budget cards in an accessible `Goals & Budget` planning region. Weekly Goals and Budget Utilization remain the first grid; the separate full-width metrics section follows in DOM and visual order. The shaded planning surface, dark top borders, white-on-black heading icons, accented goal rows, two-column budget tiles, summary badges, black primary controls, and responsive one-column collapse are CSS/presentation only. Goal, budget-history, performance-cache, notes, and action persistence remain unchanged.
+The workspace keeps the existing component and state boundaries while rendering the supplied reference hierarchy in DOM and visual order: Weekly PPC Performance first, Strategic Weekly Goals and Budget Utilization second, then notes and actions. The metrics card reuses the same report values but derives sales comparison bars, the PPC/organic order split, efficiency rings, revenue summary, and budget pacing during render. The compact monochrome borders, neutral fills, badges, goal progress, budget burn-rate view, and responsive collapse are presentation only. Goal, budget-history, performance-cache, notes, and action persistence remain unchanged.
 
 ## Goal resolution and previous-week comparisons
 
