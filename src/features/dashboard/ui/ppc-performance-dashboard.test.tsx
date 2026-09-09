@@ -194,7 +194,7 @@ describe("PpcPerformanceDashboard", () => {
 
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
-    const performanceCard = await screen.findByRole("region", { name: "Weekly Performance" });
+    const performanceCard = await screen.findByRole("region", { name: "Weekly Performance Metrics" });
     expect(within(performanceCard).getByRole("textbox", { name: "Spend" })).toHaveValue("0");
     expect(within(performanceCard).getByLabelText("Previous Spend: $56")).toBeVisible();
     expect(within(performanceCard).queryByLabelText(/Spend decreased by/)).not.toBeInTheDocument();
@@ -231,7 +231,7 @@ describe("PpcPerformanceDashboard", () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
     expect(await screen.findByText("Scale Insights synced through 2026-09-01.")).toBeVisible();
-    const performanceCard = screen.getByRole("region", { name: "Weekly Performance" });
+    const performanceCard = screen.getByRole("region", { name: "Weekly Performance Metrics" });
     expect(within(performanceCard).getByRole("textbox", { name: "Spend" })).toHaveValue("82");
     expect(within(performanceCard).getByRole("textbox", { name: "PPC Sales" })).toHaveValue("482");
     expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveValue("836");
@@ -341,11 +341,14 @@ describe("PpcPerformanceDashboard", () => {
 
     fireEvent.change(screen.getByRole("textbox", { name: /Weekly limit/i }), { target: { value: "50" } });
     fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "75" } });
-    const budgetCard = screen.getByRole("region", { name: "Budget Tracking" });
+    const goalsCard = screen.getByRole("region", { name: "Weekly Goals" });
+    const budgetCard = screen.getByRole("region", { name: "Budget Utilization" });
     expect(within(budgetCard).getByText("Overspent")).toBeVisible();
     expect(within(budgetCard).getByText("$25")).toBeVisible();
 
-    const performanceCard = screen.getByRole("region", { name: "Weekly Performance" });
+    const performanceCard = screen.getByRole("region", { name: "Weekly Performance Metrics" });
+    expect(goalsCard.compareDocumentPosition(performanceCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(budgetCard.compareDocumentPosition(performanceCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(performanceCard).getAllByRole("textbox").map(input => input.getAttribute("aria-label"))).toEqual([
       "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
     ]);

@@ -6,6 +6,10 @@ The PPC dashboard provides a compact bottom-right Performance AI widget whenever
 
 Chat conversations are separated by product and active week and remain only in component memory for the current page session. They are not added to the browser report schema. The browser sends bounded context only after the user asks a question; an authenticated server route invokes the OpenAI model through Vercel AI Gateway and supplies only Scale Insights tools that are read-only and accept an ASIN scope. The route forcibly replaces generated ASIN, marketplace, and date arguments with the selected product and visible reporting range. Scale Insights OAuth, AI credentials, provider errors, and model internals are never returned to the client. A missing Scale Insights grant produces a hosted Connect link inside the widget.
 
+## Third-panel workspace hierarchy
+
+The selected-product workspace uses a clean neutral card system inspired by the supplied reference while retaining the Glassco dashboard's existing controls and data. Weekly Goals and Budget Utilization form the first two-column row. Weekly Performance Metrics spans the full row directly beneath them, followed by Previous Week Result/Weekly Summary and the action plan. Section headings use compact monochrome icons and uppercase labels; active-goal and budget-pacing badges summarize the two leading cards. The layout collapses to one column on narrow screens without changing report behavior.
+
 ## Goal history and previous-week metric comparisons
 
 Each active weekly goal has explicit Achieved and Missed actions beside Delete. Resolving a goal removes it from the active list and records its title, target, actual, outcome, completion time, and reporting week in the selected product's Goal History. The history button sits beside Add Goal and shows resolved goals across that product's saved weeks. Active status choices remain On Track or At Risk. Older terminal goals are migrated into history when restored.

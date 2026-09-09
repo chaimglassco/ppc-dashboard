@@ -8,6 +8,10 @@ Authenticated `POST /ppc/api/dashboard/ai-chat` is the sole model boundary. It v
 
 The same verified Pipeline identity opens a short-lived Scale Insights MCP session through Vercel Connect. Runtime tool discovery is filtered to valid read-only, non-destructive definitions that expose an ASIN argument; known reporting tools remain explicitly allowlisted, while mutation-shaped names and account-wide tools are never offered to the model. Every execution overwrites supported ASIN, marketplace, and date parameters with the selected ASIN, US, and the visible completed-date range. Tool text/structured results are bounded to 50,000 characters, binary content is discarded, the session closes after generation, and both dashboard context and MCP results are treated as untrusted data. The browser receives only the final answer or a validated hosted consent URL.
 
+## Third-panel presentation layer
+
+The workspace keeps the existing component and state boundaries but assigns presentation-specific classes to its leading goal, budget, and metrics sections. The first grid contains Weekly Goals and Budget Utilization; the full-width metrics section follows in DOM and visual order. Neutral surfaces, monochrome heading icons, summary badges, and responsive one-column collapse are CSS-only. Goal, budget-history, performance-cache, notes, and action persistence remain unchanged.
+
 ## Goal resolution and previous-week comparisons
 
 `WeeklyPpcReport.goalHistory` is a backward-compatible, validated array of at most 100 resolved goals per product/week. Achieved/Missed actions atomically remove an item from `goals`, prepend a terminal history entry with an ISO timestamp, and use the existing dirty-report auto-save. The product-level history dialog derives a newest-first view across saved reports without duplicating data. Parser migration moves legacy terminal goals out of the active list, using the report update time or reporting-week start as a deterministic resolution timestamp; malformed history entries are discarded.

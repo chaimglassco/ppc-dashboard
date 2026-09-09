@@ -2,6 +2,10 @@
 
 Last updated: September 9, 2026
 
+## Third-panel workspace redesign
+
+Restyled the selected-product workspace using the supplied neutral, compact reference while preserving every existing interaction. Weekly Goals and Budget Utilization now lead the panel as a two-column row with active-goal and pacing summaries, and the renamed Weekly Performance Metrics section sits directly below them. Later notes and action sections retain their order. The third panel now uses flatter neutral cards, monochrome section icons, tighter spacing, and a responsive single-column fallback without changing stored data.
+
 ## Larger Weekly Performance metrics
 
 Redesigned Weekly Performance into two structured rows matching the requested visual hierarchy: Sales Metrics spans four cards, while Order Volume and Efficiency & Targets share the second row. Follow-up refinements substantially reduced card height and typography, centered titles and values, kept titles on one line, restored the intended vertical content flow, rendered current zero values beside their symbols, and suppressed false 100% comparison badges while current-period data is unavailable. Each card retains a compact centered `Prev. Week` footer. ACOS retains its red target warning and states the target gap; TACOS includes a total-advertising-ratio hint. The change is responsive and does not alter stored metric precision or report schemas.
