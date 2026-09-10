@@ -54,12 +54,31 @@ type ProviderPeriod = {
 const PAGE_SIZE = 500;
 const MAX_CAMPAIGNS = 5_000;
 const MAX_PAGES = 20;
-const CAMPAIGN_ID_KEYS = ["campaign_id", "campaignId", "CampaignId", "CampaignID"];
-const CAMPAIGN_NAME_KEYS = ["campaign_name", "campaignName", "CampaignName", "campaign", "Campaign"];
-const SPONSORED_TYPE_KEYS = ["sponsored_type", "sponsoredType", "SponsoredType", "ad_type", "adType", "AdType"];
-const SALES_KEYS = ["total_sales", "sales", "PPCSales", "ppc_sales", "PpcSales", "Sales"];
-const SPEND_KEYS = ["total_spend", "spend", "PPCCost", "ppc_cost", "PpcCost", "cost", "Cost", "Spend"];
-const ORDERS_KEYS = ["total_orders", "orders", "PPCOrders", "ppc_orders", "PpcOrders", "Orders"];
+const CAMPAIGN_ID_KEYS = [
+  "campaign_id", "campaignId", "CampaignId", "CampaignID", "amazon_campaign_id", "amazonCampaignId", "AmazonCampaignId",
+  "entity_id", "entityId", "EntityId", "reference_id", "referenceId", "ReferenceId", "id", "Id", "ID",
+];
+const CAMPAIGN_NAME_KEYS = [
+  "campaign_name", "campaignName", "CampaignName", "campaign", "Campaign", "entity_name", "entityName", "EntityName",
+  "reference_name", "referenceName", "ReferenceName", "name", "Name", "title", "Title",
+];
+const SPONSORED_TYPE_KEYS = [
+  "sponsored_type", "sponsoredType", "SponsoredType", "sponsored_ads_type", "sponsoredAdsType", "SponsoredAdsType",
+  "sponsored_ad_type", "sponsoredAdType", "SponsoredAdType", "campaign_type", "campaignType", "CampaignType",
+  "ad_type", "adType", "AdType", "ad_type_name", "adTypeName", "AdTypeName",
+];
+const SALES_KEYS = [
+  "total_sales", "sales", "PPCSales", "ppc_sales", "PpcSales", "ppcSales", "advertising_sales", "advertisingSales",
+  "attributed_sales", "attributedSales", "Sales",
+];
+const SPEND_KEYS = [
+  "total_spend", "spend", "PPCSpend", "ppc_spend", "ppcSpend", "PPCCost", "ppc_cost", "PpcCost", "ppcCost",
+  "ad_spend", "adSpend", "advertising_cost", "advertisingCost", "cost", "Cost", "Spend",
+];
+const ORDERS_KEYS = [
+  "total_orders", "orders", "PPCOrders", "ppc_orders", "PpcOrders", "ppcOrders", "order_count", "orderCount",
+  "attributed_orders", "attributedOrders", "Orders",
+];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -69,11 +88,19 @@ function stringValue(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function numericValue(value: unknown) {
+  if (typeof value === "number") return value;
+  if (typeof value !== "string") return Number.NaN;
+  const normalized = value.trim().replace(/[,$£€¥]/g, "");
+  return /^\d+(?:\.\d+)?$/.test(normalized) ? Number(normalized) : Number.NaN;
+}
+
 function finiteNonNegative(value: unknown, field: string) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+  const number = numericValue(value);
+  if (!Number.isFinite(number) || number < 0) {
     throw new ScaleInsightsDataError("invalid_response", `Scale Insights returned an invalid campaign ${field}.`);
   }
-  return value;
+  return number;
 }
 
 function integerValue(value: unknown, field: string) {
@@ -82,10 +109,24 @@ function integerValue(value: unknown, field: string) {
   return number;
 }
 
-function recordValue(record: Record<string, unknown>, keys: string[], depth = 2): unknown {
+function normalizedKey(value: string) {
+  return value.replace(/[^a-z0-9]/gi, "").toLowerCase();
+}
+
+function directRecordValue(record: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
-    if (record[key] !== undefined && record[key] !== null) return record[key];
+    if (record[key] !== undefined && record[key] !== null && !isRecord(record[key]) && !Array.isArray(record[key])) return record[key];
   }
+  const normalizedKeys = new Set(keys.map(normalizedKey));
+  for (const [key, value] of Object.entries(record)) {
+    if (value !== undefined && value !== null && !isRecord(value) && !Array.isArray(value) && normalizedKeys.has(normalizedKey(key))) return value;
+  }
+  return undefined;
+}
+
+function recordValue(record: Record<string, unknown>, keys: string[], depth = 2): unknown {
+  const direct = directRecordValue(record, keys);
+  if (direct !== undefined && direct !== null) return direct;
   if (depth <= 0) return undefined;
   for (const value of Object.values(record)) {
     if (!isRecord(value)) continue;
@@ -114,7 +155,8 @@ function sponsoredTypeValue(value: unknown): number | null {
 function campaignFromRecord(record: Record<string, unknown>): ProviderCampaign | null {
   const campaignId = campaignIdValue(recordValue(record, CAMPAIGN_ID_KEYS));
   const campaignName = stringValue(recordValue(record, CAMPAIGN_NAME_KEYS));
-  const sponsoredType = sponsoredTypeValue(recordValue(record, SPONSORED_TYPE_KEYS));
+  const sponsoredType = sponsoredTypeValue(recordValue(record, SPONSORED_TYPE_KEYS))
+    ?? sponsoredTypeValue(recordValue(record, ["type", "Type"]));
   if (!campaignId || !campaignName || sponsoredType == null) return null;
 
   const rawSales = recordValue(record, SALES_KEYS);
@@ -129,6 +171,13 @@ function campaignFromRecord(record: Record<string, unknown>): ProviderCampaign |
 
 function collectCampaignRows(value: unknown, depth = 0): ProviderCampaign[] {
   if (depth > 5) return [];
+  if (typeof value === "string" && /^[\[{]/.test(value.trim())) {
+    try {
+      return collectCampaignRows(JSON.parse(value), depth + 1);
+    } catch {
+      return [];
+    }
+  }
   if (Array.isArray(value)) {
     return value.flatMap(candidate => {
       if (!isRecord(candidate)) return [];
@@ -138,6 +187,46 @@ function collectCampaignRows(value: unknown, depth = 0): ProviderCampaign[] {
   }
   if (!isRecord(value)) return [];
   return Object.values(value).flatMap(candidate => collectCampaignRows(candidate, depth + 1));
+}
+
+function parseTextRows(value: string) {
+  const text = value.trim();
+  if (!text) return [];
+  const jsonCandidates = [text, ...[...text.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map(match => match[1].trim())];
+  for (const candidate of jsonCandidates) {
+    try {
+      const parsed: unknown = JSON.parse(candidate);
+      const campaigns = collectCampaignRows(parsed);
+      if (campaigns.length) return campaigns;
+    } catch {
+      continue;
+    }
+  }
+
+  // Scale Insights can place a display table in MCP text content while keeping totals in structuredContent.
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line.includes("|"));
+  for (let index = 0; index < lines.length - 2; index += 1) {
+    const headers = lines[index].replace(/^\||\|$/g, "").split("|").map(value => value.trim());
+    const separator = lines[index + 1].replace(/^\||\|$/g, "").split("|").map(value => value.trim());
+    if (headers.length < 4 || separator.length !== headers.length || !separator.every(value => /^:?-{3,}:?$/.test(value))) continue;
+    const records: Record<string, unknown>[] = [];
+    for (const line of lines.slice(index + 2)) {
+      const cells = line.replace(/^\||\|$/g, "").split("|").map(value => value.trim());
+      if (cells.length !== headers.length) break;
+      records.push(Object.fromEntries(headers.map((header, cellIndex) => [header, cells[cellIndex]])));
+    }
+    const campaigns = records.flatMap(record => {
+      const campaign = campaignFromRecord(record);
+      return campaign ? [campaign] : [];
+    });
+    if (campaigns.length) return campaigns;
+  }
+  return [];
+}
+
+function collectMcpContentRows(result: unknown) {
+  if (!isRecord(result) || !Array.isArray(result.content)) return [];
+  return result.content.flatMap(block => isRecord(block) && block.type === "text" && typeof block.text === "string" ? parseTextRows(block.text) : []);
 }
 
 function numberOrNull(value: unknown) {
@@ -164,6 +253,7 @@ function parseProviderPage(result: unknown, country: string, startDate: string, 
   const scope = providerScope(payload);
   const metadata = isRecord(payload.oppMeta) ? payload.oppMeta : isRecord(payload.meta) ? payload.meta : isRecord(payload.Meta) ? payload.Meta : {};
   const campaigns = collectCampaignRows(payload);
+  if (!campaigns.length) campaigns.push(...collectMcpContentRows(result));
   const totalCount = numberOrNull(metadata.total_count ?? metadata.totalCount ?? metadata.TotalCount);
   if (totalCount != null && totalCount > 0 && campaigns.length === 0) {
     throw new ScaleInsightsDataError("invalid_response", "Scale Insights returned campaign results without readable campaign rows.");
@@ -180,14 +270,26 @@ function parseProviderPage(result: unknown, country: string, startDate: string, 
 function enumStrings(property: ToolProperty) {
   const direct = Array.isArray(property.enum) ? property.enum.filter((value): value is string => typeof value === "string") : [];
   const variants = [...(Array.isArray(property.oneOf) ? property.oneOf : []), ...(Array.isArray(property.anyOf) ? property.anyOf : [])];
-  return [...direct, ...variants.flatMap(value => isRecord(value) && Array.isArray(value.enum) ? value.enum.filter((item): item is string => typeof item === "string") : [])];
+  const directConst = typeof property.const === "string" ? [property.const] : [];
+  return [...direct, ...directConst, ...variants.flatMap(value => {
+    if (!isRecord(value)) return [];
+    const enumValues = Array.isArray(value.enum) ? value.enum.filter((item): item is string => typeof item === "string") : [];
+    return typeof value.const === "string" ? [...enumValues, value.const] : enumValues;
+  })];
 }
 
 export function getScaleInsightsCampaignToolCapabilities(inputSchema: unknown): ScaleInsightsCampaignToolCapabilities {
   const properties = isRecord(inputSchema) && isRecord(inputSchema.properties) ? inputSchema.properties : {};
   const propertyNames = new Set(Object.keys(properties));
-  const groupingKey = ["dimension", "entity_type", "entityType", "level", "group_by", "groupBy", "breakdown"]
-    .find(key => propertyNames.has(key));
+  const groupingKey = [
+    "dimension", "entity_type", "entityType", "level", "group_by", "groupBy", "breakdown", "grouping", "view",
+    "view_by", "viewBy", "report_type", "reportType", "report_scope", "reportScope", "report_level", "reportLevel",
+    "aggregate_by", "aggregateBy", "aggregation", "aggregation_level", "aggregationLevel", "breakdown_by", "breakdownBy",
+    "entity", "entity_level", "entityLevel", "granularity", "scope",
+  ].find(key => propertyNames.has(key)) ?? Object.entries(properties).find(([, property]) => {
+    if (!isRecord(property)) return false;
+    return enumStrings(property).some(candidate => ["campaign", "campaigns"].includes(candidate.toLowerCase()));
+  })?.[0];
   let grouping: ScaleInsightsCampaignToolCapabilities["grouping"];
   if (groupingKey) {
     const property = isRecord(properties[groupingKey]) ? properties[groupingKey] : {};

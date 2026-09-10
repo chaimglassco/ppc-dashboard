@@ -34,6 +34,9 @@ describe("Scale Insights campaign comparison adapter", () => {
     expect(getScaleInsightsCampaignToolCapabilities({ properties: {
       group_by: { enum: ["product", "campaign"] }, limit: { type: "integer" }, offset: { type: "integer" },
     } })).toEqual({ grouping: { key: "group_by", value: "campaign" }, limitKey: "limit", offsetKey: "offset", pageKey: undefined, cursorKey: undefined });
+    expect(getScaleInsightsCampaignToolCapabilities({ properties: {
+      report_scope: { anyOf: [{ const: "products" }, { const: "campaigns" }, { const: "keywords" }] }, pageSize: { type: "integer" }, cursor: { type: "string" },
+    } })).toEqual({ grouping: { key: "report_scope", value: "campaigns" }, limitKey: "pageSize", offsetKey: undefined, pageKey: undefined, cursorKey: "cursor" });
   });
 
   it("loads both periods, follows pagination, merges by id and ad type, and prefers the current name", async () => {
@@ -78,5 +81,37 @@ describe("Scale Insights campaign comparison adapter", () => {
   it("returns an empty valid comparison when neither period has campaign activity", async () => {
     const callTool = vi.fn(async (_name: string, args: Record<string, unknown>) => payload(String(args.start_date), String(args.end_date), [], 0));
     await expect(loadScaleInsightsCampaignComparison(params, callTool)).resolves.toMatchObject({ campaigns: [], warnings: [] });
+  });
+
+  it("reads nested entity rows with formatted MCP values", async () => {
+    const callTool = vi.fn(async (_name: string, args: Record<string, unknown>) => payload(String(args.start_date), String(args.end_date), [{
+      type: "campaign",
+      campaign: { id: "campaign-nested", name: "Nested campaign", sponsored_ads_type: "Sponsored Products" },
+      metrics: { "PPC Sales": "$1,287.73", "PPC Cost": "$86.54", "PPC Orders": "4" },
+    }]));
+    const comparison = await loadScaleInsightsCampaignComparison(params, callTool);
+    expect(comparison.campaigns).toEqual([expect.objectContaining({
+      campaignId: "campaign-nested", campaignName: "Nested campaign", sponsoredType: 0,
+      previous: { sales: 1287.73, spend: 86.54, orders: 4 }, current: { sales: 1287.73, spend: 86.54, orders: 4 },
+    })]);
+  });
+
+  it("reads campaign rows from MCP text content when structuredContent contains only totals", async () => {
+    const callTool = vi.fn(async (_name: string, args: Record<string, unknown>) => ({
+      structuredContent: {
+        agg: { Country: "US", StartDate: String(args.start_date), EndDate: String(args.end_date), Currency: "USD" },
+        oppMeta: { total_count: 1, data_as_of: String(args.end_date) },
+      },
+      content: [{ type: "text", text: [
+        "| Campaign ID | Campaign Name | Sponsored Type | PPC Sales | PPC Cost | PPC Orders |",
+        "| --- | --- | --- | --- | --- | --- |",
+        "| campaign-text | Text campaign | SP | $287.73 | $86.54 | 4 |",
+      ].join("\n") }],
+    }));
+    const comparison = await loadScaleInsightsCampaignComparison(params, callTool);
+    expect(comparison.campaigns).toEqual([expect.objectContaining({
+      campaignId: "campaign-text", campaignName: "Text campaign",
+      previous: { sales: 287.73, spend: 86.54, orders: 4 }, current: { sales: 287.73, spend: 86.54, orders: 4 },
+    })]);
   });
 });

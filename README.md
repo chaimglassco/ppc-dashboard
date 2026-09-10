@@ -121,7 +121,7 @@ npm test
 npm run build
 ```
 
-The last verified state passes all four commands with 51 test files, 299 passing tests, and 6 intentionally skipped tests.
+The last verified state passes all four commands with 51 test files, 301 passing tests, and 6 intentionally skipped tests.
 
 ## Project structure
 
