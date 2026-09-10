@@ -1,5 +1,9 @@
 # Glassco Back Office Library — Architecture
 
+## Dashboard control presentation
+
+Save and Refresh Data share the workspace header as a vertical action group; the metrics header retains provider freshness, authorization, and warning state without duplicating Refresh. Previous Week Summary resolves existing `previousWeekResult`/prior notes into read-only text and suppresses its empty placeholder. Action rows keep the validated `dueDate` compatibility field in storage but no longer render a date editor. Goal Target precedes the read-only Actual projection, with the three outcome controls stacked vertically. The Weekly Limit tile renders the existing derived daily budget, and the separate daily-limit/balance row is removed because the Spend tile already renders its balance. These changes are render-only and do not alter report keys, parsers, API boundaries, or storage schemas.
+
 ## Dashboard catalog presentation
 
 The merged Pipeline/local product array retains the existing validated `productOrderIds` contract, then receives a stable presentation sort by normalized tag name. The fixed priority is Lead Came, Complementary, Homasote Board, Shard Catcher, and Kiln Paper; equal-priority products retain their merged order. Tag changes select the first matching visible product through the filter event, so no derived-selection effect or storage migration is required.
@@ -26,7 +30,7 @@ The same verified Pipeline identity opens a short-lived Scale Insights MCP sessi
 
 ## Third-panel presentation layer
 
-The workspace uses a dedicated ppc-performance-workspace.module.css module, isolated from the product/timeline stylesheet. Unused legacy workspace selectors were removed. The dashboard route layout self-hosts Geist and JetBrains Mono through next/font; the three reference panels consume those font variables through their isolated modules. The third-panel canvas uses a 1152px maximum width, 24px spacing, bordered white sections on #fafafa, and 190px metric tiles. Goal/budget DOM order precedes performance. Report state, authenticated adapters, cache precision, and schemas remain unchanged. Conversion Rate is a display-only unavailable card; Total Orders follows Organic Orders, and ACOS/TACOS remain adjacent. Save Weekly Report records the existing browser-local report state without an export control or additional persistence.
+The workspace uses a dedicated ppc-performance-workspace.module.css module, isolated from the product/timeline stylesheet. Unused legacy workspace selectors were removed. The dashboard route layout self-hosts Geist and JetBrains Mono through next/font; the three reference panels consume those font variables through their isolated modules. The third-panel canvas uses a 1152px maximum width, 24px spacing, bordered white sections on #fafafa, and 190px metric tiles. Goal/budget DOM order precedes performance. Report state, authenticated adapters, cache precision, and schemas remain unchanged. Conversion Rate is a display-only unavailable card; Total Orders follows Organic Orders, and ACOS/TACOS remain adjacent. Save records the existing browser-local report state without an export control or additional persistence.
 
 ## Product-panel presentation layer
 

@@ -2,6 +2,15 @@
 
 Last updated: September 11, 2026
 
+## September 11, 2026 — workspace control refinements
+
+- Workspace actions are now stacked in the product header as Save then Refresh Data; Weekly PPC Performance retains its sync/authorization text without a second refresh control.
+- Previous Week Summary is read-only and suppresses the former “No outcome summary was entered” placeholder. Existing `previousWeekResult` values and preceding notes remain visible through the current fallback order.
+- The final card is Action Items. Due-date inputs are hidden while the optional stored `dueDate` field remains accepted for backward compatibility.
+- Weekly goals render Target before the read-only Actual and stack achieved, missed, and delete buttons vertically. Budget Utilization places Daily limit inside Weekly Limit and removes the duplicated secondary daily/balance row.
+- This is a presentation-only change: no storage key, report schema, API, authentication, or provider contract changed.
+- Lint, typecheck, all 310 tests across 51 files (6 skipped), the production build, and `git diff --check` pass. A live browser fixture loaded a stored prior result and action due date, then confirmed the new controls, target/action geometry, empty-summary behavior, budget copy, no horizontal overflow, and no hydration or console errors at the app browser's 327px mobile viewport. Desktop structure and order are covered by the same responsive component and regression assertions.
+
 ## September 11, 2026 — tag-driven product selection
 
 - All Tags applies a stable display priority of Lead Came, Complementary, Homasote Board, Shard Catcher, Kiln Paper, then remaining/untagged products. The existing saved product order remains the tie-breaker inside each group, and the browser-storage schema is unchanged.
@@ -38,7 +47,7 @@ Last updated: September 11, 2026
 - The PPC Dashboard third panel was rebuilt from the supplied HTML reference. Its order is product header; Strategic Weekly Goals and Budget Utilization; two five-card performance rows; Previous/Current Week Summary; and action items.
 - The first metric row is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Conversion Rate displays `—` because the current data contract has no valid source. The second row is PPC Orders, Org. Orders, Total Orders, Organic Sales, and TACOS.
 - The third panel now uses isolated Geist/JetBrains Mono styling with a 1152px canvas, 24px spacing, neutral monochrome surfaces, 190px desktop metric cards, and responsive mobile stacking. The Products and Reporting Periods panels were not redesigned in that change.
-- Existing goals, Goal History, budget editing/history, Scale Insights refresh, notes, action completion, and browser-local persistence remain active. Action due dates now use the existing `dueDate` field, and Export downloads the selected report as JSON.
+- Existing goals, Goal History, budget editing/history, Scale Insights refresh, notes, action completion, and browser-local persistence remain active. Later revisions removed Export and the visible action due-date controls while preserving stored-field compatibility.
 - The Next.js route helper for dashboard product normalization moved into `src/features/dashboard/domain/pipeline-products.ts`; behavior is unchanged, and the route now conforms to Next.js route-export constraints.
 - Isolated browser verification confirmed both five-card grids, exact 190px tile height, Geist rendering, no horizontal overflow at desktop or 390px, note save/reload, and no JavaScript exceptions. Lint, typecheck, all 283 tests across 47 files (6 skipped), and the production build pass. Production-account/OAuth verification remains for deployment review.
 - The redesign is local and has not been deployed.

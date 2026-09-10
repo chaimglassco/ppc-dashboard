@@ -1,5 +1,9 @@
 # Deployment Guide
 
+## September 11 workspace-control release
+
+This client-only release adds no environment variable, API change, dependency, or persistence migration. After deployment, verify Save/Refresh Data in the workspace header, the read-only empty-safe Previous Week Summary, date-free Action Items rows, target-first goals with vertical outcome controls, and the consolidated Budget Utilization tiles. Confirm stored reports containing `previousWeekResult` and `actions[].dueDate` still load without validation loss.
+
 ## September 11 dashboard presentation release
 
 This release changes only client presentation and selection state. It adds no environment variables, hosted dependency, API contract, or browser-storage migration. After deployment, verify All Tags ordering, automatic first-product selection for every tag filter, Current/Partial badge colors, and the absence of the workspace-title tag badge using a real populated catalog.
@@ -24,7 +28,7 @@ The Reporting Periods release is presentation-only. After deployment, verify the
 
 The Library deploys as a Next.js microfrontend under `/ppc`. Pipeline Postgres is authoritative for documents, categories, tombstones, versions, audit records, and shared backups after the protected one-time legacy Blob migration. Private Vercel Blob remains required for uploaded images and the immutable legacy migration artifact. Repository Markdown is bootstrap/compatibility content only; bookmarks, history, completion, and last-read position remain browser-local.
 
-The third-panel redesign is presentation-only and requires no environment, API, or storage migration. After deployment, verify the responsive order is Weekly PPC Performance → Strategic Weekly Goals/Budget Utilization → notes/actions. Confirm the performance card has four sales cards, the PPC/organic order donut, two order cards, two efficiency gauges, exact date comparison, total revenue, Target ACOS, live-sync status, and Refresh Data. Then recheck goal progress/actions, budget allocation/spend, burn-rate pacing, five-row history pagination, notes, and action controls.
+The third-panel redesign is presentation-only and requires no environment, API, or storage migration. After deployment, verify Strategic Weekly Goals/Budget Utilization precede Weekly PPC Performance, followed by notes, campaign diagnostics, and Action Items. Confirm the performance card has five sales cards, five order/efficiency cards, total revenue, Target ACOS, and live-sync status. Then recheck header Refresh Data, goal progress/actions, budget allocation/spend, burn-rate pacing, five-row history pagination, notes, and action controls.
 
 Goal History extends the existing version-1 browser report value with an optional array and requires no environment variable, database, or server migration. The small Weekly Performance card layout is presentation-only. After deployment, verify resolving one Achieved and one Missed goal survives reload, is scoped to the selected product, and does not reappear in the active list. Also verify the four-card Sales row, split Orders/Efficiency row, centered single-line titles and values, stable vertical card flow, percentage badges only for available current data, centered `Prev. Week` footers, metric-specific favorable colors, ACOS target-gap copy, comma-formatted whole metrics, centered budget values, and removal of the redundant previous sales/TACOS summary.
 

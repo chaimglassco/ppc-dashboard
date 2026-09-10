@@ -1,5 +1,9 @@
 # Glassco Back Office Library — Product Specification
 
+## September 11 dashboard control revision
+
+The workspace header presents **Save** with **Refresh Data** directly below it. Previous Week Summary is view-only and stays blank when no result was entered. The final card is titled **Action Items** and contains completion, title, priority, assignee placeholder, and delete controls without a due-date picker. Weekly goal progress reads Target before Actual, and achieved/missed/delete buttons form a vertical control group. Budget Utilization places the calculated daily limit inside the Weekly Limit tile and does not repeat daily limit or over/remaining balance outside the primary tiles.
+
 ## September 11 dashboard catalog behavior
 
 The All Tags product view groups products in this order: Lead Came, Complementary, Homasote Board, Shard Catcher, Kiln Paper, then every other or untagged product. Existing saved order is preserved inside each group. Changing the tag filter selects the first product matching that tag and the active search, immediately updating Reporting Periods and the workspace. The current-period badge uses light blue, Partial uses light red, and the workspace product title no longer repeats the product tag.
@@ -30,7 +34,7 @@ The second panel follows the supplied HTML reference as a 340px white reporting 
 
 ## Third-panel workspace hierarchy
 
-The third panel follows the supplied HTML reference: product header; Strategic Weekly Goals and Budget Utilization; Weekly PPC Performance; side-by-side Previous/Current Week Summary; Campaign Week-over-Week Comparison; and the action list. Desktop metrics are two rows of five equal cards. Row one is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Row two is PPC Orders, Org. Orders, Total Orders, ACOS, and TACOS. Conversion Rate displays an unavailable dash because the existing metrics contract has no conversion denominator. Goals, budget history, date editing, notes formatting, and action completion remain functional. Save Weekly Report retains local auto-save.
+The third panel follows the supplied HTML reference: product header; Strategic Weekly Goals and Budget Utilization; Weekly PPC Performance; side-by-side Previous/Current Week Summary; Campaign Week-over-Week Comparison; and Action Items. Desktop metrics are two rows of five equal cards. Row one is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Row two is PPC Orders, Org. Orders, Total Orders, ACOS, and TACOS. Conversion Rate displays an unavailable dash because the existing metrics contract has no conversion denominator. Goals, budget history, current-week notes formatting, and action completion remain functional. Save retains local auto-save.
 
 ## Goal history and previous-week metric comparisons
 
@@ -40,7 +44,7 @@ Add Goal creates a structured selector with Increase Spend, Decrease Spend, PPC 
 
 Weekly Performance uses small grouped cards: four Sales Metrics cards across the first row, then three Order Volume cards and two Efficiency & Targets cards beneath them. Each card keeps its single-line centered title, current rounded value, helper copy, and centered `Prev. Week` footer in a stable vertical stack. A compact percentage-change badge appears only when current-period metrics are available. Favorable movement is green and unfavorable movement is red: lower is favorable for Spend, ACOS, and TACOS, while higher is favorable for sales and orders. Whole-number metric presentation uses thousands separators and unavailable current metrics render as an orderly zero instead of a detached symbol. The ACOS warning card also shows how far it is above Target ACOS; TACOS identifies itself as the total advertising ratio. Budget Weekly limit and Actual spend values remain centered, and the duplicate previous-week sales/TACOS summary remains removed from Previous Week Result.
 
-When a user opens the following week, its Carry-forward result and lessons field starts with the preceding report's Previous Week Result documentation. Existing text in the newer week takes priority and is never overwritten.
+When a user opens the following week, the read-only Previous Week Summary prefers result text already stored on the newer report, then the preceding report's result or notes. Existing text remains intact and is never overwritten.
 
 ## Target ACOS and ASIN analysis navigation
 
@@ -52,7 +56,7 @@ Reporting-period cards summarize Spend, PPC Sales, PPC Order, and ACOS for the s
 
 ## Budget history, report controls, and multi-month timeline
 
-Each product/week report shows a compact budget-history table with `Date of Change`, `From`, and `To` columns. One entry is recorded when a Weekly limit edit is committed by blur or Enter; intermediate keystrokes do not create rows. Reporting-period cards expose their existing report status in the reference status chip; the separate Save Draft button remains absent. The Current Week Summary displays report status and the primary control is Save Weekly Report.
+Each product/week report shows a compact budget-history table with `Date of Change`, `From`, and `To` columns. One entry is recorded when a Weekly limit edit is committed by blur or Enter; intermediate keystrokes do not create rows. Reporting-period cards expose their existing report status in the reference status chip; the separate Save Draft button remains absent. The Current Week Summary displays report status and the primary control is Save.
 
 The reporting-period picker supports multiple selected months across years, plus a one-click full-year selection. The timeline displays the unique Wednesday–Tuesday weeks that intersect a selected month, includes weeks crossing a month boundary, omits future weeks, and labels the header with the months actually covered.
 

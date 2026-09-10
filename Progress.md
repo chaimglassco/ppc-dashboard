@@ -1,5 +1,9 @@
 # Project Progress
 
+## September 11, 2026 — Workspace control refinements
+
+Condensed the workspace header to vertically stacked Save and Refresh Data actions and removed the duplicate refresh control from Weekly PPC Performance. Made Previous Week Summary read-only, removed its empty-result warning, renamed the final card Action Items, and removed action due-date inputs without changing stored action compatibility. Weekly goals now present Target before Actual and stack outcome controls vertically. Budget Utilization now shows Daily limit inside Weekly Limit and removes the duplicated secondary detail row. No API or browser-storage schema changed.
+
 ## September 11, 2026 — Tag-driven product selection
 
 The All Tags catalog now groups products as Lead Came, Complementary, Homasote Board, Shard Catcher, Kiln Paper, then all remaining tags and untagged products while retaining saved order inside each group. Every tag-filter change selects the first visible matching product so its reporting periods and workspace data appear immediately. The reporting-period Current badge is light blue, Partial is light red, and the workspace heading no longer repeats the selected product tag. No storage schema changed.
@@ -22,7 +26,7 @@ Rebuilt Reporting Periods from the supplied HTML and image as a 340px white pane
 
 ## September 10, 2026 — Reference-based third-panel rebuild
 
-Rebuilt the workspace from the supplied HTML with the corrected Total Orders tile and unavailable Conversion Rate card. Added isolated reference typography/layout, compact editable goals, expandable budget history, summary footers, action due dates, and JSON export. Retained the original first two panels and all existing API/storage boundaries at that stage. This work is local and has not been deployed. Browser fixture checks cover desktop/mobile layout and note persistence; final validation results are recorded in HANDOFF.md.
+Rebuilt the workspace from the supplied HTML with the corrected Total Orders tile and unavailable Conversion Rate card. Added isolated reference typography/layout, compact editable goals, expandable budget history, summary footers, and action completion. Retained the original first two panels and all existing API/storage boundaries at that stage. Later refinements removed the export and visible action dates. Browser fixture checks cover desktop/mobile layout and note persistence; final validation results are recorded in HANDOFF.md.
 
 Last updated: September 9, 2026
 

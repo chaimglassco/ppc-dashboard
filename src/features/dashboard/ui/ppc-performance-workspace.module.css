@@ -39,8 +39,9 @@
 .asinNavigationColumn + .asinNavigationColumn { padding-left: 24px; border-left: 1px solid var(--border); }
 .asinNavigation a { color: #52525b; font-size: 12px; line-height: 1.25; text-decoration: none; }
 .asinNavigation a:hover { color: #09090b; text-decoration: underline; }
-.saveArea { display: grid; gap: 4px; justify-items: end; margin-left: 4px; }
+.saveArea { display: grid; gap: 6px; justify-items: stretch; margin-left: 4px; }
 .saveArea small { max-width: 250px; font: 10px/1.4 var(--mono); color: var(--muted); text-align: right; }
+.saveArea > button { width: 100%; }
 .primaryButton, .secondaryButton { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 12px; min-height: 30px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #09090b; font-size: 12px !important; font-weight: 600 !important; }
 .primaryButton { border-color: #09090b; background: #09090b; color: white; }
 .primaryButton:hover { background: #27272a; }
@@ -68,13 +69,13 @@
 .goalInlineValues { display: flex; align-items: center; gap: 4px; font: 12px var(--mono); color: var(--muted); }
 .goalInlineValues input { width: 65px; min-width: 0; padding: 0; border: 0; background: transparent; font: 700 12px var(--mono); color: #09090b; }
 .goalInlineValues input[readonly] { width: 50px; text-align: right; }
-.goalRowFooter { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; font: 10px var(--mono); }
+.goalRowFooter { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 6px; font: 10px var(--mono); }
 .goalMetrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .goalMetrics input, .goalMetrics select { width: 100%; min-width: 0; height: 28px; border: 1px solid var(--border); background: white; border-radius: 4px; padding: 3px 5px; color: #09090b; font: 11px var(--mono); }
 .goalActualField { display: grid; gap: 3px; }
 .goalActualField small { font: 9px var(--mono); }
 .goalActualFinal { color: #047857; }.goalActualPartial { color: #a16207; }.goalActualWaiting { color: #71717a; }
-.goalOutcomeActions { grid-column: 1/-1; display: flex; justify-content: flex-end; gap: 4px; }
+.goalOutcomeActions { grid-column: 1/-1; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .goalOutcomeActions button { display: grid; place-items: center; width: 24px; height: 24px; background: white; border: 1px solid var(--border); border-radius: 4px; color: #52525b; }
 .goalOutcomeActions button:hover { color: #09090b; border-color: #09090b; }
 .goalProgress { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
@@ -86,11 +87,10 @@
 .budgetPrimaryGrid > label { display: grid; justify-items: center; gap: 4px; padding: 12px; background: #fafafa; border: 1px solid var(--border); border-radius: 8px; text-align: center; }
 .budgetPrimaryGrid > label > span:first-child { font: 10px/1.5 var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 .budgetPrimaryGrid small { font: 10px/1.5 var(--mono); color: var(--muted); }
+.budgetPrimaryGrid small strong { color: #09090b; }
 .moneyInput { display: flex; justify-content: center; align-items: baseline; width: 100%; }
 .moneyInput input, .moneyInput i { max-width: 100%; min-width: 0; width: 100%; padding: 0; border: 0; background: transparent; font: 800 24px/1.4 var(--mono); color: #09090b; text-align: center; }
 .moneyInput i { width: auto; font-style: normal; }
-.budgetSecondaryStats { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 12px; font: 10px/1.5 var(--mono); color: var(--muted); }
-.budgetSecondaryStats strong { color: #09090b; }
 .budgetBurnRate { display: flex; align-items: center; gap: 16px; padding: 14px; background: #fafafa; border: 1px solid var(--border); border-radius: 8px; }
 .budgetBurnRate > div { min-width: 0; flex: 1; }
 .budgetBurnRate p { display: flex; justify-content: space-between; gap: 8px; margin: 0; font-size: 12px; line-height: 1.3; }
@@ -174,7 +174,6 @@
 .summaryFooter > span:last-child { text-align: right; }
 .autoSaved { color: #047857; }
 .actionDescription { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
-.actionRow input.actionDate { flex: 0 1 120px; width: 120px; padding: 3px 5px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #71717a; font: 10px var(--mono); }
 .assigneePlaceholder { display: grid; place-items: center; width: 20px; height: 20px; flex: none; border-radius: 50%; border: 1px solid var(--border); background: #f4f4f5; color: var(--muted); font: 9px var(--mono); }
 .actionList { display: flex; flex-direction: column; gap: 8px; }
 .actionRow { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: rgba(244,244,245,.4); }

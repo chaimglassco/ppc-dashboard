@@ -1,5 +1,9 @@
 # Glassco Team SOP Library and PPC Dashboard
 
+## Dashboard workspace controls (September 11, 2026)
+
+The product workspace now stacks **Save** and **Refresh Data** in the header. Previous Week Summary is read-only and omits the empty-summary warning, while Action Items no longer shows per-item date inputs. Weekly goals place Target before Actual and stack the achieved, missed, and delete actions vertically. Budget Utilization shows the calculated daily limit inside the Weekly Limit tile and removes the duplicated detail row below the tiles. Existing browser records remain compatible, including saved action due dates and prior-week result text; these fields are no longer edited from the revised controls.
+
 ## Dashboard catalog update (September 11, 2026)
 
 All Tags groups PPC products by Lead Came, Complementary, Homasote Board, Shard Catcher, and Kiln Paper before other products. Switching tag filters automatically selects the first matching product and updates the reporting/workspace panels. Current and Partial period badges use light blue and light red respectively, and the workspace title omits the redundant product-tag badge.
@@ -125,7 +129,7 @@ npm test
 npm run build
 ```
 
-The last verified state passes all four commands with 51 test files, 307 passing tests, and 6 intentionally skipped tests.
+The last verified state passes all four commands with 51 test files, 310 passing tests, and 6 intentionally skipped tests.
 
 ## Project structure
 

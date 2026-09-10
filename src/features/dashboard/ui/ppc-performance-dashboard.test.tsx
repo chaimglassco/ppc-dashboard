@@ -64,11 +64,11 @@ describe("PpcPerformanceDashboard", () => {
     expect(metricsCalls).toHaveLength(5);
     expect(within(screen.getByRole("button", { name: /August 19 to August 25/ })).getByText("$82")).toBeVisible();
     spend = 99;
-    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh Data" }));
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("99"));
     expect(metricsCalls).toHaveLength(6);
     fail = true;
-    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh Data" }));
     await screen.findByText("Refresh failed. Previously saved metrics are still displayed.");
     expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("99");
     expect(screen.getByRole("textbox", { name: "Spend" })).toHaveAttribute("readonly");
@@ -79,7 +79,7 @@ describe("PpcPerformanceDashboard", () => {
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/dashboard/products"), expect.any(Object));
-    expect(screen.getByRole("button", { name: "Save Weekly Report" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Open current week" })).not.toBeInTheDocument();
     const currentPeriod = screen.getByRole("button", { name: /August 26 to September 1 reporting period/ });
     expect(within(currentPeriod).getByText("Aug 26 – Sep 1, 2026")).toBeVisible();
@@ -125,13 +125,13 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(budgetHistory).getByText("$0")).toBeVisible();
     expect(within(budgetHistory).getByText("$1,500")).toBeVisible();
     fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "350" } });
-    expect(screen.getByText("$1,150")).toBeVisible();
+    expect(screen.getByText((_, element) => element?.tagName === "SMALL" && element.textContent === "$1,150 remaining")).toBeVisible();
     expect(screen.getByLabelText("23% of weekly budget used")).toBeVisible();
     fireEvent.change(screen.getByRole("textbox", { name: "Performance documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
-    expect(screen.getByRole("button", { name: "Save Weekly Report" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save" })).toBeVisible();
     expect(within(screen.getByRole("region", { name: "Current Week Summary" })).getByText("Saving changes…")).toBeVisible();
     await waitFor(() => expect(screen.getByText("Changes saved automatically")).toBeVisible(), { timeout: 3_000 });
-    expect(screen.getByRole("button", { name: "Save Weekly Report" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save" })).toBeVisible();
 
     const stored = JSON.parse(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY) || "{}");
     expect(stored.version).toBe(1);
@@ -340,7 +340,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(window.localStorage.getItem("SCALE_INSIGHTS_MCP_ACCESS_TOKEN")).toBeNull();
   });
 
-  it("shows overspend, grouped metrics, formatted notes, and reference priorities and due dates", async () => {
+  it("shows the revised goals, budget, summaries, notes, and action controls", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
 
@@ -348,8 +348,10 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "75" } });
     const goalsCard = screen.getByRole("region", { name: "Weekly Goals" });
     const budgetCard = screen.getByRole("region", { name: "Budget Utilization" });
-    expect(within(budgetCard).getByText("Overspent")).toBeVisible();
-    expect(within(budgetCard).getByText("$25")).toBeVisible();
+    expect(within(budgetCard).getByText("Over Budget")).toBeVisible();
+    expect(within(budgetCard).getByText((_, element) => element?.tagName === "SMALL" && element.textContent === "$25 overspent")).toBeVisible();
+    expect(within(budgetCard).getByText("$7.14").closest("small")).toHaveTextContent("Daily limit $7.14");
+    expect(within(budgetCard).queryByText("Allocated cap")).not.toBeInTheDocument();
 
     const performanceCard = screen.getByRole("region", { name: "Weekly PPC Performance" });
     expect(performanceCard.compareDocumentPosition(goalsCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
@@ -395,6 +397,8 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Mark ACOS achieved" }));
     expect(screen.queryByRole("combobox", { name: "ACOS status" })).not.toBeInTheDocument();
     const ppcSalesTarget = screen.getByRole("textbox", { name: "PPC Sales target" });
+    const ppcSalesActual = screen.getByRole("textbox", { name: "PPC Sales actual" });
+    expect(ppcSalesTarget.compareDocumentPosition(ppcSalesActual) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.focus(ppcSalesTarget);
     fireEvent.change(ppcSalesTarget, { target: { value: "2000" } });
     fireEvent.blur(ppcSalesTarget);
@@ -412,9 +416,9 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.queryByText(/Previous week:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/No saved report exists/i)).not.toBeInTheDocument();
 
-    const carryForward = screen.getByRole("textbox", { name: "Carry-forward result and lessons" }) as HTMLTextAreaElement;
     const documentation = screen.getByRole("textbox", { name: "Performance documentation" }) as HTMLTextAreaElement;
-    expect(carryForward.className).toBe(documentation.className);
+    expect(screen.queryByRole("textbox", { name: "Carry-forward result and lessons" })).not.toBeInTheDocument();
+    expect(screen.queryByText("No outcome summary was entered.")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Bulleted list Performance documentation" }));
     expect(documentation).toHaveValue("• ");
     fireEvent.change(documentation, { target: { value: "First action\nSecond action" } });
@@ -425,20 +429,12 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.keyDown(documentation, { key: "Enter", shiftKey: true });
     expect(documentation).toHaveValue("• First action\n• Second action\n• ");
 
-    fireEvent.click(screen.getByRole("button", { name: "Numbered list Carry-forward result and lessons" }));
-    expect(carryForward).toHaveValue("1. ");
-    fireEvent.change(carryForward, { target: { value: "1. First action" } });
-    carryForward.setSelectionRange(carryForward.value.length, carryForward.value.length);
-    fireEvent.keyDown(carryForward, { key: "Enter", shiftKey: true });
-    expect(carryForward).toHaveValue("1. First action\n2. ");
-
+    expect(screen.getByRole("heading", { name: "Action Items" })).toBeVisible();
     const priority = screen.getByRole("combobox", { name: /negative exact keywords priority/i });
     expect(priority.className).toMatch(/priorityHigh/);
     fireEvent.change(priority, { target: { value: "Low" } });
     expect(priority.className).toMatch(/priorityLow/);
-    const dueDate = screen.getByLabelText(/due date/i);
-    fireEvent.change(dueDate, { target: { value: "2026-09-01" } });
-    expect(dueDate).toHaveValue("2026-09-01");
+    expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
   }, 15_000);
 
   it("starts with the first priority-tag product and omits its tag beside the workspace title", async () => {
@@ -474,7 +470,10 @@ describe("PpcPerformanceDashboard", () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Export" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save Weekly Report" })).toBeVisible();
+    const save = screen.getByRole("button", { name: "Save" });
+    const refresh = screen.getByRole("button", { name: "Refresh Data" });
+    expect(save).toBeVisible();
+    expect(save.compareDocumentPosition(refresh) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("carries the previous week's result documentation into an existing blank next week", async () => {
@@ -489,7 +488,8 @@ describe("PpcPerformanceDashboard", () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
-    expect(screen.getByRole("textbox", { name: "Carry-forward result and lessons" })).toHaveValue("Keep the winning exact campaign.");
+    expect(screen.getByText("Keep the winning exact campaign.")).toBeVisible();
+    expect(screen.queryByRole("textbox", { name: "Carry-forward result and lessons" })).not.toBeInTheDocument();
   });
 
   it("shows only selected-month weeks, including their boundary overlap", async () => {

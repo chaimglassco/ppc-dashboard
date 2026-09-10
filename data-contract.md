@@ -1,5 +1,9 @@
 # Data Contract
 
+## September 11 workspace control revision
+
+No data shape changed. `glassco.ppcPerformanceNotes.v1` continues to accept `previousWeekResult` and `actions[].dueDate` for backward compatibility, but the revised dashboard renders the previous-week result as read-only and omits action date inputs. Target-first goal ordering, vertical outcome actions, the header Save/Refresh controls, and the daily-limit placement are presentation changes. Daily limit remains derived from and stored with the weekly budget through the existing normalization path.
+
 ## September 11 product ordering
 
 No stored catalog fields changed. `glassco.ppcDashboardCatalog.v1.productOrderIds` remains the manual order source; the All Tags panel applies a stable display-only tag priority over that order. Tag filtering and its automatic first-product selection remain transient React state and are not persisted.
@@ -18,7 +22,7 @@ The verified September 10 production schema exposes `account_ref`, `ad_type`, `a
 
 ## September 10 workspace presentation
 
-The workspace redesign consumes the existing version-1 report and performance cache. Conversion Rate has no stored field and displays unavailable; do not derive it without an appropriate denominator. The second row uses the existing ACOS and TACOS calculated fields. Action due-date controls read/write the existing actions[].dueDate field. The summary underline control inserts literal <u> markers into the existing plain-text notes field, like the existing bold/list markers; notes are never rendered as arbitrary raw HTML.
+The workspace redesign consumes the existing version-1 report and performance cache. Conversion Rate has no stored field and displays unavailable; do not derive it without an appropriate denominator. The second row uses the existing ACOS and TACOS calculated fields. The current-week summary underline control inserts literal <u> markers into the existing plain-text notes field, like the existing bold/list markers; notes are never rendered as arbitrary raw HTML.
 
 ## Product performance AI request
 

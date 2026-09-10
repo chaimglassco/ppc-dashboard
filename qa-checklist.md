@@ -1,5 +1,14 @@
 # QA Checklist
 
+## September 11 workspace-control checks
+
+- [x] Confirm Save is followed vertically by Refresh Data in the workspace header and no Refresh button remains in Weekly PPC Performance.
+- [x] Confirm previous-week text is readable but has no textarea, formatting toolbar, or empty-result warning.
+- [x] Confirm the final card is named Action Items and each row has no due-date input while existing stored records still parse.
+- [x] Confirm every weekly goal displays Target before Actual and its achieved, missed, and delete controls are vertical and keyboard accessible.
+- [x] Confirm Weekly Limit shows Daily limit inside its tile, Spend retains the single remaining/overspent detail, and no duplicate balance row appears below the tiles.
+- [x] Verify the affected workspace at desktop and mobile widths with no horizontal overflow, hydration warning, or console error.
+
 ## September 11 tag-filter and period-style checks
 
 - [x] In All Tags, confirm Lead Came products precede Complementary, Homasote Board, Shard Catcher, and Kiln Paper, with other/untagged products last and stable ordering inside each group.
@@ -46,7 +55,7 @@ Use this checklist before merging or deploying changes.
 - Verify five cards in each desktop metric row, Conversion Rate after Total Sales, and Total Orders after Org. Orders.
 - Verify unavailable Conversion Rate stays a dash and no fabricated comparisons appear.
 - Verify reference fonts, 24px spacing, 190px tiles, green/red deltas, TACOS gauge, and mobile wrapping.
-- Exercise goal target/status/history, budget edits and expanded history, notes formatting/save/reload, action due dates/completion, Refresh Data, and JSON Export.
+- Exercise goal target/status/history, budget edits and expanded history, current-note formatting/save/reload, action completion, Save, and Refresh Data.
 - Check that product and reporting-period panels retain their styling and behavior.
 - Browser fixtures verify UI behavior only; production account/OAuth verification is separate.
 
@@ -68,7 +77,7 @@ Click Add Goal and verify the selector offers exactly Increase Spend, Decrease S
 
 With adjacent weeks containing data, verify Weekly Performance displays four Sales Metrics cards in the first row, followed by three Order Volume and two Efficiency & Targets cards. Confirm every card uses a small vertical stack, keeps its centered title on one line, centers the current value and helper copy, uses a compact percentage badge, and centers the prior value in a `Prev. Week` footer without clipping or spillover. Lower Spend/ACOS/TACOS must be green; higher sales/orders must be green; movement in the unfavorable direction must be red; unchanged or unavailable comparisons show no badge. For an unavailable current week with a populated previous week, confirm current values show `0` with their symbol and no false 100% decrease badges. Confirm values such as 1667 display as 1,667 while stored precision remains unchanged. Verify the ACOS target-gap copy, TACOS helper copy, centered budget values, and removal of the redundant previous total-sales/TACOS line.
 
-Enter Previous Week Result documentation, open the immediately following week, and confirm Carry-forward result and lessons is automatically populated. Confirm text already saved in the newer week takes priority.
+Enter Previous Week Result documentation, open the immediately following week, and confirm the value appears in the read-only Previous Week Summary. Confirm text already saved in the newer week takes priority.
 
 ## Target ACOS and ASIN-scoped Scale Insights navigation
 
@@ -242,7 +251,7 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] Successful Scale Insights imports lock the five source fields and Budget Actual spend, show data freshness, and support an explicit refresh. An unconfigured, unavailable, empty, malformed, or mismatched response leaves manual entry available with an actionable non-secret error.
 - [ ] `/ppc/api/dashboard/performance` rejects unauthenticated requests, invalid ASINs, unsupported marketplaces, non-Wednesday starts, and differently scoped upstream results; successful responses include `Cache-Control: no-store`.
 - [ ] Vercel OIDC credentials, Scale Insights OAuth grants, and Connect-issued access tokens are absent from client bundles, network response bodies, browser storage, and browser logs. The authorization-required response contains only the hosted consent URL and non-secret status fields.
-- [ ] Save Draft and Save Weekly Report persist a schema-valid `glassco.ppcPerformanceNotes.v1` record, survive refresh, and clearly identify unsaved versus saved local state.
+- [ ] Save persists a schema-valid `glassco.ppcPerformanceNotes.v1` record, survives refresh, and clearly identifies unsaved versus saved local state.
 - [ ] At desktop widths all three panels remain usable; at narrow widths the panels stack without hiding save controls or producing inaccessible inputs.
 - [ ] Missing and expired Pipeline sessions redirect to Pipeline with a validated requested PPC `returnTo`; temporary server failures remain on a retry gate.
 - [ ] ADMIN sees full catalog/category controls and can save shared changes.
