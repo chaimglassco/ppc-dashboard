@@ -1,8 +1,12 @@
 # Project Progress
 
+## September 10, 2026 — Reference-based first-panel rebuild
+
+Rebuilt Products from the supplied HTML and image as a fixed 300px white panel with the reference title/count row, single plus action, bordered search and tag controls, 36px thumbnails, status dots, neutral tags, and a solid-black selected card. The plus action opens the existing Add product, Add tag, and product-edit controls, preserving local catalog validation, filters, selection, dialogs, deletion, and drag/keyboard reorder. The completed second- and third-panel rebuilds and all storage/API contracts remain intact. This work is local and has not been deployed.
+
 ## September 10, 2026 — Reference-based second-panel rebuild
 
-Rebuilt Reporting Periods from the supplied HTML and image as a 340px white panel with the reference uppercase header, calendar placement, integrated month control, compact neutral cards, black Current/selection treatment, abbreviated visible date ranges, status chips, tag metadata, and four boxed statistics. Existing month selection, Wednesday–Tuesday boundaries, current-week cutoff, report switching, cached performance hydration, and local schemas remain intact. The Products panel and completed third-panel rebuild are preserved. This work is local and has not been deployed.
+Rebuilt Reporting Periods from the supplied HTML and image as a 340px white panel with the reference uppercase header, calendar placement, integrated month control, compact neutral cards, black Current/selection treatment, abbreviated visible date ranges, status chips, tag metadata, and four boxed statistics. Existing month selection, Wednesday–Tuesday boundaries, current-week cutoff, report switching, cached performance hydration, and local schemas remain intact. The completed third-panel rebuild is preserved. This work is local and has not been deployed.
 
 ## September 10, 2026 — Reference-based third-panel rebuild
 

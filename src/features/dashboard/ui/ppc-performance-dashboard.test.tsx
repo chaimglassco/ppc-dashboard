@@ -488,6 +488,7 @@ describe("PpcPerformanceDashboard", () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
 
+    fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
     fireEvent.click(screen.getByRole("button", { name: "Enable product editing" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete Glass Cleaner" }));
     const warning = screen.getByRole("alertdialog", { name: "Remove Glass Cleaner?" });
@@ -508,12 +509,14 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.queryByText("Active", { exact: true })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit Glass Cleaner" })).not.toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
     fireEvent.click(screen.getByRole("button", { name: "Add tag" }));
     const tagDialog = screen.getByRole("dialog", { name: "Add tag" });
     fireEvent.change(within(tagDialog).getByRole("textbox", { name: "Tag name" }), { target: { value: "Launch group" } });
     fireEvent.click(within(tagDialog).getByRole("button", { name: "Add tag" }));
     expect(screen.getByRole("combobox", { name: "Filter products by tag" })).toHaveDisplayValue("Launch group");
 
+    fireEvent.click(screen.getByRole("button", { name: "Product actions" }));
     fireEvent.click(screen.getByRole("button", { name: "Add product" }));
     const productDialog = screen.getByRole("dialog", { name: "Add product" });
     fireEvent.change(within(productDialog).getByRole("textbox", { name: "Product name" }), { target: { value: "Glass Polish" } });
@@ -559,8 +562,13 @@ describe("PpcPerformanceDashboard", () => {
     }
     expect(screen.getAllByText("Launch group").length).toBeGreaterThan(1);
 
+    const productActions = screen.getByRole("button", { name: "Product actions" });
+    fireEvent.click(productActions);
     fireEvent.click(screen.getByRole("button", { name: "Enable product editing" }));
+    expect(productActions).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(productActions);
     expect(screen.getByRole("button", { name: "Exit product editing" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(productActions);
     fireEvent.click(screen.getByRole("button", { name: "Edit Glass Polish" }));
     const editDialog = screen.getByRole("dialog", { name: "Edit product" });
     fireEvent.change(within(editDialog).getByRole("textbox", { name: "Product name" }), { target: { value: "Glass Polish Pro" } });

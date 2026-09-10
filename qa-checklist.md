@@ -2,6 +2,14 @@
 
 Use this checklist before merging or deploying changes.
 
+## Products reference rebuild
+
+- Verify the first panel is a 300px white desktop column with a thin neutral right border, uppercase `PRODUCTS` title, neutral count badge, and one square plus action.
+- Confirm the plus action opens Add product, Add tag, and Enable/Exit product editing; Escape closes the menu, and the existing dialogs still validate and persist browser-local catalog changes.
+- Confirm search and tag filtering use compact bordered white controls and continue to filter by product name, ASIN, SKU, and tag.
+- Confirm each product card has a 36px thumbnail, status dot, truncated name, and optional tag badge. The selected card must be solid black with white copy; inactive cards remain white with neutral borders.
+- Exercise selection, add/edit/delete, Pipeline-product hiding confirmation, drag reorder, keyboard reorder, filtering, desktop scrolling, and 390px layout. Confirm the reporting and workspace panels retain their behavior and there are no hydration or console errors.
+
 ## Reporting Periods reference rebuild
 
 - Verify the second panel is 340px wide on the desktop dashboard, white, square-edged, and separated by a thin neutral right border.

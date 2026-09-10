@@ -2,6 +2,13 @@
 
 Last updated: September 10, 2026
 
+## September 10, 2026 — local first-panel redesign
+
+- Products was rebuilt from the supplied HTML/image reference as a fixed 300px white column. The header now has the compact uppercase title and count on the left and one square plus action on the right; search and tag filtering use bordered white controls.
+- Product cards now use 36px thumbnails, a small status dot, truncated names, optional neutral tag badges, white inactive surfaces, and a solid-black selected state. The default layout matches the reference without removing catalog functions.
+- The plus action opens Add product, Add tag, and Enable/Exit product editing. Existing local validation, image lookup/upload, Pipeline-product hiding confirmation, filtering, selection, dialogs, deletion, and drag/keyboard reorder remain intact. The menu is transient and no API or storage schema changed.
+- Production-browser verification confirmed the 300px white panel, one-pixel neutral divider, 32px search/tag controls, 62px cards with 36px thumbnails, solid-black selected state, working search and product selection, plus-menu actions, Escape dismissal, and a 390px layout without horizontal overflow. The dashboard and `/ppc/library` produced no browser warnings or exceptions. Lint, typecheck, all 283 tests across 47 files (6 skipped), and the production build pass. This redesign is local and has not been deployed.
+
 ## September 10, 2026 — local second-panel redesign
 
 - Reporting Periods was rebuilt from the supplied HTML/image reference as a 340px white column. The reference hierarchy is now uppercase title plus calendar action, integrated month navigation, and 12px-spaced neutral period cards.

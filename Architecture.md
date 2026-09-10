@@ -10,7 +10,11 @@ The same verified Pipeline identity opens a short-lived Scale Insights MCP sessi
 
 ## Third-panel presentation layer
 
-The workspace uses a dedicated ppc-performance-workspace.module.css module, isolated from the product/timeline stylesheet. Unused legacy workspace selectors were removed. The dashboard route layout self-hosts Geist and JetBrains Mono through next/font; only the third panel consumes those font variables. Its canvas uses a 1152px maximum width, 24px spacing, bordered white sections on #fafafa, and 190px metric tiles. Goal/budget DOM order precedes performance. Report state, authenticated adapters, cache precision, and schemas remain unchanged. Conversion Rate is a display-only unavailable card, and the repeated Organic Sales tile reads the existing derived value. JSON export uses a temporary browser object URL; no server call or additional persistence is introduced.
+The workspace uses a dedicated ppc-performance-workspace.module.css module, isolated from the product/timeline stylesheet. Unused legacy workspace selectors were removed. The dashboard route layout self-hosts Geist and JetBrains Mono through next/font; the three reference panels consume those font variables through their isolated modules. The third-panel canvas uses a 1152px maximum width, 24px spacing, bordered white sections on #fafafa, and 190px metric tiles. Goal/budget DOM order precedes performance. Report state, authenticated adapters, cache precision, and schemas remain unchanged. Conversion Rate is a display-only unavailable card, and the repeated Organic Sales tile reads the existing derived value. JSON export uses a temporary browser object URL; no server call or additional persistence is introduced.
+
+## Product-panel presentation layer
+
+The first dashboard panel uses `product-portfolio-panel.module.css` and a fixed 300px desktop grid track to reproduce the supplied white monochrome surface. The default header exposes one plus trigger; its transient React menu reveals the existing add-product, add-tag, and edit-mode commands without introducing new persisted state. Search, tag filtering, product selection, local image overrides, dialogs, deletion, and accessible keyboard reorder continue to operate through `ProductPortfolioPanel`. The visual status dot, selected-card color, thumbnail size, and tag badge are render-only projections of the validated catalog.
 
 ## Reporting-period presentation layer
 

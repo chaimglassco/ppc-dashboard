@@ -30,17 +30,18 @@ describe("application navigation style contract", () => {
   });
 
   it("lays out the responsive three-panel PPC performance workspace below the shared top bar", () => {
-    expect(dashboardCss).toContain(".dashboard{height:calc(100vh - 74px);display:grid;grid-template-columns:280px 340px minmax(620px,1fr)");
+    expect(dashboardCss).toContain(".dashboard{height:calc(100vh - 74px);display:grid;grid-template-columns:300px 340px minmax(620px,1fr)");
     expect(dashboardCss).toContain("@media(max-width:760px){.dashboard{height:auto;min-height:calc(100vh - 108px);display:block");
   });
 
-  it("keeps portfolio ordering while isolating the reference reporting-period surface", () => {
+  it("isolates the reference product and reporting-period surfaces", () => {
     expect(dashboardCss).toContain(".dashboard{column-gap:0;row-gap:12px}");
     expect(reportingPeriodsCss).toContain("position: relative");
     expect(reportingPeriodsCss).toContain("width: 28px");
     expect(reportingPeriodsCss).toContain("background: #fff");
     expect(reportingPeriodsCss).toContain("border: 2px solid #000");
-    expect(portfolioCss).toContain(".list{direction:rtl}");
-    expect(portfolioCss).toContain(".list>*{direction:ltr}");
+    expect(portfolioCss).toContain("border-right: 1px solid #e4e4e7");
+    expect(portfolioCss).toContain("background: #000");
+    expect(portfolioCss).toContain("min-height: 60px");
   });
 });
