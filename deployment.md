@@ -1,5 +1,9 @@
 # Deployment Guide
 
+## September 10 workspace release
+
+The third-panel redesign requires no data migration, environment changes, or Pipeline deployment. Deploy the Library/PPC project only after production approval. The dashboard route adds self-hosted Geist and JetBrains Mono using next/font; builds need the same Google font download access already used by the app font. Verify the new panel at /ppc/dashboard and check the Library at /ppc/library. If the local Turbopack dev server reports “Next.js package not found,” use npm run dev -- --webpack for local verification; production build remains a separate gate.
+
 ## Current deployment model
 
 The Library deploys as a Next.js microfrontend under `/ppc`. Pipeline Postgres is authoritative for documents, categories, tombstones, versions, audit records, and shared backups after the protected one-time legacy Blob migration. Private Vercel Blob remains required for uploaded images and the immutable legacy migration artifact. Repository Markdown is bootstrap/compatibility content only; bookmarks, history, completion, and last-read position remain browser-local.

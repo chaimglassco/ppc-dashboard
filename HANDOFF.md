@@ -1,6 +1,16 @@
 # Glassco PPC Dashboard Handoff
 
-Last updated: August 28, 2026
+Last updated: September 10, 2026
+
+## September 10, 2026 — local third-panel redesign
+
+- The PPC Dashboard third panel was rebuilt from the supplied HTML reference. Its order is product header; Strategic Weekly Goals and Budget Utilization; two five-card performance rows; Previous/Current Week Summary; and action items.
+- The first metric row is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Conversion Rate displays `—` because the current data contract has no valid source. The second row is PPC Orders, Org. Orders, Total Orders, Organic Sales, and TACOS.
+- The third panel now uses isolated Geist/JetBrains Mono styling with a 1152px canvas, 24px spacing, neutral monochrome surfaces, 190px desktop metric cards, and responsive mobile stacking. The Products and Reporting Periods panels were not redesigned.
+- Existing goals, Goal History, budget editing/history, Scale Insights refresh, notes, action completion, and browser-local persistence remain active. Action due dates now use the existing `dueDate` field, and Export downloads the selected report as JSON.
+- The Next.js route helper for dashboard product normalization moved into `src/features/dashboard/domain/pipeline-products.ts`; behavior is unchanged, and the route now conforms to Next.js route-export constraints.
+- Isolated browser verification confirmed both five-card grids, exact 190px tile height, Geist rendering, no horizontal overflow at desktop or 390px, note save/reload, and no JavaScript exceptions. Lint, typecheck, all 283 tests across 47 files (6 skipped), and the production build pass. Production-account/OAuth verification remains for deployment review.
+- The redesign is local and has not been deployed.
 
 ## Start here
 

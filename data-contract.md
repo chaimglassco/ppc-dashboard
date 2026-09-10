@@ -1,5 +1,9 @@
 # Data Contract
 
+## September 10 workspace presentation and export
+
+No storage schema or API contract changes. The redesign consumes the existing version-1 report and performance cache. Conversion Rate has no stored field and displays unavailable; do not derive it without an appropriate denominator. The second-row Organic Sales tile reuses organicSales. Action due-date controls read/write the existing actions[].dueDate field. Report Export is a JSON download of the selected WeeklyPpcReport, including current overlaid metrics, without session tokens. The summary underline control inserts literal <u> markers into the existing plain-text notes field, like the existing bold/list markers; notes are never rendered as arbitrary raw HTML.
+
 ## Product performance AI request
 
 `POST /ppc/api/dashboard/ai-chat` accepts an authenticated transient request containing `question`, up to eight `{ role, text }` history items, and a selected-product context. Context includes bounded product identity, one active Wednesday, active-week planning fields, and up to sixty `{ weekStart, weekEnd, dataState, metrics }` summaries. ASIN is empty or exactly ten uppercase alphanumeric characters; dates must be real ISO dates; metrics are finite nonnegative numbers no greater than one billion; `dataState` is `Partial`, `Final`, or normalized to `Saved/manual`. The body is capped at 100 KB. Unknown fields are ignored and malformed scope returns `400`.

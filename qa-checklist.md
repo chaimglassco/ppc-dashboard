@@ -4,10 +4,13 @@ Use this checklist before merging or deploying changes.
 
 ## Third-panel workspace hierarchy
 
-- [ ] Open a selected product and confirm Weekly PPC Performance is the first card in the third panel, followed by Strategic Weekly Goals and Budget Utilization side by side.
-- [ ] Confirm the performance card shows four sales cards, a Total Orders PPC/organic donut, PPC/Organic order cards, and ACOS/TACOS radial gauges without clipping. Verify the date comparison, total revenue, Target ACOS, live-sync status, and Refresh Data control reflect the selected week.
-- [ ] Confirm goal progress and all goal actions still work. Verify weekly limit, spent, daily limit, remaining/overspent, burn-rate pacing, and five-row paginated budget history use the existing report values.
-- [ ] Verify the neutral cards, thin borders, compact centered values, comparison pills/bars, and restrained black accents stay aligned at desktop width; at mobile width confirm sales cards wrap and the order, efficiency, goals, and budget layouts collapse without clipping.
+- Verify goals/budget precede performance, followed by previous/current summaries and the action section.
+- Verify five cards in each desktop metric row, Conversion Rate after Total Sales, and Total Orders after Org. Orders.
+- Verify unavailable Conversion Rate stays a dash and no fabricated comparisons appear.
+- Verify reference fonts, 24px spacing, 190px tiles, green/red deltas, TACOS gauge, and mobile wrapping.
+- Exercise goal target/status/history, budget edits and expanded history, notes formatting/save/reload, action due dates/completion, Refresh Data, and JSON Export.
+- Check that product and reporting-period panels retain their styling and behavior.
+- Browser fixtures verify UI behavior only; production account/OAuth verification is separate.
 
 ## Product performance AI assistant
 

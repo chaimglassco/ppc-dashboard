@@ -79,7 +79,7 @@ describe("PpcPerformanceDashboard", () => {
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/dashboard/products"), expect.any(Object));
-    expect(screen.getByRole("button", { name: "Weekly Report" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save Weekly Report" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Open current week" })).not.toBeInTheDocument();
     const currentPeriod = within(screen.getByLabelText("Reporting periods")).getAllByRole("button").find(button => button.textContent?.includes("August 26 to September 1")) as HTMLButtonElement;
     expect(within(currentPeriod).getByText("August 26 to September 1")).toBeVisible();
@@ -91,7 +91,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(currentPeriod).toHaveAttribute("aria-pressed", "true");
     expect(within(screen.getByLabelText("Reporting periods")).getAllByRole("button")[0]).toBe(currentPeriod);
 
-    expect(screen.queryByText("Draft", { exact: true })).not.toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Current Week Summary" })).getByText("Draft", { exact: true })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Save Draft" })).not.toBeInTheDocument();
     const monthTrigger = screen.getByRole("button", { name: "Choose reporting months, July–September 2026" });
     expect(monthTrigger.querySelector("svg")).not.toBeNull();
@@ -114,6 +114,7 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.change(weeklyLimit, { target: { value: "1500" } });
     fireEvent.blur(weeklyLimit);
     expect(screen.getByText("$214.29")).toBeVisible();
+    fireEvent.click(screen.getByText("Budget History", { selector: "summary" }));
     const budgetHistory = screen.getByRole("table", { name: "Budget change history" });
     expect(within(budgetHistory).getByRole("columnheader", { name: "Date of Change" })).toBeVisible();
     expect(within(budgetHistory).getByRole("columnheader", { name: "From" })).toBeVisible();
@@ -124,10 +125,10 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.getByText("$1,150")).toBeVisible();
     expect(screen.getByLabelText("23% of weekly budget used")).toBeVisible();
     fireEvent.change(screen.getByRole("textbox", { name: "Performance documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
-    expect(screen.getByRole("button", { name: "Save Changes" })).toBeVisible();
-    expect(screen.getByText("Saving changes…")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save Weekly Report" })).toBeVisible();
+    expect(within(screen.getByRole("region", { name: "Current Week Summary" })).getByText("Saving changes…")).toBeVisible();
     await waitFor(() => expect(screen.getByText("Changes saved automatically")).toBeVisible(), { timeout: 3_000 });
-    expect(screen.getByRole("button", { name: "Weekly Report" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save Weekly Report" })).toBeVisible();
 
     const stored = JSON.parse(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY) || "{}");
     expect(stored.version).toBe(1);
@@ -160,6 +161,7 @@ describe("PpcPerformanceDashboard", () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
+    fireEvent.click(screen.getByText("Budget History", { selector: "summary" }));
     const table = screen.getByRole("table", { name: "Budget change history" });
     expect(within(table).getAllByRole("row")).toHaveLength(6);
     expect(within(table).getAllByText("$10")).toHaveLength(2);
@@ -243,7 +245,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveValue("82");
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveAttribute("readonly");
     expect(screen.getByRole("textbox", { name: "ACOS actual" })).toHaveValue("17%");
-    expect(within(screen.getByRole("textbox", { name: "ACOS actual" }).closest("label")!).getByText("Final")).toBeVisible();
+    expect(within(screen.getByRole("textbox", { name: "ACOS actual" }).closest("[class*=goalRow]")!).getByText("Final")).toBeVisible();
     expect(screen.getByRole("textbox", { name: "PPC Sales actual" })).toHaveValue("$482");
     expect(screen.getByRole("textbox", { name: "PPC Sales actual" })).toHaveAttribute("readonly");
     fireEvent.click(screen.getByRole("button", { name: "Add Goal" }));
@@ -307,7 +309,7 @@ describe("PpcPerformanceDashboard", () => {
 
     expect(await screen.findByText("Scale Insights synced through 2026-08-28.")).toBeVisible();
     expect(screen.getByRole("textbox", { name: "ACOS actual" })).toHaveValue("25%");
-    expect(within(screen.getByRole("textbox", { name: "ACOS actual" }).closest("label")!).getByText("Partial")).toBeVisible();
+    expect(within(screen.getByRole("textbox", { name: "ACOS actual" }).closest("[class*=goalRow]")!).getByText("Partial")).toBeVisible();
   }, 10_000);
 
   it("offers hosted Scale Insights consent without storing credentials in the browser", async () => {
@@ -335,7 +337,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(window.localStorage.getItem("SCALE_INSIGHTS_MCP_ACCESS_TOKEN")).toBeNull();
   });
 
-  it("shows overspend, grouped metrics, formatted notes, and color-coded priorities without dates", async () => {
+  it("shows overspend, grouped metrics, formatted notes, and reference priorities and due dates", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
 
@@ -347,10 +349,18 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(budgetCard).getByText("$25")).toBeVisible();
 
     const performanceCard = screen.getByRole("region", { name: "Weekly PPC Performance" });
-    expect(performanceCard.compareDocumentPosition(goalsCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(performanceCard.compareDocumentPosition(budgetCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(performanceCard.compareDocumentPosition(goalsCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(performanceCard.compareDocumentPosition(budgetCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    const salesMetrics = within(performanceCard).getByRole("region", { name: "Sales metrics" });
+    const totalSalesCard = within(salesMetrics).getByRole("textbox", { name: "Total Sales" }).closest("label")!;
+    const conversionRateCard = within(salesMetrics).getByLabelText("Conversion Rate unavailable");
+    expect(totalSalesCard.nextElementSibling).toBe(conversionRateCard);
+    const orderMetrics = within(performanceCard).getByRole("region", { name: "Orders metrics" });
+    const organicOrdersCard = within(orderMetrics).getByRole("textbox", { name: "Organic Orders" }).closest("label")!;
+    const totalOrdersCard = within(orderMetrics).getByRole("textbox", { name: "Total Orders" }).closest("label")!;
+    expect(organicOrdersCard.nextElementSibling).toBe(totalOrdersCard);
     expect(within(performanceCard).getAllByRole("textbox").map(input => input.getAttribute("aria-label"))).toEqual([
-      "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "Total Orders", "PPC Orders", "Organic Orders", "ACOS", "TACOS",
+      "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "ACOS", "PPC Orders", "Organic Orders", "Total Orders", "TACOS",
     ]);
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Sales" }), { target: { value: "100" } });
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "Total Sales" }), { target: { value: "300" } });
@@ -418,8 +428,32 @@ describe("PpcPerformanceDashboard", () => {
     expect(priority.className).toMatch(/priorityHigh/);
     fireEvent.change(priority, { target: { value: "Low" } });
     expect(priority.className).toMatch(/priorityLow/);
-    expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
+    const dueDate = screen.getByLabelText(/due date/i);
+    fireEvent.change(dueDate, { target: { value: "2026-09-01" } });
+    expect(dueDate).toHaveValue("2026-09-01");
   }, 15_000);
+
+  it("exports the selected weekly report with a stable JSON filename", async () => {
+    const createObjectURL = vi.fn(() => "blob:weekly-report");
+    const revokeObjectURL = vi.fn();
+    const NativeUrl = URL;
+    class TestUrl extends NativeUrl {
+      static createObjectURL = createObjectURL;
+      static revokeObjectURL = revokeObjectURL;
+    }
+    vi.stubGlobal("URL", TestUrl);
+    let downloadedAs = "";
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      downloadedAs = this.download;
+    });
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+
+    expect(createObjectURL).toHaveBeenCalledWith(expect.objectContaining({ type: "application/json" }));
+    expect(downloadedAs).toBe("ppc-report-product-1-2026-08-26.json");
+  });
 
   it("carries the previous week's result documentation into an existing blank next week", async () => {
     window.localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({

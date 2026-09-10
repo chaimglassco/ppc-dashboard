@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GET, normalizeDashboardProducts } from "./route";
+import { GET } from "./route";
+import { normalizeDashboardProducts } from "@/features/dashboard/domain/pipeline-products";
 
 describe("PPC dashboard product catalog", () => {
   afterEach(() => vi.restoreAllMocks());

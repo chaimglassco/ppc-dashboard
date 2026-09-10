@@ -1,5 +1,9 @@
 # Project Progress
 
+## September 10, 2026 — Reference-based third-panel rebuild
+
+Rebuilt the workspace from the supplied HTML with the corrected Total Orders tile and unavailable Conversion Rate card. Added isolated reference typography/layout, compact editable goals, expandable budget history, summary footers, action due dates, and JSON export. Retained the original first two panels and all existing API/storage boundaries. This work is local and has not been deployed. Browser fixture checks cover desktop/mobile layout and note persistence; final validation results are recorded in HANDOFF.md.
+
 Last updated: September 9, 2026
 
 ## Third-panel workspace redesign
@@ -156,7 +160,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Thirty-nine Vitest files pass with 238 passing tests and 6 intentionally skipped tests.
+- Forty-seven Vitest files pass with 283 passing tests and 6 intentionally skipped tests.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.

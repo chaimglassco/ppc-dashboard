@@ -10,7 +10,7 @@ The same verified Pipeline identity opens a short-lived Scale Insights MCP sessi
 
 ## Third-panel presentation layer
 
-The workspace keeps the existing component and state boundaries while rendering the supplied reference hierarchy in DOM and visual order: Weekly PPC Performance first, Strategic Weekly Goals and Budget Utilization second, then notes and actions. The metrics card reuses the same report values but derives sales comparison bars, the PPC/organic order split, efficiency rings, revenue summary, and budget pacing during render. The compact monochrome borders, neutral fills, badges, goal progress, budget burn-rate view, and responsive collapse are presentation only. Goal, budget-history, performance-cache, notes, and action persistence remain unchanged.
+The workspace uses a dedicated ppc-performance-workspace.module.css module, isolated from the product/timeline stylesheet. Unused legacy workspace selectors were removed. The dashboard route layout self-hosts Geist and JetBrains Mono through next/font; only the third panel consumes those font variables. Its canvas uses a 1152px maximum width, 24px spacing, bordered white sections on #fafafa, and 190px metric tiles. Goal/budget DOM order precedes performance. Report state, authenticated adapters, cache precision, and schemas remain unchanged. Conversion Rate is a display-only unavailable card, and the repeated Organic Sales tile reads the existing derived value. JSON export uses a temporary browser object URL; no server call or additional persistence is introduced.
 
 ## Goal resolution and previous-week comparisons
 

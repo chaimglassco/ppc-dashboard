@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import {
-  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, ClipboardList, DollarSign,
-  FileText, Flag, Italic, List, ListOrdered, Plus, RefreshCw, Save, ShoppingCart, SlidersHorizontal, Trash2, X,
+  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, DollarSign,
+  FileText, Flag, Italic, Underline, List, ListOrdered, Plus, RefreshCw, Save, Download, TrendingUp, SlidersHorizontal, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
@@ -23,6 +23,7 @@ import { ProductPerformanceChat, type PerformanceChatPeriod } from "./product-pe
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, type PerformanceCache } from "../domain/ppc-performance-cache";
 import { getScaleInsightsAnalysisHref, PPC_ANALYSIS_COLUMNS } from "../domain/ppc-analysis-navigation";
 import styles from "./ppc-performance-dashboard.module.css";
+import ws from "./ppc-performance-workspace.module.css";
 
 type MetricField = "spend" | "ppcSales" | "organicSales" | "totalSales" | "ppcOrders" | "organicOrders" | "totalOrders" | "acos" | "tacos";
 type MetricDefinition = { field: MetricField; label: string; prefix?: string; suffix?: string; calculated?: boolean; imported?: boolean };
@@ -83,52 +84,47 @@ function preciseCurrency(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: Number.isInteger(value) ? 0 : 2, maximumFractionDigits: 2 }).format(value || 0);
 }
 
-function RadialGauge({ value, label, muted = false }: { value: number; label: string; muted?: boolean }) {
+function exportWeeklyReport(report: WeeklyPpcReport) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `ppc-report-${report.productId}-${report.weekStart}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function RadialGauge({ value, label }: { value: number; label: string }) {
   const circumference = 87.96;
   const progress = Math.min(100, Math.max(0, value));
   const dash = (progress / 100) * circumference;
-  return <span className={styles.radialGauge} aria-hidden="true">
-    <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" /><circle className={muted ? styles.radialGaugeMuted : ""} cx="18" cy="18" r="14" strokeDasharray={`${dash} ${circumference}`} /></svg>
+  return <span className={ws.radialGauge} aria-hidden="true">
+    <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" /><circle cx="18" cy="18" r="14" strokeDasharray={`${dash} ${circumference}`} /></svg>
     <strong>{label}</strong>
   </span>;
 }
 
-function MetricInput({ metric, report, previousValue, comparisonAvailable, importedLocked, warning, targetAcos, volumeShare, onChange }: { metric: MetricDefinition; report: WeeklyPpcReport; previousValue?: number; comparisonAvailable: boolean; importedLocked: boolean; warning?: boolean; targetAcos?: number; volumeShare?: number; onChange: (field: MetricField, value: number) => void }) {
+function MetricInput({ metric, report, previousValue, comparisonAvailable, importedLocked, warning, targetAcos, onChange }: { metric: MetricDefinition; report: WeeklyPpcReport; previousValue?: number; comparisonAvailable: boolean; importedLocked: boolean; warning?: boolean; targetAcos?: number; onChange: (field: MetricField, value: number) => void }) {
   const readOnly = Boolean(metric.calculated || (metric.imported && importedLocked));
   const displayValue = roundedMetricValue(report[metric.field]);
   const comparison = previousValue == null ? 0 : report[metric.field] - previousValue;
   const comparisonDirection = comparison > 0 ? "increased" : comparison < 0 ? "decreased" : "unchanged";
   const deltaPercentage = metricDeltaPercentage(report[metric.field], previousValue);
   const favorable = comparison !== 0 && (lowerIsBetter(metric.field) ? comparison < 0 : comparison > 0);
-  const trendTone = comparison === 0 ? styles.metricNeutral : favorable ? styles.metricIncrease : styles.metricDecrease;
+  const trendTone = comparison === 0 ? ws.metricNeutral : favorable ? ws.metricIncrease : ws.metricDecrease;
   const trendLabel = deltaPercentage == null ? "New" : `${deltaPercentage}%`;
   const targetDifference = warning && targetAcos ? Math.round(Math.max(0, report.acos - targetAcos)) : 0;
-  const isEfficiency = metric.field === "acos" || metric.field === "tacos";
-  const isSalesMetric = ["spend", "ppcSales", "organicSales", "totalSales"].includes(metric.field);
-  const currentShare = previousValue && report[metric.field] ? Math.round((report[metric.field] / Math.max(report[metric.field], previousValue)) * 100) : report[metric.field] ? 100 : 0;
-  return <label className={`${styles.metricCard} ${readOnly ? styles.calculatedMetric : ""} ${warning ? styles.metricWarning : ""} ${metric.field === "totalSales" ? styles.metricFeatured : ""} ${isEfficiency ? styles.efficiencyMetric : ""}`} data-warning={warning || undefined}>
-    <span className={styles.metricCardHeader}><span>{metric.label}</span>{comparisonAvailable && previousValue != null && comparison !== 0 ? <span className={`${styles.metricDelta} ${trendTone}`} aria-label={`${metric.label} ${comparisonDirection} by ${trendLabel} from previous week`}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}{trendLabel}</span> : null}</span>
-    {isEfficiency ? <RadialGauge value={report[metric.field]} label={`${displayValue}%`} muted={metric.field === "tacos"} /> : null}
-    <span className={`${styles.metricInputWrap} ${metric.suffix ? styles.metricPercentWrap : ""}`}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-describedby={warning ? "acos-target-warning" : undefined} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" size={Math.max(1, displayValue.length)} value={displayValue} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
-    {isSalesMetric ? <span className={styles.metricMiniTrack} aria-hidden="true"><i style={{ width: `${currentShare}%` }} /><b /></span> : null}
-    {warning ? <span id="acos-target-warning" className={styles.metricCardHint}>Target: {new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(targetAcos || 0)}% · +{targetDifference}% over limit</span> : metric.field === "tacos" ? <span className={styles.metricCardHint}>Healthy · Target &lt; 30%</span> : volumeShare != null ? <span className={styles.metricCardHint}>{volumeShare}% of total volume</span> : <span className={styles.metricCardHint} aria-hidden="true">&nbsp;</span>}
-    <span className={`${styles.metricPreviousRow} ${styles.metricPrevious}`} aria-label={previousValue == null ? `Previous ${metric.label}: unavailable` : comparisonAvailable ? `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}, ${comparisonDirection}` : `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}`}>
+  const isEfficiency = metric.field === "tacos";
+  return <label className={`${ws.metricCard} ${isEfficiency ? ws.efficiencyMetric : ""}`} data-warning={warning || (isEfficiency && report.tacos >= 30) || undefined}>
+    <span className={ws.metricCardHeader}><span>{metric.field === "spend" ? "Total Spend" : metric.field === "organicOrders" ? "Org. Orders" : metric.label}</span>{comparisonAvailable && previousValue != null && comparison !== 0 ? <span className={`${ws.metricDelta} ${trendTone}`} aria-label={`${metric.label} ${comparisonDirection} by ${trendLabel} from previous week`}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}{trendLabel}</span> : null}</span>
+    {isEfficiency ? <RadialGauge value={report[metric.field]} label={`${displayValue}%`} /> : null}
+    <span className={ws.metricInputWrap}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-describedby={warning ? "acos-target-warning" : undefined} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" size={Math.max(1, displayValue.length)} style={{ width: `${Math.max(1, displayValue.length)}ch` }} value={displayValue} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
+    {warning ? <span id="acos-target-warning" className={ws.metricCardHint}>Target: {new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(targetAcos || 0)}% · +{targetDifference}% over limit</span> : metric.field === "tacos" ? <span className={ws.metricCardHint}>{report.tacos < 30 ? "Healthy" : "Above target"} · Target &lt; 30%</span> : <span className={ws.metricCardHint} aria-hidden="true">&nbsp;</span>}
+    <span className={ws.metricPreviousRow} aria-label={previousValue == null ? `Previous ${metric.label}: unavailable` : comparisonAvailable ? `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}, ${comparisonDirection}` : `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}`}>
       <small>Prev. Week</small>
       <strong>{previousValue == null ? "—" : previousMetricValue(metric, previousValue)}</strong>
     </span>
-  </label>;
-}
-
-function OrderVolumeSummary({ report, importedLocked, onChange }: { report: WeeklyPpcReport; importedLocked: boolean; onChange: (field: MetricField, value: number) => void }) {
-  const total = Math.max(0, report.totalOrders);
-  const ppcShare = total ? Math.min(100, Math.round((report.ppcOrders / total) * 100)) : 0;
-  const circumference = 87.96;
-  const ppcDash = (ppcShare / 100) * circumference;
-  const organicDash = circumference - ppcDash;
-  const displayValue = roundedMetricValue(total);
-  return <label className={styles.orderVolumeSummary}>
-    <span className={styles.orderDonut}><svg aria-hidden="true" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" /><circle cx="18" cy="18" r="14" strokeDasharray={`${ppcDash} ${circumference}`} /><circle className={styles.orderDonutOrganic} cx="18" cy="18" r="14" strokeDasharray={`${organicDash} ${circumference}`} strokeDashoffset={-ppcDash} /></svg><span><input aria-label="Total Orders" aria-readonly={importedLocked || undefined} readOnly={importedLocked} inputMode="numeric" size={Math.max(1, displayValue.length)} value={displayValue} onChange={event => { if (!importedLocked) onChange("totalOrders", numericValue(event.target.value)); }} /><small>Units</small></span></span>
-    <span className={styles.orderLegend}><span><i />PPC ({ppcShare}%)<strong>{roundedMetricValue(report.ppcOrders)}</strong></span><span><i />Org ({Math.max(0, 100 - ppcShare)}%)<strong>{roundedMetricValue(report.organicOrders)}</strong></span></span>
   </label>;
 }
 
@@ -146,24 +142,22 @@ function WeeklyGoalRow({ goal, report, dataState, onUpdate, onResolve, onRemove 
     metric, title: weeklyGoalLabel(metric), unit: weeklyGoalUnit(metric), target: "", actual: "",
   });
 
-  return <div className={styles.goalRow}>
-    <div className={styles.goalDefinition}>
-      <label>Goal<select aria-label={`Goal metric ${goal.id}`} value={goal.metric ?? ""} onChange={event => selectMetric(event.target.value as WeeklyGoalMetric)}><option value="" disabled>Choose goal</option>{WEEKLY_GOAL_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+  return <div className={ws.goalRow}>
+    <div className={ws.goalDefinition}>
+      <CheckCircle2 aria-hidden="true" /><label><span className={ws.srOnly}>Goal</span><select aria-label={`Goal metric ${goal.id}`} value={goal.metric ?? ""} onChange={event => selectMetric(event.target.value as WeeklyGoalMetric)}><option value="" disabled>Choose goal</option>{WEEKLY_GOAL_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
       {goal.metric === "organicOrders" ? <label>Measure<select aria-label="Organic Order measurement" value={weeklyGoalUnit(goal.metric, goal.unit)} onChange={event => onUpdate({ unit: event.target.value as "number" | "percentage", target: "", actual: "" })}><option value="number">Number</option><option value="percentage">Percentage</option></select></label> : null}
+      <select aria-label={`${label} status`} className={workspaceStatusTone(goal.status)} value={goal.status} onChange={event => onUpdate({ status: event.target.value as GoalStatus })}>{ACTIVE_GOAL_STATUSES.map(status => <option className={workspaceStatusTone(status)} key={status}>{status}</option>)}</select>
     </div>
-    <div className={styles.goalMetrics}>
-      <label>Target<input aria-label={`${label} target`} inputMode="decimal" value={targetEditing ? goal.target.replace(/[^0-9.-]/g, "") : formatWeeklyGoalTarget(goal)} onFocus={() => setTargetEditing(true)} onBlur={() => setTargetEditing(false)} onChange={event => onUpdate({ target: event.target.value })} /></label>
-      <label>Actual<span className={styles.goalActualField}><input aria-label={`${label} actual`} aria-readonly="true" readOnly value={actual} placeholder="—" /><small className={actualState === "Final" ? styles.goalActualFinal : actualState === "Partial" ? styles.goalActualPartial : styles.goalActualWaiting}>{actualState ?? (goal.metric ? "Waiting" : "Select goal")}</small></span></label>
-      <label>Status<select aria-label={`${label} status`} className={statusTone(goal.status)} value={goal.status} onChange={event => onUpdate({ status: event.target.value as GoalStatus })}>{ACTIVE_GOAL_STATUSES.map(status => <option className={statusTone(status)} key={status}>{status}</option>)}</select></label>
-      <div className={styles.goalOutcomeActions}><button type="button" className={styles.goalAchievedButton} aria-label={`Mark ${label} achieved`} title="Mark achieved" onClick={() => onResolve("Achieved")}><CheckCircle2 aria-hidden="true" /></button><button type="button" className={styles.goalMissedButton} aria-label={`Mark ${label} missed`} title="Mark missed" onClick={() => onResolve("Missed")}><X aria-hidden="true" /></button><button type="button" className={styles.goalDeleteButton} aria-label={`Remove ${label}`} onClick={onRemove}><Trash2 aria-hidden="true" /></button></div>
+    <div className={ws.goalProgress}><span><i style={{ width: `${goalProgress}%` }} /></span><div className={ws.goalInlineValues}><input aria-label={`${label} actual`} aria-readonly="true" readOnly value={actual} placeholder="—" /><span>/ target</span><input aria-label={`${label} target`} inputMode="decimal" value={targetEditing ? goal.target.replace(/[^0-9.-]/g, "") : formatWeeklyGoalTarget(goal)} placeholder="—" onFocus={() => setTargetEditing(true)} onBlur={() => setTargetEditing(false)} onChange={event => onUpdate({ target: event.target.value })} /></div></div>
+    <div className={ws.goalRowFooter}><small className={actualState === "Final" ? ws.goalActualFinal : actualState === "Partial" ? ws.goalActualPartial : ws.goalActualWaiting}>{actualState ?? (goal.metric ? "Waiting" : "Select goal")}</small>
+      <div className={ws.goalOutcomeActions}><button type="button" aria-label={`Mark ${label} achieved`} title="Mark achieved" onClick={() => onResolve("Achieved")}><CheckCircle2 aria-hidden="true" /></button><button type="button" aria-label={`Mark ${label} missed`} title="Mark missed" onClick={() => onResolve("Missed")}><X aria-hidden="true" /></button><button type="button" aria-label={`Remove ${label}`} onClick={onRemove}><Trash2 aria-hidden="true" /></button></div>
     </div>
-    <div className={styles.goalProgress}><span><i style={{ width: `${goalProgress}%` }} /></span><strong>{actual || "—"} <small>/ target {formatWeeklyGoalTarget(goal) || "—"}</small></strong></div>
   </div>;
 }
 
 function FormattedTextarea({ label, value, placeholder, onChange }: { label: string; value: string; placeholder: string; onChange: (value: string) => void }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const applyFormat = (format: "bold" | "italic" | "bullet" | "numbered") => {
+  const applyFormat = (format: "bold" | "italic" | "underline" | "bullet" | "numbered") => {
     const textarea = textareaRef.current;
     if (!textarea) return;
     const start = textarea.selectionStart;
@@ -173,10 +167,10 @@ function FormattedTextarea({ label, value, placeholder, onChange }: { label: str
     let selectionStart = start;
     let selectionEnd = end;
 
-    if (format === "bold" || format === "italic") {
-      const marker = format === "bold" ? "**" : "_";
-      const content = selected || (format === "bold" ? "bold text" : "italic text");
-      replacement = `${marker}${content}${marker}`;
+    if (format === "bold" || format === "italic" || format === "underline") {
+      const marker = format === "bold" ? "**" : format === "underline" ? "<u>" : "_";
+      const content = selected || `${format} text`;
+      replacement = `${marker}${content}${format === "underline" ? "</u>" : marker}`;
       selectionStart = start + marker.length;
       selectionEnd = selectionStart + content.length;
     } else {
@@ -217,12 +211,13 @@ function FormattedTextarea({ label, value, placeholder, onChange }: { label: str
     });
   };
 
-  return <div className={styles.textAreaLabel}><span>{label}</span><span className={styles.formatToolbar} role="toolbar" aria-label={`${label} formatting`}>
+  return <div className={ws.textAreaLabel}><span>{label}</span><span className={ws.formatToolbar} role="toolbar" aria-label={`${label} formatting`}>
     <button type="button" aria-label={`Bold ${label}`} onClick={() => applyFormat("bold")}><Bold aria-hidden="true" /></button>
     <button type="button" aria-label={`Italic ${label}`} onClick={() => applyFormat("italic")}><Italic aria-hidden="true" /></button>
+    <button type="button" aria-label={`Underline ${label}`} onClick={() => applyFormat("underline")}><Underline aria-hidden="true" /></button>
     <button type="button" aria-label={`Bulleted list ${label}`} onClick={() => applyFormat("bullet")}><List aria-hidden="true" /></button>
     <button type="button" aria-label={`Numbered list ${label}`} onClick={() => applyFormat("numbered")}><ListOrdered aria-hidden="true" /></button>
-  </span><textarea ref={textareaRef} className={styles.notesArea} aria-label={label} value={value} onChange={event => onChange(event.target.value)} onKeyDown={continueList} placeholder={placeholder} /></div>;
+  </span><textarea ref={textareaRef} className={ws.notesArea} aria-label={label} value={value} onChange={event => onChange(event.target.value)} onKeyDown={continueList} placeholder={placeholder} /></div>;
 }
 
 function statusTone(status: string) {
@@ -232,10 +227,17 @@ function statusTone(status: string) {
   return styles.info;
 }
 
+function workspaceStatusTone(status: string) {
+  if (status === "Completed" || status === "Achieved" || status === "On Track") return ws.success;
+  if (status === "Needs Review" || status === "At Risk") return ws.warning;
+  if (status === "Missed") return ws.danger;
+  return ws.info;
+}
+
 function priorityTone(priority: ActionItem["priority"]) {
-  if (priority === "High") return styles.priorityHigh;
-  if (priority === "Low") return styles.priorityLow;
-  return styles.priorityMedium;
+  if (priority === "High") return ws.priorityHigh;
+  if (priority === "Low") return ws.priorityLow;
+  return ws.priorityMedium;
 }
 
 export function PpcPerformanceDashboard({ initialToday }: { initialToday: string }) {
@@ -332,7 +334,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         });
         setSaveNotice("Changes saved automatically");
       } catch {
-        setSaveNotice("Auto-save failed — use Save Changes");
+        setSaveNotice("Auto-save failed — use Save Weekly Report");
       }
     }, AUTO_SAVE_DELAY_MS);
 
@@ -404,9 +406,6 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const budgetBalance = report ? report.weeklyBudget - report.spend : 0;
   const isOverspent = budgetBalance < 0;
   const isAcosAboveTarget = Boolean(report && report.targetAcos > 0 && report.acos > report.targetAcos);
-  const totalOrderVolume = report?.totalOrders ?? 0;
-  const ppcOrderShare = totalOrderVolume ? Math.round(((report?.ppcOrders ?? 0) / totalOrderVolume) * 100) : 0;
-  const organicOrderShare = Math.max(0, 100 - ppcOrderShare);
   const activeWeekDay = Math.min(7, Math.max(0, Math.floor((Date.parse(initialToday) - Date.parse(activeWeekStart)) / 86400000) + 1));
   const expectedBudgetUsage = Math.round((activeWeekDay / 7) * 100);
   const budgetPacingDelta = budgetUsage - expectedBudgetUsage;
@@ -664,54 +663,57 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
       })}</div>
     </aside>
 
-    <main className={styles.workspace}>
-      {!selectedProduct || !report ? <div className={styles.workspaceEmpty}><BarChart3 aria-hidden="true" /><h2>Select a product</h2><p>Choose a Pipeline product to start its weekly PPC documentation.</p></div> : <>
-        <header className={styles.workspaceHeader}>
-          <div className={styles.workspaceProduct}>{selectedProduct.imageDataUrl ? <span className={styles.workspaceProductImage}><Image src={selectedProduct.imageDataUrl} alt={`${selectedProduct.name} product`} width={62} height={62} unoptimized /></span> : null}<div><span className={styles.eyebrow}>WEEKLY PPC PERFORMANCE</span><div className={styles.titleRow}><h2>{selectedProduct.name}</h2>{selectedProductTag ? <span>{selectedProductTag.name}</span> : null}</div><p>ASIN: {selectedProduct.asin ? <a href={`https://www.amazon.com/dp/${encodeURIComponent(selectedProduct.asin)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product ASIN ${selectedProduct.asin} on Amazon`}>{selectedProduct.asin}</a> : <strong>N/A</strong>}<i />SKU: {selectedProduct.sku ? <a href={`https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=${encodeURIComponent(selectedProduct.sku)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product SKU ${selectedProduct.sku} in Seller Central`}>{selectedProduct.sku}</a> : <strong>N/A</strong>}</p></div></div>
-          {selectedAsin ? <nav className={styles.asinNavigation} aria-label={`Scale Insights analysis for ASIN ${selectedAsin}`}>{PPC_ANALYSIS_COLUMNS.map(column => <div key={column.key} className={styles.asinNavigationColumn} role="group" aria-label={column.label}>{column.sections.map(section => <a key={section.slug} href={getScaleInsightsAnalysisHref(selectedAsin, section.slug, activeWeekStart, addDaysIso(activeWeekStart, 6))} target="_blank" rel="noopener noreferrer">{section.label}</a>)}</div>)}</nav> : null}
-          <div className={styles.saveArea}><div><button type="button" className={styles.primaryButton} onClick={saveReport}><Save />{dirty ? "Save Changes" : "Weekly Report"}</button></div><small className={dirty ? styles.unsaved : styles.saved}>{dirty ? saveNotice || "Saving changes…" : saveNotice || (report.updatedAt ? `Saved ${new Date(report.updatedAt).toLocaleString()}` : "Not saved yet")}</small></div>
+    <main className={ws.workspace}>
+      {!selectedProduct || !report ? <div className={ws.workspaceEmpty}><BarChart3 aria-hidden="true" /><h2>Select a product</h2><p>Choose a Pipeline product to start its weekly PPC documentation.</p></div> : <>
+        <header className={ws.workspaceHeader}>
+          <div className={ws.workspaceProduct}>{selectedProduct.imageDataUrl ? <span className={ws.workspaceProductImage}><Image src={selectedProduct.imageDataUrl} alt={`${selectedProduct.name} product`} width={44} height={44} unoptimized /></span> : null}<div><span className={ws.eyebrow}>WEEKLY PPC PERFORMANCE</span><div className={ws.titleRow}><h2>{selectedProduct.name}</h2>{selectedProductTag ? <span>{selectedProductTag.name}</span> : null}</div><p>ASIN: {selectedProduct.asin ? <a href={`https://www.amazon.com/dp/${encodeURIComponent(selectedProduct.asin)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product ASIN ${selectedProduct.asin} on Amazon`}>{selectedProduct.asin}</a> : <strong>N/A</strong>}<i />SKU: {selectedProduct.sku ? <a href={`https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=${encodeURIComponent(selectedProduct.sku)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product SKU ${selectedProduct.sku} in Seller Central`}>{selectedProduct.sku}</a> : <strong>N/A</strong>}{previousReport && previousReport.totalSales > 0 ? <span className={ws.salesTrend}><TrendingUp />Sales {report.totalSales >= previousReport.totalSales ? "+" : "−"}{metricDeltaPercentage(report.totalSales, previousReport.totalSales)}% WoW</span> : null}</p></div></div>
+          {selectedAsin ? <nav className={ws.asinNavigation} aria-label={`Scale Insights analysis for ASIN ${selectedAsin}`}>{PPC_ANALYSIS_COLUMNS.map(column => <div key={column.key} className={ws.asinNavigationColumn} role="group" aria-label={column.label}>{column.sections.map(section => <a key={section.slug} href={getScaleInsightsAnalysisHref(selectedAsin, section.slug, activeWeekStart, addDaysIso(activeWeekStart, 6))} target="_blank" rel="noopener noreferrer">{section.label}</a>)}</div>)}</nav> : null}
+          <div className={ws.saveArea}><div><button type="button" className={ws.secondaryButton} onClick={() => exportWeeklyReport(report)}><Download />Export</button><button type="button" className={ws.primaryButton} onClick={saveReport}><Save />Save Weekly Report</button></div><small className={dirty ? ws.unsaved : ws.saved}>{dirty ? saveNotice || "Saving changes…" : saveNotice || (report.updatedAt ? `Saved ${new Date(report.updatedAt).toLocaleString()}` : "Not saved yet")}</small></div>
         </header>
 
-        <div className={styles.workspaceScroll}>
-          <section className={`${styles.card} ${styles.performanceCard}`} aria-labelledby="metrics-heading">
-            <div className={styles.performanceTitleBar}>
-              <div><div className={styles.performanceHeading}><h3 id="metrics-heading"><BarChart3 />Weekly PPC Performance</h3><label className={styles.targetAcosField}><span>Target ACOS:</span><span><input aria-label="Target ACOS" inputMode="decimal" value={report.targetAcos || ""} placeholder="0" onChange={event => patchReport({ targetAcos: numericValue(event.target.value) })} /><i>%</i></span></label></div><p>Performance overview for <strong>{formatWeekRange(activeWeekStart)}</strong>, compared against previous week ({formatWeekRange(previousWeekStart)})</p></div>
-              <div className={styles.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? styles.performanceError : ""}><i />{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}<button type="button" aria-label="Refresh" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => { refreshRequest.current = snapshotKey; setPerformanceRefresh(value => value + 1); }}><RefreshCw aria-hidden="true" />Refresh Data</button></div>
-            </div>
-            {displayedPerformanceLoad.warnings.length ? <ul className={styles.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}
-            <section className={`${styles.metricGroup} ${styles.salesMetricGroup}`} aria-label="Sales metrics"><div className={styles.metricGroupHeading}><h4><DollarSign aria-hidden="true" />Sales &amp; Spend Metrics</h4><span>Total Revenue: <strong>{preciseCurrency(report.totalSales)}</strong></span></div><div className={styles.metricGroupGrid}>{METRIC_GROUPS[0].metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>
-            <div className={styles.performanceLowerGrid}>
-              <section className={`${styles.metricGroup} ${styles.orderMetricGroup}`} aria-label="Orders metrics"><div className={styles.metricGroupHeading}><h4><ShoppingCart aria-hidden="true" />Order Volume</h4><span>{roundedMetricValue(report.totalOrders)} Units Sold</span></div><div className={styles.orderMetricGrid}><OrderVolumeSummary report={report} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />{METRIC_GROUPS[1].metrics.filter(metric => metric.field !== "totalOrders").map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} volumeShare={metric.field === "ppcOrders" ? ppcOrderShare : organicOrderShare} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>
-              <section className={`${styles.metricGroup} ${styles.efficiencyMetricGroup}`} aria-label="Efficiency metrics"><div className={styles.metricGroupHeading}><h4><SlidersHorizontal aria-hidden="true" />Efficiency &amp; Targets</h4><span>{isAcosAboveTarget ? "ACOS Attention Req." : "Efficiency Healthy"}</span></div><div className={styles.metricGroupGrid}>{METRIC_GROUPS[2].metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} warning={metric.field === "acos" && isAcosAboveTarget} targetAcos={metric.field === "acos" ? report.targetAcos : undefined} onChange={(field, value) => patchReport({ [field]: value })} />)}</div></section>
-            </div>
-          </section>
+        <div className={ws.workspaceScroll}><div className={ws.workspaceCanvas}>
+          <div className={`${ws.twoColumn} ${ws.workspaceTopGrid}`}>
+            <section className={`${ws.card} ${ws.goalCard}`} aria-label="Weekly Goals"><div className={ws.cardTitle}><div className={ws.sectionTitleGroup}><h3><Flag />Strategic Weekly Goals</h3><span>{report.goals.length} Goal{report.goals.length === 1 ? "" : "s"} Active</span></div><div className={ws.goalHeaderActions}><button type="button" onClick={() => setGoalHistoryOpen(true)}>Goal History</button><button type="button" onClick={addGoal}><Plus />Add Goal</button></div></div><div className={ws.goalList}>{report.goals.map(goal => <WeeklyGoalRow key={goal.id} goal={goal} report={report} dataState={goalDataState} onUpdate={patch => updateGoal(goal.id, patch)} onResolve={status => resolveGoal(goal.id, status)} onRemove={() => removeGoal(goal.id)} />)}</div></section>
 
-          <div className={`${styles.twoColumn} ${styles.workspaceTopGrid}`}>
-            <section className={`${styles.card} ${styles.goalCard}`} aria-label="Weekly Goals"><div className={styles.cardTitle}><div className={styles.sectionTitleGroup}><h3><Flag />Strategic Weekly Goals</h3><span>{report.goals.length} Goal{report.goals.length === 1 ? "" : "s"} Active</span></div><div className={styles.goalHeaderActions}><button type="button" onClick={() => setGoalHistoryOpen(true)}>Goal History</button><button type="button" onClick={addGoal}><Plus />Add Goal</button></div></div><div className={styles.goalList}>{report.goals.map(goal => <WeeklyGoalRow key={goal.id} goal={goal} report={report} dataState={goalDataState} onUpdate={patch => updateGoal(goal.id, patch)} onResolve={status => resolveGoal(goal.id, status)} onRemove={() => removeGoal(goal.id)} />)}</div></section>
-
-            <section className={`${styles.card} ${styles.budgetCard}`} aria-labelledby="budget-heading">
-              <div className={styles.cardTitle}><h3 id="budget-heading"><DollarSign />Budget Utilization</h3><span className={isOverspent ? styles.pacingDanger : budgetUsage >= 80 ? styles.pacingWarning : styles.pacingHealthy}>{isOverspent ? "Over Budget" : budgetUsage >= 80 ? "Watch Pacing" : "Pacing Optimal"}</span></div>
-              <div className={styles.budgetPrimaryGrid}>
-                <label><span>Weekly Limit</span><span className={styles.moneyInput}><i>$</i><input aria-label="Weekly limit" inputMode="decimal" value={report.weeklyBudget || ""} placeholder="0" onFocus={() => { budgetEditStartRef.current = { key: selectedKey, value: report.weeklyBudget }; }} onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} onBlur={event => finishBudgetEdit(event.currentTarget.value)} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span><small>Allocated cap</small></label>
-                <label className={isOverspent ? styles.budgetOver : ""}><span>Spent ({budgetUsage}%)</span><span className={styles.moneyInput}><i>$</i><input aria-label="Actual spend" aria-readonly={importedMetricsLocked || undefined} readOnly={importedMetricsLocked} inputMode="numeric" value={roundedMetricValue(report.spend)} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span><small>{currency(Math.abs(budgetBalance))} {isOverspent ? "overspent" : "remaining"}</small></label>
+            <section className={`${ws.card} ${ws.budgetCard}`} aria-labelledby="budget-heading">
+              <div className={ws.cardTitle}><h3 id="budget-heading"><DollarSign />Budget Utilization</h3><span className={isOverspent ? ws.pacingDanger : budgetUsage >= 80 ? ws.pacingWarning : ws.pacingHealthy}>{isOverspent ? "Over Budget" : budgetUsage >= 80 ? "Watch Pacing" : "Pacing Optimal"}</span></div>
+              <div className={ws.budgetPrimaryGrid}>
+                <label><span>Weekly Limit</span><span className={ws.moneyInput}><i>$</i><input aria-label="Weekly limit" inputMode="decimal" style={{ width: `${Math.max(1, roundedMetricValue(report.weeklyBudget).length)}ch` }} value={report.weeklyBudget ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(report.weeklyBudget) : ""} placeholder="0" onFocus={() => { budgetEditStartRef.current = { key: selectedKey, value: report.weeklyBudget }; }} onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} onBlur={event => finishBudgetEdit(event.currentTarget.value)} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span><small>Allocated cap</small></label>
+                <label className={isOverspent ? ws.budgetOver : ""}><span>Spent ({budgetUsage}%)</span><span className={ws.moneyInput}><i>$</i><input aria-label="Actual spend" aria-readonly={importedMetricsLocked || undefined} readOnly={importedMetricsLocked} inputMode="numeric" style={{ width: `${Math.max(1, roundedMetricValue(report.spend).length)}ch` }} value={roundedMetricValue(report.spend)} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span><small>{currency(Math.abs(budgetBalance))} {isOverspent ? "overspent" : "remaining"}</small></label>
               </div>
-              <div className={styles.budgetSecondaryStats}><span>Daily limit <strong>{preciseCurrency(dailyLimitFromWeekly(report.weeklyBudget))}</strong></span><span>{isOverspent ? "Overspent" : "Remaining"} <strong>{currency(Math.abs(budgetBalance))}</strong></span></div>
-              <div className={styles.budgetBurnRate}><RadialGauge value={budgetUsage} label={`${budgetUsage}%`} /><div><p><strong>Burn Rate Progress</strong><span>{preciseCurrency(report.spend)} / {preciseCurrency(report.weeklyBudget)}</span></p><div className={styles.progressTrack} aria-label={`${budgetUsage}% of weekly budget used`}><span className={budgetUsage >= 100 ? styles.progressDanger : budgetUsage >= 80 ? styles.progressWarning : ""} style={{ width: `${Math.min(100, budgetUsage)}%` }} /></div><small><span>Expected at day {activeWeekDay}: {expectedBudgetUsage}%</span><strong>{budgetPacingDelta === 0 ? "On pace" : `${budgetPacingDelta > 0 ? "Over" : "Under"}-pacing by ${Math.abs(budgetPacingDelta)}%`}</strong></small></div></div>
-              <div className={styles.budgetHistory}>
-                <h4>Budget History</h4>
+              <div className={ws.budgetSecondaryStats}><span>Daily limit <strong>{preciseCurrency(dailyLimitFromWeekly(report.weeklyBudget))}</strong></span><span>{isOverspent ? "Overspent" : "Remaining"} <strong>{currency(Math.abs(budgetBalance))}</strong></span></div>
+              <div className={ws.budgetBurnRate}><RadialGauge value={budgetUsage} label={`${budgetUsage}%`} /><div><p><strong>Burn Rate Progress</strong><span>{preciseCurrency(report.spend)} / {preciseCurrency(report.weeklyBudget)}</span></p><div className={ws.progressTrack} aria-label={`${budgetUsage}% of weekly budget used`}><span className={budgetUsage >= 100 ? ws.progressDanger : budgetUsage >= 80 ? ws.progressWarning : ""} style={{ width: `${Math.min(100, budgetUsage)}%` }} /></div><small><span>Expected at day {activeWeekDay}: {expectedBudgetUsage}%</span><strong>{budgetPacingDelta === 0 ? "On pace" : `${budgetPacingDelta > 0 ? "Over" : "Under"}-pacing by ${Math.abs(budgetPacingDelta)}%`}</strong></small></div></div>
+              <details className={ws.budgetHistory}><summary>Budget History</summary>
                 <table aria-label="Budget change history"><thead><tr><th>Date of Change</th><th>From</th><th>To</th></tr></thead><tbody>{visibleBudgetHistory.length ? visibleBudgetHistory.map(change => <tr key={change.id}><td>{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(change.changedAt))}</td><td>{preciseCurrency(change.from)}</td><td>{preciseCurrency(change.to)}</td></tr>) : <tr><td colSpan={3}>No budget changes recorded yet.</td></tr>}</tbody></table>
-                {budgetHistoryPageCount > 1 ? <nav className={styles.budgetHistoryPagination} aria-label="Budget history pages"><button type="button" aria-label="Previous budget history page" disabled={budgetHistoryPage === 1} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage - 1 })}><ArrowLeft aria-hidden="true" /></button>{Array.from({ length: budgetHistoryPageCount }, (_, index) => index + 1).map(page => <button type="button" key={page} aria-label={`Budget history page ${page}`} aria-current={page === budgetHistoryPage ? "page" : undefined} onClick={() => setBudgetHistoryView({ key: selectedKey, page })}>{page}</button>)}<button type="button" aria-label="Next budget history page" disabled={budgetHistoryPage === budgetHistoryPageCount} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage + 1 })}><ArrowRight aria-hidden="true" /></button></nav> : null}
-              </div>
+                {budgetHistoryPageCount > 1 ? <nav className={ws.budgetHistoryPagination} aria-label="Budget history pages"><button type="button" aria-label="Previous budget history page" disabled={budgetHistoryPage === 1} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage - 1 })}><ArrowLeft aria-hidden="true" /></button>{Array.from({ length: budgetHistoryPageCount }, (_, index) => index + 1).map(page => <button type="button" key={page} aria-label={`Budget history page ${page}`} aria-current={page === budgetHistoryPage ? "page" : undefined} onClick={() => setBudgetHistoryView({ key: selectedKey, page })}>{page}</button>)}<button type="button" aria-label="Next budget history page" disabled={budgetHistoryPage === budgetHistoryPageCount} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage + 1 })}><ArrowRight aria-hidden="true" /></button></nav> : null}
+              </details>
             </section>
           </div>
 
-          <div className={styles.twoColumn}>
-            <section className={styles.card} aria-labelledby="previous-heading"><div className={styles.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Result</h3></div>{previousReport ? <div className={styles.previousSummary}>{previousReport.status === "Draft" ? null : <span className={statusTone(previousReport.status)}>{previousReport.status}</span>}<p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : null}<FormattedTextarea label="Carry-forward result and lessons" value={carryForwardResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /></section>
-            <section className={styles.card} aria-labelledby="notes-heading"><div className={styles.cardTitle}><h3 id="notes-heading"><FileText />Weekly Summary & Notes</h3></div><FormattedTextarea label="Performance documentation" value={report.notes} onChange={notes => patchReport({ notes })} placeholder="Executive summary, wins, underperformance, bid changes, negative keywords, learnings, and priorities for next week..." /></section>
+          <section className={`${ws.card} ${ws.performanceCard}`} aria-labelledby="metrics-heading">
+            <div className={ws.performanceTitleBar}>
+              <div><div className={ws.performanceHeading}><h3 id="metrics-heading"><BarChart3 />Weekly PPC Performance</h3><label className={ws.targetAcosField}><span>Target ACOS:</span><span><input aria-label="Target ACOS" inputMode="decimal" value={report.targetAcos || ""} placeholder="0" onChange={event => patchReport({ targetAcos: numericValue(event.target.value) })} /><i>%</i></span></label></div><p>Performance overview for <strong>{formatWeekRange(activeWeekStart)}</strong>, compared against previous week ({formatWeekRange(previousWeekStart)})</p></div>
+              <div className={ws.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? ws.performanceError : ""}><i />{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}<button type="button" aria-label="Refresh" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => { refreshRequest.current = snapshotKey; setPerformanceRefresh(value => value + 1); }}><RefreshCw aria-hidden="true" />Refresh Data</button></div>
+            </div>
+            {displayedPerformanceLoad.warnings.length ? <ul className={ws.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}
+            <section className={ws.metricGroup} aria-label="Sales metrics"><div className={ws.metricGroupHeading}><h4><DollarSign aria-hidden="true" />Sales &amp; Spend Metrics</h4><span>Total Revenue: <strong>{preciseCurrency(report.totalSales)}</strong></span></div><div className={ws.metricGroupGrid}>{METRIC_GROUPS[0].metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}<div className={ws.metricCard} aria-label="Conversion Rate unavailable"><span className={ws.metricCardHeader}>Conv. Rate</span><strong className={ws.unavailableValue}>—</strong><span className={ws.metricCardHint}>Conversion data unavailable</span><span className={ws.metricPreviousRow}><small>Prev. Wk</small><strong>—</strong></span></div></div></section>
+            <section className={ws.metricGroup} aria-label="Orders metrics">
+              <div className={ws.metricGroupHeading}><h4><SlidersHorizontal aria-hidden="true" />Order Volume &amp; Efficiency Targets</h4><div className={ws.efficiencySummary}><span>{roundedMetricValue(report.totalOrders)} Units Sold</span><label className={isAcosAboveTarget ? ws.acosWarning : ws.acosStatus} data-warning={isAcosAboveTarget || undefined}>ACOS <input aria-label="ACOS" aria-describedby={isAcosAboveTarget ? "acos-target-warning" : undefined} readOnly value={roundedMetricValue(report.acos)} />%{isAcosAboveTarget ? " · Attention req." : ""}</label>{isAcosAboveTarget ? <span id="acos-target-warning" className={ws.srOnly}>Target: {report.targetAcos}% · +{Math.round(report.acos - report.targetAcos)}% over limit</span> : null}</div></div>
+              <div className={ws.metricGroupGrid}>
+                {METRIC_GROUPS[1].metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}
+                <div className={ws.metricCard}><span className={ws.metricCardHeader}>Organic Sales{currentPerformanceAvailable && previousReport && previousReport.organicSales > 0 && report.organicSales !== previousReport.organicSales ? <span className={`${ws.metricDelta} ${report.organicSales > previousReport.organicSales ? ws.metricIncrease : ws.metricDecrease}`}>{report.organicSales > previousReport.organicSales ? <ArrowUp /> : <ArrowDown />}{metricDeltaPercentage(report.organicSales, previousReport.organicSales)}%</span> : null}</span><strong className={ws.unavailableValue}>{currency(report.organicSales)}</strong><span className={ws.metricPreviousRow}><small>Prev. Wk</small><strong>{previousReport ? preciseCurrency(previousReport.organicSales) : "—"}</strong></span></div>
+                <MetricInput metric={METRIC_GROUPS[2].metrics[1]} report={report} previousValue={previousReport?.tacos} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />
+              </div>
+            </section>
+          </section>
+
+          <div className={ws.twoColumn}>
+            <section className={`${ws.card} ${ws.summaryCard}`} aria-labelledby="previous-heading"><div className={ws.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Summary</h3><span>{previousReport?.status === "Completed" ? "Archived" : previousReport?.status === "Needs Review" ? "In Review" : "Previous Week"}</span></div>{previousReport ? <div className={ws.previousSummary}>{previousReport.status === "Draft" ? null : <span className={workspaceStatusTone(previousReport.status)}>{previousReport.status}</span>}<p>{previousReport.previousWeekResult || previousReport.notes || "No outcome summary was entered."}</p></div> : null}<FormattedTextarea label="Carry-forward result and lessons" value={carryForwardResult} onChange={previousWeekResult => patchReport({ previousWeekResult })} placeholder="What goal was achieved or missed, why, and what should carry into this week?" /><footer className={ws.summaryFooter}><span>Status: {previousReport?.status ?? "No previous report"}</span><span>ROAS: {previousReport && previousReport.spend > 0 ? `${(previousReport.ppcSales / previousReport.spend).toFixed(1)}x` : "—"}</span></footer></section>
+            <section className={`${ws.card} ${ws.summaryCard} ${ws.currentSummaryCard}`} aria-labelledby="notes-heading"><div className={ws.cardTitle}><h3 id="notes-heading"><FileText />Current Week Summary</h3><span>{report.status === "Needs Review" ? "In Review" : report.status}</span></div><FormattedTextarea label="Performance documentation" value={report.notes} onChange={notes => patchReport({ notes })} placeholder="Executive summary, wins, underperformance, bid changes, negative keywords, learnings, and priorities for next week..." /><footer className={ws.summaryFooter}><span className={dirty ? ws.unsaved : ws.autoSaved}>{dirty ? saveNotice || "Saving…" : report.updatedAt ? "Saved locally" : "Not saved yet"}</span><span>Last edited: {report.updatedAt ? new Date(report.updatedAt).toLocaleString() : "—"}</span></footer></section>
           </div>
 
-          <section className={styles.card} aria-labelledby="actions-heading"><div className={styles.cardTitle}><h3 id="actions-heading"><ClipboardList />Next-Week Action Plan</h3><button type="button" onClick={addAction}><Plus />Add Item</button></div><div className={styles.actionList}>{report.actions.map(action => <div className={styles.actionRow} key={action.id}><button type="button" className={action.done ? styles.actionDone : ""} aria-label={action.done ? `Mark ${action.title} incomplete` : `Mark ${action.title} complete`} onClick={() => updateAction(action.id, { done: !action.done })}>{action.done ? <Check /> : null}</button><input aria-label="Action item" value={action.title} onChange={event => updateAction(action.id, { title: event.target.value })} /><select aria-label={`${action.title} priority`} className={priorityTone(action.priority)} value={action.priority} onChange={event => updateAction(action.id, { priority: event.target.value as ActionItem["priority"] })}><option>High</option><option>Medium</option><option>Low</option></select><button type="button" aria-label={`Remove ${action.title}`} onClick={() => removeAction(action.id)}><Trash2 /></button></div>)}</div></section>
-        </div>
+          <section className={ws.card} aria-labelledby="actions-heading"><div className={ws.cardTitle}><div><h3 id="actions-heading">Previous Week Summary</h3><p className={ws.actionDescription}>Operational tasks generated from this week’s performance analysis</p></div><button type="button" onClick={addAction}><Plus />Add Action Item</button></div><div className={ws.actionList}>{report.actions.map(action => <div className={ws.actionRow} key={action.id}><button type="button" className={action.done ? ws.actionDone : ""} aria-label={action.done ? `Mark ${action.title} incomplete` : `Mark ${action.title} complete`} onClick={() => updateAction(action.id, { done: !action.done })}>{action.done ? <Check /> : null}</button><input aria-label="Action item" value={action.title} onChange={event => updateAction(action.id, { title: event.target.value })} /><select aria-label={`${action.title} priority`} className={priorityTone(action.priority)} value={action.priority} onChange={event => updateAction(action.id, { priority: event.target.value as ActionItem["priority"] })}><option>High</option><option>Medium</option><option>Low</option></select><input type="date" className={ws.actionDate} aria-label={`${action.title} due date`} value={action.dueDate} onChange={event => updateAction(action.id, { dueDate: event.target.value })} /><span className={ws.assigneePlaceholder} aria-label="Assignee unavailable">—</span><button type="button" aria-label={`Remove ${action.title}`} onClick={() => removeAction(action.id)}><Trash2 /></button></div>)}</div></section>
+        </div></div>
       </>}
     </main>
 

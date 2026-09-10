@@ -8,7 +8,7 @@ Chat conversations are separated by product and active week and remain only in c
 
 ## Third-panel workspace hierarchy
 
-The selected-product workspace follows the supplied compact monochrome reference while retaining the Glassco dashboard's existing controls and data. Weekly PPC Performance leads with a date comparison header, live-sync status, Target ACOS control, and four Sales & Spend cards. Order Volume uses a PPC/organic donut beside the two order cards, while Efficiency & Targets uses ACOS/TACOS radial gauges. Strategic Weekly Goals and Budget Utilization follow in a balanced two-column row; goal progress, editable goal controls, budget allocation/spend, burn-rate pacing, and paginated budget history remain available. Previous Week Result/Weekly Summary and the action plan retain their later order. Thin borders, neutral surfaces, compact typography, and responsive one-column fallbacks match the reference without changing report behavior.
+The third panel follows the supplied HTML reference: product header; Strategic Weekly Goals and Budget Utilization; Weekly PPC Performance; side-by-side Previous/Current Week Summary; and the action list. Desktop metrics are two rows of five equal cards. Row one is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Row two is PPC Orders, Org. Orders, Total Orders (the user correction), the reference’s repeated Organic Sales, and TACOS. Conversion Rate displays an unavailable dash because the existing metrics contract has no conversion denominator. ACOS and its warning remain in the second-row heading. Goals, budget history, date editing, notes formatting, and action completion remain functional. Export downloads the selected report as JSON; Save Weekly Report retains local auto-save. The first two panels are unchanged.
 
 ## Goal history and previous-week metric comparisons
 
@@ -30,7 +30,7 @@ Reporting-period cards summarize Spend, PPC Sales, PPC Order, and ACOS for the s
 
 ## Budget history, report controls, and multi-month timeline
 
-Each product/week report shows a compact budget-history table with `Date of Change`, `From`, and `To` columns. One entry is recorded when a Weekly limit edit is committed by blur or Enter; intermediate keystrokes do not create rows. Draft badges and the Save Draft button are hidden, while automatic saving and the primary Weekly Report/Save Changes control remain available.
+Each product/week report shows a compact budget-history table with `Date of Change`, `From`, and `To` columns. One entry is recorded when a Weekly limit edit is committed by blur or Enter; intermediate keystrokes do not create rows. Reporting-period Draft badges and the Save Draft button remain hidden. The Current Week Summary displays report status and the primary control is Save Weekly Report.
 
 The reporting-period picker supports multiple selected months across years, plus a one-click full-year selection. The timeline displays the unique Wednesday–Tuesday weeks that intersect a selected month, includes weeks crossing a month boundary, omits future weeks, and labels the header with the months actually covered.
 
