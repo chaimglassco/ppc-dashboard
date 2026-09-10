@@ -8,6 +8,8 @@ When Scale Insights supplies both campaign ID and sponsored type, the campaign n
 
 Campaign retrieval requires a campaign grouping capability explicitly advertised by the connected Scale Insights MCP schema. The application never substitutes ASIN aggregate totals for campaign rows. Missing capability and unreadable-row responses have separate safe UI messages and correlation IDs; server diagnostics contain only tool/schema names and response structure, never campaign values, user data, or credentials.
 
+The September 10 production contract check confirmed that the connected `get_ads_performance` tool has no campaign grouping input and that no dedicated campaign-reporting tool is advertised. Until that provider capability or another campaign-level source exists, the section displays a neutral capability notice without Retry because repeating the same request cannot produce campaign rows.
+
 ## Product performance AI assistant
 
 The PPC dashboard provides a compact bottom-right Performance AI widget whenever a product is selected. It answers questions using the selected ASIN/product, active reporting week, available previous week, every populated reporting period in the current month selection, weekly budget and Target ACOS, active goals, action items, saved notes, and live read-only Scale Insights MCP tools. Suggested questions cover summary, ACOS movement, and next priorities; users can also type free-form performance questions. Every answer must distinguish Partial, Final, and saved/manual values, identify whether facts came from Scale Insights or saved dashboard context, and acknowledge unavailable data rather than inventing it.

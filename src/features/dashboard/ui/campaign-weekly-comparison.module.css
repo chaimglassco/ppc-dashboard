@@ -10,6 +10,8 @@
 .stateMessage a, .stateMessage button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid #09090b; border-radius: 4px; background: #09090b; color: white; font: 600 11px/1.4 var(--font-workspace-sans), sans-serif; text-decoration: none; }
 .stateMessage button svg { width: 14px; height: 14px; }
 .errorState { border-color: #fecdd3; background: #fff1f2; color: #9f1239; }
+.capabilityState { border-color: #d4d4d8; background: #fafafa; color: #52525b; }
+.capabilityState .errorCopy strong { color: #27272a; }
 .errorCopy { display: grid; justify-items: center; gap: 3px; }
 .errorCopy strong { color: #881337; font: 700 12px/1.4 var(--font-workspace-sans), sans-serif; }
 .errorCopy small { margin-top: 3px; color: #71717a; font: 9px/1.4 var(--mono); }

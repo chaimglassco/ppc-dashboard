@@ -6,7 +6,7 @@ Reduced the campaign diagnostic to a verifiable Spend-baseline stage. When campa
 
 The live-provider adapter recognizes nested campaign/entity records, formatted Spend strings, `const`-based grouping choices, embedded JSON, and MCP text-table rows while preserving strict scope, identifier, and nonnegative-Spend validation.
 
-Added the production diagnostic gate after repeated live `502` responses showed that synthetic provider fixtures were insufficient. Campaign loading now stops before an aggregate call when the MCP schema does not advertise campaign grouping, distinguishes missing capability from unreadable rows, returns a safe correlation ID, and logs only redacted schema/response structure. The UI explains the specific condition and retains Retry. This diagnostic build still requires an approved deployment and one authenticated production retry before the exact live provider contract can be implemented or the feature can be declared working.
+Deployed the production diagnostic gate at commit `c68cdc9` and correlated authenticated request `7274368f-fc45-4e62-ab36-cd7d799273f1`. The live `get_ads_performance` schema has ASIN/date/ad-type/paging/sorting/summary inputs but no campaign grouping, and the connector advertises no dedicated campaign-reporting tool. Campaign loading correctly stops before an aggregate call. The current connection cannot provide the real campaign Spend rows needed for Stage 1, so the dashboard presents a neutral capability notice without a Retry loop. Enabling the comparison requires a future Scale Insights campaign-reporting capability or another campaign-level source.
 
 ## September 10, 2026 — Reference-based first-panel rebuild
 

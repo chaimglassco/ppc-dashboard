@@ -10,11 +10,10 @@ import styles from "./campaign-weekly-comparison.module.css";
 
 type BaselineLoadState = {
   key: string;
-  status: "idle" | "loading" | "authorization" | "ready" | "error";
+  status: "idle" | "loading" | "authorization" | "ready" | "unsupported" | "error";
   message: string;
   baseline?: CampaignSpendBaseline;
   authorizationUrl?: string;
-  errorCode?: string;
   requestId?: string;
 };
 
@@ -76,9 +75,16 @@ export function CampaignWeeklyComparison({ asin, country = "US", weekStart, refr
           const candidate = value && typeof value === "object"
             ? value as { error?: unknown; code?: unknown; requestId?: unknown }
             : {};
-          const message = candidate.code === "campaign_capability_missing"
-            ? "The connected Scale Insights integration does not expose campaign-level reporting. Weekly totals remain available."
-            : candidate.code === "campaign_rows_unreadable"
+          if (candidate.code === "campaign_capability_missing") {
+            setLoadState({
+              key: comparisonKey,
+              status: "unsupported",
+              message: "Scale Insights provides weekly ASIN totals through this connection, but its current reporting tools do not provide campaign-level rows.",
+              requestId: typeof candidate.requestId === "string" ? candidate.requestId : undefined,
+            });
+            return;
+          }
+          const message = candidate.code === "campaign_rows_unreadable"
               ? "Scale Insights returned a campaign report format this version cannot read."
               : typeof candidate.error === "string"
                 ? candidate.error
@@ -101,7 +107,6 @@ export function CampaignWeeklyComparison({ asin, country = "US", weekStart, refr
           key: comparisonKey,
           status: "error",
           message: error instanceof Error ? error.message : "Previous-week campaign Spend is unavailable.",
-          errorCode: providerError.code,
           requestId: providerError.requestId,
         });
       });
@@ -127,9 +132,17 @@ export function CampaignWeeklyComparison({ asin, country = "US", weekStart, refr
     {displayedState.status === "loading" ? <div className={styles.stateMessage} role="status"><RefreshCw className={styles.loadingIcon} aria-hidden="true" /><span>{displayedState.message}</span></div> : null}
     {displayedState.status === "idle" ? <div className={styles.stateMessage}><span>{displayedState.message}</span></div> : null}
     {displayedState.status === "authorization" ? <div className={styles.stateMessage}><span>{displayedState.message}</span><a href={displayedState.authorizationUrl}>Connect Scale Insights</a></div> : null}
+    {displayedState.status === "unsupported" ? <div className={`${styles.stateMessage} ${styles.capabilityState}`} role="status">
+      <span className={styles.errorCopy}>
+        <strong>Campaign-level data is unavailable from the connected Scale Insights tools</strong>
+        <span>{displayedState.message}</span>
+        <span>The comparison table can be enabled when the connection exposes campaign reporting or another campaign-level data source is added.</span>
+        {displayedState.requestId ? <small>Reference ID: {displayedState.requestId}</small> : null}
+      </span>
+    </div> : null}
     {displayedState.status === "error" ? <div className={`${styles.stateMessage} ${styles.errorState}`} role="alert">
       <span className={styles.errorCopy}>
-        <strong>{displayedState.errorCode === "campaign_capability_missing" ? "Campaign reporting is not available through this connection" : "Campaign Spend could not be loaded"}</strong>
+        <strong>Campaign Spend could not be loaded</strong>
         <span>{displayedState.message}</span>
         {displayedState.requestId ? <small>Reference ID: {displayedState.requestId}</small> : null}
       </span>

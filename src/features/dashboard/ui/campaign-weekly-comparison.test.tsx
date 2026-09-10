@@ -62,25 +62,23 @@ describe("CampaignWeeklyComparison Spend baseline", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 
-  it("offers safe authorization and retry states", async () => {
+  it("offers safe authorization and unsupported-capability states", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({ authorizationRequired: true, authorizationUrl: "https://vercel.com/api/v1/connect/authorize/scl_test" }) })
       .mockResolvedValueOnce({ ok: false, status: 502, json: async () => ({
         error: "Provider detail must stay hidden.",
         code: "campaign_capability_missing",
         requestId: "request-safe-123",
-      }) })
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ comparison: baselinePayload() }) });
+      }) });
     vi.stubGlobal("fetch", fetchMock);
     const view = render(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
     expect(await screen.findByRole("link", { name: "Connect Scale Insights" })).toHaveAttribute("href", "https://vercel.com/api/v1/connect/authorize/scl_test");
     view.rerender(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={1} />);
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("Campaign reporting is not available through this connection");
-    expect(alert).toHaveTextContent("The connected Scale Insights integration does not expose campaign-level reporting. Weekly totals remain available.");
-    expect(alert).toHaveTextContent("Reference ID: request-safe-123");
-    expect(alert).not.toHaveTextContent("Provider detail must stay hidden.");
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(await screen.findByText("Spend baseline")).toBeVisible();
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("Campaign-level data is unavailable from the connected Scale Insights tools");
+    expect(status).toHaveTextContent("Scale Insights provides weekly ASIN totals through this connection, but its current reporting tools do not provide campaign-level rows.");
+    expect(status).toHaveTextContent("Reference ID: request-safe-123");
+    expect(status).not.toHaveTextContent("Provider detail must stay hidden.");
+    expect(within(status).queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });
 });

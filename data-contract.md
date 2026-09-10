@@ -10,6 +10,8 @@ Provider campaign rows may be flat, nested under campaign/entity records, embedd
 
 The adapter calls advertising performance only when the live input schema explicitly exposes a campaign grouping choice. Missing capability returns no-store `502 { error, code: "campaign_capability_missing", requestId }` without making an aggregate request. A positive campaign result that cannot be normalized returns the same shape with `code: "campaign_rows_unreadable"`. The request ID correlates the safe browser error with sanitized server structure logs; raw provider values and account/user identifiers are never returned or logged.
 
+The verified September 10 production schema exposes `account_ref`, `ad_type`, `asin_list`, `count`, `country`, `days`, `end_date`, `mode`, `page`, `sort_by`, `sort_direction`, `start_date`, and `summary_only`. It has no campaign grouping property, and the connector advertises no campaign-reporting tool. Consequently, `campaign_capability_missing` is non-retryable until the provider contract changes; no campaign baseline DTO is created or cached.
+
 ## September 10 workspace presentation
 
 The workspace redesign consumes the existing version-1 report and performance cache. Conversion Rate has no stored field and displays unavailable; do not derive it without an appropriate denominator. The second row uses the existing ACOS and TACOS calculated fields. Action due-date controls read/write the existing actions[].dueDate field. The summary underline control inserts literal <u> markers into the existing plain-text notes field, like the existing bold/list markers; notes are never rendered as arbitrary raw HTML.

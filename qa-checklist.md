@@ -9,9 +9,9 @@
 - [ ] Open a campaign name and confirm the protected new tab is the exact Scale Insights campaign trend for its ID, sponsored type, and previous-period dates.
 - [ ] Switch products/weeks quickly and confirm stale responses never replace the active baseline. Refresh Data must reload the previous Spend request without creating browser-storage entries.
 - [ ] Verify loading, no-ASIN, no-campaign, hosted-consent, malformed-data, pagination warning, provider-error, and Retry states at desktop and mobile widths.
-- [ ] Supply a tool schema without campaign grouping and confirm no provider call occurs, the API returns `campaign_capability_missing` with a correlation ID, and the UI explains that weekly totals remain available.
+- [x] Supply a tool schema without campaign grouping and confirm no provider call occurs, the API returns `campaign_capability_missing` with a correlation ID, and the UI explains that weekly totals remain available.
 - [ ] Supply an unrecognized positive campaign response and confirm `campaign_rows_unreadable`; verify logs contain schema/property names, structural paths, counts, content types, and table headers without ASINs, campaign names/IDs, Spend values, user data, tokens, or raw payloads.
-- [ ] After the approved diagnostic deployment, trigger one authenticated production Retry, find both correlated diagnostic events in Vercel logs, and record the exact advertised campaign contract before changing the adapter.
+- [x] After the approved diagnostic deployment, trigger one authenticated production request, find both correlated diagnostic events in Vercel logs, and record the advertised contract. Reference `7274368f-fc45-4e62-ab36-cd7d799273f1` confirmed no campaign grouping input and no dedicated campaign-reporting tool.
 - [ ] Do not approve the final provider fix until production returns `200`, real previous-week campaign rows render, their Spend reconciles with Scale Insights for the same ASIN/dates, and no hydration or console errors occur.
 
 Use this checklist before merging or deploying changes.
