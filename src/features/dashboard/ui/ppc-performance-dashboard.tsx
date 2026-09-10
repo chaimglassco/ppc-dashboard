@@ -15,7 +15,7 @@ import {
   WEEKLY_GOAL_OPTIONS, weeklyGoalActualValue, weeklyGoalLabel, weeklyGoalUnit, type GoalDataState, type WeeklyGoal, type WeeklyGoalMetric, type WeeklyPpcReport,
 } from "../domain/ppc-dashboard-state";
 import {
-  PPC_DASHBOARD_CATALOG_STORAGE_KEY, createDashboardTagId, emptyDashboardCatalog, mergeDashboardProducts,
+  PPC_DASHBOARD_CATALOG_STORAGE_KEY, createDashboardTagId, emptyDashboardCatalog, mergeDashboardProducts, orderDashboardProductsByTag,
   parseDashboardCatalogStore, reorderVisibleProducts, type DashboardCatalogProduct, type DashboardCatalogStore, type ManagedDashboardProduct,
 } from "../domain/ppc-dashboard-catalog";
 import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfolio-panel";
@@ -277,17 +277,20 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const loadProducts = useCallback(async (signal?: AbortSignal) => {
     setProductsLoading(true);
     setProductsError("");
+    let nextProducts: DashboardProduct[] = [];
     try {
       const response = await fetch(withPpcBasePath("/api/dashboard/products"), { headers: getPipelineAuthorizationHeader(), cache: "no-store", signal });
       const value: unknown = await response.json();
       if (!response.ok || !value || typeof value !== "object") throw new Error("Could not load Pipeline products.");
       const candidates = (value as { products?: unknown }).products;
-      const nextProducts = Array.isArray(candidates) ? candidates as DashboardProduct[] : [];
+      nextProducts = Array.isArray(candidates) ? candidates as DashboardProduct[] : [];
       setPipelineProducts(nextProducts);
-      setSelectedProductId(current => current || nextProducts[0]?.id || "");
     } catch (error) {
       if ((error as Error).name !== "AbortError") setProductsError(error instanceof Error ? error.message : "Could not load Pipeline products.");
     } finally {
+      const storedCatalog = parseDashboardCatalogStore(window.localStorage.getItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY));
+      const orderedProducts = orderDashboardProductsByTag(mergeDashboardProducts(nextProducts, storedCatalog), storedCatalog.tags);
+      setSelectedProductId(current => current || orderedProducts[0]?.id || "");
       setProductsLoading(false);
     }
   }, []);
@@ -300,7 +303,6 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
       cacheRef.current = parsePerformanceCache(window.localStorage.getItem(PPC_PERFORMANCE_CACHE_KEY));
       setPerformanceCache(cacheRef.current);
       setCacheReady(true);
-      setSelectedProductId(current => current || storedCatalog.customProducts[0]?.id || "");
     }, 0);
     const controller = new AbortController();
     const productTimer = window.setTimeout(() => void loadProducts(controller.signal), 0);
@@ -359,7 +361,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [goalHistoryOpen, monthPickerOpen]);
 
-  const products = useMemo(() => mergeDashboardProducts(pipelineProducts, catalog), [catalog, pipelineProducts]);
+  const products = useMemo(() => orderDashboardProductsByTag(mergeDashboardProducts(pipelineProducts, catalog), catalog.tags), [catalog, pipelineProducts]);
   const weekStarts = useMemo(() => getSelectedMonthWeekStarts(selectedMonths, currentWeekStart), [currentWeekStart, selectedMonths]);
   const reportingMonthLabel = useMemo(() => formatReportingMonthRange(weekStarts), [weekStarts]);
   const activeWeekStart = weekStarts.includes(selectedWeekStart) ? selectedWeekStart : weekStarts[0] ?? selectedWeekStart;
@@ -664,7 +666,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         const isSelected = weekStart === activeWeekStart;
         return <button type="button" key={weekStart} aria-label={`${formatWeekRange(weekStart)} reporting period`} aria-pressed={isSelected} className={`${periods.periodCard} ${isSelected ? periods.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
           {isCurrent ? <span className={periods.currentBadge}>Current</span> : null}
-          <span className={periods.periodTop}><span className={periods.periodIdentity}><strong>{formatPeriodCardRange(weekStart)}</strong><span className={periods.periodMeta}>{isCurrent ? <><small>Week {getIsoWeekNumber(weekStart)}</small><i aria-hidden="true" /><span><Clock3 aria-hidden="true" />In Review</span></> : selectedProductTag ? <span className={periods.productTag}><Tag aria-hidden="true" />{selectedProductTag.name}</span> : <small>Week {getIsoWeekNumber(weekStart)}</small>}</span></span><span className={periods.statusChip}>{periodStatus}</span></span>
+          <span className={periods.periodTop}><span className={periods.periodIdentity}><strong>{formatPeriodCardRange(weekStart)}</strong><span className={periods.periodMeta}>{isCurrent ? <><small>Week {getIsoWeekNumber(weekStart)}</small><i aria-hidden="true" /><span><Clock3 aria-hidden="true" />In Review</span></> : selectedProductTag ? <span className={periods.productTag}><Tag aria-hidden="true" />{selectedProductTag.name}</span> : <small>Week {getIsoWeekNumber(weekStart)}</small>}</span></span><span className={`${periods.statusChip} ${isCurrent ? periods.partialStatus : ""}`}>{periodStatus}</span></span>
           <span className={periods.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>Sales</small><strong>{currency(periodReport?.ppcSales ?? 0)}</strong></span><span><small>Orders</small><strong>{periodReport?.ppcOrders ?? 0}</strong></span><span><small>ACoS</small><strong>{Math.round(periodReport?.acos ?? 0)}%</strong></span></span>
         </button>;
       })}</div>
@@ -673,7 +675,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     <main className={ws.workspace}>
       {!selectedProduct || !report ? <div className={ws.workspaceEmpty}><BarChart3 aria-hidden="true" /><h2>Select a product</h2><p>Choose a Pipeline product to start its weekly PPC documentation.</p></div> : <>
         <header className={ws.workspaceHeader}>
-          <div className={ws.workspaceProduct}>{selectedProduct.imageDataUrl ? <span className={ws.workspaceProductImage}><Image src={selectedProduct.imageDataUrl} alt={`${selectedProduct.name} product`} width={44} height={44} unoptimized /></span> : null}<div><span className={ws.eyebrow}>WEEKLY PPC PERFORMANCE</span><div className={ws.titleRow}><h2>{selectedProduct.name}</h2>{selectedProductTag ? <span>{selectedProductTag.name}</span> : null}</div><p className={ws.productIdentifiers}><span>ASIN: {selectedProduct.asin ? <a href={`https://www.amazon.com/dp/${encodeURIComponent(selectedProduct.asin)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product ASIN ${selectedProduct.asin} on Amazon`}>{selectedProduct.asin}</a> : <strong>N/A</strong>}</span><span>SKU: {selectedProduct.sku ? <a href={`https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=${encodeURIComponent(selectedProduct.sku)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product SKU ${selectedProduct.sku} in Seller Central`}>{selectedProduct.sku}</a> : <strong>N/A</strong>}</span>{previousReport && previousReport.totalSales > 0 ? <span className={ws.salesTrend}><TrendingUp />Sales {report.totalSales >= previousReport.totalSales ? "+" : "−"}{metricDeltaPercentage(report.totalSales, previousReport.totalSales)}% WoW</span> : null}</p></div></div>
+          <div className={ws.workspaceProduct}>{selectedProduct.imageDataUrl ? <span className={ws.workspaceProductImage}><Image src={selectedProduct.imageDataUrl} alt={`${selectedProduct.name} product`} width={44} height={44} unoptimized /></span> : null}<div><span className={ws.eyebrow}>WEEKLY PPC PERFORMANCE</span><div className={ws.titleRow}><h2>{selectedProduct.name}</h2></div><p className={ws.productIdentifiers}><span>ASIN: {selectedProduct.asin ? <a href={`https://www.amazon.com/dp/${encodeURIComponent(selectedProduct.asin)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product ASIN ${selectedProduct.asin} on Amazon`}>{selectedProduct.asin}</a> : <strong>N/A</strong>}</span><span>SKU: {selectedProduct.sku ? <a href={`https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=${encodeURIComponent(selectedProduct.sku)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product SKU ${selectedProduct.sku} in Seller Central`}>{selectedProduct.sku}</a> : <strong>N/A</strong>}</span>{previousReport && previousReport.totalSales > 0 ? <span className={ws.salesTrend}><TrendingUp />Sales {report.totalSales >= previousReport.totalSales ? "+" : "−"}{metricDeltaPercentage(report.totalSales, previousReport.totalSales)}% WoW</span> : null}</p></div></div>
           {selectedAsin ? <nav className={ws.asinNavigation} aria-label={`Scale Insights analysis for ASIN ${selectedAsin}`}>{PPC_ANALYSIS_COLUMNS.map(column => <div key={column.key} className={ws.asinNavigationColumn} role="group" aria-label={column.label}>{column.sections.map(section => <a key={section.slug} href={getScaleInsightsAnalysisHref(selectedAsin, section.slug, activeWeekStart, addDaysIso(activeWeekStart, 6))} target="_blank" rel="noopener noreferrer">{section.label}</a>)}</div>)}</nav> : null}
           <div className={ws.saveArea}><button type="button" className={ws.primaryButton} onClick={saveReport}><Save />Save Weekly Report</button><small className={dirty ? ws.unsaved : ws.saved}>{dirty ? saveNotice || "Saving changes…" : saveNotice || (report.updatedAt ? `Saved ${new Date(report.updatedAt).toLocaleString()}` : "Not saved yet")}</small></div>
         </header>

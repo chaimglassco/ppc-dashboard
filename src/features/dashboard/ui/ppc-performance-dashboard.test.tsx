@@ -85,7 +85,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(currentPeriod).getByText("Aug 26 – Sep 1, 2026")).toBeVisible();
     expect(within(currentPeriod).getByText("Week 35").parentElement?.className).toMatch(/periodMeta/);
     expect(within(currentPeriod).getByText("In Review")).toBeVisible();
-    expect(within(currentPeriod).getByText("Partial")).toBeVisible();
+    expect(within(currentPeriod).getByText("Current").className).toMatch(/currentBadge/);
+    expect(within(currentPeriod).getByText("Partial").className).toMatch(/partialStatus/);
     expect(within(currentPeriod).getByText("Sales")).toBeVisible();
     expect(within(currentPeriod).getByText("Orders")).toBeVisible();
     expect(within(currentPeriod).getByText("ACoS")).toBeVisible();
@@ -439,6 +440,35 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.change(dueDate, { target: { value: "2026-09-01" } });
     expect(dueDate).toHaveValue("2026-09-01");
   }, 15_000);
+
+  it("starts with the first priority-tag product and omits its tag beside the workspace title", async () => {
+    window.localStorage.setItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      tags: [{ id: "tag-comp", name: "Complementary" }, { id: "tag-lead", name: "Lead Came" }],
+      customProducts: [],
+      productOverrides: {
+        "product-comp": { name: "Plastic Fids", asin: "B000000002", sku: "PF-01", tagId: "tag-comp", imageDataUrl: "" },
+        "product-lead": { name: "Lead Nippers", asin: "B000000001", sku: "LN-01", tagId: "tag-lead", imageDataUrl: "" },
+      },
+      hiddenPipelineProductIds: [],
+    }));
+    vi.mocked(fetch).mockImplementation(async input => String(input).includes("/api/dashboard/performance?")
+      ? { ok: false, status: 503, json: async () => ({ error: "Unavailable" }) } as Response
+      : { ok: true, status: 200, json: async () => ({ products: [
+        { id: "product-comp", name: "Plastic Fids", asin: "B000000002", sku: "PF-01", stageId: "launch", status: "Active" },
+        { id: "product-lead", name: "Lead Nippers", asin: "B000000001", sku: "LN-01", stageId: "launch", status: "Active" },
+      ] }) } as Response);
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+
+    const workspaceTitle = await screen.findByRole("heading", { name: "Lead Nippers" });
+    expect(workspaceTitle.parentElement).toHaveTextContent(/^Lead Nippers$/);
+    const productsPanel = screen.getByRole("heading", { name: "Products" }).closest("aside")!;
+    const leadProduct = within(productsPanel).getByRole("button", { name: /Lead Nippers/ });
+    const complementaryProduct = within(productsPanel).getByRole("button", { name: /Plastic Fids/ });
+    expect(leadProduct.compareDocumentPosition(complementaryProduct) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(leadProduct).toHaveAttribute("aria-pressed", "true");
+  });
 
   it("shows the weekly save action without an export control", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);

@@ -1,5 +1,9 @@
 # Glassco Back Office Library — Architecture
 
+## Dashboard catalog presentation
+
+The merged Pipeline/local product array retains the existing validated `productOrderIds` contract, then receives a stable presentation sort by normalized tag name. The fixed priority is Lead Came, Complementary, Homasote Board, Shard Catcher, and Kiln Paper; equal-priority products retain their merged order. Tag changes select the first matching visible product through the filter event, so no derived-selection effect or storage migration is required.
+
 ## Campaign comparison boundary
 
 Authenticated `GET /ppc/api/dashboard/campaign-comparison` validates the ten-character ASIN, supported marketplace, and Wednesday week start. It caps the active range at yesterday UTC and gives the preceding week the same inclusive day count, preventing a partial week from being compared with seven completed days. The route uses the verified Pipeline user as the existing Vercel Connect subject and returns no-store success, hosted-consent, validation, configuration, and bounded provider-error responses. Campaign contract errors return a stable `campaign_capability_missing` or `campaign_rows_unreadable` code plus a random correlation ID.

@@ -1,5 +1,12 @@
 # QA Checklist
 
+## September 11 tag-filter and period-style checks
+
+- [x] In All Tags, confirm Lead Came products precede Complementary, Homasote Board, Shard Catcher, and Kiln Paper, with other/untagged products last and stable ordering inside each group.
+- [x] Change tag filters and confirm the first matching visible product becomes selected and drives Reporting Periods and workspace data immediately, including the All Tags reset.
+- [ ] Confirm Current is light blue, Partial is light red, and no tag badge appears beside the workspace product name at desktop and mobile widths.
+- [ ] Confirm product-card tags and previous-period tag metadata remain visible and keyboard product selection still works.
+
 ## Campaign week-over-week comparison
 
 - [ ] Select a completed week and confirm the table requests campaign data only for the immediately preceding Wednesday–Tuesday range.

@@ -162,15 +162,22 @@
   top: -8px;
   right: 12px;
   border-radius: 4px;
-  background: #000;
+  border: 1px solid #bfdbfe;
+  background: #dbeafe;
   padding: 2px 8px;
-  color: #fff;
+  color: #1d4ed8;
   font-family: var(--font-workspace-mono), Consolas, monospace;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: .08em;
   line-height: 1.35;
   text-transform: uppercase;
+}
+
+.statusChip.partialStatus {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
 }
 
 .periodTop {

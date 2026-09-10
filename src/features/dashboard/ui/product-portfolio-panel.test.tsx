@@ -28,6 +28,22 @@ it("exposes reorder handles only in edit mode and supports dropping and keyboard
   fireEvent.click(screen.getByRole("button", { name: "Exit product editing" }));
   expect(screen.queryByRole("button", { name: "Reorder First" })).not.toBeInTheDocument();
 });
+
+it("selects the first visible product whenever the tag filter changes", () => {
+  const selectProduct = vi.fn();
+  const tags = [{ id: "lead", name: "Lead Came" }, { id: "comp", name: "Complementary" }];
+  const products = [
+    { id: "lead-1", name: "Lead Nippers", asin: "B000000001", sku: "L1", stageId: "dashboard", status: "Active" as const, source: "dashboard" as const, tagId: "lead", imageDataUrl: "" },
+    { id: "comp-1", name: "Plastic Fids", asin: "B000000002", sku: "C1", stageId: "dashboard", status: "Active" as const, source: "dashboard" as const, tagId: "comp", imageDataUrl: "" },
+    { id: "comp-2", name: "Glazing Nails", asin: "B000000003", sku: "C2", stageId: "dashboard", status: "Active" as const, source: "dashboard" as const, tagId: "comp", imageDataUrl: "" },
+  ];
+  render(<ProductPortfolioPanel products={products} tags={tags} loading={false} error="" selectedProductId="lead-1" onSelectProduct={selectProduct} onRetry={vi.fn()} onCreateTag={() => ({ id: "", error: "" })} onSaveProduct={() => ""} onDeleteProduct={vi.fn()} />);
+
+  fireEvent.change(screen.getByRole("combobox", { name: "Filter products by tag" }), { target: { value: "comp" } });
+  expect(selectProduct).toHaveBeenLastCalledWith("comp-1");
+  fireEvent.change(screen.getByRole("combobox", { name: "Filter products by tag" }), { target: { value: "all" } });
+  expect(selectProduct).toHaveBeenLastCalledWith("lead-1");
+});
 const image = "data:image/jpeg;base64,/9j/";
 function openForm() {
   const save = vi.fn(() => "");

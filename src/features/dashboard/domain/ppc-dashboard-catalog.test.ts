@@ -1,7 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { mergeDashboardProducts, parseDashboardCatalogStore, reorderVisibleProducts } from "./ppc-dashboard-catalog";
+import { mergeDashboardProducts, orderDashboardProductsByTag, parseDashboardCatalogStore, reorderVisibleProducts } from "./ppc-dashboard-catalog";
 
 describe("PPC dashboard catalog", () => {
+  it("groups the All Tags catalog in the requested tag order while preserving order inside each group", () => {
+    const tags = [
+      { id: "kiln", name: "Kiln Paper" }, { id: "lead", name: "Lead Came" }, { id: "shard", name: "Shard Catcher" },
+      { id: "comp", name: "Complementary" }, { id: "board", name: "Homasote Board" },
+    ];
+    const products = [
+      ["unknown", ""], ["kiln-1", "kiln"], ["lead-1", "lead"], ["comp-1", "comp"],
+      ["lead-2", "lead"], ["board-1", "board"], ["shard-1", "shard"],
+    ].map(([id, tagId]) => ({ id, name: id, asin: "", sku: "", stageId: "dashboard", status: "Active" as const, source: "dashboard" as const, tagId, imageDataUrl: "" }));
+
+    expect(orderDashboardProductsByTag(products, tags).map(product => product.id)).toEqual([
+      "lead-1", "lead-2", "comp-1", "board-1", "shard-1", "kiln-1", "unknown",
+    ]);
+  });
+
   it("reorders filtered products without shifting unrelated product slots", () => {
     expect(reorderVisibleProducts(["a", "x", "b", "y", "c"], ["a", "b", "c"], "c", "a")).toEqual(["c", "x", "a", "y", "b"]);
     expect(reorderVisibleProducts(["a", "b"], ["a", "b"], "missing", "a")).toEqual(["a", "b"]);

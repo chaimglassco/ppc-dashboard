@@ -1,5 +1,9 @@
 # Deployment Guide
 
+## September 11 dashboard presentation release
+
+This release changes only client presentation and selection state. It adds no environment variables, hosted dependency, API contract, or browser-storage migration. After deployment, verify All Tags ordering, automatic first-product selection for every tag filter, Current/Partial badge colors, and the absence of the workspace-title tag badge using a real populated catalog.
+
 ## Campaign comparison release
 
 This release adds authenticated `GET /ppc/api/dashboard/campaign-comparison` and uses the existing Scale Insights Vercel Connect attachment, Pipeline identity, and MCP endpoint. It adds no environment variable, database migration, or browser-storage migration. Deploy only the Library/PPC project after approval.

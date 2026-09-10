@@ -1,5 +1,9 @@
 # Glassco Back Office Library — Product Specification
 
+## September 11 dashboard catalog behavior
+
+The All Tags product view groups products in this order: Lead Came, Complementary, Homasote Board, Shard Catcher, Kiln Paper, then every other or untagged product. Existing saved order is preserved inside each group. Changing the tag filter selects the first product matching that tag and the active search, immediately updating Reporting Periods and the workspace. The current-period badge uses light blue, Partial uses light red, and the workspace product title no longer repeats the product tag.
+
 ## Campaign week-over-week comparison
 
 Below the Previous and Current Week Summary cards, Stage 1 of Campaign Week-over-Week Comparison loads only the selected ASIN's previous matched reporting period from Scale Insights. It extracts campaign display name and Spend, plus campaign ID and sponsored type when the provider supplies them. The table is sorted by previous-week Spend, shows ten campaigns first with Show all when needed, and contains Campaign, Previous Week Spend, and Current Week Spend columns. Current Week Spend intentionally displays a blank dash until the next stage is implemented.

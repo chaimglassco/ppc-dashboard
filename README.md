@@ -1,5 +1,9 @@
 # Glassco Team SOP Library and PPC Dashboard
 
+## Dashboard catalog update (September 11, 2026)
+
+All Tags groups PPC products by Lead Came, Complementary, Homasote Board, Shard Catcher, and Kiln Paper before other products. Switching tag filters automatically selects the first matching product and updates the reporting/workspace panels. Current and Partial period badges use light blue and light red respectively, and the workspace title omits the redundant product-tag badge.
+
 ## Dashboard reference redesign (September 10, 2026)
 
 The dashboard workspace follows the supplied HTML reference across all three panels. Products is a fixed 300px white column with a compact title/count row, one plus-button action menu, search and tag controls, neutral product cards, and a solid-black selected card. Reporting Periods is a 340px white column with an integrated month navigator, neutral period cards, abbreviated ranges, and a black selected-card treatment. The workspace places Strategic Weekly Goals and Budget Utilization above two five-card performance rows, paired summaries, a campaign week-over-week diagnostic, and action items. Total Orders follows Organic Orders; ACOS and TACOS sit together; Conversion Rate follows Total Sales and shows an unavailable dash until a valid source exists. Planning and catalog edits still save only in this browser.

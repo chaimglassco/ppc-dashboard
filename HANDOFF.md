@@ -1,6 +1,13 @@
 # Glassco PPC Dashboard Handoff
 
-Last updated: September 10, 2026
+Last updated: September 11, 2026
+
+## September 11, 2026 — tag-driven product selection
+
+- All Tags applies a stable display priority of Lead Came, Complementary, Homasote Board, Shard Catcher, Kiln Paper, then remaining/untagged products. The existing saved product order remains the tie-breaker inside each group, and the browser-storage schema is unchanged.
+- Changing the tag filter immediately selects the first product matching the selected tag and current search so Reporting Periods and workspace data switch with it. Initial loading also selects the first product from the ordered merged catalog.
+- Current is light blue, Partial is light red, and the workspace product name no longer repeats its tag badge. The product cards and prior-period tag metadata retain their existing tags.
+- Lint, typecheck, all 310 tests across 51 files (6 skipped), production build, and `git diff --check` pass. Local browser verification used a deliberately scrambled six-product catalog and confirmed the exact tag grouping, initial and filter-driven selection, `rgb(219, 234, 254)` Current background, `rgb(255, 241, 242)` Partial background, no redundant title tag, no page overflow, and no hydration or console errors.
 
 ## September 10, 2026 — campaign week-over-week comparison
 

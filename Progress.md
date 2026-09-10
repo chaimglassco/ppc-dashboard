@@ -1,5 +1,9 @@
 # Project Progress
 
+## September 11, 2026 — Tag-driven product selection
+
+The All Tags catalog now groups products as Lead Came, Complementary, Homasote Board, Shard Catcher, Kiln Paper, then all remaining tags and untagged products while retaining saved order inside each group. Every tag-filter change selects the first visible matching product so its reporting periods and workspace data appear immediately. The reporting-period Current badge is light blue, Partial is light red, and the workspace heading no longer repeats the selected product tag. No storage schema changed.
+
 ## September 10, 2026 — Campaign week-over-week comparison
 
 Reduced the campaign diagnostic to a verifiable Spend-baseline stage. When campaign grouping is available, the server makes one Scale Insights request for the previous matched period and requires campaign name and Spend; campaign ID and sponsored type are optional. The table sorts those campaigns by Spend, shows ten first with Show all, and leaves Current Week Spend as an explicit pending dash. Loading, freshness, warning, consent, retry, provider failure, empty, stale-request, Refresh Data, protected trend links, and memory-only caching remain included. Current-period retrieval, deltas, Sales/Orders, and mover grouping are deferred until this first live source is confirmed.

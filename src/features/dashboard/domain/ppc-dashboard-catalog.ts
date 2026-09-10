@@ -30,6 +30,8 @@ export type ManagedDashboardProduct = DashboardProduct & {
   imageDataUrl: string;
 };
 
+const TAG_DISPLAY_PRIORITY = ["lead came", "complementary", "homasote board", "shard catcher", "kiln paper"];
+
 export function emptyDashboardCatalog(): DashboardCatalogStore {
   return { version: 1, tags: [], customProducts: [], productOverrides: {}, hiddenPipelineProductIds: [] };
 }
@@ -148,6 +150,16 @@ export function mergeDashboardProducts(pipelineProducts: DashboardProduct[], cat
   });
   const positions = new Map((catalog.productOrderIds ?? []).map((id, index) => [id, index]));
   return [...catalog.customProducts, ...imported].sort((a, b) => (positions.get(a.id) ?? Infinity) - (positions.get(b.id) ?? Infinity));
+}
+
+export function orderDashboardProductsByTag(products: ManagedDashboardProduct[], tags: DashboardTag[]): ManagedDashboardProduct[] {
+  const tagNames = new Map(tags.map(tag => [tag.id, tag.name.trim().toLocaleLowerCase()]));
+  const priority = new Map(TAG_DISPLAY_PRIORITY.map((name, index) => [name, index]));
+  return products.map((product, index) => ({ product, index })).sort((first, second) => {
+    const firstPriority = priority.get(tagNames.get(first.product.tagId) ?? "") ?? TAG_DISPLAY_PRIORITY.length;
+    const secondPriority = priority.get(tagNames.get(second.product.tagId) ?? "") ?? TAG_DISPLAY_PRIORITY.length;
+    return firstPriority - secondPriority || first.index - second.index;
+  }).map(({ product }) => product);
 }
 
 // Reorder visible slots only so a tag/search filter never moves unrelated products.

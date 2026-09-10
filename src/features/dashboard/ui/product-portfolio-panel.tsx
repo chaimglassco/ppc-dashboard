@@ -43,6 +43,12 @@ function productImage(file: File) {
   });
 }
 
+function productMatchesFilters(product: ManagedDashboardProduct, filter: string, query: string, tagById: Map<string, DashboardTag>) {
+  const matchesTag = filter === "all" || (filter === "untagged" ? !product.tagId : product.tagId === filter);
+  const haystack = `${product.name} ${product.asin} ${product.sku} ${tagById.get(product.tagId)?.name ?? ""}`.toLocaleLowerCase();
+  return matchesTag && (!query || haystack.includes(query));
+}
+
 export function ProductPortfolioPanel({ products, tags, loading, error, selectedProductId, onSelectProduct, onRetry, onCreateTag, onSaveProduct, onDeleteProduct, onReorderProducts }: Props) {
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("all");
@@ -105,10 +111,14 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
 
   const tagById = useMemo(() => new Map(tags.map(tag => [tag.id, tag])), [tags]);
   const filteredProducts = useMemo(() => products.filter(product => {
-    const matchesTag = tagFilter === "all" || (tagFilter === "untagged" ? !product.tagId : product.tagId === tagFilter);
-    const haystack = `${product.name} ${product.asin} ${product.sku} ${tagById.get(product.tagId)?.name ?? ""}`.toLocaleLowerCase();
-    return matchesTag && (!deferredSearch || haystack.includes(deferredSearch));
+    return productMatchesFilters(product, tagFilter, deferredSearch, tagById);
   }), [deferredSearch, products, tagById, tagFilter]);
+  const changeTagFilter = (nextFilter: string) => {
+    setTagFilter(nextFilter);
+    const query = search.trim().toLocaleLowerCase();
+    const firstProduct = products.find(product => productMatchesFilters(product, nextFilter, query, tagById));
+    if (firstProduct) onSelectProduct(firstProduct.id);
+  };
   const moveProduct = (sourceId: string, targetId: string) => {
     if (!editMode || !onReorderProducts || sourceId === targetId) return;
     const error = onReorderProducts(sourceId, targetId, filteredProducts.map(product => product.id));
@@ -188,7 +198,7 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
       <div className={styles.headingRow}><div className={styles.headingTitle}><h1 id="products-heading">Products</h1><span className={styles.count}>{products.length}</span></div><div className={styles.actionsMenu}><button type="button" className={styles.actionsTrigger} aria-label="Product actions" aria-expanded={actionsOpen} onClick={() => setActionsOpen(current => !current)}><Plus aria-hidden="true" /></button>{actionsOpen ? <div className={styles.actionsMenuPanel}><button type="button" onClick={() => { setActionsOpen(false); openCreateProduct(); }}><Plus aria-hidden="true" />Add product</button><button type="button" onClick={() => { setActionsOpen(false); setTagError(""); setTagDialogOpen(true); }}><Tag aria-hidden="true" />Add tag</button><button type="button" aria-pressed={editMode} onClick={() => { setActionsOpen(false); setEditMode(current => !current); }}>{editMode ? <Eye aria-hidden="true" /> : <Pencil aria-hidden="true" />}{editMode ? "Exit product editing" : "Enable product editing"}</button></div> : null}</div></div>
       <label className={styles.search}><Search aria-hidden="true" /><span className="sr-only">Search products</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search products..." /></label>
       <div className={styles.tagControls}>
-        <label><span className="sr-only">Filter products by tag</span><Tag aria-hidden="true" /><select aria-label="Filter products by tag" value={tagFilter} onChange={event => setTagFilter(event.target.value)}><option value="all">All tags</option><option value="untagged">Untagged</option>{tags.map(tag => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label>
+        <label><span className="sr-only">Filter products by tag</span><Tag aria-hidden="true" /><select aria-label="Filter products by tag" value={tagFilter} onChange={event => changeTagFilter(event.target.value)}><option value="all">All tags</option><option value="untagged">Untagged</option>{tags.map(tag => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label>
       </div>
     </div>
 

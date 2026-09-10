@@ -1,5 +1,9 @@
 # Data Contract
 
+## September 11 product ordering
+
+No stored catalog fields changed. `glassco.ppcDashboardCatalog.v1.productOrderIds` remains the manual order source; the All Tags panel applies a stable display-only tag priority over that order. Tag filtering and its automatic first-product selection remain transient React state and are not persisted.
+
 ## Campaign week-over-week comparison
 
 `GET /ppc/api/dashboard/campaign-comparison?asin=<ASIN>&country=<marketplace>&weekStart=<Wednesday>` accepts the same normalized ASIN, marketplace, and week-start rules as weekly performance. The server derives `currentStartDate`, an end date capped at yesterday UTC, `previousStartDate = currentStartDate - 7 days`, and a previous end date with the same inclusive day count. Future/no-completed-day weeks return no-store `404`. Pipeline authentication, stable-user Vercel Connect consent, HTTPS MCP transport, timeout, configuration, and bounded-error behavior match the weekly performance route.
