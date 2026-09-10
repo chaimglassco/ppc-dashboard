@@ -1,5 +1,6 @@
 import { addDaysIso } from "@/features/dashboard/domain/ppc-dashboard-state";
 import { ScaleInsightsDataError, type ScaleInsightsWeeklyPerformanceParams } from "@/features/dashboard/data/scale-insights-performance";
+import { ScaleInsightsCampaignProviderError } from "@/features/dashboard/data/scale-insights-campaign-comparison";
 import {
   getScaleInsightsCampaignSpendBaseline,
   ScaleInsightsAuthorizationRequiredError,
@@ -14,8 +15,8 @@ export const dynamic = "force-dynamic";
 const SUPPORTED_MARKETPLACES = new Set(["US", "CA", "MX", "UK", "DE", "FR", "IT", "ES", "NL", "JP", "SG", "AU"]);
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
 
-function errorResponse(error: string, status: number) {
-  return Response.json({ error }, { status, headers: NO_STORE_HEADERS });
+function errorResponse(error: string, status: number, details?: { code: string; requestId: string }) {
+  return Response.json({ error, ...details }, { status, headers: NO_STORE_HEADERS });
 }
 
 function isIsoDate(value: string) {
@@ -41,6 +42,7 @@ function inclusiveDayCount(startDate: string, endDate: string) {
 }
 
 export async function GET(request: Request) {
+  const requestId = crypto.randomUUID();
   const verified = await verifyPipelineRequest(request);
   if (verified instanceof Response) return verified;
   if (!verified.user.id) return errorResponse("The verified Pipeline user is missing a stable identity.", 503);
@@ -77,7 +79,7 @@ export async function GET(request: Request) {
       userId: verified.user.id,
       issuer: getPipelineOrigin(),
       callbackUrl: new URL(withPpcBasePath("/dashboard"), request.url).toString(),
-    });
+    }, { requestId });
     if (dataState === "Partial") {
       comparison.warnings = [
         ...comparison.warnings,
@@ -94,6 +96,9 @@ export async function GET(request: Request) {
       }, { status: 409, headers: NO_STORE_HEADERS });
     }
     if (error instanceof ScaleInsightsConfigurationError) return errorResponse("Scale Insights is not configured for campaign comparison on this server.", 503);
+    if (error instanceof ScaleInsightsCampaignProviderError) {
+      return errorResponse(error.message, 502, { code: error.campaignCode, requestId });
+    }
     if (error instanceof ScaleInsightsDataError) return errorResponse(error.message, error.code === "no_data" ? 404 : 502);
     return errorResponse("Scale Insights campaign comparison is temporarily unavailable.", 502);
   }

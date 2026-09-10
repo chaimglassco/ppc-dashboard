@@ -9,7 +9,15 @@ vi.mock("@/features/dashboard/data/scale-insights-server", () => {
     constructor(readonly authorizationUrl: string) { super("authorization required"); }
   }
   class ScaleInsightsConfigurationError extends Error {}
-  return { getScaleInsightsCampaignSpendBaseline: vi.fn(), ScaleInsightsAuthorizationRequiredError, ScaleInsightsConfigurationError };
+  class ScaleInsightsCampaignProviderError extends Error {
+    constructor(readonly campaignCode: string, message: string) { super(message); }
+  }
+  return {
+    getScaleInsightsCampaignSpendBaseline: vi.fn(),
+    ScaleInsightsAuthorizationRequiredError,
+    ScaleInsightsConfigurationError,
+    ScaleInsightsCampaignProviderError,
+  };
 });
 
 import {
@@ -17,6 +25,7 @@ import {
   ScaleInsightsAuthorizationRequiredError,
   ScaleInsightsConfigurationError,
 } from "@/features/dashboard/data/scale-insights-server";
+import { ScaleInsightsCampaignProviderError } from "@/features/dashboard/data/scale-insights-campaign-comparison";
 import { verifyPipelineRequest } from "@/lib/pipeline-auth-server";
 import { GET, parseCampaignComparisonQuery } from "./route";
 
@@ -48,7 +57,9 @@ describe("campaign comparison API", () => {
       asin: "B012345678", country: "US",
       previousStartDate: "2026-08-26", previousEndDate: "2026-08-30",
       currentStartDate: "2026-09-02", currentEndDate: "2026-09-06", dataState: "Partial",
-    }, expect.objectContaining({ userId: "pipeline-user-1", issuer: "https://glasscopipeline.vercel.app" }));
+    }, expect.objectContaining({ userId: "pipeline-user-1", issuer: "https://glasscopipeline.vercel.app" }), {
+      requestId: expect.any(String),
+    });
     const body = await response.json();
     expect(body.comparison.warnings).toEqual([expect.stringContaining("Matched partial comparison")]);
   });
@@ -60,7 +71,7 @@ describe("campaign comparison API", () => {
     expect(getScaleInsightsCampaignSpendBaseline).toHaveBeenCalledWith(expect.objectContaining({
       previousStartDate: "2026-08-26", previousEndDate: "2026-09-01",
       currentStartDate: "2026-09-02", currentEndDate: "2026-09-08", dataState: "Final",
-    }), expect.anything());
+    }), expect.anything(), { requestId: expect.any(String) });
   });
 
   it("normalizes and validates the query", () => {
@@ -95,5 +106,20 @@ describe("campaign comparison API", () => {
     response = await GET(new Request(requestUrl));
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({ error: "Scale Insights is not configured for campaign comparison on this server." });
+  });
+
+  it("returns a stable provider code and correlation ID for an unsupported campaign contract", async () => {
+    vi.mocked(getScaleInsightsCampaignSpendBaseline).mockRejectedValue(new ScaleInsightsCampaignProviderError(
+      "campaign_capability_missing",
+      "The connected Scale Insights integration does not expose campaign-level reporting.",
+    ));
+    const response = await GET(new Request(requestUrl));
+    expect(response.status).toBe(502);
+    expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
+    await expect(response.json()).resolves.toEqual({
+      error: "The connected Scale Insights integration does not expose campaign-level reporting.",
+      code: "campaign_capability_missing",
+      requestId: expect.any(String),
+    });
   });
 });

@@ -30,6 +30,20 @@ export type ScaleInsightsCampaignToolCapabilities = {
   cursorKey?: string;
 };
 
+export type CampaignProviderErrorCode = "campaign_capability_missing" | "campaign_rows_unreadable";
+
+export class ScaleInsightsCampaignProviderError extends ScaleInsightsDataError {
+  constructor(public readonly campaignCode: CampaignProviderErrorCode, message: string) {
+    super("invalid_response", message);
+    this.name = "ScaleInsightsCampaignProviderError";
+  }
+}
+
+export type CampaignDiagnosticReporter = (
+  event: CampaignProviderErrorCode | "campaign_tool_contract",
+  details: Record<string, unknown>,
+) => void;
+
 type ProviderCampaign = {
   campaignId: string;
   sponsoredType: number;
@@ -82,9 +96,115 @@ const ORDERS_KEYS = [
   "total_orders", "orders", "PPCOrders", "ppc_orders", "PpcOrders", "ppcOrders", "order_count", "orderCount",
   "attributed_orders", "attributedOrders", "Orders",
 ];
+const MUTATING_TOOL_NAME = /(create|update|delete|remove|change|adjust|pause|enable|disable|set|write|save|launch|apply)/i;
+const READ_ONLY_TOOL_NAME = /^(get|list|read|search|fetch|query|find|analy[sz]e|compare)|performance|report|insight|trend/i;
+const SENSITIVE_SCHEMA_KEY = /(account|customer|profile|user|email|token|auth|secret|credential|asin|campaign.?id)/i;
+const STRUCTURAL_RESPONSE_KEYS = new Set([
+  "agg", "content", "structuredcontent", "type", "text", "rows", "row", "data", "items", "results", "records",
+  "oppmeta", "meta", "metadata", "totals", "summary", "country", "startdate", "enddate", "currency", "totalcount",
+  "nextcursor", "cursor", "campaigns", "campaign", "metrics", "spend", "cost", "ppccost", "totalspend", "campaignname",
+  "campaignid", "sponsoredtype", "adtype", "name", "id", "sales", "orders",
+]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function boundedKeys(value: Record<string, unknown>) {
+  return Object.keys(value).toSorted().slice(0, 50);
+}
+
+function structuralResponseKeys(value: Record<string, unknown>) {
+  const safe = Object.keys(value).filter(key => STRUCTURAL_RESPONSE_KEYS.has(normalizedKey(key))).toSorted().slice(0, 50);
+  return safe.length === Object.keys(value).length ? safe : [...safe, "<redacted-dynamic-keys>"];
+}
+
+function boundedSchemaStrings(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((candidate): candidate is string | number | boolean => ["string", "number", "boolean"].includes(typeof candidate))
+    .map(candidate => String(candidate).slice(0, 80))
+    .slice(0, 30);
+}
+
+export function getReadOnlyScaleInsightsToolNames(definitions: Array<{ name: string; description?: string }>) {
+  return definitions
+    .filter(definition => {
+      const searchable = `${definition.name} ${definition.description || ""}`;
+      return !MUTATING_TOOL_NAME.test(searchable) && READ_ONLY_TOOL_NAME.test(searchable);
+    })
+    .map(definition => definition.name)
+    .toSorted();
+}
+
+export function summarizeCampaignToolSchema(inputSchema: unknown) {
+  const properties = isRecord(inputSchema) && isRecord(inputSchema.properties) ? inputSchema.properties : {};
+  const choices: Record<string, string[]> = {};
+  for (const [key, candidate] of Object.entries(properties)) {
+    if (!isRecord(candidate)) continue;
+    if (SENSITIVE_SCHEMA_KEY.test(key)) continue;
+    const values = [
+      ...boundedSchemaStrings(candidate.enum),
+      ...(candidate.const === undefined ? [] : [String(candidate.const).slice(0, 80)]),
+      ...[...(Array.isArray(candidate.oneOf) ? candidate.oneOf : []), ...(Array.isArray(candidate.anyOf) ? candidate.anyOf : [])]
+        .flatMap(option => isRecord(option)
+          ? [...boundedSchemaStrings(option.enum), ...(option.const === undefined ? [] : [String(option.const).slice(0, 80)])]
+          : []),
+    ];
+    if (values.length) choices[key] = [...new Set(values)].slice(0, 30);
+  }
+  return { propertyNames: boundedKeys(properties), choices };
+}
+
+type ProviderShapeSummary = {
+  objectPaths: Array<{ path: string; keys: string[] }>;
+  arrayPaths: Array<{ path: string; length: number; itemKeys: string[] }>;
+  contentTypes: string[];
+  markdownHeaders: string[][];
+};
+
+function collectProviderShape(value: unknown, path: string, depth: number, summary: ProviderShapeSummary) {
+  if (depth > 4 || summary.objectPaths.length + summary.arrayPaths.length >= 80) return;
+  if (Array.isArray(value)) {
+    const firstRecord = value.find(isRecord);
+    summary.arrayPaths.push({ path, length: value.length, itemKeys: firstRecord ? boundedKeys(firstRecord) : [] });
+    if (firstRecord) collectProviderShape(firstRecord, `${path}[]`, depth + 1, summary);
+    return;
+  }
+  if (!isRecord(value)) return;
+  summary.objectPaths.push({ path, keys: path.endsWith("[]") ? boundedKeys(value) : structuralResponseKeys(value) });
+  for (const [key, candidate] of Object.entries(value)) {
+    if (isRecord(candidate) || Array.isArray(candidate)) {
+      const pathSegment = STRUCTURAL_RESPONSE_KEYS.has(normalizedKey(key)) ? key : "<redacted>";
+      collectProviderShape(candidate, `${path}.${pathSegment}`, depth + 1, summary);
+    }
+  }
+}
+
+function getMarkdownHeaders(text: string) {
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const headers: string[][] = [];
+  for (let index = 0; index < lines.length - 1 && headers.length < 5; index += 1) {
+    if (!lines[index].includes("|") || !lines[index + 1].includes("|")) continue;
+    const cells = lines[index].replace(/^\||\|$/g, "").split("|").map(value => value.trim().slice(0, 80));
+    const separator = lines[index + 1].replace(/^\||\|$/g, "").split("|").map(value => value.trim());
+    if (cells.length >= 2 && separator.length === cells.length && separator.every(value => /^:?-{3,}:?$/.test(value))) headers.push(cells);
+  }
+  return headers;
+}
+
+export function summarizeCampaignProviderResponse(result: unknown) {
+  const summary: ProviderShapeSummary = { objectPaths: [], arrayPaths: [], contentTypes: [], markdownHeaders: [] };
+  collectProviderShape(result, "$", 0, summary);
+  if (isRecord(result) && Array.isArray(result.content)) {
+    for (const block of result.content) {
+      if (!isRecord(block)) continue;
+      const type = typeof block.type === "string" ? block.type.slice(0, 40) : "unknown";
+      if (!summary.contentTypes.includes(type)) summary.contentTypes.push(type);
+      if (type === "text" && typeof block.text === "string") summary.markdownHeaders.push(...getMarkdownHeaders(block.text));
+    }
+  }
+  return summary;
 }
 
 function stringValue(value: unknown) {
@@ -250,7 +370,14 @@ function assertScope(payload: Record<string, unknown>, country: string, startDat
   }
 }
 
-function parseProviderPage(result: unknown, country: string, startDate: string, endDate: string, metricSelection: CampaignMetricSelection): ProviderPage {
+function parseProviderPage(
+  result: unknown,
+  country: string,
+  startDate: string,
+  endDate: string,
+  metricSelection: CampaignMetricSelection,
+  reportDiagnostic?: CampaignDiagnosticReporter,
+): ProviderPage {
   const payload = unwrapScaleInsightsPayload(result);
   assertScope(payload, country, startDate, endDate);
   const scope = providerScope(payload);
@@ -259,7 +386,15 @@ function parseProviderPage(result: unknown, country: string, startDate: string, 
   if (!campaigns.length) campaigns.push(...collectMcpContentRows(result, metricSelection));
   const totalCount = numberOrNull(metadata.total_count ?? metadata.totalCount ?? metadata.TotalCount);
   if (totalCount != null && totalCount > 0 && campaigns.length === 0) {
-    throw new ScaleInsightsDataError("invalid_response", "Scale Insights returned campaign results without readable campaign rows.");
+    reportDiagnostic?.("campaign_rows_unreadable", {
+      period: { startDate, endDate },
+      resultCount: totalCount,
+      responseShape: summarizeCampaignProviderResponse(result),
+    });
+    throw new ScaleInsightsCampaignProviderError(
+      "campaign_rows_unreadable",
+      "Scale Insights returned a campaign report format this version cannot read.",
+    );
   }
   return {
     campaigns,
@@ -340,6 +475,7 @@ async function loadProviderPeriod(
   callTool: ScaleInsightsToolCaller,
   capabilities: ScaleInsightsCampaignToolCapabilities,
   metricSelection: CampaignMetricSelection = "all",
+  reportDiagnostic?: CampaignDiagnosticReporter,
 ): Promise<ProviderPeriod> {
   const campaigns = new Map<string, ProviderCampaign>();
   const warnings: string[] = [];
@@ -365,7 +501,14 @@ async function loadProviderPeriod(
     if (capabilities.pageKey) args[capabilities.pageKey] = pageNumber;
     if (capabilities.cursorKey && cursor) args[capabilities.cursorKey] = cursor;
 
-    const providerPage = parseProviderPage(await callTool("get_ads_performance", args), country, startDate, endDate, metricSelection);
+    const providerPage = parseProviderPage(
+      await callTool("get_ads_performance", args),
+      country,
+      startDate,
+      endDate,
+      metricSelection,
+      reportDiagnostic,
+    );
     currency = providerPage.currency || currency;
     dataAsOf = providerPage.dataAsOf || dataAsOf;
     totalCount = providerPage.totalCount ?? totalCount;
@@ -396,10 +539,18 @@ export async function loadScaleInsightsCampaignComparison(
   params: ScaleInsightsCampaignComparisonParams,
   callTool: ScaleInsightsToolCaller,
   capabilities: ScaleInsightsCampaignToolCapabilities = {},
+  reportDiagnostic?: CampaignDiagnosticReporter,
 ): Promise<CampaignWeeklyComparison> {
+  if (!capabilities.grouping) {
+    reportDiagnostic?.("campaign_capability_missing", { capabilities });
+    throw new ScaleInsightsCampaignProviderError(
+      "campaign_capability_missing",
+      "The connected Scale Insights integration does not expose campaign-level reporting.",
+    );
+  }
   const [previous, current] = await Promise.all([
-    loadProviderPeriod(params.asin, params.country, params.previousStartDate, params.previousEndDate, callTool, capabilities),
-    loadProviderPeriod(params.asin, params.country, params.currentStartDate, params.currentEndDate, callTool, capabilities),
+    loadProviderPeriod(params.asin, params.country, params.previousStartDate, params.previousEndDate, callTool, capabilities, "all", reportDiagnostic),
+    loadProviderPeriod(params.asin, params.country, params.currentStartDate, params.currentEndDate, callTool, capabilities, "all", reportDiagnostic),
   ]);
   const keys = new Set([...previous.campaigns.keys(), ...current.campaigns.keys()]);
   const campaigns = [...keys].map(key => {
@@ -437,7 +588,15 @@ export async function loadScaleInsightsCampaignSpendBaseline(
   params: ScaleInsightsCampaignComparisonParams,
   callTool: ScaleInsightsToolCaller,
   capabilities: ScaleInsightsCampaignToolCapabilities = {},
+  reportDiagnostic?: CampaignDiagnosticReporter,
 ): Promise<CampaignSpendBaseline> {
+  if (!capabilities.grouping) {
+    reportDiagnostic?.("campaign_capability_missing", { capabilities });
+    throw new ScaleInsightsCampaignProviderError(
+      "campaign_capability_missing",
+      "The connected Scale Insights integration does not expose campaign-level reporting.",
+    );
+  }
   const previous = await loadProviderPeriod(
     params.asin,
     params.country,
@@ -446,6 +605,7 @@ export async function loadScaleInsightsCampaignSpendBaseline(
     callTool,
     capabilities,
     "spend",
+    reportDiagnostic,
   );
   return {
     asin: params.asin,

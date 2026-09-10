@@ -20,9 +20,13 @@ import {
   type ScaleInsightsWeeklyPerformanceParams,
 } from "./scale-insights-performance";
 import {
+  getReadOnlyScaleInsightsToolNames,
   getScaleInsightsCampaignToolCapabilities,
   loadScaleInsightsCampaignComparison,
   loadScaleInsightsCampaignSpendBaseline,
+  ScaleInsightsCampaignProviderError,
+  summarizeCampaignToolSchema,
+  type CampaignDiagnosticReporter,
   type ScaleInsightsCampaignComparisonParams,
 } from "./scale-insights-campaign-comparison";
 import type { CampaignSpendBaseline, CampaignWeeklyComparison } from "../domain/campaign-weekly-comparison";
@@ -57,6 +61,23 @@ export type ScaleInsightsToolSession = {
   definitions: Tool[];
   callTool: ScaleInsightsToolCaller;
 };
+
+export type ScaleInsightsCampaignDiagnosticContext = {
+  requestId: string;
+};
+
+function createCampaignDiagnosticReporter(requestId: string): CampaignDiagnosticReporter {
+  return (event, details) => {
+    console.warn(JSON.stringify({
+      level: "warning",
+      message: "Scale Insights campaign provider diagnostic",
+      route: "/api/dashboard/campaign-comparison",
+      requestId,
+      event,
+      ...details,
+    }));
+  };
+}
 
 function getConnector() {
   return process.env.SCALE_INSIGHTS_CONNECTOR?.trim() || DEFAULT_SCALE_INSIGHTS_CONNECTOR;
@@ -131,11 +152,27 @@ export async function getScaleInsightsCampaignComparison(
 export async function getScaleInsightsCampaignSpendBaseline(
   params: ScaleInsightsCampaignComparisonParams,
   identity: ScaleInsightsRequestIdentity,
+  diagnostic: ScaleInsightsCampaignDiagnosticContext,
 ): Promise<CampaignSpendBaseline> {
   return withScaleInsightsToolSession(identity, ({ definitions, callTool }) => {
+    const reportDiagnostic = createCampaignDiagnosticReporter(diagnostic.requestId);
     const adsTool = definitions.find(tool => tool.name === "get_ads_performance");
-    if (!adsTool) throw new ScaleInsightsConfigurationError("Scale Insights did not advertise campaign performance access.");
-    return loadScaleInsightsCampaignSpendBaseline(params, callTool, getScaleInsightsCampaignToolCapabilities(adsTool.inputSchema));
+    const capabilities = adsTool ? getScaleInsightsCampaignToolCapabilities(adsTool.inputSchema) : {};
+    reportDiagnostic("campaign_tool_contract", {
+      period: { startDate: params.previousStartDate, endDate: params.previousEndDate },
+      marketplace: params.country,
+      readOnlyToolNames: getReadOnlyScaleInsightsToolNames(definitions),
+      adsPerformanceSchema: adsTool ? summarizeCampaignToolSchema(adsTool.inputSchema) : null,
+      capabilities,
+    });
+    if (!adsTool) {
+      reportDiagnostic("campaign_capability_missing", { capabilities });
+      throw new ScaleInsightsCampaignProviderError(
+        "campaign_capability_missing",
+        "The connected Scale Insights integration does not expose campaign-level reporting.",
+      );
+    }
+    return loadScaleInsightsCampaignSpendBaseline(params, callTool, capabilities, reportDiagnostic);
   });
 }
 

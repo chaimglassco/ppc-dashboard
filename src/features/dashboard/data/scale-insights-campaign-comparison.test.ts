@@ -1,9 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { ScaleInsightsDataError } from "./scale-insights-performance";
 import {
+  getReadOnlyScaleInsightsToolNames,
   getScaleInsightsCampaignToolCapabilities,
   loadScaleInsightsCampaignComparison,
   loadScaleInsightsCampaignSpendBaseline,
+  ScaleInsightsCampaignProviderError,
+  summarizeCampaignProviderResponse,
+  summarizeCampaignToolSchema,
 } from "./scale-insights-campaign-comparison";
 
 const params = {
@@ -15,6 +19,7 @@ const params = {
   currentEndDate: "2026-09-08",
   dataState: "Final" as const,
 };
+const campaignCapabilities = { grouping: { key: "group_by", value: "campaign" } };
 
 function payload(startDate: string, endDate: string, rows: Record<string, unknown>[], totalCount = rows.length) {
   return {
@@ -38,6 +43,43 @@ describe("Scale Insights campaign comparison adapter", () => {
     expect(getScaleInsightsCampaignToolCapabilities({ properties: {
       report_scope: { anyOf: [{ const: "products" }, { const: "campaigns" }, { const: "keywords" }] }, pageSize: { type: "integer" }, cursor: { type: "string" },
     } })).toEqual({ grouping: { key: "report_scope", value: "campaigns" }, limitKey: "pageSize", offsetKey: undefined, pageKey: undefined, cursorKey: "cursor" });
+  });
+
+  it("summarizes tool and response shapes without logging provider values", () => {
+    const schema = summarizeCampaignToolSchema({ properties: {
+      group_by: { enum: ["product", "campaign"] }, limit: { type: "integer" }, secret_input: { enum: ["must-not-log"] },
+    } });
+    const response = summarizeCampaignProviderResponse({
+      structuredContent: {
+        agg: { Country: "US" },
+        rows: [{ CampaignId: "secret-campaign-id", Campaign: "Secret campaign name", Spend: 86.54 }],
+        campaignMap: { "Secret dynamic campaign": { Spend: 86.54 } },
+      },
+      content: [{ type: "text", text: "| Campaign | Spend |\n| --- | --- |\n| Secret campaign name | $86.54 |" }],
+    });
+    const serialized = JSON.stringify({ schema, response });
+    expect(schema).toEqual({
+      propertyNames: ["group_by", "limit", "secret_input"],
+      choices: { group_by: ["product", "campaign"] },
+    });
+    expect(response.markdownHeaders).toEqual([["Campaign", "Spend"]]);
+    expect(serialized).not.toContain("secret-campaign-id");
+    expect(serialized).not.toContain("Secret campaign name");
+    expect(serialized).not.toContain("Secret dynamic campaign");
+    expect(serialized).not.toContain("86.54");
+    expect(getReadOnlyScaleInsightsToolNames([
+      { name: "get_ads_performance", description: "Retrieve performance reports" },
+      { name: "update_campaign", description: "Update a campaign" },
+    ])).toEqual(["get_ads_performance"]);
+  });
+
+  it("fails before calling aggregate advertising data when no campaign capability is advertised", async () => {
+    const callTool = vi.fn();
+    const reportDiagnostic = vi.fn();
+    await expect(loadScaleInsightsCampaignSpendBaseline(params, callTool, {}, reportDiagnostic))
+      .rejects.toMatchObject({ campaignCode: "campaign_capability_missing" });
+    expect(callTool).not.toHaveBeenCalled();
+    expect(reportDiagnostic).toHaveBeenCalledWith("campaign_capability_missing", { capabilities: {} });
   });
 
   it("loads both periods, follows pagination, merges by id and ad type, and prefers the current name", async () => {
@@ -76,12 +118,12 @@ describe("Scale Insights campaign comparison adapter", () => {
 
   it("rejects provider data for the wrong reporting scope", async () => {
     const callTool = vi.fn(async () => payload("2020-01-01", "2020-01-07", [row("campaign-1", "Wrong scope", 1, 1, 1)]));
-    await expect(loadScaleInsightsCampaignComparison(params, callTool)).rejects.toBeInstanceOf(ScaleInsightsDataError);
+    await expect(loadScaleInsightsCampaignComparison(params, callTool, campaignCapabilities)).rejects.toBeInstanceOf(ScaleInsightsDataError);
   });
 
   it("returns an empty valid comparison when neither period has campaign activity", async () => {
     const callTool = vi.fn(async (_name: string, args: Record<string, unknown>) => payload(String(args.start_date), String(args.end_date), [], 0));
-    await expect(loadScaleInsightsCampaignComparison(params, callTool)).resolves.toMatchObject({ campaigns: [], warnings: [] });
+    await expect(loadScaleInsightsCampaignComparison(params, callTool, campaignCapabilities)).resolves.toMatchObject({ campaigns: [], warnings: [] });
   });
 
   it("reads nested entity rows with formatted MCP values", async () => {
@@ -90,7 +132,7 @@ describe("Scale Insights campaign comparison adapter", () => {
       campaign: { id: "campaign-nested", name: "Nested campaign", sponsored_ads_type: "Sponsored Products" },
       metrics: { "PPC Sales": "$1,287.73", "PPC Cost": "$86.54", "PPC Orders": "4" },
     }]));
-    const comparison = await loadScaleInsightsCampaignComparison(params, callTool);
+    const comparison = await loadScaleInsightsCampaignComparison(params, callTool, campaignCapabilities);
     expect(comparison.campaigns).toEqual([expect.objectContaining({
       campaignId: "campaign-nested", campaignName: "Nested campaign", sponsoredType: 0,
       previous: { sales: 1287.73, spend: 86.54, orders: 4 }, current: { sales: 1287.73, spend: 86.54, orders: 4 },
@@ -109,11 +151,13 @@ describe("Scale Insights campaign comparison adapter", () => {
         "| campaign-text | Text campaign | SP | $287.73 | $86.54 | 4 |",
       ].join("\n") }],
     }));
-    const comparison = await loadScaleInsightsCampaignComparison(params, callTool);
+    const reportDiagnostic = vi.fn();
+    const comparison = await loadScaleInsightsCampaignComparison(params, callTool, campaignCapabilities, reportDiagnostic);
     expect(comparison.campaigns).toEqual([expect.objectContaining({
       campaignId: "campaign-text", campaignName: "Text campaign",
       previous: { sales: 287.73, spend: 86.54, orders: 4 }, current: { sales: 287.73, spend: 86.54, orders: 4 },
     })]);
+    expect(reportDiagnostic).not.toHaveBeenCalled();
   });
 
   it("loads only the previous period and requires only campaign Spend for the staged baseline", async () => {
@@ -121,7 +165,7 @@ describe("Scale Insights campaign comparison adapter", () => {
       campaign: { name: "Spend-only campaign" },
       metrics: { spend: 42.75 },
     }]));
-    const baseline = await loadScaleInsightsCampaignSpendBaseline(params, callTool);
+    const baseline = await loadScaleInsightsCampaignSpendBaseline(params, callTool, campaignCapabilities);
     expect(callTool).toHaveBeenCalledTimes(1);
     expect(callTool).toHaveBeenCalledWith("get_ads_performance", expect.objectContaining({
       start_date: params.previousStartDate, end_date: params.previousEndDate, summary_only: false,
@@ -131,5 +175,25 @@ describe("Scale Insights campaign comparison adapter", () => {
       currentPeriod: { startDate: params.currentStartDate, endDate: params.currentEndDate },
       campaigns: [{ campaignId: null, sponsoredType: null, campaignName: "Spend-only campaign", previousSpend: 42.75 }],
     });
+  });
+
+  it("reports a sanitized shape when campaign rows cannot be read", async () => {
+    const callTool = vi.fn(async (_name: string, args: Record<string, unknown>) => ({
+      structuredContent: {
+        agg: { Country: "US", StartDate: String(args.start_date), EndDate: String(args.end_date), Currency: "USD" },
+        oppMeta: { total_count: 1 },
+        rows: [{ unknown_name: "Sensitive campaign", unknown_cost: 42.75 }],
+      },
+    }));
+    const reportDiagnostic = vi.fn();
+    await expect(loadScaleInsightsCampaignSpendBaseline(params, callTool, campaignCapabilities, reportDiagnostic))
+      .rejects.toBeInstanceOf(ScaleInsightsCampaignProviderError);
+    expect(reportDiagnostic).toHaveBeenCalledWith("campaign_rows_unreadable", expect.objectContaining({
+      period: { startDate: params.previousStartDate, endDate: params.previousEndDate },
+      resultCount: 1,
+      responseShape: expect.objectContaining({ objectPaths: expect.any(Array) }),
+    }));
+    expect(JSON.stringify(reportDiagnostic.mock.calls)).not.toContain("Sensitive campaign");
+    expect(JSON.stringify(reportDiagnostic.mock.calls)).not.toContain("42.75");
   });
 });

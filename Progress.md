@@ -2,9 +2,11 @@
 
 ## September 10, 2026 — Campaign week-over-week comparison
 
-Reduced the campaign diagnostic to a verifiable Spend-baseline stage. The server now makes one Scale Insights request for the previous matched period and requires only campaign ID, sponsored type, name, and Spend. The table sorts those campaigns by Spend, shows ten first with Show all, and leaves Current Week Spend as an explicit pending dash. Loading, freshness, warning, consent, retry, provider failure, empty, stale-request, Refresh Data, protected trend links, and memory-only caching remain included. Current-period retrieval, deltas, Sales/Orders, and mover grouping are deferred until this first live source is confirmed.
+Reduced the campaign diagnostic to a verifiable Spend-baseline stage. When campaign grouping is available, the server makes one Scale Insights request for the previous matched period and requires campaign name and Spend; campaign ID and sponsored type are optional. The table sorts those campaigns by Spend, shows ten first with Show all, and leaves Current Week Spend as an explicit pending dash. Loading, freshness, warning, consent, retry, provider failure, empty, stale-request, Refresh Data, protected trend links, and memory-only caching remain included. Current-period retrieval, deltas, Sales/Orders, and mover grouping are deferred until this first live source is confirmed.
 
 The live-provider adapter recognizes nested campaign/entity records, formatted Spend strings, `const`-based grouping choices, embedded JSON, and MCP text-table rows while preserving strict scope, identifier, and nonnegative-Spend validation.
+
+Added the production diagnostic gate after repeated live `502` responses showed that synthetic provider fixtures were insufficient. Campaign loading now stops before an aggregate call when the MCP schema does not advertise campaign grouping, distinguishes missing capability from unreadable rows, returns a safe correlation ID, and logs only redacted schema/response structure. The UI explains the specific condition and retains Retry. This diagnostic build still requires an approved deployment and one authenticated production retry before the exact live provider contract can be implemented or the feature can be declared working.
 
 ## September 10, 2026 — Reference-based first-panel rebuild
 
@@ -174,7 +176,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Fifty-one Vitest files pass with 303 passing tests and 6 intentionally skipped tests.
+- Fifty-one Vitest files pass with 307 passing tests and 6 intentionally skipped tests.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.

@@ -14,6 +14,8 @@ type BaselineLoadState = {
   message: string;
   baseline?: CampaignSpendBaseline;
   authorizationUrl?: string;
+  errorCode?: string;
+  requestId?: string;
 };
 
 const INITIAL_CAMPAIGN_COUNT = 10;
@@ -71,10 +73,20 @@ export function CampaignWeeklyComparison({ asin, country = "US", weekStart, refr
           }
         }
         if (!response.ok || !value || typeof value !== "object") {
-          const message = value && typeof value === "object" && typeof (value as { error?: unknown }).error === "string"
-            ? String((value as { error: string }).error)
+          const candidate = value && typeof value === "object"
+            ? value as { error?: unknown; code?: unknown; requestId?: unknown }
+            : {};
+          const message = candidate.code === "campaign_capability_missing"
+            ? "The connected Scale Insights integration does not expose campaign-level reporting. Weekly totals remain available."
+            : candidate.code === "campaign_rows_unreadable"
+              ? "Scale Insights returned a campaign report format this version cannot read."
+              : typeof candidate.error === "string"
+                ? candidate.error
             : "Previous-week campaign Spend is unavailable.";
-          throw new Error(message);
+          const error = new Error(message) as Error & { code?: string; requestId?: string };
+          if (typeof candidate.code === "string") error.code = candidate.code;
+          if (typeof candidate.requestId === "string") error.requestId = candidate.requestId;
+          throw error;
         }
         const baseline = parseCampaignSpendBaseline((value as { comparison?: unknown }).comparison);
         if (!baseline || baseline.asin !== asin.toUpperCase() || baseline.country !== country || baseline.currentPeriod.startDate !== weekStart) {
@@ -84,7 +96,14 @@ export function CampaignWeeklyComparison({ asin, country = "US", weekStart, refr
         setLoadState({ key: comparisonKey, status: "ready", message: "", baseline });
       }).catch(error => {
         if (controller.signal.aborted || (error as Error).name === "AbortError") return;
-        setLoadState({ key: comparisonKey, status: "error", message: error instanceof Error ? error.message : "Previous-week campaign Spend is unavailable." });
+        const providerError = error as Error & { code?: string; requestId?: string };
+        setLoadState({
+          key: comparisonKey,
+          status: "error",
+          message: error instanceof Error ? error.message : "Previous-week campaign Spend is unavailable.",
+          errorCode: providerError.code,
+          requestId: providerError.requestId,
+        });
       });
     }, 0);
     return () => { window.clearTimeout(requestTimer); controller.abort(); };
@@ -108,7 +127,14 @@ export function CampaignWeeklyComparison({ asin, country = "US", weekStart, refr
     {displayedState.status === "loading" ? <div className={styles.stateMessage} role="status"><RefreshCw className={styles.loadingIcon} aria-hidden="true" /><span>{displayedState.message}</span></div> : null}
     {displayedState.status === "idle" ? <div className={styles.stateMessage}><span>{displayedState.message}</span></div> : null}
     {displayedState.status === "authorization" ? <div className={styles.stateMessage}><span>{displayedState.message}</span><a href={displayedState.authorizationUrl}>Connect Scale Insights</a></div> : null}
-    {displayedState.status === "error" ? <div className={`${styles.stateMessage} ${styles.errorState}`} role="alert"><span>{displayedState.message}</span><button type="button" onClick={() => setRetryVersion(value => value + 1)}><RefreshCw aria-hidden="true" />Retry</button></div> : null}
+    {displayedState.status === "error" ? <div className={`${styles.stateMessage} ${styles.errorState}`} role="alert">
+      <span className={styles.errorCopy}>
+        <strong>{displayedState.errorCode === "campaign_capability_missing" ? "Campaign reporting is not available through this connection" : "Campaign Spend could not be loaded"}</strong>
+        <span>{displayedState.message}</span>
+        {displayedState.requestId ? <small>Reference ID: {displayedState.requestId}</small> : null}
+      </span>
+      <button type="button" onClick={() => setRetryVersion(value => value + 1)}><RefreshCw aria-hidden="true" />Retry</button>
+    </div> : null}
 
     {baseline ? <>
       <div className={styles.periodComparison} aria-label="Campaign Spend reporting periods">
