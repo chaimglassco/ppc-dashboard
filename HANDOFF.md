@@ -2,6 +2,13 @@
 
 Last updated: September 10, 2026
 
+## September 10, 2026 — campaign week-over-week comparison
+
+- A new read-only Campaign Week-over-Week Comparison sits below the paired weekly summaries and above action items. It loads the selected ASIN's current and immediately preceding Scale Insights campaign performance, matching elapsed day counts for partial weeks.
+- Six independently collapsed Sales/Spend/Orders increase/decline dropdowns show category counts and combined movement. Rows are sorted by the selected metric, show ten first with Show all, include all three Previous → Current metrics, and link campaign names directly to the Scale Insights campaign trend page.
+- The authenticated no-store `/ppc/api/dashboard/campaign-comparison` route reuses Pipeline identity and Vercel Connect, validates exact provider scope, discovers campaign grouping/pagination from the live MCP tool schema, and merges by campaign ID plus sponsored type. Comparison data is cached only in React memory and no browser-storage contract changed.
+- Lint, typecheck, all 299 passing tests across 51 files (6 skipped), and the production build pass. Local browser verification with a temporary authenticated Scale Insights response confirmed exact partial dates, six initially collapsed accordions, keyboard expansion, all-metric campaign rows, activity labels, category totals, protected exact campaign links, correct placement, no page overflow, and no hydration or console errors; the temporary fixture and browser state were removed. A connected production account must still exercise real Scale Insights campaign payloads during deployment review.
+
 ## September 10, 2026 — local first-panel redesign
 
 - Products was rebuilt from the supplied HTML/image reference as a fixed 300px white column. The header now has the compact uppercase title and count on the left and one square plus action on the right; search and tag filtering use bordered white controls.

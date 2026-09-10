@@ -1,8 +1,16 @@
 # Data Contract
 
-## September 10 workspace presentation and export
+## Campaign week-over-week comparison
 
-No storage schema or API contract changes. The redesign consumes the existing version-1 report and performance cache. Conversion Rate has no stored field and displays unavailable; do not derive it without an appropriate denominator. The second-row Organic Sales tile reuses organicSales. Action due-date controls read/write the existing actions[].dueDate field. Report Export is a JSON download of the selected WeeklyPpcReport, including current overlaid metrics, without session tokens. The summary underline control inserts literal <u> markers into the existing plain-text notes field, like the existing bold/list markers; notes are never rendered as arbitrary raw HTML.
+`GET /ppc/api/dashboard/campaign-comparison?asin=<ASIN>&country=<marketplace>&weekStart=<Wednesday>` accepts the same normalized ASIN, marketplace, and week-start rules as weekly performance. The server derives `currentStartDate`, an end date capped at yesterday UTC, `previousStartDate = currentStartDate - 7 days`, and a previous end date with the same inclusive day count. Future/no-completed-day weeks return no-store `404`. Pipeline authentication, stable-user Vercel Connect consent, HTTPS MCP transport, timeout, configuration, and bounded-error behavior match the weekly performance route.
+
+Success is `{ comparison }`, where `comparison` contains `{ asin, country, currency, dataState, previousPeriod, currentPeriod, freshness, campaigns, warnings }`. Each period is `{ startDate, endDate }`; `dataState` is `Partial` or `Final`; freshness contains previous/current provider data-as-of strings. Each campaign is `{ campaignId, sponsoredType, campaignName, previousActive, currentActive, previous, current, delta }`. `previous` and `current` contain finite nonnegative `{ sales, spend, orders }` with integer Orders. Each metric delta contains signed `absolute` and `percentage`; percentage is `null` when the previous value is zero. Browser parsing recalculates deltas from validated period metrics and does not trust serialized delta fields.
+
+Provider rows merge by `sponsoredType:campaignId`; the current name wins, previous-only/current-only rows retain activity flags, and missing-period values normalize to zero. The API is read-only and no-store. The Client Component caches validated results only in memory for its mounted page session. Neither raw MCP payloads nor comparison DTOs enter `glassco.ppcPerformanceNotes.v1`, `glassco.ppcPerformanceCache.v1`, `glassco.ppcDashboardCatalog.v1`, local storage, or session storage.
+
+## September 10 workspace presentation
+
+The workspace redesign consumes the existing version-1 report and performance cache. Conversion Rate has no stored field and displays unavailable; do not derive it without an appropriate denominator. The second row uses the existing ACOS and TACOS calculated fields. Action due-date controls read/write the existing actions[].dueDate field. The summary underline control inserts literal <u> markers into the existing plain-text notes field, like the existing bold/list markers; notes are never rendered as arbitrary raw HTML.
 
 ## Product performance AI request
 

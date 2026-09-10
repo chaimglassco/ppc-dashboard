@@ -19,6 +19,12 @@ import {
   type ScaleInsightsWeeklyPerformance,
   type ScaleInsightsWeeklyPerformanceParams,
 } from "./scale-insights-performance";
+import {
+  getScaleInsightsCampaignToolCapabilities,
+  loadScaleInsightsCampaignComparison,
+  type ScaleInsightsCampaignComparisonParams,
+} from "./scale-insights-campaign-comparison";
+import type { CampaignWeeklyComparison } from "../domain/campaign-weekly-comparison";
 
 const DEFAULT_SCALE_INSIGHTS_MCP_URL = "https://mcp.scaleinsights.com/mcp";
 const DEFAULT_SCALE_INSIGHTS_CONNECTOR = "mcp.scaleinsights.com/glassco-scale-insights";
@@ -108,6 +114,17 @@ export async function getScaleInsightsWeeklyPerformance(
   identity: ScaleInsightsRequestIdentity,
 ): Promise<ScaleInsightsWeeklyPerformance> {
   return withScaleInsightsClient(identity, callTool => loadScaleInsightsWeeklyPerformance(params, callTool));
+}
+
+export async function getScaleInsightsCampaignComparison(
+  params: ScaleInsightsCampaignComparisonParams,
+  identity: ScaleInsightsRequestIdentity,
+): Promise<CampaignWeeklyComparison> {
+  return withScaleInsightsToolSession(identity, ({ definitions, callTool }) => {
+    const adsTool = definitions.find(tool => tool.name === "get_ads_performance");
+    if (!adsTool) throw new ScaleInsightsConfigurationError("Scale Insights did not advertise campaign performance access.");
+    return loadScaleInsightsCampaignComparison(params, callTool, getScaleInsightsCampaignToolCapabilities(adsTool.inputSchema));
+  });
 }
 
 async function withConnectedScaleInsightsClient<T>(

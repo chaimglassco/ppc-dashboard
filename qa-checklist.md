@@ -1,5 +1,16 @@
 # QA Checklist
 
+## Campaign week-over-week comparison
+
+- [ ] Select a completed week and confirm the selected Wednesday–Tuesday range is compared with the full preceding Wednesday–Tuesday range.
+- [ ] Select a partial week and confirm both periods contain the same number of completed days, with Partial and the exact ranges visible.
+- [ ] Confirm all six Sales/Spend/Orders increase/decline accordions begin collapsed and their headers show campaign counts plus combined changes.
+- [ ] Open each accordion and confirm campaigns are sorted by primary-metric impact, the first ten appear initially, Show all exposes the remainder, and equal values appear in neither direction.
+- [ ] Confirm every row shows Previous → Current Sales, Spend, and Orders plus absolute/percentage change. Verify New activity, No current-period activity, and a zero-current value's `−100%` handling.
+- [ ] Open a campaign name and confirm the protected new tab is the exact Scale Insights campaign trend for its ID, sponsored type, and selected dates.
+- [ ] Switch products/weeks quickly and confirm stale responses never replace the active comparison. Refresh Data must reload both weekly totals and the active campaign comparison without creating browser-storage entries.
+- [ ] Verify loading, no-ASIN, no-campaign, empty-category, hosted-consent, malformed-data, pagination warning, provider-error, and Retry states at desktop and mobile widths with keyboard-accessible summaries.
+
 Use this checklist before merging or deploying changes.
 
 ## Products reference rebuild

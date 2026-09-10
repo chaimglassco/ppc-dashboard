@@ -1,5 +1,9 @@
 # Project Progress
 
+## September 10, 2026 — Campaign week-over-week comparison
+
+Added a read-only campaign diagnostic below the weekly summaries. It compares the selected ASIN's active Wednesday–Tuesday period with the prior matched-length period, using two concurrent Scale Insights campaign reads, runtime grouping/pagination discovery, strict scope validation, and stable campaign ID plus sponsored-type merging. Six collapsed dropdowns cover Sales, Spend, and Orders increases and declines; each shows category totals, ten largest movers first, all three From → To metrics, New/no-current activity cues, and a direct protected link to the campaign's Scale Insights weekly trend. Loading, Partial/Final, freshness, warning, consent, retry, provider failure, empty, stale-request, and Refresh Data behavior are included. Results are memory-only and no storage schema changed.
+
 ## September 10, 2026 — Reference-based first-panel rebuild
 
 Rebuilt Products from the supplied HTML and image as a fixed 300px white panel with the reference title/count row, single plus action, bordered search and tag controls, 36px thumbnails, status dots, neutral tags, and a solid-black selected card. The plus action opens the existing Add product, Add tag, and product-edit controls, preserving local catalog validation, filters, selection, dialogs, deletion, and drag/keyboard reorder. The completed second- and third-panel rebuilds and all storage/API contracts remain intact. This work is local and has not been deployed.
@@ -168,7 +172,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Forty-seven Vitest files pass with 283 passing tests and 6 intentionally skipped tests.
+- Fifty-one Vitest files pass with 299 passing tests and 6 intentionally skipped tests.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.

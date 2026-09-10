@@ -1,5 +1,11 @@
 # Glassco Back Office Library — Product Specification
 
+## Campaign week-over-week comparison
+
+Below the Previous and Current Week Summary cards, the selected ASIN shows a read-only campaign comparison for the active reporting week and the immediately preceding week. A partial active week is compared with the same number of completed days from the previous week. Six independent accordions—Sales Decline/Increase, Spend Decline/Increase, and Orders Decline/Increase—start collapsed and show campaign count plus combined movement. Opening one shows the ten largest movers first, with Show all when needed. Every row includes campaign name and Previous → Current Sales, Spend, and Orders with absolute and percentage change; the selected metric is emphasized. Campaigns with no prior data read New activity, and campaigns missing from the selected period read No current-period activity.
+
+The campaign name opens Scale Insights' exact campaign trend view in a protected new tab using the campaign ID, sponsored type, and active comparison dates. The section shows matched periods, Partial/Final state, data freshness, warnings, loading, consent, retry, provider failure, and empty-category states. Refresh Data reloads both weekly totals and campaign comparison. Comparison results remain in React memory for the page session and never change campaigns, bids, budgets, weekly notes, or browser-storage schemas.
+
 ## Product performance AI assistant
 
 The PPC dashboard provides a compact bottom-right Performance AI widget whenever a product is selected. It answers questions using the selected ASIN/product, active reporting week, available previous week, every populated reporting period in the current month selection, weekly budget and Target ACOS, active goals, action items, saved notes, and live read-only Scale Insights MCP tools. Suggested questions cover summary, ACOS movement, and next priorities; users can also type free-form performance questions. Every answer must distinguish Partial, Final, and saved/manual values, identify whether facts came from Scale Insights or saved dashboard context, and acknowledge unavailable data rather than inventing it.
@@ -16,7 +22,7 @@ The second panel follows the supplied HTML reference as a 340px white reporting 
 
 ## Third-panel workspace hierarchy
 
-The third panel follows the supplied HTML reference: product header; Strategic Weekly Goals and Budget Utilization; Weekly PPC Performance; side-by-side Previous/Current Week Summary; and the action list. Desktop metrics are two rows of five equal cards. Row one is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Row two is PPC Orders, Org. Orders, Total Orders (the user correction), the reference’s repeated Organic Sales, and TACOS. Conversion Rate displays an unavailable dash because the existing metrics contract has no conversion denominator. ACOS and its warning remain in the second-row heading. Goals, budget history, date editing, notes formatting, and action completion remain functional. Export downloads the selected report as JSON; Save Weekly Report retains local auto-save.
+The third panel follows the supplied HTML reference: product header; Strategic Weekly Goals and Budget Utilization; Weekly PPC Performance; side-by-side Previous/Current Week Summary; Campaign Week-over-Week Comparison; and the action list. Desktop metrics are two rows of five equal cards. Row one is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Row two is PPC Orders, Org. Orders, Total Orders, ACOS, and TACOS. Conversion Rate displays an unavailable dash because the existing metrics contract has no conversion denominator. Goals, budget history, date editing, notes formatting, and action completion remain functional. Save Weekly Report retains local auto-save.
 
 ## Goal history and previous-week metric comparisons
 

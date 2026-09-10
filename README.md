@@ -2,7 +2,7 @@
 
 ## Dashboard reference redesign (September 10, 2026)
 
-The dashboard workspace follows the supplied HTML reference across all three panels. Products is a fixed 300px white column with a compact title/count row, one plus-button action menu, search and tag controls, neutral product cards, and a solid-black selected card. Reporting Periods is a 340px white column with an integrated month navigator, neutral period cards, abbreviated ranges, and a black selected-card treatment. The workspace places Strategic Weekly Goals and Budget Utilization above two five-card performance rows, paired summaries, and action items. Total Orders follows Organic Orders; Conversion Rate follows Total Sales and shows an unavailable dash until a valid source exists. Export downloads the selected report as JSON; planning and catalog edits still save only in this browser.
+The dashboard workspace follows the supplied HTML reference across all three panels. Products is a fixed 300px white column with a compact title/count row, one plus-button action menu, search and tag controls, neutral product cards, and a solid-black selected card. Reporting Periods is a 340px white column with an integrated month navigator, neutral period cards, abbreviated ranges, and a black selected-card treatment. The workspace places Strategic Weekly Goals and Budget Utilization above two five-card performance rows, paired summaries, a campaign week-over-week diagnostic, and action items. Total Orders follows Organic Orders; ACOS and TACOS sit together; Conversion Rate follows Total Sales and shows an unavailable dash until a valid source exists. Planning and catalog edits still save only in this browser.
 
 This repository provides the Glassco Team SOP Library—a responsive Amazon PPC knowledge base, shared document-administration interface, and structured document builder—and the authenticated Weekly PPC Performance workspace at `/ppc/dashboard`.
 
@@ -24,6 +24,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - PPC verifies the existing Pipeline session through Pipeline’s `/api/auth/session` endpoint.
 - PPC Dashboard loads the authenticated user’s compact Pipeline product catalog and provides a three-panel product, reporting-period, and weekly documentation workspace.
 - For products with an ASIN, the selected Wednesday–Tuesday period automatically loads Spend, PPC Sales, PPC Orders, Total Sales, and Total Orders from Scale Insights through an authenticated server route. Organic Sales, Organic Orders, ACOS, and TACOS are calculated by this application.
+- Campaign Week-over-Week Comparison uses the same authenticated Scale Insights connection to compare the selected ASIN's campaign Sales, Spend, and Orders with the preceding matched-length period. Six collapsed mover views show all three metrics and open the exact campaign trend in Scale Insights; results remain in memory only.
 - A session-only Performance AI widget combines the selected product, active week, populated visible reporting periods, and planning notes with live read-only Scale Insights MCP tools. Server-side enforcement limits every tool call to that ASIN, US, and the visible completed-date range without changing the saved report schema.
 - The Products panel can add dashboard-only products, apply local edits and images, create reusable tags, filter by tag, and remove dashboard-added products. These catalog customizations use the validated `glassco.ppcDashboardCatalog.v1` browser record and do not mutate Product Pipeline records.
 - Weekly goals, budget limits, performance figures, prior-week outcomes, notes, and action items save to the versioned `glassco.ppcPerformanceNotes.v1` browser record in this initial UI milestone; they are not yet shared across browsers.
@@ -64,6 +65,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 
 - Next.js uses `basePath: "/ppc"` for pages, assets, and API routes.
 - `/ppc/api/dashboard/performance` verifies the Pipeline session before requesting a short-lived Scale Insights token from Vercel Connect for that stable Pipeline user ID. Vercel stores and refreshes the OAuth grant; credentials and tokens are never returned to the browser or written to browser storage.
+- `/ppc/api/dashboard/campaign-comparison` applies the same authenticated no-store boundary to two matched campaign periods, follows advertised provider pagination, validates scope and metrics, and returns only normalized campaign comparison data.
 - Authenticated `/ppc/api/dashboard/ai-chat` validates bounded product/week context and invokes `openai/gpt-5.6-sol` through Vercel AI Gateway; model credentials remain server-side and responses are not cached.
 - Private shared images are fetched by client previews with the Pipeline bearer token and rendered through temporary browser object URLs; raw private API URLs are never assigned directly to image elements.
 - Pipeline proxies `/ppc/:path*` to the independently deployed PPC Vercel project.
@@ -119,7 +121,7 @@ npm test
 npm run build
 ```
 
-The last verified state passes all four commands with 47 test files, 283 passing tests, and 6 intentionally skipped tests.
+The last verified state passes all four commands with 51 test files, 299 passing tests, and 6 intentionally skipped tests.
 
 ## Project structure
 
@@ -129,6 +131,7 @@ src/app/                            Next.js routes, APIs, layout, and global sty
 src/app/api/library/                Authenticated shared-library API
 src/app/api/pipeline-session/       Pipeline session verification endpoint
 src/app/api/dashboard/performance/ Authenticated Scale Insights performance endpoint
+src/app/api/dashboard/campaign-comparison/ Authenticated campaign comparison endpoint
 src/components/                     Application shell and session provider
 src/features/dashboard/data/       Scale Insights validation and server-only MCP transport
 src/features/library/data/          Markdown bootstrap and legacy Blob migration adapters

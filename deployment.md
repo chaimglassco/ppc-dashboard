@@ -1,5 +1,11 @@
 # Deployment Guide
 
+## Campaign comparison release
+
+This release adds authenticated `GET /ppc/api/dashboard/campaign-comparison` and uses the existing Scale Insights Vercel Connect attachment, Pipeline identity, and MCP endpoint. It adds no environment variable, database migration, or browser-storage migration. Deploy only the Library/PPC project after approval.
+
+After deployment, select a product with an ASIN and verify the campaign section appears between the paired weekly summaries and action items. Confirm a current partial week uses matched elapsed days; a completed week uses two seven-day periods. Exercise all six initially collapsed accordions, category counts/totals, top-ten and Show all behavior, all three metric transitions, New/no-current activity labels, Refresh Data, and responsive keyboard operation. Open several campaign names and confirm they reach the matching Scale Insights campaign trend without OAuth or connector material in the URL. Test an ungranted user, an empty ASIN/week, and a provider failure; successful and error responses must remain no-store. The live MCP tool definition must expose readable campaign rows from `get_ads_performance`; a pagination limitation must surface as a warning rather than silently implying completeness.
+
 ## September 10 workspace release
 
 The first-, second-, and third-panel redesigns require no data migration, environment changes, or Pipeline deployment. Deploy the Library/PPC project only after production approval. The dashboard route adds self-hosted Geist and JetBrains Mono using next/font; builds need the same Google font download access already used by the app font. Verify the new panels at /ppc/dashboard and check the Library at /ppc/library. If the local Turbopack dev server reports “Next.js package not found,” use npm run dev -- --webpack for local verification; production build remains a separate gate.

@@ -1,5 +1,13 @@
 # Glassco Back Office Library — Architecture
 
+## Campaign comparison boundary
+
+Authenticated `GET /ppc/api/dashboard/campaign-comparison` validates the ten-character ASIN, supported marketplace, and Wednesday week start. It caps the active range at yesterday UTC and gives the preceding week the same inclusive day count, preventing a partial week from being compared with seven completed days. The route uses the verified Pipeline user as the existing Vercel Connect subject and returns no-store success, hosted-consent, validation, configuration, and bounded provider-error responses.
+
+The server discovers the connected `get_ads_performance` input schema, applies an advertised campaign grouping field when available, and follows advertised cursor, offset, or page pagination up to bounded request and campaign limits. Two raw ASIN-scoped periods load concurrently. Provider results must match the requested country and exact date range; campaign identity, sponsored type, name, Sales, Spend, and integer Orders are normalized before use. Rows merge by `sponsoredType:campaignId`, aggregate duplicates within a period, prefer the current name, and retain explicit previous/current activity flags. Missing-period metrics become zero without describing the campaign as paused. Raw MCP content and credentials never cross the server boundary.
+
+`CampaignWeeklyComparison` is a focused Client Component below the paired summaries. It validates the API DTO, cancels stale product/week requests, and keeps results in an in-memory map keyed by country, ASIN, and Wednesday. The shared Refresh Data version invalidates the active entry. Six native-details accordions derive their membership, impact ordering, counts, totals, and top-ten slice during render. Trend destinations use only the fixed Scale Insights origin plus validated server-returned campaign ID/type and active dates; they open with `noopener noreferrer`. No comparison data enters `glassco.ppcPerformanceNotes.v1`, `glassco.ppcPerformanceCache.v1`, or a new storage key.
+
 ## Product performance AI boundary
 
 `ProductPerformanceChat` is a dashboard-only Client Component rendered for the selected product. It keeps separate in-memory message arrays keyed by product ID and active Wednesday, and sends at most eight prior messages plus sixty populated period summaries. The active report additionally contributes its bounded budget, Target ACOS, notes, carry-forward text, goals, and actions. Text output is rendered as plain text with preserved line breaks; no model-generated HTML is enabled and no chat state enters `glassco.ppcPerformanceNotes.v1` or another browser key.
@@ -10,7 +18,7 @@ The same verified Pipeline identity opens a short-lived Scale Insights MCP sessi
 
 ## Third-panel presentation layer
 
-The workspace uses a dedicated ppc-performance-workspace.module.css module, isolated from the product/timeline stylesheet. Unused legacy workspace selectors were removed. The dashboard route layout self-hosts Geist and JetBrains Mono through next/font; the three reference panels consume those font variables through their isolated modules. The third-panel canvas uses a 1152px maximum width, 24px spacing, bordered white sections on #fafafa, and 190px metric tiles. Goal/budget DOM order precedes performance. Report state, authenticated adapters, cache precision, and schemas remain unchanged. Conversion Rate is a display-only unavailable card, and the repeated Organic Sales tile reads the existing derived value. JSON export uses a temporary browser object URL; no server call or additional persistence is introduced.
+The workspace uses a dedicated ppc-performance-workspace.module.css module, isolated from the product/timeline stylesheet. Unused legacy workspace selectors were removed. The dashboard route layout self-hosts Geist and JetBrains Mono through next/font; the three reference panels consume those font variables through their isolated modules. The third-panel canvas uses a 1152px maximum width, 24px spacing, bordered white sections on #fafafa, and 190px metric tiles. Goal/budget DOM order precedes performance. Report state, authenticated adapters, cache precision, and schemas remain unchanged. Conversion Rate is a display-only unavailable card; Total Orders follows Organic Orders, and ACOS/TACOS remain adjacent. Save Weekly Report records the existing browser-local report state without an export control or additional persistence.
 
 ## Product-panel presentation layer
 
