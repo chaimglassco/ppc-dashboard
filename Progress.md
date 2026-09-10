@@ -2,9 +2,9 @@
 
 ## September 10, 2026 — Campaign week-over-week comparison
 
-Added a read-only campaign diagnostic below the weekly summaries. It compares the selected ASIN's active Wednesday–Tuesday period with the prior matched-length period, using two concurrent Scale Insights campaign reads, runtime grouping/pagination discovery, strict scope validation, and stable campaign ID plus sponsored-type merging. Six collapsed dropdowns cover Sales, Spend, and Orders increases and declines; each shows category totals, ten largest movers first, all three From → To metrics, New/no-current activity cues, and a direct protected link to the campaign's Scale Insights weekly trend. Loading, Partial/Final, freshness, warning, consent, retry, provider failure, empty, stale-request, and Refresh Data behavior are included. Results are memory-only and no storage schema changed.
+Reduced the campaign diagnostic to a verifiable Spend-baseline stage. The server now makes one Scale Insights request for the previous matched period and requires only campaign ID, sponsored type, name, and Spend. The table sorts those campaigns by Spend, shows ten first with Show all, and leaves Current Week Spend as an explicit pending dash. Loading, freshness, warning, consent, retry, provider failure, empty, stale-request, Refresh Data, protected trend links, and memory-only caching remain included. Current-period retrieval, deltas, Sales/Orders, and mover grouping are deferred until this first live source is confirmed.
 
-The live-provider adapter also recognizes nested campaign/entity records, formatted metric strings, `const`-based grouping choices, embedded JSON, and MCP text-table rows. This fixes the valid-results/“without readable campaign rows” failure while preserving strict scope, identifier, and nonnegative-metric validation.
+The live-provider adapter recognizes nested campaign/entity records, formatted Spend strings, `const`-based grouping choices, embedded JSON, and MCP text-table rows while preserving strict scope, identifier, and nonnegative-Spend validation.
 
 ## September 10, 2026 — Reference-based first-panel rebuild
 
@@ -174,7 +174,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Fifty-one Vitest files pass with 299 passing tests and 6 intentionally skipped tests.
+- Fifty-one Vitest files pass with 303 passing tests and 6 intentionally skipped tests.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.

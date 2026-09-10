@@ -9,11 +9,11 @@ vi.mock("@/features/dashboard/data/scale-insights-server", () => {
     constructor(readonly authorizationUrl: string) { super("authorization required"); }
   }
   class ScaleInsightsConfigurationError extends Error {}
-  return { getScaleInsightsCampaignComparison: vi.fn(), ScaleInsightsAuthorizationRequiredError, ScaleInsightsConfigurationError };
+  return { getScaleInsightsCampaignSpendBaseline: vi.fn(), ScaleInsightsAuthorizationRequiredError, ScaleInsightsConfigurationError };
 });
 
 import {
-  getScaleInsightsCampaignComparison,
+  getScaleInsightsCampaignSpendBaseline,
   ScaleInsightsAuthorizationRequiredError,
   ScaleInsightsConfigurationError,
 } from "@/features/dashboard/data/scale-insights-server";
@@ -28,12 +28,12 @@ describe("campaign comparison API", () => {
     vi.setSystemTime(new Date("2026-09-07T01:30:00Z"));
     vi.mocked(verifyPipelineRequest).mockReset();
     vi.mocked(verifyPipelineRequest).mockResolvedValue({ user: { id: "pipeline-user-1", email: "admin@example.com", name: "Admin", role: "ADMIN" } });
-    vi.mocked(getScaleInsightsCampaignComparison).mockReset();
-    vi.mocked(getScaleInsightsCampaignComparison).mockImplementation(async params => ({
+    vi.mocked(getScaleInsightsCampaignSpendBaseline).mockReset();
+    vi.mocked(getScaleInsightsCampaignSpendBaseline).mockImplementation(async params => ({
       asin: params.asin, country: params.country, currency: "USD", dataState: params.dataState,
       previousPeriod: { startDate: params.previousStartDate, endDate: params.previousEndDate },
       currentPeriod: { startDate: params.currentStartDate, endDate: params.currentEndDate },
-      freshness: { previousDataAsOf: params.previousEndDate, currentDataAsOf: params.currentEndDate },
+      freshness: { previousDataAsOf: params.previousEndDate },
       campaigns: [], warnings: [],
     }));
   });
@@ -44,7 +44,7 @@ describe("campaign comparison API", () => {
     const response = await GET(new Request(requestUrl, { headers: { Authorization: "Bearer pipeline-token" } }));
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
-    expect(getScaleInsightsCampaignComparison).toHaveBeenCalledWith({
+    expect(getScaleInsightsCampaignSpendBaseline).toHaveBeenCalledWith({
       asin: "B012345678", country: "US",
       previousStartDate: "2026-08-26", previousEndDate: "2026-08-30",
       currentStartDate: "2026-09-02", currentEndDate: "2026-09-06", dataState: "Partial",
@@ -57,7 +57,7 @@ describe("campaign comparison API", () => {
     vi.setSystemTime(new Date("2026-09-10T01:30:00Z"));
     const response = await GET(new Request(requestUrl));
     expect(response.status).toBe(200);
-    expect(getScaleInsightsCampaignComparison).toHaveBeenCalledWith(expect.objectContaining({
+    expect(getScaleInsightsCampaignSpendBaseline).toHaveBeenCalledWith(expect.objectContaining({
       previousStartDate: "2026-08-26", previousEndDate: "2026-09-01",
       currentStartDate: "2026-09-02", currentEndDate: "2026-09-08", dataState: "Final",
     }), expect.anything());
@@ -73,11 +73,11 @@ describe("campaign comparison API", () => {
     vi.mocked(verifyPipelineRequest).mockResolvedValue(new Response(null, { status: 401 }));
     const response = await GET(new Request(requestUrl));
     expect(response.status).toBe(401);
-    expect(getScaleInsightsCampaignComparison).not.toHaveBeenCalled();
+    expect(getScaleInsightsCampaignSpendBaseline).not.toHaveBeenCalled();
   });
 
   it("returns the hosted authorization URL without caching it", async () => {
-    vi.mocked(getScaleInsightsCampaignComparison).mockRejectedValue(new ScaleInsightsAuthorizationRequiredError("https://vercel.com/api/v1/connect/authorize/scl_test"));
+    vi.mocked(getScaleInsightsCampaignSpendBaseline).mockRejectedValue(new ScaleInsightsAuthorizationRequiredError("https://vercel.com/api/v1/connect/authorize/scl_test"));
     const response = await GET(new Request(requestUrl));
     expect(response.status).toBe(409);
     expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
@@ -91,7 +91,7 @@ describe("campaign comparison API", () => {
   it("uses safe errors for future weeks and provider configuration failures", async () => {
     let response = await GET(new Request(requestUrl.replace("2026-09-02", "2026-09-09")));
     expect(response.status).toBe(404);
-    vi.mocked(getScaleInsightsCampaignComparison).mockRejectedValue(new ScaleInsightsConfigurationError("secret"));
+    vi.mocked(getScaleInsightsCampaignSpendBaseline).mockRejectedValue(new ScaleInsightsConfigurationError("secret"));
     response = await GET(new Request(requestUrl));
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({ error: "Scale Insights is not configured for campaign comparison on this server." });

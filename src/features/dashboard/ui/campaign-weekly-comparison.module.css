@@ -18,6 +18,9 @@
 .periodComparison strong { color: #27272a; font: 600 11px/1.5 var(--mono); }
 .periodComparison > small { margin-left: auto; text-transform: none; letter-spacing: 0; }
 .warnings { margin: 0; padding: 10px 12px 10px 28px; border: 1px solid #fde68a; border-radius: 6px; background: #fffbeb; color: #92400e; font: 11px/1.5 var(--mono); }
+.baselineTable { overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: white; }
+.baselineSummary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); background: #fafafa; color: #52525b; font: 10px/1.4 var(--mono); }
+.baselineSummary strong { color: #18181b; font-family: var(--font-workspace-sans), sans-serif; font-size: 11px; }
 .accordionList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .moverAccordion { min-width: 0; border: 1px solid var(--border); border-radius: 8px; background: white; }
 .moverAccordion[open] { grid-column: 1 / -1; }
@@ -37,7 +40,7 @@
 .moverAccordion[open] .chevron { transform: rotate(180deg); }
 .accordionContent { padding: 0 12px 12px; border-top: 1px solid var(--border); }
 .tableScroll { overflow-x: auto; }
-.tableScroll table { width: 100%; min-width: 850px; border-collapse: collapse; text-align: left; }
+.tableScroll table { width: 100%; min-width: 640px; border-collapse: collapse; text-align: left; }
 .tableScroll thead { background: #fafafa; }
 .tableScroll th, .tableScroll td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .tableScroll thead th { color: #71717a; font: 600 10px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .04em; }
@@ -46,6 +49,7 @@
 .tableScroll tbody th a { display: flex; align-items: flex-start; gap: 6px; color: #18181b; font-size: 11px; font-weight: 700; line-height: 1.4; text-decoration: none; }
 .tableScroll tbody th a:hover span { text-decoration: underline; }
 .tableScroll tbody th a svg { width: 13px; height: 13px; flex: none; margin-top: 1px; color: #71717a; }
+.campaignName { color: #18181b; font-size: 11px; font-weight: 700; line-height: 1.4; }
 .tableScroll tbody th > small { display: block; margin-top: 4px; color: #a16207; font: 9px/1.4 var(--mono); }
 .tableScroll tbody tr:last-child th, .tableScroll tbody tr:last-child td { border-bottom: 0; }
 .primaryMetric { background: #fafafa; box-shadow: inset 2px 0 #09090b; }
@@ -58,6 +62,7 @@
 .deltaIncrease { color: #047857; }
 .deltaDecline { color: #be123c; }
 .deltaNeutral { color: #52525b; }
+.pendingValue { color: #a1a1aa; font: 600 14px/1 var(--mono); }
 .showAllButton { display: block; margin: 12px auto 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #27272a; font-size: 11px; font-weight: 600; }
 .showAllButton:hover { border-color: #09090b; background: #fafafa; }
 .emptyCategory { margin: 12px 0 0; padding: 18px; border-radius: 6px; background: #fafafa; color: #71717a; font: 11px/1.5 var(--mono); text-align: center; }

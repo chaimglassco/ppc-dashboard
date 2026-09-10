@@ -1,5 +1,6 @@
 import {
   createCampaignComparisonRow,
+  type CampaignSpendBaseline,
   type CampaignPeriodMetrics,
   type CampaignWeeklyComparison,
 } from "../domain/campaign-weekly-comparison";
@@ -35,6 +36,8 @@ type ProviderCampaign = {
   campaignName: string;
   metrics: CampaignPeriodMetrics;
 };
+
+type CampaignMetricSelection = "all" | "spend";
 
 type ProviderPage = {
   campaigns: ProviderCampaign[];
@@ -152,28 +155,28 @@ function sponsoredTypeValue(value: unknown): number | null {
   return null;
 }
 
-function campaignFromRecord(record: Record<string, unknown>): ProviderCampaign | null {
+function campaignFromRecord(record: Record<string, unknown>, metricSelection: CampaignMetricSelection): ProviderCampaign | null {
   const campaignId = campaignIdValue(recordValue(record, CAMPAIGN_ID_KEYS));
   const campaignName = stringValue(recordValue(record, CAMPAIGN_NAME_KEYS));
   const sponsoredType = sponsoredTypeValue(recordValue(record, SPONSORED_TYPE_KEYS))
     ?? sponsoredTypeValue(recordValue(record, ["type", "Type"]));
-  if (!campaignId || !campaignName || sponsoredType == null) return null;
+  if (!campaignName || (metricSelection === "all" && (!campaignId || sponsoredType == null))) return null;
 
   const rawSales = recordValue(record, SALES_KEYS);
   const rawSpend = recordValue(record, SPEND_KEYS);
   const rawOrders = recordValue(record, ORDERS_KEYS);
-  if (rawSales == null || rawSpend == null || rawOrders == null) return null;
-  const sales = finiteNonNegative(rawSales, "Sales");
+  if (rawSpend == null || (metricSelection === "all" && (rawSales == null || rawOrders == null))) return null;
+  const sales = rawSales == null ? 0 : finiteNonNegative(rawSales, "Sales");
   const spend = finiteNonNegative(rawSpend, "Spend");
-  const orders = integerValue(rawOrders, "Orders");
-  return { campaignId, campaignName, sponsoredType, metrics: { sales, spend, orders } };
+  const orders = rawOrders == null ? 0 : integerValue(rawOrders, "Orders");
+  return { campaignId, campaignName, sponsoredType: sponsoredType ?? -1, metrics: { sales, spend, orders } };
 }
 
-function collectCampaignRows(value: unknown, depth = 0): ProviderCampaign[] {
+function collectCampaignRows(value: unknown, metricSelection: CampaignMetricSelection, depth = 0): ProviderCampaign[] {
   if (depth > 5) return [];
   if (typeof value === "string" && /^[\[{]/.test(value.trim())) {
     try {
-      return collectCampaignRows(JSON.parse(value), depth + 1);
+      return collectCampaignRows(JSON.parse(value), metricSelection, depth + 1);
     } catch {
       return [];
     }
@@ -181,22 +184,22 @@ function collectCampaignRows(value: unknown, depth = 0): ProviderCampaign[] {
   if (Array.isArray(value)) {
     return value.flatMap(candidate => {
       if (!isRecord(candidate)) return [];
-      const campaign = campaignFromRecord(candidate);
-      return campaign ? [campaign] : collectCampaignRows(candidate, depth + 1);
+      const campaign = campaignFromRecord(candidate, metricSelection);
+      return campaign ? [campaign] : collectCampaignRows(candidate, metricSelection, depth + 1);
     });
   }
   if (!isRecord(value)) return [];
-  return Object.values(value).flatMap(candidate => collectCampaignRows(candidate, depth + 1));
+  return Object.values(value).flatMap(candidate => collectCampaignRows(candidate, metricSelection, depth + 1));
 }
 
-function parseTextRows(value: string) {
+function parseTextRows(value: string, metricSelection: CampaignMetricSelection) {
   const text = value.trim();
   if (!text) return [];
   const jsonCandidates = [text, ...[...text.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)].map(match => match[1].trim())];
   for (const candidate of jsonCandidates) {
     try {
       const parsed: unknown = JSON.parse(candidate);
-      const campaigns = collectCampaignRows(parsed);
+      const campaigns = collectCampaignRows(parsed, metricSelection);
       if (campaigns.length) return campaigns;
     } catch {
       continue;
@@ -216,7 +219,7 @@ function parseTextRows(value: string) {
       records.push(Object.fromEntries(headers.map((header, cellIndex) => [header, cells[cellIndex]])));
     }
     const campaigns = records.flatMap(record => {
-      const campaign = campaignFromRecord(record);
+      const campaign = campaignFromRecord(record, metricSelection);
       return campaign ? [campaign] : [];
     });
     if (campaigns.length) return campaigns;
@@ -224,9 +227,9 @@ function parseTextRows(value: string) {
   return [];
 }
 
-function collectMcpContentRows(result: unknown) {
+function collectMcpContentRows(result: unknown, metricSelection: CampaignMetricSelection) {
   if (!isRecord(result) || !Array.isArray(result.content)) return [];
-  return result.content.flatMap(block => isRecord(block) && block.type === "text" && typeof block.text === "string" ? parseTextRows(block.text) : []);
+  return result.content.flatMap(block => isRecord(block) && block.type === "text" && typeof block.text === "string" ? parseTextRows(block.text, metricSelection) : []);
 }
 
 function numberOrNull(value: unknown) {
@@ -247,13 +250,13 @@ function assertScope(payload: Record<string, unknown>, country: string, startDat
   }
 }
 
-function parseProviderPage(result: unknown, country: string, startDate: string, endDate: string): ProviderPage {
+function parseProviderPage(result: unknown, country: string, startDate: string, endDate: string, metricSelection: CampaignMetricSelection): ProviderPage {
   const payload = unwrapScaleInsightsPayload(result);
   assertScope(payload, country, startDate, endDate);
   const scope = providerScope(payload);
   const metadata = isRecord(payload.oppMeta) ? payload.oppMeta : isRecord(payload.meta) ? payload.meta : isRecord(payload.Meta) ? payload.Meta : {};
-  const campaigns = collectCampaignRows(payload);
-  if (!campaigns.length) campaigns.push(...collectMcpContentRows(result));
+  const campaigns = collectCampaignRows(payload, metricSelection);
+  if (!campaigns.length) campaigns.push(...collectMcpContentRows(result, metricSelection));
   const totalCount = numberOrNull(metadata.total_count ?? metadata.totalCount ?? metadata.TotalCount);
   if (totalCount != null && totalCount > 0 && campaigns.length === 0) {
     throw new ScaleInsightsDataError("invalid_response", "Scale Insights returned campaign results without readable campaign rows.");
@@ -306,8 +309,10 @@ export function getScaleInsightsCampaignToolCapabilities(inputSchema: unknown): 
   };
 }
 
-function campaignKey(campaign: Pick<ProviderCampaign, "campaignId" | "sponsoredType">) {
-  return `${campaign.sponsoredType}:${campaign.campaignId}`;
+function campaignKey(campaign: Pick<ProviderCampaign, "campaignId" | "sponsoredType" | "campaignName">) {
+  return campaign.campaignId
+    ? `${campaign.sponsoredType}:${campaign.campaignId}`
+    : `${campaign.sponsoredType}:name:${campaign.campaignName.toLocaleLowerCase()}`;
 }
 
 function mergeProviderCampaign(target: Map<string, ProviderCampaign>, campaign: ProviderCampaign) {
@@ -334,6 +339,7 @@ async function loadProviderPeriod(
   endDate: string,
   callTool: ScaleInsightsToolCaller,
   capabilities: ScaleInsightsCampaignToolCapabilities,
+  metricSelection: CampaignMetricSelection = "all",
 ): Promise<ProviderPeriod> {
   const campaigns = new Map<string, ProviderCampaign>();
   const warnings: string[] = [];
@@ -359,7 +365,7 @@ async function loadProviderPeriod(
     if (capabilities.pageKey) args[capabilities.pageKey] = pageNumber;
     if (capabilities.cursorKey && cursor) args[capabilities.cursorKey] = cursor;
 
-    const providerPage = parseProviderPage(await callTool("get_ads_performance", args), country, startDate, endDate);
+    const providerPage = parseProviderPage(await callTool("get_ads_performance", args), country, startDate, endDate, metricSelection);
     currency = providerPage.currency || currency;
     dataAsOf = providerPage.dataAsOf || dataAsOf;
     totalCount = providerPage.totalCount ?? totalCount;
@@ -424,5 +430,39 @@ export async function loadScaleInsightsCampaignComparison(
     freshness: { previousDataAsOf: previous.dataAsOf, currentDataAsOf: current.dataAsOf },
     campaigns,
     warnings,
+  };
+}
+
+export async function loadScaleInsightsCampaignSpendBaseline(
+  params: ScaleInsightsCampaignComparisonParams,
+  callTool: ScaleInsightsToolCaller,
+  capabilities: ScaleInsightsCampaignToolCapabilities = {},
+): Promise<CampaignSpendBaseline> {
+  const previous = await loadProviderPeriod(
+    params.asin,
+    params.country,
+    params.previousStartDate,
+    params.previousEndDate,
+    callTool,
+    capabilities,
+    "spend",
+  );
+  return {
+    asin: params.asin,
+    country: params.country,
+    currency: previous.currency || "USD",
+    dataState: params.dataState,
+    previousPeriod: { startDate: params.previousStartDate, endDate: params.previousEndDate },
+    currentPeriod: { startDate: params.currentStartDate, endDate: params.currentEndDate },
+    freshness: { previousDataAsOf: previous.dataAsOf },
+    campaigns: [...previous.campaigns.values()]
+      .map(campaign => ({
+        campaignId: campaign.campaignId || null,
+        sponsoredType: campaign.sponsoredType >= 0 ? campaign.sponsoredType : null,
+        campaignName: campaign.campaignName,
+        previousSpend: campaign.metrics.spend,
+      }))
+      .toSorted((first, second) => second.previousSpend - first.previousSpend || first.campaignName.localeCompare(second.campaignName)),
+    warnings: previous.warnings,
   };
 }

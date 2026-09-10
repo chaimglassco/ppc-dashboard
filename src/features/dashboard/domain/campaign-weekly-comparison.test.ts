@@ -5,6 +5,7 @@ import {
   getCampaignMovers,
   getCampaignMoverTotal,
   getScaleInsightsCampaignTrendHref,
+  parseCampaignSpendBaseline,
   parseCampaignWeeklyComparison,
 } from "./campaign-weekly-comparison";
 
@@ -57,5 +58,16 @@ describe("campaign weekly comparison domain", () => {
     expect(parsed).toMatchObject({ asin: "B012345678", country: "US", currency: "USD", dataState: "Partial" });
     expect(parsed?.campaigns[0].delta.sales).toEqual({ absolute: -25, percentage: -25 });
     expect(parseCampaignWeeklyComparison({})).toBeNull();
+  });
+
+  it("validates the staged previous-week Spend baseline", () => {
+    expect(parseCampaignSpendBaseline({
+      asin: "b012345678", country: "us", currency: "usd", dataState: "Final",
+      previousPeriod: { startDate: "2026-08-26", endDate: "2026-09-01" },
+      currentPeriod: { startDate: "2026-09-02", endDate: "2026-09-08" },
+      freshness: { previousDataAsOf: "2026-09-02" }, warnings: [],
+      campaigns: [{ campaignId: "campaign-1", sponsoredType: 0, campaignName: "Campaign 1", previousSpend: 42.75 }],
+    })).toMatchObject({ asin: "B012345678", campaigns: [{ previousSpend: 42.75 }] });
+    expect(parseCampaignSpendBaseline({})).toBeNull();
   });
 });

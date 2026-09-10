@@ -40,6 +40,25 @@ export type CampaignWeeklyComparison = {
   warnings: string[];
 };
 
+export type CampaignSpendBaselineRow = {
+  campaignId: string | null;
+  sponsoredType: number | null;
+  campaignName: string;
+  previousSpend: number;
+};
+
+export type CampaignSpendBaseline = {
+  asin: string;
+  country: string;
+  currency: string;
+  dataState: "Final" | "Partial";
+  previousPeriod: CampaignComparisonPeriod;
+  currentPeriod: CampaignComparisonPeriod;
+  freshness: { previousDataAsOf: string };
+  campaigns: CampaignSpendBaselineRow[];
+  warnings: string[];
+};
+
 export type CampaignMoverCategory = {
   id: `${CampaignComparisonMetric}-${CampaignComparisonDirection}`;
   metric: CampaignComparisonMetric;
@@ -145,8 +164,8 @@ export function parseCampaignWeeklyComparison(value: unknown): CampaignWeeklyCom
   const campaigns: CampaignComparisonRow[] = [];
   for (const candidate of value.campaigns) {
     if (!isRecord(candidate)) return null;
-    const campaignId = stringValue(candidate.campaignId);
-    const sponsoredType = finiteNonNegative(candidate.sponsoredType);
+    const campaignId = candidate.campaignId == null ? null : stringValue(candidate.campaignId);
+    const sponsoredType = candidate.sponsoredType == null ? null : finiteNonNegative(candidate.sponsoredType);
     const campaignName = stringValue(candidate.campaignName);
     const previous = parseMetrics(candidate.previous);
     const current = parseMetrics(candidate.current);
@@ -175,6 +194,42 @@ export function parseCampaignWeeklyComparison(value: unknown): CampaignWeeklyCom
       previousDataAsOf: stringValue(freshnessValue.previousDataAsOf),
       currentDataAsOf: stringValue(freshnessValue.currentDataAsOf),
     },
+    campaigns,
+    warnings,
+  };
+}
+
+export function parseCampaignSpendBaseline(value: unknown): CampaignSpendBaseline | null {
+  if (!isRecord(value)) return null;
+  const asin = stringValue(value.asin).toUpperCase();
+  const country = stringValue(value.country).toUpperCase();
+  const currency = stringValue(value.currency).toUpperCase();
+  const dataState = value.dataState === "Final" || value.dataState === "Partial" ? value.dataState : null;
+  const previousPeriod = parsePeriod(value.previousPeriod);
+  const currentPeriod = parsePeriod(value.currentPeriod);
+  const freshnessValue = isRecord(value.freshness) ? value.freshness : null;
+  if (!/^[A-Z0-9]{10}$/.test(asin) || !/^[A-Z]{2}$/.test(country) || !/^[A-Z]{3}$/.test(currency) || !dataState || !previousPeriod || !currentPeriod || !freshnessValue || !Array.isArray(value.campaigns) || !Array.isArray(value.warnings)) return null;
+
+  const campaigns: CampaignSpendBaselineRow[] = [];
+  for (const candidate of value.campaigns) {
+    if (!isRecord(candidate)) return null;
+    const campaignId = stringValue(candidate.campaignId);
+    const sponsoredType = finiteNonNegative(candidate.sponsoredType);
+    const campaignName = stringValue(candidate.campaignName);
+    const previousSpend = finiteNonNegative(candidate.previousSpend);
+    if ((candidate.campaignId != null && !campaignId) || (sponsoredType != null && !Number.isInteger(sponsoredType)) || !campaignName || previousSpend == null) return null;
+    campaigns.push({ campaignId, sponsoredType, campaignName, previousSpend });
+  }
+  const warnings = value.warnings.every(warning => typeof warning === "string") ? value.warnings.map(warning => warning.trim()).filter(Boolean) : null;
+  if (!warnings) return null;
+  return {
+    asin,
+    country,
+    currency,
+    dataState,
+    previousPeriod,
+    currentPeriod,
+    freshness: { previousDataAsOf: stringValue(freshnessValue.previousDataAsOf) },
     campaigns,
     warnings,
   };

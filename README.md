@@ -24,7 +24,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - PPC verifies the existing Pipeline session through Pipeline’s `/api/auth/session` endpoint.
 - PPC Dashboard loads the authenticated user’s compact Pipeline product catalog and provides a three-panel product, reporting-period, and weekly documentation workspace.
 - For products with an ASIN, the selected Wednesday–Tuesday period automatically loads Spend, PPC Sales, PPC Orders, Total Sales, and Total Orders from Scale Insights through an authenticated server route. Organic Sales, Organic Orders, ACOS, and TACOS are calculated by this application.
-- Campaign Week-over-Week Comparison uses the same authenticated Scale Insights connection to compare the selected ASIN's campaign Sales, Spend, and Orders with the preceding matched-length period. Six collapsed mover views show all three metrics and open the exact campaign trend in Scale Insights; results remain in memory only.
+- Campaign Week-over-Week Comparison is currently staged as a previous-week Spend baseline. It makes one authenticated Scale Insights request for the preceding matched period, lists campaigns by Spend, leaves Current Week Spend blank, and opens the previous-period campaign trend; results remain in memory only.
 - A session-only Performance AI widget combines the selected product, active week, populated visible reporting periods, and planning notes with live read-only Scale Insights MCP tools. Server-side enforcement limits every tool call to that ASIN, US, and the visible completed-date range without changing the saved report schema.
 - The Products panel can add dashboard-only products, apply local edits and images, create reusable tags, filter by tag, and remove dashboard-added products. These catalog customizations use the validated `glassco.ppcDashboardCatalog.v1` browser record and do not mutate Product Pipeline records.
 - Weekly goals, budget limits, performance figures, prior-week outcomes, notes, and action items save to the versioned `glassco.ppcPerformanceNotes.v1` browser record in this initial UI milestone; they are not yet shared across browsers.
@@ -65,7 +65,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 
 - Next.js uses `basePath: "/ppc"` for pages, assets, and API routes.
 - `/ppc/api/dashboard/performance` verifies the Pipeline session before requesting a short-lived Scale Insights token from Vercel Connect for that stable Pipeline user ID. Vercel stores and refreshes the OAuth grant; credentials and tokens are never returned to the browser or written to browser storage.
-- `/ppc/api/dashboard/campaign-comparison` applies the same authenticated no-store boundary to two matched campaign periods, follows advertised provider pagination, validates scope and metrics, and returns only normalized campaign comparison data.
+- `/ppc/api/dashboard/campaign-comparison` currently applies the authenticated no-store boundary to one previous matched campaign period, follows advertised provider pagination, validates scope and Spend, and returns the staged normalized baseline.
 - Authenticated `/ppc/api/dashboard/ai-chat` validates bounded product/week context and invokes `openai/gpt-5.6-sol` through Vercel AI Gateway; model credentials remain server-side and responses are not cached.
 - Private shared images are fetched by client previews with the Pipeline bearer token and rendered through temporary browser object URLs; raw private API URLs are never assigned directly to image elements.
 - Pipeline proxies `/ppc/:path*` to the independently deployed PPC Vercel project.
@@ -121,7 +121,7 @@ npm test
 npm run build
 ```
 
-The last verified state passes all four commands with 51 test files, 301 passing tests, and 6 intentionally skipped tests.
+The last verified state passes all four commands with 51 test files, 303 passing tests, and 6 intentionally skipped tests.
 
 ## Project structure
 

@@ -4,11 +4,10 @@ Last updated: September 10, 2026
 
 ## September 10, 2026 — campaign week-over-week comparison
 
-- A new read-only Campaign Week-over-Week Comparison sits below the paired weekly summaries and above action items. It loads the selected ASIN's current and immediately preceding Scale Insights campaign performance, matching elapsed day counts for partial weeks.
-- Six independently collapsed Sales/Spend/Orders increase/decline dropdowns show category counts and combined movement. Rows are sorted by the selected metric, show ten first with Show all, include all three Previous → Current metrics, and link campaign names directly to the Scale Insights campaign trend page.
-- The authenticated no-store `/ppc/api/dashboard/campaign-comparison` route reuses Pipeline identity and Vercel Connect, validates exact provider scope, discovers campaign grouping/pagination from the live MCP tool schema, and merges by campaign ID plus sponsored type. Comparison data is cached only in React memory and no browser-storage contract changed.
-- A live-provider compatibility fix accepts nested campaign/entity records, formatted metric strings, `const`-based grouping choices, embedded JSON, and text-table campaign rows when structured content contains only totals. This addresses the “Scale Insights returned campaign results without readable campaign rows” error without relaxing scope or metric validation.
-- Lint, typecheck, all 301 passing tests across 51 files (6 skipped), and the production build pass. Local browser verification with a temporary authenticated Scale Insights response confirmed exact partial dates, six initially collapsed accordions, keyboard expansion, all-metric campaign rows, activity labels, category totals, protected exact campaign links, correct placement, no page overflow, and no hydration or console errors; the temporary fixture and browser state were removed.
+- Campaign Week-over-Week Comparison is reduced to a Stage 1 Spend baseline below the paired summaries. The authenticated no-store route makes one Scale Insights request for the previous matched period and requires only campaign name and Spend; campaign ID and sponsored type are retained when available.
+- The table sorts by Previous Week Spend, shows ten first with Show all, and leaves Current Week Spend as an explicit pending dash. Campaign links open the exact previous-period Scale Insights trend. Current retrieval, deltas, Sales/Orders, and mover groups remain deferred.
+- The provider adapter accepts nested campaign/entity records, formatted Spend strings, `const`-based grouping choices, embedded JSON, and MCP text tables while retaining exact scope and nonnegative-Spend validation. Baselines remain in React memory and no browser-storage contract changed.
+- Local browser verification confirmed populated previous Spend, pending current values, optional identifier handling, previous-period links, responsive overflow containment, and no console errors. Lint, typecheck, all 303 passing tests across 51 files (6 skipped), and the production build pass.
 
 ## September 10, 2026 — local first-panel redesign
 

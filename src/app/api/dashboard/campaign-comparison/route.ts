@@ -1,7 +1,7 @@
 import { addDaysIso } from "@/features/dashboard/domain/ppc-dashboard-state";
 import { ScaleInsightsDataError, type ScaleInsightsWeeklyPerformanceParams } from "@/features/dashboard/data/scale-insights-performance";
 import {
-  getScaleInsightsCampaignComparison,
+  getScaleInsightsCampaignSpendBaseline,
   ScaleInsightsAuthorizationRequiredError,
   ScaleInsightsConfigurationError,
 } from "@/features/dashboard/data/scale-insights-server";
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
   const dataState = currentEndDate < selectedWeek.endDate ? "Partial" as const : "Final" as const;
 
   try {
-    const comparison = await getScaleInsightsCampaignComparison({
+    const comparison = await getScaleInsightsCampaignSpendBaseline({
       asin: selectedWeek.asin,
       country: selectedWeek.country,
       previousStartDate,

@@ -3,6 +3,7 @@ import { ScaleInsightsDataError } from "./scale-insights-performance";
 import {
   getScaleInsightsCampaignToolCapabilities,
   loadScaleInsightsCampaignComparison,
+  loadScaleInsightsCampaignSpendBaseline,
 } from "./scale-insights-campaign-comparison";
 
 const params = {
@@ -113,5 +114,22 @@ describe("Scale Insights campaign comparison adapter", () => {
       campaignId: "campaign-text", campaignName: "Text campaign",
       previous: { sales: 287.73, spend: 86.54, orders: 4 }, current: { sales: 287.73, spend: 86.54, orders: 4 },
     })]);
+  });
+
+  it("loads only the previous period and requires only campaign Spend for the staged baseline", async () => {
+    const callTool = vi.fn(async (_name: string, args: Record<string, unknown>) => payload(String(args.start_date), String(args.end_date), [{
+      campaign: { name: "Spend-only campaign" },
+      metrics: { spend: 42.75 },
+    }]));
+    const baseline = await loadScaleInsightsCampaignSpendBaseline(params, callTool);
+    expect(callTool).toHaveBeenCalledTimes(1);
+    expect(callTool).toHaveBeenCalledWith("get_ads_performance", expect.objectContaining({
+      start_date: params.previousStartDate, end_date: params.previousEndDate, summary_only: false,
+    }));
+    expect(baseline).toMatchObject({
+      previousPeriod: { startDate: params.previousStartDate, endDate: params.previousEndDate },
+      currentPeriod: { startDate: params.currentStartDate, endDate: params.currentEndDate },
+      campaigns: [{ campaignId: null, sponsoredType: null, campaignName: "Spend-only campaign", previousSpend: 42.75 }],
+    });
   });
 });
