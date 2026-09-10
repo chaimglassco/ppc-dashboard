@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import {
-  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, DollarSign,
-  FileText, Flag, Italic, Underline, List, ListOrdered, Plus, RefreshCw, Save, Download, TrendingUp, SlidersHorizontal, Trash2, X,
+  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, Clock3, DollarSign,
+  FileText, Flag, Italic, Underline, List, ListOrdered, Plus, RefreshCw, Save, Download, Tag, TrendingUp, SlidersHorizontal, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
@@ -23,6 +23,7 @@ import { ProductPerformanceChat, type PerformanceChatPeriod } from "./product-pe
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, type PerformanceCache } from "../domain/ppc-performance-cache";
 import { getScaleInsightsAnalysisHref, PPC_ANALYSIS_COLUMNS } from "../domain/ppc-analysis-navigation";
 import styles from "./ppc-performance-dashboard.module.css";
+import periods from "./ppc-reporting-periods.module.css";
 import ws from "./ppc-performance-workspace.module.css";
 
 type MetricField = "spend" | "ppcSales" | "organicSales" | "totalSales" | "ppcOrders" | "organicOrders" | "totalOrders" | "acos" | "tacos";
@@ -60,6 +61,22 @@ function numericValue(value: string) {
 
 function roundedMetricValue(value: number) {
   return Number.isFinite(value) ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(Math.max(0, value))) : "0";
+}
+
+function formatPeriodCardRange(weekStart: string) {
+  const start = new Date(`${weekStart}T12:00:00Z`);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+  const month = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
+  const startMonth = month.format(start);
+  const endMonth = month.format(end);
+  const startDay = start.getUTCDate();
+  const endDay = end.getUTCDate();
+  const startYear = start.getUTCFullYear();
+  const endYear = end.getUTCFullYear();
+  if (startYear !== endYear) return `${startMonth} ${startDay}, ${startYear} – ${endMonth} ${endDay}, ${endYear}`;
+  if (startMonth === endMonth) return `${startMonth} ${startDay} – ${endDay}, ${endYear}`;
+  return `${startMonth} ${startDay} – ${endMonth} ${endDay}, ${endYear}`;
 }
 
 function previousMetricValue(metric: MetricDefinition, value: number) {
@@ -643,22 +660,22 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   return <section className={styles.dashboard} aria-label="Weekly PPC Performance Notes">
     <ProductPortfolioPanel products={products} tags={catalog.tags} loading={productsLoading} error={productsError} selectedProductId={selectedProductId} onSelectProduct={selectProduct} onRetry={() => void loadProducts()} onCreateTag={createTag} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} onReorderProducts={reorderProducts} />
 
-    <aside className={styles.periodsPanel} aria-labelledby="periods-heading">
-      <div className={styles.panelHeader}>
-        <div className={styles.headingRow}><div><span className={styles.eyebrow}>TIMELINE</span><h2 id="periods-heading">Reporting Periods</h2></div></div>
-        <div className={styles.monthPickerRow}><div className={styles.monthPicker} role="group" aria-label="Month navigation"><button type="button" aria-label="Previous selected month range" onClick={() => shiftReportingMonths(-1)}><ArrowLeft /></button><strong>{reportingMonthLabel}</strong><button type="button" aria-label="Next selected month range" onClick={() => shiftReportingMonths(1)}><ArrowRight /></button></div><button type="button" className={styles.calendarPickerButton} aria-label={`Choose reporting months, ${reportingMonthLabel}`} onClick={openMonthPicker}><CalendarDays aria-hidden="true" /></button></div>
+    <aside className={periods.periodsPanel} aria-labelledby="periods-heading">
+      <div className={periods.panelHeader}>
+        <div className={periods.headingRow}><h2 id="periods-heading">Reporting Periods</h2><button type="button" className={periods.calendarPickerButton} aria-label={`Choose reporting months, ${reportingMonthLabel}`} onClick={openMonthPicker}><CalendarDays aria-hidden="true" /></button></div>
+        <div className={periods.monthPicker} role="group" aria-label="Month navigation"><button type="button" aria-label="Previous selected month range" onClick={() => shiftReportingMonths(-1)}><ArrowLeft aria-hidden="true" /></button><strong>{reportingMonthLabel}</strong><button type="button" aria-label="Next selected month range" onClick={() => shiftReportingMonths(1)}><ArrowRight aria-hidden="true" /></button></div>
       </div>
-      <div className={styles.periodList} aria-label="Reporting periods">{weekStarts.map(weekStart => {
+      <div className={periods.periodList} aria-label="Reporting periods">{weekStarts.map(weekStart => {
         const periodDraft = selectedProductId ? reports[reportKey(selectedProductId, weekStart)] : null;
         const periodSnapshot = performanceCache[performanceCacheKey(selectedAsin, weekStart)];
         const periodReport = periodSnapshot ? { ...periodDraft, ...periodSnapshot.metrics } : periodDraft;
         const periodStatus = periodReport?.status ?? "Draft";
         const isCurrent = weekStart === currentWeekStart;
         const isSelected = weekStart === activeWeekStart;
-        return <button type="button" key={weekStart} aria-pressed={isSelected} className={`${styles.periodCard} ${isSelected ? styles.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
-          {isCurrent ? <span className={styles.currentBadge}>Current</span> : null}
-          <span className={styles.periodTop}><strong>{formatWeekRange(weekStart)}</strong><span className={styles.periodMeta}><small>Week {getIsoWeekNumber(weekStart)}</small>{periodStatus === "Draft" ? null : <i className={statusTone(periodStatus)}>{periodStatus}</i>}</span></span>
-          <span className={styles.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>PPC Sales</small><strong>{currency(periodReport?.ppcSales ?? 0)}</strong></span><span><small>PPC Order</small><strong>{periodReport?.ppcOrders ?? 0}</strong></span><span><small>ACOS</small><strong>{Math.round(periodReport?.acos ?? 0)}%</strong></span></span>
+        return <button type="button" key={weekStart} aria-label={`${formatWeekRange(weekStart)} reporting period`} aria-pressed={isSelected} className={`${periods.periodCard} ${isSelected ? periods.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
+          {isCurrent ? <span className={periods.currentBadge}>Current</span> : null}
+          <span className={periods.periodTop}><span className={periods.periodIdentity}><strong>{formatPeriodCardRange(weekStart)}</strong><span className={periods.periodMeta}>{isCurrent ? <><small>Week {getIsoWeekNumber(weekStart)}</small><i aria-hidden="true" /><span><Clock3 aria-hidden="true" />In Review</span></> : selectedProductTag ? <span className={periods.productTag}><Tag aria-hidden="true" />{selectedProductTag.name}</span> : <small>Week {getIsoWeekNumber(weekStart)}</small>}</span></span><span className={periods.statusChip}>{periodStatus}</span></span>
+          <span className={periods.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>Sales</small><strong>{currency(periodReport?.ppcSales ?? 0)}</strong></span><span><small>Orders</small><strong>{periodReport?.ppcOrders ?? 0}</strong></span><span><small>ACoS</small><strong>{Math.round(periodReport?.acos ?? 0)}%</strong></span></span>
         </button>;
       })}</div>
     </aside>

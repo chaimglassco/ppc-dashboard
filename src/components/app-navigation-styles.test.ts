@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
 const dashboardCss = readFileSync(join(process.cwd(), "src", "features", "dashboard", "ui", "ppc-performance-dashboard.module.css"), "utf8");
 const portfolioCss = readFileSync(join(process.cwd(), "src", "features", "dashboard", "ui", "product-portfolio-panel.module.css"), "utf8");
+const reportingPeriodsCss = readFileSync(join(process.cwd(), "src", "features", "dashboard", "ui", "ppc-reporting-periods.module.css"), "utf8");
 
 describe("application navigation style contract", () => {
   it("uses three independent rounded cards with hover and visible focus states", () => {
@@ -29,16 +30,17 @@ describe("application navigation style contract", () => {
   });
 
   it("lays out the responsive three-panel PPC performance workspace below the shared top bar", () => {
-    expect(dashboardCss).toContain(".dashboard{height:calc(100vh - 74px);display:grid;grid-template-columns:280px 330px minmax(620px,1fr)");
+    expect(dashboardCss).toContain(".dashboard{height:calc(100vh - 74px);display:grid;grid-template-columns:280px 340px minmax(620px,1fr)");
     expect(dashboardCss).toContain("@media(max-width:760px){.dashboard{height:auto;min-height:calc(100vh - 108px);display:block");
   });
 
-  it("joins the selected product to the reporting-period panel as one continuous surface", () => {
+  it("keeps portfolio ordering while isolating the reference reporting-period surface", () => {
     expect(dashboardCss).toContain(".dashboard{column-gap:0;row-gap:12px}");
-    expect(dashboardCss).toContain(".periodsPanel{border-left:0;border-radius:0 16px 16px 0;background:#dceaff");
+    expect(reportingPeriodsCss).toContain("position: relative");
+    expect(reportingPeriodsCss).toContain("width: 28px");
+    expect(reportingPeriodsCss).toContain("background: #fff");
+    expect(reportingPeriodsCss).toContain("border: 2px solid #000");
     expect(portfolioCss).toContain(".list{direction:rtl}");
     expect(portfolioCss).toContain(".list>*{direction:ltr}");
-    expect(portfolioCss).toContain(".selected{z-index:2;margin-right:-12px;border-color:#dceaff;border-radius:12px 0 0 12px;background:#dceaff");
-    expect(portfolioCss).toContain(".selected::after{position:absolute;top:-1px;right:-12px;bottom:-1px;width:13px;background:#dceaff");
   });
 });

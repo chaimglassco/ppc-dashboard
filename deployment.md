@@ -2,7 +2,9 @@
 
 ## September 10 workspace release
 
-The third-panel redesign requires no data migration, environment changes, or Pipeline deployment. Deploy the Library/PPC project only after production approval. The dashboard route adds self-hosted Geist and JetBrains Mono using next/font; builds need the same Google font download access already used by the app font. Verify the new panel at /ppc/dashboard and check the Library at /ppc/library. If the local Turbopack dev server reports “Next.js package not found,” use npm run dev -- --webpack for local verification; production build remains a separate gate.
+The second- and third-panel redesigns require no data migration, environment changes, or Pipeline deployment. Deploy the Library/PPC project only after production approval. The dashboard route adds self-hosted Geist and JetBrains Mono using next/font; builds need the same Google font download access already used by the app font. Verify the new panels at /ppc/dashboard and check the Library at /ppc/library. If the local Turbopack dev server reports “Next.js package not found,” use npm run dev -- --webpack for local verification; production build remains a separate gate.
+
+The Reporting Periods release is presentation-only. After deployment, verify the 340px white panel, title-row calendar action, integrated multi-month navigator, abbreviated visible date ranges, black selected/current treatment, status/tag metadata, and four Spend/Sales/Orders/ACoS cells. Exercise month shifting, the month dialog, report switching, metric hydration, keyboard focus, and responsive layout. The full accessible names must continue to state the actual Wednesday–Tuesday range.
 
 ## Current deployment model
 

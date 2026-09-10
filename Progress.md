@@ -1,8 +1,12 @@
 # Project Progress
 
+## September 10, 2026 — Reference-based second-panel rebuild
+
+Rebuilt Reporting Periods from the supplied HTML and image as a 340px white panel with the reference uppercase header, calendar placement, integrated month control, compact neutral cards, black Current/selection treatment, abbreviated visible date ranges, status chips, tag metadata, and four boxed statistics. Existing month selection, Wednesday–Tuesday boundaries, current-week cutoff, report switching, cached performance hydration, and local schemas remain intact. The Products panel and completed third-panel rebuild are preserved. This work is local and has not been deployed.
+
 ## September 10, 2026 — Reference-based third-panel rebuild
 
-Rebuilt the workspace from the supplied HTML with the corrected Total Orders tile and unavailable Conversion Rate card. Added isolated reference typography/layout, compact editable goals, expandable budget history, summary footers, action due dates, and JSON export. Retained the original first two panels and all existing API/storage boundaries. This work is local and has not been deployed. Browser fixture checks cover desktop/mobile layout and note persistence; final validation results are recorded in HANDOFF.md.
+Rebuilt the workspace from the supplied HTML with the corrected Total Orders tile and unavailable Conversion Rate card. Added isolated reference typography/layout, compact editable goals, expandable budget history, summary footers, action due dates, and JSON export. Retained the original first two panels and all existing API/storage boundaries at that stage. This work is local and has not been deployed. Browser fixture checks cover desktop/mobile layout and note persistence; final validation results are recorded in HANDOFF.md.
 
 Last updated: September 9, 2026
 

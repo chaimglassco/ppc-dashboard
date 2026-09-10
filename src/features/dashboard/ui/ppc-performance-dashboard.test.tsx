@@ -81,12 +81,13 @@ describe("PpcPerformanceDashboard", () => {
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/dashboard/products"), expect.any(Object));
     expect(screen.getByRole("button", { name: "Save Weekly Report" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Open current week" })).not.toBeInTheDocument();
-    const currentPeriod = within(screen.getByLabelText("Reporting periods")).getAllByRole("button").find(button => button.textContent?.includes("August 26 to September 1")) as HTMLButtonElement;
-    expect(within(currentPeriod).getByText("August 26 to September 1")).toBeVisible();
+    const currentPeriod = screen.getByRole("button", { name: /August 26 to September 1 reporting period/ });
+    expect(within(currentPeriod).getByText("Aug 26 – Sep 1, 2026")).toBeVisible();
     expect(within(currentPeriod).getByText("Week 35").parentElement?.className).toMatch(/periodMeta/);
-    expect(within(currentPeriod).getByText("PPC Sales")).toBeVisible();
-    expect(within(currentPeriod).getByText("PPC Order")).toBeVisible();
-    expect(within(currentPeriod).getByText("ACOS")).toBeVisible();
+    expect(within(currentPeriod).getByText("In Review")).toBeVisible();
+    expect(within(currentPeriod).getByText("Sales")).toBeVisible();
+    expect(within(currentPeriod).getByText("Orders")).toBeVisible();
+    expect(within(currentPeriod).getByText("ACoS")).toBeVisible();
     expect(within(currentPeriod).queryByText("ROAS")).not.toBeInTheDocument();
     expect(currentPeriod).toHaveAttribute("aria-pressed", "true");
     expect(within(screen.getByLabelText("Reporting periods")).getAllByRole("button")[0]).toBe(currentPeriod);
@@ -475,8 +476,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
 
     const periods = within(screen.getByLabelText("Reporting periods")).getAllByRole("button");
-    expect(periods[0]).toHaveTextContent("September 2 to September 8");
-    expect(periods[1]).toHaveTextContent("August 26 to September 1");
+    expect(periods[0]).toHaveTextContent("Sep 2 – 8, 2026");
+    expect(periods[1]).toHaveTextContent("Aug 26 – Sep 1, 2026");
     expect(periods).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Choose reporting months, August & September 2026" })).toBeVisible();
     expect(screen.queryByText("August 19 to August 25")).not.toBeInTheDocument();

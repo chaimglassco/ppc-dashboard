@@ -2,11 +2,19 @@
 
 Last updated: September 10, 2026
 
+## September 10, 2026 — local second-panel redesign
+
+- Reporting Periods was rebuilt from the supplied HTML/image reference as a 340px white column. The reference hierarchy is now uppercase title plus calendar action, integrated month navigation, and 12px-spaced neutral period cards.
+- Visible dates use compact ranges such as `Aug 26 – Sep 1, 2026`; each button retains the full Wednesday–Tuesday range in its accessible name. The selected card has a two-pixel black border, the current week has a black Current badge plus Week/In Review metadata, and every card exposes its existing report status.
+- The four reference statistic cells read Spend, Sales, Orders, and ACoS while projecting the existing Spend, PPC Sales, PPC Orders, and calculated ACOS fields. Past periods show the selected product tag when one exists.
+- Multi-month/year selection, future-week exclusion, report switching, metric backfill/cache overlay, browser-local reports, and all first/third-panel interactions remain unchanged. No API, storage, or data-contract migration is required.
+- Clean production-browser verification confirmed a 340px white panel, one-pixel neutral divider, two-pixel black selected border, Geist/mono typography, correct Spend/Sales/Orders/ACoS projections, full accessible week names, working period selection and month dialog, 390px responsive fit without page overflow, and no browser exceptions. Lint, typecheck, all 283 tests across 47 files (6 skipped), and the production build pass. This redesign is local and has not been deployed.
+
 ## September 10, 2026 — local third-panel redesign
 
 - The PPC Dashboard third panel was rebuilt from the supplied HTML reference. Its order is product header; Strategic Weekly Goals and Budget Utilization; two five-card performance rows; Previous/Current Week Summary; and action items.
 - The first metric row is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Conversion Rate displays `—` because the current data contract has no valid source. The second row is PPC Orders, Org. Orders, Total Orders, Organic Sales, and TACOS.
-- The third panel now uses isolated Geist/JetBrains Mono styling with a 1152px canvas, 24px spacing, neutral monochrome surfaces, 190px desktop metric cards, and responsive mobile stacking. The Products and Reporting Periods panels were not redesigned.
+- The third panel now uses isolated Geist/JetBrains Mono styling with a 1152px canvas, 24px spacing, neutral monochrome surfaces, 190px desktop metric cards, and responsive mobile stacking. The Products and Reporting Periods panels were not redesigned in that change.
 - Existing goals, Goal History, budget editing/history, Scale Insights refresh, notes, action completion, and browser-local persistence remain active. Action due dates now use the existing `dueDate` field, and Export downloads the selected report as JSON.
 - The Next.js route helper for dashboard product normalization moved into `src/features/dashboard/domain/pipeline-products.ts`; behavior is unchanged, and the route now conforms to Next.js route-export constraints.
 - Isolated browser verification confirmed both five-card grids, exact 190px tile height, Geist rendering, no horizontal overflow at desktop or 390px, note save/reload, and no JavaScript exceptions. Lint, typecheck, all 283 tests across 47 files (6 skipped), and the production build pass. Production-account/OAuth verification remains for deployment review.

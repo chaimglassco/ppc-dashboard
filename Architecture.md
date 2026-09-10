@@ -12,6 +12,10 @@ The same verified Pipeline identity opens a short-lived Scale Insights MCP sessi
 
 The workspace uses a dedicated ppc-performance-workspace.module.css module, isolated from the product/timeline stylesheet. Unused legacy workspace selectors were removed. The dashboard route layout self-hosts Geist and JetBrains Mono through next/font; only the third panel consumes those font variables. Its canvas uses a 1152px maximum width, 24px spacing, bordered white sections on #fafafa, and 190px metric tiles. Goal/budget DOM order precedes performance. Report state, authenticated adapters, cache precision, and schemas remain unchanged. Conversion Rate is a display-only unavailable card, and the repeated Organic Sales tile reads the existing derived value. JSON export uses a temporary browser object URL; no server call or additional persistence is introduced.
 
+## Reporting-period presentation layer
+
+The second dashboard panel uses `ppc-reporting-periods.module.css` so the supplied 340px monochrome design does not inherit the earlier blue timeline treatment. It consumes the dashboard layout’s existing Geist and JetBrains Mono variables. The component continues to derive its week list, selection, report status, cached metrics, month coverage, and tag from existing state; the abbreviated range and reference labels are display projections only. Full week ranges remain in button accessible names. No report, catalog, or cache schema changes were introduced.
+
 ## Goal resolution and previous-week comparisons
 
 `WeeklyPpcReport.goalHistory` is a backward-compatible, validated array of at most 100 resolved goals per product/week. Achieved/Missed actions atomically remove an item from `goals`, prepend a terminal history entry with an ISO timestamp, and use the existing dirty-report auto-save. The product-level history dialog derives a newest-first view across saved reports without duplicating data. Parser migration moves legacy terminal goals out of the active list, using the report update time or reporting-week start as a deterministic resolution timestamp; malformed history entries are discarded.

@@ -2,6 +2,15 @@
 
 Use this checklist before merging or deploying changes.
 
+## Reporting Periods reference rebuild
+
+- Verify the second panel is 340px wide on the desktop dashboard, white, square-edged, and separated by a thin neutral right border.
+- Confirm the header reads `REPORTING PERIODS`, the calendar icon sits on the title row, and the current multi-month label remains centered inside one integrated previous/next control.
+- Confirm visible ranges are abbreviated, while each period button’s accessible name states the full Wednesday–Tuesday range.
+- Confirm the selected card has a two-pixel black border and white background. The current week must show the black Current badge, Week number, In Review cue, and its real report-status chip.
+- Confirm each card has four bordered cells labeled Spend, Sales, Orders, and ACoS, populated from the existing PPC timeline fields. Past cards should show the selected product tag when present.
+- Exercise previous/next range shifting, the multi-month dialog, current/future cutoff, report switching, cached metric hydration, keyboard focus, and narrow/mobile layout. Confirm the first and third panels retain their behavior and there are no hydration or console errors.
+
 ## Third-panel workspace hierarchy
 
 - Verify goals/budget precede performance, followed by previous/current summaries and the action section.
@@ -42,7 +51,7 @@ Create at least six budget changes. Confirm Budget History shows exactly five da
 
 ## Budget history and multi-month timeline
 
-Change a Weekly limit using multiple keystrokes, blur or press Enter, and verify exactly one newest-first history row appears with `Date of Change`, `From`, and `To`. Reload and confirm the row persists. Verify invalid stored rows are dropped and older reports without history still load. Confirm no Draft badge or Save Draft button is visible.
+Change a Weekly limit using multiple keystrokes, blur or press Enter, and verify exactly one newest-first history row appears with `Date of Change`, `From`, and `To`. Reload and confirm the row persists. Verify invalid stored rows are dropped and older reports without history still load. Confirm the reporting-period status chip may show Draft and that no separate Save Draft button is visible.
 
 Select adjacent, non-adjacent, and cross-year months; apply the selection and verify only intersecting Wednesday–Tuesday weeks appear, duplicates are removed, future weeks stay hidden, boundary weeks and their extra month names remain visible, Escape/Close discards un-applied changes, and Select Year can display a full historical year.
 

@@ -1,8 +1,8 @@
 # Glassco Team SOP Library and PPC Dashboard
 
-## Third-panel design (September 10, 2026)
+## Dashboard reference redesign (September 10, 2026)
 
-The dashboard workspace follows the supplied HTML reference, with Strategic Weekly Goals and Budget Utilization above two five-card performance rows, paired summaries, and action items. Total Orders follows Organic Orders; Conversion Rate follows Total Sales and shows an unavailable dash until a valid source exists. The third panel uses Geist/JetBrains Mono, 24px spacing, and 190px desktop metric cards. Export downloads the selected report as JSON; planning edits still save only in this browser. Product and reporting-period panels retain their existing design.
+The dashboard workspace follows the supplied HTML reference, with Strategic Weekly Goals and Budget Utilization above two five-card performance rows, paired summaries, and action items. Total Orders follows Organic Orders; Conversion Rate follows Total Sales and shows an unavailable dash until a valid source exists. The Reporting Periods panel now follows the same reference with a 340px white column, compact uppercase header, integrated month navigator, neutral period cards, abbreviated ranges, and a black selected-card treatment. Export downloads the selected report as JSON; planning edits still save only in this browser. The Products panel retains its existing design.
 
 This repository provides the Glassco Team SOP Library—a responsive Amazon PPC knowledge base, shared document-administration interface, and structured document builder—and the authenticated Weekly PPC Performance workspace at `/ppc/dashboard`.
 
