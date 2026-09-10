@@ -85,6 +85,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(currentPeriod).getByText("Aug 26 – Sep 1, 2026")).toBeVisible();
     expect(within(currentPeriod).getByText("Week 35").parentElement?.className).toMatch(/periodMeta/);
     expect(within(currentPeriod).getByText("In Review")).toBeVisible();
+    expect(within(currentPeriod).getByText("Partial")).toBeVisible();
     expect(within(currentPeriod).getByText("Sales")).toBeVisible();
     expect(within(currentPeriod).getByText("Orders")).toBeVisible();
     expect(within(currentPeriod).getByText("ACoS")).toBeVisible();
@@ -281,7 +282,7 @@ describe("PpcPerformanceDashboard", () => {
     const previousSpend = within(performanceCard).getByLabelText("Previous Spend: $90, decreased");
     expect(previousSpend.className).not.toMatch(/metricIncrease|metricDecrease/);
     expect(within(performanceCard).getByLabelText("Spend decreased by 9% from previous week").className).toMatch(/metricIncrease/);
-    expect(within(performanceCard).getAllByText("Prev. Week")).toHaveLength(8);
+    expect(within(performanceCard).getAllByText("Prev. Week")).toHaveLength(9);
     expect(screen.queryByText(/total sales ·/i)).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
   }, 10_000);
@@ -360,9 +361,14 @@ describe("PpcPerformanceDashboard", () => {
     const organicOrdersCard = within(orderMetrics).getByRole("textbox", { name: "Organic Orders" }).closest("label")!;
     const totalOrdersCard = within(orderMetrics).getByRole("textbox", { name: "Total Orders" }).closest("label")!;
     expect(organicOrdersCard.nextElementSibling).toBe(totalOrdersCard);
+    const acosCard = within(orderMetrics).getByRole("textbox", { name: "ACOS" }).closest("label")!;
+    const tacosCard = within(orderMetrics).getByRole("textbox", { name: "TACOS" }).closest("label")!;
+    expect(totalOrdersCard.nextElementSibling).toBe(acosCard);
+    expect(acosCard.nextElementSibling).toBe(tacosCard);
     expect(within(performanceCard).getAllByRole("textbox").map(input => input.getAttribute("aria-label"))).toEqual([
-      "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "ACOS", "PPC Orders", "Organic Orders", "Total Orders", "TACOS",
+      "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "ACOS summary", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
     ]);
+    expect(within(performanceCard).queryByText(/Performance overview for/i)).not.toBeInTheDocument();
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Sales" }), { target: { value: "100" } });
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "Total Sales" }), { target: { value: "300" } });
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Orders" }), { target: { value: "3" } });
@@ -373,12 +379,12 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(performanceCard).getByRole("textbox", { name: "TACOS" })).toHaveValue("25");
     expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveAttribute("readonly");
     const targetAcos = within(performanceCard).getByRole("textbox", { name: "Target ACOS" });
-    const acosCard = within(performanceCard).getByRole("textbox", { name: "ACOS" }).closest("label");
+    const warningAcosCard = within(performanceCard).getByRole("textbox", { name: "ACOS" }).closest("label");
     fireEvent.change(targetAcos, { target: { value: "25" } });
-    expect(acosCard).toHaveAttribute("data-warning", "true");
+    expect(warningAcosCard).toHaveAttribute("data-warning", "true");
     expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveAccessibleDescription("Target: 25% · +50% over limit");
     fireEvent.change(targetAcos, { target: { value: "80" } });
-    expect(acosCard).not.toHaveAttribute("data-warning");
+    expect(warningAcosCard).not.toHaveAttribute("data-warning");
 
     const goalStatus = screen.getByRole("combobox", { name: "ACOS status" });
     expect(goalStatus.className).toMatch(/success/);
@@ -434,26 +440,11 @@ describe("PpcPerformanceDashboard", () => {
     expect(dueDate).toHaveValue("2026-09-01");
   }, 15_000);
 
-  it("exports the selected weekly report with a stable JSON filename", async () => {
-    const createObjectURL = vi.fn(() => "blob:weekly-report");
-    const revokeObjectURL = vi.fn();
-    const NativeUrl = URL;
-    class TestUrl extends NativeUrl {
-      static createObjectURL = createObjectURL;
-      static revokeObjectURL = revokeObjectURL;
-    }
-    vi.stubGlobal("URL", TestUrl);
-    let downloadedAs = "";
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
-      downloadedAs = this.download;
-    });
-
+  it("shows the weekly save action without an export control", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Export" }));
-
-    expect(createObjectURL).toHaveBeenCalledWith(expect.objectContaining({ type: "application/json" }));
-    expect(downloadedAs).toBe("ppc-report-product-1-2026-08-26.json");
+    expect(screen.queryByRole("button", { name: "Export" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save Weekly Report" })).toBeVisible();
   });
 
   it("carries the previous week's result documentation into an existing blank next week", async () => {
@@ -537,6 +528,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(headerSkuLink).toHaveAttribute("href", "https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=POLISH-01");
     expect(headerAsinLink).toHaveAttribute("target", "_blank");
     expect(headerSkuLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(headerAsinLink.parentElement?.nextElementSibling).toContainElement(headerSkuLink);
     expect(headerAsinLink.closest("p")).not.toHaveTextContent("August 26 to September 1");
     expect(headerAsinLink.closest("p")).not.toHaveTextContent("Week 35");
     const asinNavigation = screen.getByRole("navigation", { name: "Scale Insights analysis for ASIN B012345679" });
@@ -551,9 +543,9 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(asinNavigation).getByRole("link", { name: "Placements" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/Placements/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Ad Types" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/AdTypes/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Main Keywords" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/MainKeywords/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
-    expect(within(asinNavigation).getByRole("link", { name: "Daily Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=1&to=2026-09-01&asinList=B012345679");
-    expect(within(asinNavigation).getByRole("link", { name: "Weekly Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=7&to=2026-09-01&asinList=B012345679");
-    expect(within(asinNavigation).getByRole("link", { name: "Monthly Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/AdvertisingTrend?cycles=7&daysPerCycle=30&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Daily Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/SalesTrend?cycles=7&daysPerCycle=1&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Weekly Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/SalesTrend?cycles=7&daysPerCycle=7&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Monthly Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/SalesTrend?cycles=7&daysPerCycle=30&to=2026-09-01&asinList=B012345679");
     const trendNavigation = within(asinNavigation).getByRole("group", { name: "Trend reports" });
     expect(within(trendNavigation).getAllByRole("link").map(link => link.textContent)).toEqual(["Daily Performance", "Weekly Performance", "Monthly Performance"]);
     for (const link of within(asinNavigation).getAllByRole("link")) {

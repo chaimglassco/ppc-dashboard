@@ -12,9 +12,9 @@ export const PPC_ANALYSIS_COLUMNS = [
     { slug: "main-keywords", label: "Main Keywords", path: "/Ads/MainKeywords/Index" },
   ] },
   { key: "trends", label: "Trend reports", sections: [
-    { slug: "daily-performance-trend", label: "Daily Performance", path: "/Ads/AdvertisingTrend", daysPerCycle: 1 },
-    { slug: "weekly-performance-trend", label: "Weekly Performance", path: "/Ads/AdvertisingTrend", daysPerCycle: 7 },
-    { slug: "monthly-performance-trend", label: "Monthly Performance", path: "/Ads/AdvertisingTrend", daysPerCycle: 30 },
+    { slug: "daily-performance-trend", label: "Daily Performance", path: "/Sales/SalesTrend", daysPerCycle: 1 },
+    { slug: "weekly-performance-trend", label: "Weekly Performance", path: "/Sales/SalesTrend", daysPerCycle: 7 },
+    { slug: "monthly-performance-trend", label: "Monthly Performance", path: "/Sales/SalesTrend", daysPerCycle: 30 },
   ] },
 ] as const;
 

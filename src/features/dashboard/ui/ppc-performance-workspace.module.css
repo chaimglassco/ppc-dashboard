@@ -28,18 +28,18 @@
 .titleRow { display: flex; align-items: center; gap: 8px; }
 .titleRow h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.025em; line-height: 1.2; }
 .titleRow > span { background: #f4f4f5; border: 1px solid var(--border); border-radius: 4px; padding: 2px 5px; font: 10px var(--mono); }
-.workspaceHeader p { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; color: var(--muted); font: 12px/1.5 var(--mono); }
+.workspaceHeader p { margin: 4px 0 0; color: var(--muted); font: 12px/1.5 var(--mono); }
 .workspaceHeader p a { color: inherit; text-decoration: none; }
 .workspaceHeader p a:hover { color: #09090b; text-decoration: underline; }
-.workspaceHeader p i { width: 4px; height: 4px; border-radius: 50%; background: #d4d4d8; }
+.productIdentifiers { display: grid; justify-items: start; gap: 2px; }
+.productIdentifiers > span { min-width: 0; }
 .salesTrend { display: inline-flex; align-items: center; gap: 2px; color: #09090b; font-weight: 600; }
-.asinNavigation { display: flex; align-items: flex-start; gap: 24px; margin-inline: auto; }
+.asinNavigation { display: flex; align-items: flex-start; gap: 24px; margin-left: auto; }
 .asinNavigationColumn { display: flex; flex-direction: column; gap: 4px; }
 .asinNavigationColumn + .asinNavigationColumn { padding-left: 24px; border-left: 1px solid var(--border); }
 .asinNavigation a { color: #52525b; font-size: 12px; line-height: 1.25; text-decoration: none; }
 .asinNavigation a:hover { color: #09090b; text-decoration: underline; }
-.saveArea { display: grid; gap: 6px; justify-items: end; }
-.saveArea > div { display: flex; gap: 10px; }
+.saveArea { display: grid; gap: 4px; justify-items: end; margin-left: 4px; }
 .saveArea small { max-width: 250px; font: 10px/1.4 var(--mono); color: var(--muted); text-align: right; }
 .primaryButton, .secondaryButton { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 12px; min-height: 30px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #09090b; font-size: 12px !important; font-weight: 600 !important; }
 .primaryButton { border-color: #09090b; background: #09090b; color: white; }
