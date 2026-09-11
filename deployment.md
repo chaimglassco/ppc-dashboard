@@ -1,16 +1,20 @@
 # Deployment Guide
 
+## September 11 automatic-save and PPC-conversion correction
+
+This release adds optional `ppcClicks` to the existing weekly-performance DTO and version-1 browser records. It requires no environment variable, provider call, database change, storage-key change, or migration. After deployment, verify Refresh Data is the only header action; report edits auto-save; full/partial cached periods receive data-derived badges; new Action Items is empty; and 27 PPC Orders with 78 PPC Clicks renders 34.62%. A response without exact PPC Clicks must show an unavailable state and safe warning.
+
 ## September 11 custom-goal and planning-alignment release
 
 This release adds only the optional `goals[].custom` flag to the existing version-1 browser report. It requires no environment variable, server API, database, storage-key change, or migration. After deployment, add multiple goals and confirm Budget Utilization stays top-aligned; create, reload, resolve, and remove a Custom Goal; then confirm predefined automatic goal Actual values still work.
 
 ## September 11 compact-goal and Conversion Rate release
 
-This release extends the existing weekly-performance DTO and version-1 browser records with optional `totalSessions` and `conversionRate` values. It needs no environment variable, new provider request, database change, storage-key change, or migration. After deployment, refresh a live week and reconcile Conversion Rate against Scale Insights `TotalOrders / TotalSessions`; confirm older cached weeks remain valid and display a dash until refreshed. Also verify compact goal geometry, the resizable read-only prior documentation, and the absence of all requested summary badges/footer metadata.
+This earlier release extended the existing weekly-performance DTO and version-1 browser records with optional `totalSessions` and `conversionRate` values. The superseding correction above no longer uses Total Sessions for PPC Conversion Rate. Older cached weeks remain valid and display an unavailable state without exact PPC Clicks.
 
 ## September 11 workspace-control release
 
-This client-only release adds no environment variable, API change, dependency, or persistence migration. After deployment, verify Save/Refresh Data in the workspace header, the read-only empty-safe Previous Week Summary, date-free Action Items rows, Target above Actual with outcome controls beside status, and the consolidated Budget Utilization tiles. Confirm stored reports containing `previousWeekResult` and `actions[].dueDate` still load without validation loss.
+This client-only release adds no environment variable, API change, dependency, or persistence migration. After deployment, verify Refresh Data and automatic saving in the workspace header, the read-only empty-safe Previous Week Summary, date-free Action Items rows, Target above Actual with outcome controls beside status, and the consolidated Budget Utilization tiles. Confirm stored reports containing `previousWeekResult` and `actions[].dueDate` still load without validation loss.
 
 ## September 11 dashboard presentation release
 

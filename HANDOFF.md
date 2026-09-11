@@ -2,6 +2,13 @@
 
 Last updated: September 11, 2026
 
+## September 11, 2026 — automatic save, coverage status, and PPC conversion correction
+
+- Removed the manual Save button/function; the existing debounced browser-local autosave remains authoritative. Reporting-period badges now use cached coverage dates, so complete Wednesday–Tuesday data is Completed and shorter coverage is Partial.
+- Action Items starts empty and preserves an explicitly empty stored list. The exact untouched legacy seeded task is suppressed while edited/user-created actions remain. Goal status/outcome controls moved beside the Partial/Final label, the current-summary toolbar moved beside Performance Documentation, and Sales WoW moved from the SKU block into Total Sales.
+- Conversion is now labeled PPC Conversion Rate and uses PPC Orders divided by exact PPC Clicks. The response/cache/report contracts accept optional `ppcClicks`; 27 orders / 78 clicks is covered at 34.62%. Total Sessions and non-reconciling search-term click totals are not used as fallbacks.
+- Lint, typecheck, all 312 tests across 51 files (6 skipped), the production build, and `git diff --check` pass.
+
 ## September 11, 2026 — custom goals and stable budget placement
 
 - Strategic Weekly Goals and Budget Utilization now top-align independently. Removing grid stretching and the budget auto spacer keeps the budget controls directly under their header as goals are added.
@@ -14,13 +21,13 @@ Last updated: September 11, 2026
 
 - Goal Actual now sits directly below Target. The active status selector and achieved, missed, and delete buttons form one compact inline group.
 - Previous Week Summary always shows a Performance Documentation label and vertically resizable read-only textarea. Archived/Completed/Status/ROAS metadata is removed, and Current Week Summary no longer shows Draft or another report-status badge.
-- Weekly performance now reads `Summary.TotalSessions` from the existing Scale Insights sales request and calculates Conversion Rate as Total Orders divided by Total Sessions. A live Sep 2–8 check for B0H8P24MP4 returned 42 orders and 87 sessions, matching Scale Insights at 48.28%.
-- `totalSessions` and `conversionRate` are optional in version-1 report/cache parsing for backward compatibility. Old snapshots stay valid with an unavailable dash and populate after Refresh Data; no new storage key or migration exists.
+- Weekly performance retains `Summary.TotalSessions` for compatibility, but the displayed PPC Conversion Rate no longer uses it. The newer contract requires exact PPC Clicks.
+- `totalSessions`, `ppcClicks`, and `conversionRate` are optional in version-1 report/cache parsing for backward compatibility. Old snapshots stay valid with an unavailable state; no new storage key or migration exists.
 - Lint, typecheck, all 310 tests across 51 files (6 skipped), the production build, and `git diff --check` pass. Controlled browser QA at the app browser's 327px viewport confirmed Actual below Target, the status and three icons on one row, native vertical resizing on the read-only prior documentation, all removed summary metadata absent, Conversion Rate at 48.28% with a 48.36% prior value, zero horizontal overflow, and no console or hydration errors.
 
 ## September 11, 2026 — workspace control refinements
 
-- Workspace actions are now stacked in the product header as Save then Refresh Data; Weekly PPC Performance retains its sync/authorization text without a second refresh control.
+- Refresh Data is in the product header; Weekly PPC Performance retains its sync/authorization text without a second refresh control. A later revision removed manual Save in favor of autosave.
 - Previous Week Summary is read-only and suppresses the former “No outcome summary was entered” placeholder. Existing `previousWeekResult` values and preceding notes remain visible through the current fallback order.
 - The final card is Action Items. Due-date inputs are hidden while the optional stored `dueDate` field remains accepted for backward compatibility.
 - Weekly goals render the read-only Actual directly below Target and place achieved, missed, and delete buttons beside the status selector. Budget Utilization places Daily limit inside Weekly Limit and removes the duplicated secondary daily/balance row.
@@ -61,7 +68,7 @@ Last updated: September 11, 2026
 ## September 10, 2026 — local third-panel redesign
 
 - The PPC Dashboard third panel was rebuilt from the supplied HTML reference. Its order is product header; Strategic Weekly Goals and Budget Utilization; two five-card performance rows; Previous/Current Week Summary; and action items.
-- The first metric row is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Conversion Rate uses Scale Insights Total Orders divided by Total Sessions and shows `—` only for legacy periods without session data. The second row is PPC Orders, Org. Orders, Total Orders, ACOS, and TACOS.
+- The first metric row is Total Spend, PPC Sales, Organic Sales, Total Sales, and PPC Conversion Rate. It uses PPC Orders divided by exact PPC Clicks and shows an explicit unavailable state when clicks are omitted. The second row is PPC Orders, Org. Orders, Total Orders, ACOS, and TACOS.
 - The third panel now uses isolated Geist/JetBrains Mono styling with a 1152px canvas, 24px spacing, neutral monochrome surfaces, 190px desktop metric cards, and responsive mobile stacking. The Products and Reporting Periods panels were not redesigned in that change.
 - Existing goals, Goal History, budget editing/history, Scale Insights refresh, notes, action completion, and browser-local persistence remain active. Later revisions removed Export and the visible action due-date controls while preserving stored-field compatibility.
 - The Next.js route helper for dashboard product normalization moved into `src/features/dashboard/domain/pipeline-products.ts`; behavior is unchanged, and the route now conforms to Next.js route-export constraints.

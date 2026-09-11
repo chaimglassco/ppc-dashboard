@@ -1,18 +1,24 @@
 # Data Contract
 
+## September 11 PPC conversion and automatic-status revision
+
+Weekly performance, `glassco.ppcPerformanceCache.v1`, and `glassco.ppcPerformanceNotes.v1` accept optional nonnegative integer `ppcClicks`. `conversionRate` is calculated as `ppcOrders / ppcClicks * 100`, rounded to two decimals; zero PPC Clicks produces zero. Missing PPC Clicks leaves `conversionRate` unavailable. `totalSessions` remains optional for backward compatibility and no longer drives this metric. The existing version and storage keys remain unchanged.
+
+New reports use `actions: []`, and normalization preserves an explicitly empty list. The untouched historical seeded task is removed by its exact ID, title, priority, empty due date, and incomplete state; any edited or user-created action remains intact. The report `status` field remains readable for version-1 compatibility, but visible period status is derived from cached `startDate`/`endDate` coverage and is no longer changed by a manual Save action.
+
 ## September 11 custom-goal compatibility
 
 `WeeklyGoal` accepts optional `custom: true`. Custom goals continue to use the existing `title`, `target`, `actual`, `status`, and history fields. The marker prevents title-based legacy metric inference and is omitted for predefined goals. Version remains `1`; reports without the marker parse exactly as before, and no storage key or migration changes.
 
 ## September 11 conversion and summary revision
 
-Weekly performance responses add `metrics.totalSessions` and calculated `metrics.conversionRate`. `totalSessions` is the nonnegative integer `Summary.TotalSessions` returned by the existing Scale Insights `get_sales_data` request. `conversionRate` is `totalOrders / totalSessions * 100`, rounded to two decimals; a zero-session period returns zero. The fields are optional only when parsing older `glassco.ppcPerformanceCache.v1` and `glassco.ppcPerformanceNotes.v1` records, so no version bump or destructive migration is required. Missing legacy denominators render Conversion Rate as unavailable until that week is refreshed.
+Weekly performance responses retain optional `metrics.totalSessions` for compatibility. The superseding contract above defines the displayed conversion metric from PPC Orders and PPC Clicks; session data is never substituted.
 
 The Previous Week Summary and Current Week Summary status badges plus the prior Status/ROAS footer are no longer rendered. Previous documentation remains stored in `previousWeekResult`/`notes` and is displayed through a read-only resizable textarea; no new summary field is introduced. Goal layout changes do not alter goal values or outcomes.
 
 ## September 11 workspace control revision
 
-No data shape changed. `glassco.ppcPerformanceNotes.v1` continues to accept `previousWeekResult` and `actions[].dueDate` for backward compatibility, but the revised dashboard renders the previous-week result as read-only and omits action date inputs. Target/Actual placement, inline outcome actions, the header Save/Refresh controls, and the daily-limit placement are presentation changes. Daily limit remains derived from and stored with the weekly budget through the existing normalization path.
+`glassco.ppcPerformanceNotes.v1` continues to accept `previousWeekResult` and `actions[].dueDate` for backward compatibility, but the revised dashboard renders the previous-week result as read-only and omits action date inputs. Target/Actual placement, outcome actions, automatic-save header controls, and the daily-limit placement do not change those fields. Daily limit remains derived from and stored with the weekly budget through the existing normalization path.
 
 ## September 11 product ordering
 

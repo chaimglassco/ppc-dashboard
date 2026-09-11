@@ -1,5 +1,14 @@
 # QA Checklist
 
+## September 11 automatic-save and PPC-conversion checks
+
+- [x] Confirm the header has Refresh Data and no Save action; edit notes/goals/actions and verify the existing debounce persists changes.
+- [x] Confirm a full cached Wednesday–Tuesday range renders Completed and shorter cached coverage renders Partial without manual status mutation.
+- [x] Confirm a new report has no Action Items row until Add Action Item is selected, and an explicitly empty stored array remains empty after reload.
+- [x] Confirm goal status/outcome controls share the footer with Partial/Final, the summary toolbar shares the documentation-label row, and Sales WoW is absent below SKU and present below Total Sales.
+- [x] Confirm 27 PPC Orders / 78 PPC Clicks renders 34.62%, while Total Sessions alone does not populate PPC Conversion Rate.
+- [x] Confirm missing PPC Clicks yields a safe provider warning and explicit unavailable card without substituting search-term totals.
+
 ## September 11 custom-goal and planning-alignment checks
 
 - [x] Add at least three goals and confirm Budget Utilization remains top-aligned with no blank spacer above Weekly Limit.
@@ -13,13 +22,13 @@
 - [x] Confirm Actual renders directly below Target for every goal and all three icon buttons share the status-selector row.
 - [x] Confirm Previous Week Summary is labeled Performance Documentation, contains a read-only textarea, and can be resized vertically without changing its value.
 - [x] Confirm Archived, Completed, Status, ROAS, and the Current Week Summary Draft/status badge are absent from the summary cards.
-- [x] With a live Scale Insights week, confirm Conversion Rate equals Total Orders divided by Total Sessions to two decimals and its previous-week value/direction are correct.
-- [x] Restore a legacy performance cache entry without Total Sessions and confirm it remains valid, shows a dash, then gains Conversion Rate after Refresh Data.
+- [x] Confirm the superseding PPC Conversion Rate definition uses PPC Orders divided by PPC Clicks to two decimals and its previous-week value/direction are correct.
+- [x] Restore a legacy performance cache entry without PPC Clicks and confirm it remains valid and shows the unavailable state.
 - [x] Verify keyboard focus, desktop/mobile wrapping, horizontal overflow, hydration, and console errors.
 
 ## September 11 workspace-control checks
 
-- [x] Confirm Save is followed vertically by Refresh Data in the workspace header and no Refresh button remains in Weekly PPC Performance.
+- [x] Confirm Refresh Data appears in the workspace header and no duplicate Refresh button remains in Weekly PPC Performance.
 - [x] Confirm previous-week text appears in a read-only, vertically resizable textarea with no formatting toolbar or empty-result warning.
 - [x] Confirm the final card is named Action Items and each row has no due-date input while existing stored records still parse.
 - [x] Confirm every weekly goal displays Target before Actual and its achieved, missed, and delete controls remain keyboard accessible.
@@ -70,7 +79,7 @@ Use this checklist before merging or deploying changes.
 
 - Verify goals/budget precede performance, followed by previous/current summaries and the action section.
 - Verify five cards in each desktop metric row, Conversion Rate after Total Sales, and Total Orders after Org. Orders.
-- Verify Conversion Rate uses Total Orders ÷ Total Sessions; older periods without sessions stay a dash and never receive fabricated comparisons.
+- Verify PPC Conversion Rate uses PPC Orders ÷ PPC Clicks; older periods without exact clicks stay unavailable and never receive fabricated comparisons.
 - Verify reference fonts, 24px spacing, 190px tiles, green/red deltas, TACOS gauge, and mobile wrapping.
 - Exercise goal target/status/history, budget edits and expanded history, current-note formatting/save/reload, action completion, Save, and Refresh Data.
 - Check that product and reporting-period panels retain their styling and behavior.

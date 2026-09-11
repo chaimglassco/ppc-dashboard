@@ -42,6 +42,23 @@ describe("PPC dashboard state", () => {
     } } })).reports["legacy-product:2026-08-26"].budgetHistory).toEqual([]);
   });
 
+  it("starts actions empty and removes only the untouched legacy seeded task", () => {
+    expect(createWeeklyPpcReport("product-1", "2026-08-26").actions).toEqual([]);
+    const base = createWeeklyPpcReport("product-1", "2026-08-26");
+    const parsed = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: {
+      report: {
+        ...base,
+        actions: [
+          { id: "action-negatives", title: "Review search terms and add negative exact keywords", priority: "High", dueDate: "", done: false },
+          { id: "action-negatives", title: "Edited task", priority: "High", dueDate: "", done: false },
+          { id: "custom", title: "Inspect exact match", priority: "Medium", dueDate: "", done: false },
+        ],
+      },
+    } }));
+
+    expect(parsed.reports["product-1:2026-08-26"].actions.map(action => action.title)).toEqual(["Edited task", "Inspect exact match"]);
+  });
+
   it("validates goal history and migrates terminal legacy goals out of the active list", () => {
     const parsed = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { report: {
       ...createWeeklyPpcReport("product-1", "2026-08-26"),
@@ -156,8 +173,13 @@ describe("PPC dashboard state", () => {
       organicSales: 20.1, organicOrders: 0, acos: 0, tacos: 61.39,
     });
     expect(calculateWeeklyPerformance({
-      spend: 86.54, ppcSales: 287.73, totalSales: 491.45, ppcOrders: 27, totalOrders: 42, totalSessions: 87,
-    }).conversionRate).toBe(48.28);
+      spend: 86.54, ppcSales: 287.73, totalSales: 491.45, ppcOrders: 27, ppcClicks: 78, totalOrders: 42, totalSessions: 87,
+    }).conversionRate).toBe(34.62);
+    const invalidClicks = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { report: {
+      ...createWeeklyPpcReport("product-1", "2026-08-26"), ppcOrders: 2, ppcClicks: 1.5,
+    } } })).reports["product-1:2026-08-26"];
+    expect(invalidClicks.ppcClicks).toBeUndefined();
+    expect(invalidClicks.conversionRate).toBeUndefined();
   });
 
   it("carries unfinished goals into the following week and resets their progress", () => {

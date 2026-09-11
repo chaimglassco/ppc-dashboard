@@ -1,18 +1,24 @@
 # Glassco Back Office Library — Architecture
 
+## Automatic report state and PPC conversion
+
+The report editor persists through the existing debounced browser-storage effect and exposes no manual completion mutation. Reporting-period badges derive from Scale Insights snapshot coverage: `endDate >= weekStart + 6 days` is Completed, shorter cached coverage is Partial, the current uncached week is Partial, and an uncached past week is Draft. New and normalized reports preserve an explicitly empty `actions` array instead of seeding an operational task.
+
+PPC Conversion Rate derives only from optional exact `ppcClicks` and PPC Orders. The provider adapter accepts PPC-click fields only from the ASIN advertising aggregate or sales summary, validates them as nonnegative integers, and warns when they are absent. It does not use Total Sessions or search-term totals as a fallback. `totalSessions` remains readable for backward compatibility but no longer drives the conversion card.
+
 ## Custom goals and independent planning-card height
 
 The planning grid uses start alignment, and Budget Utilization no longer uses an automatic top margin. Each card therefore keeps its own content height when the goal list grows. Custom goal selection reuses `WeeklyGoal.title`, target, status, and outcome behavior; the optional `custom: true` marker prevents legacy metric-name inference from converting manual text into a predefined metric during version-1 report validation.
 
 ## Conversion and summary presentation
 
-The performance adapter reads `TotalSessions` from the already-requested Scale Insights sales summary and derives Conversion Rate as `TotalOrders / TotalSessions * 100`, rounded to two decimals. The authenticated route, version-1 performance cache, and version-1 weekly report accept `totalSessions` and `conversionRate`; both fields are optional when parsing older records. A refreshed live snapshot supplies them, while legacy entries continue to render the unavailable state. Conversion comparisons use the same current/previous availability guard as the other metric cards.
+The performance adapter retains `TotalSessions` from the already-requested Scale Insights sales summary for compatibility. The authenticated route, version-1 performance cache, and version-1 weekly report optionally accept `ppcClicks` and calculated `conversionRate`; missing click denominators render an explicit unavailable state. Conversion comparisons use the same current/previous availability guard as the other metric cards.
 
 Previous Week Summary renders the existing fallback result as a native read-only textarea with vertical resize enabled. It has no report-status chip or footer metadata, and Current Week Summary has no Draft/status chip. Goal rows group the status selector and three outcome controls in one inline cluster, while the Target and read-only Actual form a two-row value stack beside the progress bar.
 
 ## Dashboard control presentation
 
-Save and Refresh Data share the workspace header as a vertical action group; the metrics header retains provider freshness, authorization, and warning state without duplicating Refresh. Previous Week Summary resolves existing `previousWeekResult`/prior notes into read-only text and suppresses its empty placeholder. Action rows keep the validated `dueDate` compatibility field in storage but no longer render a date editor. Goal Target precedes the read-only Actual projection. The Weekly Limit tile renders the existing derived daily budget, and the separate daily-limit/balance row is removed because the Spend tile already renders its balance.
+Refresh Data remains in the workspace header, while the existing debounce writes every report edit automatically. The metrics header retains provider freshness, authorization, and warning state without duplicating Refresh. Previous Week Summary resolves existing `previousWeekResult`/prior notes into read-only text and suppresses its empty placeholder. Action rows keep the validated `dueDate` compatibility field in storage but no longer render a date editor. Goal Target precedes the read-only Actual projection. The Weekly Limit tile renders the existing derived daily budget, and the separate daily-limit/balance row is removed because the Spend tile already renders its balance.
 
 ## Dashboard catalog presentation
 

@@ -9,7 +9,7 @@ function adsPayload(overrides: Record<string, unknown> = {}) {
     oppMeta: {
       total_count: 1,
       data_as_of: "synced 2026-09-03 21:34 UTC",
-      totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23 },
+      totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23, total_clicks: 48 },
       ...overrides,
     },
   };
@@ -41,6 +41,7 @@ describe("Scale Insights weekly performance", () => {
         spend: 81.75,
         ppcSales: 481.75,
         ppcOrders: 23,
+        ppcClicks: 48,
         totalSales: 1317.35,
         totalOrders: 59,
         totalSessions: 122,
@@ -48,7 +49,7 @@ describe("Scale Insights weekly performance", () => {
         organicOrders: 36,
         acos: 16.97,
         tacos: 6.21,
-        conversionRate: 48.36,
+        conversionRate: 47.92,
       },
       freshness: {
         adsDataAsOf: "synced 2026-09-03 21:34 UTC",
@@ -71,6 +72,17 @@ describe("Scale Insights weekly performance", () => {
 
     const result = await loadScaleInsightsWeeklyPerformance(params, callTool);
     expect(result.warnings).toEqual([expect.stringContaining("synced at different times")]);
+  });
+
+  it("does not substitute overall sessions when exact PPC Clicks are absent", async () => {
+    const callTool = vi.fn(async (name: string) => name === "get_ads_performance"
+      ? adsPayload({ totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23 } })
+      : salesPayload());
+
+    const result = await loadScaleInsightsWeeklyPerformance(params, callTool);
+    expect(result.metrics.totalSessions).toBe(122);
+    expect(result.metrics.conversionRate).toBeUndefined();
+    expect(result.warnings).toContain("Scale Insights did not include PPC Clicks for this reporting period; PPC Conversion Rate is unavailable.");
   });
 
   it("fails closed when Scale Insights returns a different scope", async () => {

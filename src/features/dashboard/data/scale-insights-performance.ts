@@ -49,6 +49,11 @@ function nonNegativeInteger(value: unknown, field: string): number {
   return number;
 }
 
+function optionalNonNegativeInteger(candidates: unknown[], field: string): number | undefined {
+  const value = candidates.find(candidate => candidate != null);
+  return value == null ? undefined : nonNegativeInteger(value, field);
+}
+
 function stringValue(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -131,6 +136,15 @@ export async function loadScaleInsightsWeeklyPerformance(
   const totalSales = finiteNonNegative(salesSummary.TotalSales, "Total Sales");
   const totalOrders = nonNegativeInteger(salesSummary.TotalOrders, "Total Orders");
   const totalSessions = nonNegativeInteger(salesSummary.TotalSessions, "Total Sessions");
+  const ppcClicks = optionalNonNegativeInteger([
+    adsTotals.total_clicks,
+    adsTotals.TotalClicks,
+    adsAggregate.PPCClicks,
+    adsAggregate.TotalPPCClicks,
+    adsAggregate.TotalClicks,
+    salesSummary.PPCClicks,
+    salesSummary.TotalPPCClicks,
+  ], "PPC Clicks");
   const salesPpcCost = finiteNonNegative(salesSummary.TotalPPCCost, "sales-report PPC Cost");
   const salesPpcSales = finiteNonNegative(salesSummary.TotalPPCSales, "sales-report PPC Sales");
   const warnings: string[] = [];
@@ -141,11 +155,14 @@ export async function loadScaleInsightsWeeklyPerformance(
   if (ppcSales > totalSales || ppcOrders > totalOrders) {
     warnings.push("Paid attribution exceeds the total-sales report for this period; organic values were clamped to zero.");
   }
+  if (ppcClicks == null) {
+    warnings.push("Scale Insights did not include PPC Clicks for this reporting period; PPC Conversion Rate is unavailable.");
+  }
 
   return {
     ...params,
     currency: stringValue(adsAggregate.Currency) || "USD",
-    metrics: calculateWeeklyPerformance({ spend, ppcSales, ppcOrders, totalSales, totalOrders, totalSessions }),
+    metrics: calculateWeeklyPerformance({ spend, ppcSales, ppcOrders, totalSales, totalOrders, totalSessions, ...(ppcClicks == null ? {} : { ppcClicks }) }),
     freshness: {
       adsDataAsOf: stringValue(adsMeta.data_as_of),
       salesDataAsOf: stringValue(salesMeta.data_as_of),

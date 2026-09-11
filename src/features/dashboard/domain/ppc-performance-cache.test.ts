@@ -11,8 +11,8 @@ it("restores genuine zero-valued snapshots and recalculates derived metrics", ()
   expect(entries[performanceCacheKey(snapshot.asin, snapshot.startDate)].metrics.acos).toBe(0);
   expect(Object.keys(entries)).toEqual(["US:B0FG4H5C6W:2026-08-26"]);
   expect(entries[performanceCacheKey(snapshot.asin, snapshot.startDate)].metrics.conversionRate).toBeUndefined();
-  const withSessions = parsePerformanceSnapshot({ ...snapshot, metrics: { ...snapshot.metrics, totalOrders: 42, totalSessions: 87 } });
-  expect(withSessions?.metrics.conversionRate).toBe(48.28);
+  const withPpcClicks = parsePerformanceSnapshot({ ...snapshot, metrics: { ...snapshot.metrics, ppcOrders: 27, ppcClicks: 78, totalOrders: 42, totalSessions: 87 } });
+  expect(withPpcClicks?.metrics.conversionRate).toBe(34.62);
 });
 it("rejects invalid metrics, dates, marketplace, and malformed storage", () => {
   expect(parsePerformanceCache("invalid")).toEqual({});
@@ -22,4 +22,5 @@ it("rejects invalid metrics, dates, marketplace, and malformed storage", () => {
   expect(parsePerformanceSnapshot({ ...snapshot, metrics: { ...snapshot.metrics, spend: -1 } })).toBeNull();
   expect(parsePerformanceSnapshot({ ...snapshot, metrics: { ...snapshot.metrics, ppcOrders: 1.5 } })).toBeNull();
   expect(parsePerformanceSnapshot({ ...snapshot, metrics: { ...snapshot.metrics, totalSessions: 1.5 } })).toBeNull();
+  expect(parsePerformanceSnapshot({ ...snapshot, metrics: { ...snapshot.metrics, ppcClicks: 1.5 } })).toBeNull();
 });

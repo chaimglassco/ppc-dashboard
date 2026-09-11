@@ -33,7 +33,6 @@
 .workspaceHeader p a:hover { color: #09090b; text-decoration: underline; }
 .productIdentifiers { display: grid; justify-items: start; gap: 2px; }
 .productIdentifiers > span { min-width: 0; }
-.salesTrend { display: inline-flex; align-items: center; gap: 2px; color: #09090b; font-weight: 600; }
 .asinNavigation { display: flex; align-items: flex-start; gap: 24px; margin-left: auto; }
 .asinNavigationColumn { display: flex; flex-direction: column; gap: 4px; }
 .asinNavigationColumn + .asinNavigationColumn { padding-left: 24px; border-left: 1px solid var(--border); }
@@ -85,7 +84,8 @@
 .goalProgress i { display: block; height: 100%; border-radius: 99px; background: #09090b; }
 .goalProgress strong { font: 700 12px/1.4 var(--mono); }
 .goalProgress small { color: var(--muted); font-weight: 400; }
-.goalDataState { display: block; margin-top: 4px; font: 10px var(--mono); }
+.goalFooter { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.goalDataState { display: block; font: 10px var(--mono); }
 .budgetPrimaryGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
 .budgetPrimaryGrid > label { display: grid; justify-items: center; gap: 4px; padding: 12px; background: #fafafa; border: 1px solid var(--border); border-radius: 8px; text-align: center; }
 .budgetPrimaryGrid > label > span:first-child { font: 10px/1.5 var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
@@ -141,6 +141,8 @@
 .metricInputWrap input, .metricInputWrap i { min-width: 0; width: auto; max-width: 100%; padding: 0; border: 0; background: transparent; color: black; font: 800 30px/1.4 var(--mono); letter-spacing: -.04em; text-align: center; }
 .metricInputWrap i { flex-shrink: 0; font-style: normal; }
 .metricCardHint { color: var(--muted); font: 10px/1.5 var(--mono); }
+.salesCardTrend { display: inline-flex; align-items: center; justify-content: center; gap: 2px; font: 600 10px/1.5 var(--mono); }
+.salesCardTrend svg { width: 13px; height: 13px; }
 .metricPreviousRow { display: flex; justify-content: center; align-items: baseline; flex-wrap: wrap; gap: 6px; width: 100%; padding-top: 8px; margin-top: auto; border-top: 1px solid var(--border); color: var(--muted); font: 12px/1.4 var(--mono); }
 .metricPreviousRow small { font: inherit; }
 .metricPreviousRow strong { color: black; font-weight: 700; }
@@ -162,7 +164,8 @@
 .readOnlySummary { display: flex; flex: 1; flex-direction: column; gap: 10px; color: var(--muted); font: 700 10px var(--mono); text-transform: uppercase; }
 .readOnlySummary textarea { width: 100%; min-height: 180px; flex: 1; resize: vertical; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: #fafafa; color: #52525b; font: 12px/1.6 var(--mono); text-transform: none; }
 .textAreaLabel { display: flex; flex-direction: column; position: relative; gap: 10px; color: var(--muted); font: 10px var(--mono); }
-.formatToolbar { display: flex; align-self: flex-end; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 4px; background: #f4f4f5; }
+.textAreaHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.formatToolbar { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 4px; background: #f4f4f5; }
 .formatToolbar button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #52525b; }
 .formatToolbar button:hover { background: white; }
 .formatToolbar svg { width: 15px; height: 15px; }
@@ -170,9 +173,8 @@
 .notesArea::placeholder { color: #a1a1aa; }
 .summaryCard { display: flex; flex-direction: column; min-height: 348px; }
 .summaryCard .textAreaLabel { flex: 1; }
-.summaryCard .textAreaLabel > span:first-child { font-weight: 700; text-transform: uppercase; }
+.summaryCard .textAreaHeader > span:first-child { font-weight: 700; text-transform: uppercase; }
 .summaryCard .notesArea { min-height: 100px; flex: 1; }
-.summaryCard .formatToolbar { margin-top: -5px; }
 .summaryFooter { display: flex; justify-content: space-between; gap: 12px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border); color: var(--muted); font: 11px/1.5 var(--mono); }
 .summaryFooter > span:last-child { text-align: right; }
 .autoSaved { color: #047857; }

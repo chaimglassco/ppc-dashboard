@@ -1,16 +1,24 @@
 # Project Progress
 
+## September 11, 2026 — Automatic save, data-derived status, and PPC conversion correction
+
+Removed the manual Save action while retaining debounced browser-local persistence. Reporting-period Completed/Partial badges now derive from cached coverage dates, Action Items starts empty, goal controls moved into the data-state footer, current-summary formatting moved beside its label, and Sales WoW moved from the SKU block into Total Sales.
+
+Corrected the conversion definition to PPC Orders divided by PPC Clicks. The provider/cache/report contracts accept optional exact PPC Clicks, calculate 27 / 78 as 34.62%, and explicitly remain unavailable when the connected Scale Insights response omits clicks. A live connector check confirmed search-term clicks do not reconcile to the ASIN advertising totals, so they were rejected as a fallback.
+
+Lint, typecheck, all 312 tests across 51 files (6 skipped), the production build, and `git diff --check` pass.
+
 ## September 11, 2026 — Independent budget alignment and custom goals
 
 Top-aligned the two planning cards and removed the budget content's automatic top spacer, so any number of goals can grow only the Strategic Weekly Goals card. Added Custom Goal to the selector with manual text, target, status, and outcome controls. Custom intent survives reload through an optional version-1 goal marker without changing the storage key or requiring migration.
 
 ## September 11, 2026 — Compact goals, resizable prior summary, and Conversion Rate
 
-Moved weekly-goal Actual below Target and placed the three outcome icons beside the status selector. Replaced the prior-summary display with a labeled, vertically resizable, read-only Performance Documentation field and removed archive/report-state/Draft/Status/ROAS metadata from the two summary cards. Added live Conversion Rate from Scale Insights Total Orders divided by Total Sessions, including prior-week comparison and backward-compatible unavailable rendering for older cached weeks. The existing sales-summary request already supplies Total Sessions, so no new provider call is required.
+Moved weekly-goal Actual below Target and placed the three outcome icons beside the status selector. Replaced the prior-summary display with a labeled, vertically resizable, read-only Performance Documentation field and removed archive/report-state/Draft/Status/ROAS metadata from the two summary cards. The later PPC correction reserves Conversion Rate for PPC Orders divided by PPC Clicks.
 
 ## September 11, 2026 — Workspace control refinements
 
-Condensed the workspace header to vertically stacked Save and Refresh Data actions and removed the duplicate refresh control from Weekly PPC Performance. Made Previous Week Summary read-only, removed its empty-result warning, renamed the final card Action Items, and removed action due-date inputs without changing stored action compatibility. Weekly goals now present Target before Actual. Budget Utilization now shows Daily limit inside Weekly Limit and removes the duplicated secondary detail row.
+Condensed the workspace header controls and removed the duplicate refresh control from Weekly PPC Performance. Made Previous Week Summary read-only, removed its empty-result warning, renamed the final card Action Items, and removed action due-date inputs without changing stored action compatibility. Weekly goals now present Target before Actual. Budget Utilization now shows Daily limit inside Weekly Limit and removes the duplicated secondary detail row. A later revision removed the remaining manual Save action.
 
 ## September 11, 2026 — Tag-driven product selection
 

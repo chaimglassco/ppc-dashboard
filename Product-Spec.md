@@ -1,5 +1,11 @@
 # Glassco Back Office Library — Product Specification
 
+## September 11 automatic status, empty actions, and PPC conversion
+
+The workspace has no manual Save button because edits are automatically saved. Reporting Periods labels cached full weeks Completed and cached incomplete weeks Partial from their actual coverage dates. Action Items begins empty until Add Action Item is selected. Goal status and outcome controls sit at the lower right beside the Partial/Final label; summary formatting controls sit at the upper right of the documentation label; the Sales WoW line sits below the Total Sales value.
+
+PPC Conversion Rate equals PPC Orders divided by exact PPC Clicks. If Scale Insights omits PPC Clicks, the card remains unavailable and identifies the missing denominator. Overall Orders/Sessions and non-reconciling search-term click totals are never substituted.
+
 ## September 11 custom-goal and budget-card behavior
 
 Budget Utilization remains top-aligned beside Strategic Weekly Goals and does not move its controls when the goal list becomes taller. The goal selector offers Custom Goal. A custom selection displays a manual goal-text field, keeps Target editable, leaves Actual unavailable because no live metric is mapped, and retains On Track/At Risk plus achieved, missed, and delete controls.
@@ -8,11 +14,11 @@ Budget Utilization remains top-aligned beside Strategic Weekly Goals and does no
 
 Each active goal displays Target on the first line and Actual directly below it. The On Track/At Risk selector and achieved, missed, and delete icon buttons share the same top-row control group. Previous Week Summary contains the label Performance Documentation and a vertically resizable read-only field. Both summary headers omit report-state badges, and the prior summary omits Completed, Status, archive, and ROAS metadata.
 
-Conversion Rate is the selected period's Total Orders divided by Total Sessions from Scale Insights, displayed with up to two decimal places. When the prior period also has sessions, the card shows its previous value and week-over-week direction. Legacy weeks without Total Sessions remain unavailable until refreshed.
+PPC Conversion Rate is displayed with up to two decimal places. When the prior period also has PPC Clicks, the card shows its previous value and week-over-week direction.
 
 ## September 11 dashboard control revision
 
-The workspace header presents **Save** with **Refresh Data** directly below it. Previous Week Summary is view-only and stays blank when no result was entered. The final card is titled **Action Items** and contains completion, title, priority, assignee placeholder, and delete controls without a due-date picker. Weekly goal progress places Actual below Target, and achieved/missed/delete buttons sit beside the status selector. Budget Utilization places the calculated daily limit inside the Weekly Limit tile and does not repeat daily limit or over/remaining balance outside the primary tiles.
+The workspace header presents **Refresh Data** and edits save automatically. Previous Week Summary is view-only and stays blank when no result was entered. The final card is titled **Action Items** and contains completion, title, priority, assignee placeholder, and delete controls without a due-date picker. Weekly goal progress places Actual below Target, and achieved/missed/delete buttons sit beside the status selector. Budget Utilization places the calculated daily limit inside the Weekly Limit tile and does not repeat daily limit or over/remaining balance outside the primary tiles.
 
 ## September 11 dashboard catalog behavior
 

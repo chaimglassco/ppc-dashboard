@@ -1,16 +1,22 @@
 # Glassco Team SOP Library and PPC Dashboard
 
+## Dashboard automatic-save and PPC metric correction (September 11, 2026)
+
+Dashboard edits now save automatically; the workspace header contains Refresh Data and no manual Save action. Reporting-period status comes from the cached Scale Insights coverage end date: a full Wednesday–Tuesday range is Completed and a shorter range is Partial. New weekly reports start with an empty Action Items list. Goal status/outcome controls sit in the footer beside the data-state label, current-summary formatting controls share its label row, and the Sales WoW line appears inside Total Sales.
+
+The conversion card is now explicitly **PPC Conversion Rate** and calculates `PPC Orders / PPC Clicks`. Optional `ppcClicks` is accepted from exact advertising totals without changing version-1 storage keys. If the connected Scale Insights response omits PPC Clicks, the card says so and does not substitute overall Orders/Sessions or search-term clicks that do not reconcile to the ASIN total.
+
 ## Dashboard goal and budget alignment update (September 11, 2026)
 
 Strategic Weekly Goals and Budget Utilization now top-align independently, so adding goals no longer creates blank space above the budget controls or pushes them downward. The goal selector includes **Custom Goal**; selecting it reveals a manual goal-text field while retaining Target, status, and outcome controls. Custom goals persist in the existing version-1 report store through an optional marker, and older reports remain compatible.
 
 ## Dashboard goal, summary, and conversion update (September 11, 2026)
 
-Weekly goal Target and Actual values now form a compact vertical pair, with Actual directly below Target and the achieved, missed, and delete controls beside the status selector. Previous Week Summary is a labeled, vertically resizable, read-only Performance Documentation field; report-status, archive, Draft, Status, and ROAS badges were removed from the paired summary cards. Conversion Rate now comes from Scale Insights Total Orders divided by Total Sessions, retains two-decimal precision, and compares with the previous week when both periods provide session data. Older reports and performance-cache entries without sessions remain valid and display a dash until refreshed.
+Weekly goal Target and Actual values now form a compact vertical pair, with Actual directly below Target and the achieved, missed, and delete controls beside the status selector. Previous Week Summary is a labeled, vertically resizable, read-only Performance Documentation field; report-status, archive, Draft, Status, and ROAS badges were removed from the paired summary cards. The conversion card is reserved for PPC Orders divided by PPC Clicks and never presents overall conversion as PPC conversion.
 
 ## Dashboard workspace controls (September 11, 2026)
 
-The product workspace now stacks **Save** and **Refresh Data** in the header. Previous Week Summary is read-only and omits the empty-summary warning, while Action Items no longer shows per-item date inputs. Weekly goals place Target above Actual and keep the achieved, missed, and delete actions beside status. Budget Utilization shows the calculated daily limit inside the Weekly Limit tile and removes the duplicated detail row below the tiles. Existing browser records remain compatible, including saved action due dates and prior-week result text; these fields are no longer edited from the revised controls.
+The product workspace provides **Refresh Data** in the header while report edits save automatically. Previous Week Summary is read-only and omits the empty-summary warning, while Action Items no longer shows per-item date inputs. Weekly goals place Target above Actual and keep the achieved, missed, and delete actions beside status. Budget Utilization shows the calculated daily limit inside the Weekly Limit tile and removes the duplicated detail row below the tiles. Existing browser records remain compatible, including saved action due dates and prior-week result text; these fields are no longer edited from the revised controls.
 
 ## Dashboard catalog update (September 11, 2026)
 
@@ -18,7 +24,7 @@ All Tags groups PPC products by Lead Came, Complementary, Homasote Board, Shard 
 
 ## Dashboard reference redesign (September 10, 2026)
 
-The dashboard workspace follows the supplied HTML reference across all three panels. Products is a fixed 300px white column with a compact title/count row, one plus-button action menu, search and tag controls, neutral product cards, and a solid-black selected card. Reporting Periods is a 340px white column with an integrated month navigator, neutral period cards, abbreviated ranges, and a black selected-card treatment. The workspace places Strategic Weekly Goals and Budget Utilization above two five-card performance rows, paired summaries, a campaign week-over-week diagnostic, and action items. Total Orders follows Organic Orders; ACOS and TACOS sit together; Conversion Rate follows Total Sales and uses Scale Insights orders and sessions. Planning and catalog edits still save only in this browser.
+The dashboard workspace follows the supplied HTML reference across all three panels. Products is a fixed 300px white column with a compact title/count row, one plus-button action menu, search and tag controls, neutral product cards, and a solid-black selected card. Reporting Periods is a 340px white column with an integrated month navigator, neutral period cards, abbreviated ranges, and a black selected-card treatment. The workspace places Strategic Weekly Goals and Budget Utilization above two five-card performance rows, paired summaries, a campaign week-over-week diagnostic, and action items. Total Orders follows Organic Orders; ACOS and TACOS sit together; PPC Conversion Rate follows Total Sales. Planning and catalog edits still save only in this browser.
 
 This repository provides the Glassco Team SOP Library—a responsive Amazon PPC knowledge base, shared document-administration interface, and structured document builder—and the authenticated Weekly PPC Performance workspace at `/ppc/dashboard`.
 

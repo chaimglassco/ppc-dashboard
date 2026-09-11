@@ -16,7 +16,7 @@ export type WeeklyPpcReport = {
   budgetHistory: BudgetChange[];
   spend: number; ppcSales: number; organicSales: number; totalSales: number;
   ppcOrders: number; organicOrders: number; totalOrders: number; targetAcos: number; acos: number; tacos: number;
-  totalSessions?: number; conversionRate?: number;
+  totalSessions?: number; ppcClicks?: number; conversionRate?: number;
   goals: WeeklyGoal[]; goalHistory: GoalHistoryEntry[]; previousWeekResult: string; notes: string; actions: ActionItem[]; updatedAt: string | null;
 };
 export type WeeklyPerformanceSourceMetrics = {
@@ -26,6 +26,7 @@ export type WeeklyPerformanceSourceMetrics = {
   totalSales: number;
   totalOrders: number;
   totalSessions?: number;
+  ppcClicks?: number;
 };
 export type WeeklyPerformanceCalculatedMetrics = WeeklyPerformanceSourceMetrics & {
   organicSales: number;
@@ -52,9 +53,6 @@ const DEFAULT_GOALS: WeeklyGoal[] = [
   { id: "goal-acos", title: "ACOS", metric: "acos", unit: "percentage", target: "25", actual: "", status: "On Track" },
   { id: "goal-sales", title: "PPC Sales", metric: "ppcSales", unit: "currency", target: "", actual: "", status: "On Track" },
 ];
-const DEFAULT_ACTIONS: ActionItem[] = [
-  { id: "action-negatives", title: "Review search terms and add negative exact keywords", priority: "High", dueDate: "", done: false },
-];
 const REPORTING_WEEK_START_DAY = 3;
 const LEGACY_REPORTING_WEEK_START_DAY = 1;
 
@@ -70,7 +68,7 @@ export function createWeeklyPpcReport(productId: string, weekStart: string, prev
     productId, weekStart, status: "Draft", weeklyBudget: 0, dailyBudget: 0, budgetHistory: [], spend: 0,
     ppcSales: 0, organicSales: 0, totalSales: 0, ppcOrders: 0, organicOrders: 0, totalOrders: 0, targetAcos: 0,
     acos: 0, tacos: 0, goals: carriedGoals, goalHistory: [], previousWeekResult: previousReport?.previousWeekResult || "",
-    notes: "", actions: DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt: null,
+    notes: "", actions: [], updatedAt: null,
   };
 }
 
@@ -83,7 +81,7 @@ export function calculateWeeklyPerformance(metrics: WeeklyPerformanceSourceMetri
     organicOrders: Math.max(0, metrics.totalOrders - metrics.ppcOrders),
     acos: metrics.ppcSales ? Math.round((metrics.spend / metrics.ppcSales) * 10000) / 100 : 0,
     tacos: metrics.totalSales ? Math.round((metrics.spend / metrics.totalSales) * 10000) / 100 : 0,
-    ...(metrics.totalSessions == null ? {} : { conversionRate: metrics.totalSessions ? Math.round((metrics.totalOrders / metrics.totalSessions) * 10000) / 100 : 0 }),
+    conversionRate: metrics.ppcClicks == null ? undefined : metrics.ppcClicks ? Math.round((metrics.ppcOrders / metrics.ppcClicks) * 10000) / 100 : 0,
   };
 }
 
@@ -138,6 +136,11 @@ export function formatWeeklyGoalTarget(goal: WeeklyGoal) {
 
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
 function finiteNumber(value: unknown) { const number = Number(value); return Number.isFinite(number) && number >= 0 ? number : 0; }
+function optionalNonNegativeInteger(value: unknown) {
+  if (value == null) return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 && Number.isInteger(number) ? number : undefined;
+}
 
 function normalizeGoal(value: unknown, index: number): WeeklyGoal | null {
   if (!isRecord(value)) return null;
@@ -188,6 +191,14 @@ function normalizeAction(value: unknown, index: number): ActionItem | null {
   return { id: String(value.id ?? `action-${index}`), title, priority: priorities.includes(value.priority as ActionItem["priority"]) ? value.priority as ActionItem["priority"] : "Medium", dueDate: String(value.dueDate ?? ""), done: value.done === true };
 }
 
+function isUntouchedLegacyDefaultAction(action: ActionItem) {
+  return action.id === "action-negatives"
+    && action.title === "Review search terms and add negative exact keywords"
+    && action.priority === "High"
+    && action.dueDate === ""
+    && !action.done;
+}
+
 function normalizeBudgetChange(value: unknown, index: number): BudgetChange | null {
   if (!isRecord(value)) return null;
   const changedAt = typeof value.changedAt === "string" ? value.changedAt : "";
@@ -218,7 +229,9 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
   const goalHistory = [...storedGoalHistory, ...legacyGoalHistory]
     .filter((goal, index, entries) => entries.findIndex(candidate => candidate.id === goal.id) === index)
     .slice(0, 100);
-  const actions = Array.isArray(value.actions) ? value.actions.map(normalizeAction).filter((action): action is ActionItem => Boolean(action)) : [];
+  const actions = Array.isArray(value.actions)
+    ? value.actions.map(normalizeAction).filter((action): action is ActionItem => Boolean(action)).filter(action => !isUntouchedLegacyDefaultAction(action))
+    : [];
   const budgetHistory = Array.isArray(value.budgetHistory)
     ? value.budgetHistory.map(normalizeBudgetChange).filter((change): change is BudgetChange => Boolean(change)).slice(0, 100)
     : [];
@@ -227,15 +240,17 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
   const ppcOrders = finiteNumber(value.ppcOrders ?? value.orders);
   const organicOrders = finiteNumber(value.organicOrders);
   const totalSessions = value.totalSessions == null ? undefined : finiteNumber(value.totalSessions);
+  const ppcClicks = optionalNonNegativeInteger(value.ppcClicks);
   return withCalculatedPerformance({
     productId, weekStart, status: statuses.includes(value.status as ReportStatus) ? value.status as ReportStatus : "Draft",
     weeklyBudget: finiteNumber(value.weeklyBudget), dailyBudget: finiteNumber(value.dailyBudget), budgetHistory, spend: finiteNumber(value.spend),
     ppcSales, organicSales, totalSales: value.totalSales == null ? ppcSales + organicSales : finiteNumber(value.totalSales),
     ppcOrders, organicOrders, totalOrders: value.totalOrders == null ? ppcOrders + organicOrders : finiteNumber(value.totalOrders),
     ...(totalSessions == null ? {} : { totalSessions }),
+    ...(ppcClicks == null ? {} : { ppcClicks }),
     targetAcos: finiteNumber(value.targetAcos), acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
     goals: Array.isArray(value.goals) ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), goalHistory, previousWeekResult: String(value.previousWeekResult ?? ""), notes: String(value.notes ?? ""),
-    actions: actions.length ? actions : DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt,
+    actions: Array.isArray(value.actions) ? actions : [], updatedAt,
   });
 }
 
