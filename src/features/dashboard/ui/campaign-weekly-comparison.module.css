@@ -71,6 +71,18 @@
 .showAllButton { display: block; margin: 12px auto 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #27272a; font-size: 11px; font-weight: 600; }
 .showAllButton:hover { border-color: #09090b; background: #fafafa; }
 .emptyCategory { margin: 12px 0 0; padding: 18px; border-radius: 6px; background: #fafafa; color: #71717a; font: 11px/1.5 var(--mono); text-align: center; }
+.opportunityMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: #fafafa; }
+.opportunityMeta > span { display: grid; gap: 2px; }
+.opportunityMeta small { color: #71717a; font: 9px/1.4 var(--mono); }
+.opportunityMeta strong { color: #27272a; font: 600 11px/1.5 var(--mono); }
+.opportunityMeta > small { margin-left: auto; }
+.opportunityFilters { display: grid; grid-template-columns: 1.2fr repeat(3, minmax(110px, 1fr)); gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.opportunityFilters label { display: grid; gap: 5px; color: #52525b; font: 600 9px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.opportunityFilters select, .opportunityFilters input { width: 100%; min-height: 34px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #18181b; font: 11px/1.4 var(--mono); }
+.percentFilter { position: relative; display: block; }
+.percentFilter input { padding-right: 25px; }
+.percentFilter i { position: absolute; top: 50%; right: 9px; transform: translateY(-50%); color: #71717a; font-style: normal; }
+.untargetedBadge { display: inline-flex; padding: 3px 7px; border: 1px solid #bfdbfe; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font: 600 9px/1.4 var(--mono); white-space: nowrap; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .loadingIcon, .chevron { animation: none; transition: none; } }
 @media (max-width: 900px) { .accordionList { grid-template-columns: 1fr; }.moverAccordion[open] { grid-column: auto; } }
@@ -82,4 +94,6 @@
   .moverAccordion summary { grid-template-columns: 28px 1fr 16px; }
   .categorySummary { grid-column: 2 / 3; white-space: normal; }
   .chevron { grid-column: 3; grid-row: 1 / span 2; }
+  .opportunityMeta > small { width: 100%; margin-left: 0; }
+  .opportunityFilters { grid-template-columns: 1fr 1fr; }
 }

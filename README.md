@@ -145,7 +145,7 @@ npm test
 npm run build
 ```
 
-The last verified state passes all four commands with 51 test files, 310 passing tests, and 6 intentionally skipped tests.
+The last verified state passes all four commands with 55 test files, 327 passing tests, and 6 intentionally skipped tests.
 
 ## Project structure
 
@@ -184,6 +184,12 @@ Never expose the Vercel OIDC credential, Connect-issued access token, or upstrea
 For this persistence rollout, deploy Pipeline's authoritative endpoint before the Library client, then back up and initialize data as described in [deployment.md](deployment.md). For later base-path or gateway-only changes, deploy PPC before Pipeline navigation changes. Pipeline’s rewrite targets the public PPC production alias so it is not blocked by Vercel deployment protection.
 
 See [deployment.md](deployment.md) for the full rollout, verification, and rollback procedure.
+
+## Untargeted sales opportunities
+
+The PPC dashboard includes an on-demand **Untargeted Sales Opportunities** report directly below Campaign Week-over-Week Comparison. It combines the connected Scale Insights `get_search_query_data` and `get_ppc_exact_coverage` read-only tools for the selected ASIN and reporting week. Only converting search terms or product ASINs that Scale Insights explicitly marks as missing exact coverage are displayed.
+
+Loading is manual to preserve MCP usage. Type, minimum Sales, minimum Orders, and maximum ACOS filters run entirely in the browser against the loaded response. The shared **Refresh Data** button reloads this report only after the user has requested it during the current dashboard session.
 
 ## Documentation
 

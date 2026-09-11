@@ -349,6 +349,12 @@ The record contains `tags`, `customProducts`, `productOverrides`, and optional `
 
 Parsing is fail-closed: malformed records reset to an empty overlay; malformed and duplicate entries are discarded; missing tag references become untagged; unrecognized image values are removed. The overlay is browser-local, never mutates or deletes authoritative Pipeline products, and is not uploaded through either shared API. Removing any product from this portfolio does not delete its separately stored weekly reports; Pipeline-backed products remain intact in Product Pipeline.
 
+### Untargeted sales opportunity response
+
+`GET /ppc/api/dashboard/untargeted-opportunities?asin=<ASIN>&country=<marketplace>&weekStart=<Wednesday>` returns `{ opportunities }` with the normalized ASIN, marketplace, currency, selected/capped period, `Final` or `Partial` state, source freshness, warnings, and zero or more rows. Each row contains `term`, `type` (`Search term` or `Product ASIN`), finite non-negative `sales`, integer `orders`, finite non-negative `spend`, integer `clicks`, and nullable finite non-negative `acos`.
+
+The response is accepted only when every field validates. A Product ASIN term must be ten alphanumeric characters. The server includes rows only when the search-query source reports Sales greater than zero and at least one Order and the exact-coverage source explicitly reports that same normalized term as uncovered. The response is no-store and is not written to `localStorage` or the weekly-report schema. Errors may add `code` and `requestId`; authorization responses may add an allowlisted hosted consent URL.
+
 ## Validation and fallback rules
 
 - Treat all browser-storage input as untrusted.

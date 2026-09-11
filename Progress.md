@@ -202,7 +202,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 - ESLint passes.
 - Strict TypeScript check passes.
-- Fifty-one Vitest files pass with 307 passing tests and 6 intentionally skipped tests.
+- Fifty-five Vitest files pass with 327 passing tests and 6 intentionally skipped tests.
 - Production build passes and generates 15 routes/pages.
 - Core desktop flows were visually verified in the local browser.
 - Bookmark hydration mismatch was reproduced and fixed.
@@ -281,3 +281,9 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Replaced the corner-sized previous-week annotation with equal-size Current and Previous columns in every Weekly Performance metric card.
 - Added a center divider and moved red/green direction styling to the current value and arrow only.
 - Tightened the shared comparison typography to prevent percentage overflow and shortened the three Scale Insights performance-link labels.
+## September 11, 2026 — Untargeted sales opportunities
+
+- Added an on-demand report below Campaign Week-over-Week Comparison using Scale Insights search-query and exact-coverage tools.
+- Added strict provider normalization for structured and Markdown responses, safe capability/shape errors, sanitized correlation diagnostics, and no-store API delivery.
+- Added local criteria filters, top-ten expansion, final/partial metadata, product-ASIN links, shared-refresh integration, and memory-only caching.
+- Added domain, adapter, API, and component regression coverage. Full repository gates and authenticated production data reconciliation are recorded during release verification.

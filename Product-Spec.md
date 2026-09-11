@@ -227,3 +227,8 @@ These require a separately approved milestone and must preserve the current shar
 - The previous value remains neutral. The current value and direction arrow are green when it increased, red when it decreased, and neutral when unchanged or when no previous week is available.
 - Compact metric typography must keep currency and percentage symbols inside their corresponding Current or Previous column.
 - Scale Insights trend destinations are labeled Daily Performance, Weekly Performance, and Monthly Performance without a redundant “Trend” suffix.
+## Untargeted sales opportunities
+
+Directly below Campaign Week-over-Week Comparison, an on-demand card helps the PPC operator find converting customer search terms and product ASINs that do not yet have exact PPC coverage. The operator can filter the loaded list by opportunity type, minimum PPC Sales, minimum PPC Orders, and maximum ACOS. Results are ordered by PPC Sales, show ten rows initially, and can expand with Show all.
+
+Every displayed result shows PPC Sales, Orders, Spend, ACOS, and a **Not targeted** badge. Product ASINs open their Amazon detail page. The selected week is `Final` when complete and `Partial` when capped at yesterday. Empty, authorization, unavailable-capability, malformed-response, loading, retry, and partial-data states remain explicit. Loading is user-initiated to control MCP usage, while filter changes are local.

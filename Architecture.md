@@ -211,7 +211,7 @@ npm test
 npm run build
 ```
 
-Current verified result: all gates pass, including 124 tests across 22 files.
+Current verified result: all gates pass, including 327 passing tests across 55 files and 6 intentional skips.
 # Pipeline-domain integration
 
 Next.js is compiled with `basePath: "/ppc"`. Pipeline proxies `/ppc/:path*` to the stable PPC deployment alias, producing one browser origin without combining repositories or persistence systems.
@@ -244,3 +244,9 @@ Formatting writes use `document.update` with `updateScope: "content"`. The Pipel
 The dashboard derives each comparison from the selected report and the immediately preceding saved or cached weekly report. This is presentation-only: both values retain the existing report schema, while direction classes are applied only when the current period contains available performance and the prior value remains neutral. Each card uses a small centered vertical stack, a non-wrapping title, content-sized metric input, and a separate centered footer so currency and percentage symbols cannot collide with comparison content. Scale Insights trend routes retain their slugs and query parameters while their visible labels omit the redundant “Trend” suffix.
 
 Timeline cards project PPC Sales and PPC Orders rather than total values. Budget-history pagination slices the existing newest-first `budgetHistory` array into five-row view pages; the active page is transient component state and is not persisted.
+
+## Untargeted opportunity reporting
+
+`/ppc/api/dashboard/untargeted-opportunities` is an authenticated, no-store reporting boundary for one selected ASIN and Wednesday reporting week. It caps an in-progress week at yesterday, opens one Scale Insights tool session, and calls `get_search_query_data` plus `get_ppc_exact_coverage`. The adapter normalizes structured JSON and Markdown-table responses, keeps rows with positive Sales and at least one Order, and emits a row only when exact coverage is explicitly false. Missing or ambiguous coverage is excluded.
+
+The client card loads on demand and keeps validated results in component-memory cache only. Criteria changes do not call MCP. The dashboard-wide Refresh Data generation invalidates a previously requested opportunity result alongside performance data. Provider errors expose bounded codes and a correlation ID; logs contain tool property names and counts without search terms, ASIN opportunities, metrics, tokens, or raw response bodies.

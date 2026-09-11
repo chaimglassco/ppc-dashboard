@@ -49,7 +49,7 @@ Last updated: September 11, 2026
 - The provider adapter accepts nested campaign/entity records, formatted Spend strings, `const`-based grouping choices, embedded JSON, and MCP text tables while retaining exact scope and nonnegative-Spend validation. Baselines remain in React memory and no browser-storage contract changed.
 - Production deployment `dpl_AiPseuCo3En2hqSbrT1W8xTAg3fJ` at commit `c68cdc9` reached READY. Authenticated request `7274368f-fc45-4e62-ab36-cd7d799273f1` verified that `get_ads_performance` exposes only `account_ref`, `ad_type`, `asin_list`, `count`, `country`, `days`, `end_date`, `mode`, `page`, `sort_by`, `sort_direction`, `start_date`, and `summary_only`; it exposes no campaign grouping field. The other advertised read-only tools are inventory, organic-upside, exact-coverage, product-metadata, search-query, and underwater-product reports, with no dedicated campaign-reporting tool.
 - The adapter correctly stopped before making an aggregate advertising request and returned `campaign_capability_missing`. The current Scale Insights connection therefore cannot supply real campaign Spend rows. The UI presents this as a neutral provider limitation without a futile Retry control. Do not describe the live campaign table as working; enabling it requires a future Scale Insights campaign-reporting capability or another campaign-level source.
-- Lint, typecheck, all 307 passing tests across 51 files (6 skipped), and the production build pass. Local browser verification covers missing-capability, unreadable-row, and populated-table states, including correlation IDs, pending Current Week values, protected links, and responsive overflow containment.
+- Lint, typecheck, all 327 passing tests across 55 files (6 skipped), and the production build pass. Local browser verification covers missing-capability, unreadable-row, populated campaign-table, and on-demand untargeted-opportunity states, including correlation IDs, protected links, local filters, and responsive overflow containment.
 
 ## September 10, 2026 — local first-panel redesign
 
@@ -198,6 +198,14 @@ git status --short --branch
 ```
 
 Read [README.md](README.md), [Architecture.md](Architecture.md), [data-contract.md](data-contract.md), and [deployment.md](deployment.md) before changing routing, authentication, persistence, or deployment behavior.
+
+## September 11, 2026 — Untargeted sales opportunities
+
+- The dashboard card below Campaign Week-over-Week Comparison is intentionally on demand to reduce Scale Insights MCP consumption.
+- The API joins `get_search_query_data` with `get_ppc_exact_coverage`; only explicit uncovered matches may receive the `Not targeted` badge.
+- Client criteria and Show all operate on the validated in-memory response and add no MCP calls. Shared Refresh Data reloads the card only if it was previously requested in that mounted dashboard session.
+- The response does not extend `glassco.ppcPerformanceNotes.v1` or any other browser-storage contract.
+- After deployment, authenticated QA must reconcile at least one displayed result against Scale Insights for the same ASIN and date range. Use the card Reference ID for sanitized logs if the live response contract differs.
 
 ## Persistence rollout still required
 

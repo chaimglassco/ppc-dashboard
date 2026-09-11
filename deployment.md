@@ -238,3 +238,8 @@ Deploy the Pipeline Library API first because the reordered IDs require the scal
 ## Weekly comparison rollout
 
 The Weekly Performance comparison is a presentation-only Library deployment. It requires no environment variable, API, storage-schema, or data migration. Verify the compact vertical card stack, neutral prior values in the footer, non-overflowing symbols, direction color and badges only when current data is available, and shortened Daily/Weekly/Monthly Performance links at desktop and mobile widths.
+## Untargeted opportunity rollout
+
+Deploy the feature with both `/ppc/api/dashboard/untargeted-opportunities` and its dashboard card. After promotion, sign in through Pipeline, select a product and week, then click **Load Opportunities**. Confirm the response is `200`, its period matches the card, every displayed row has converting Sales/Orders, and Scale Insights exact coverage reports each row as uncovered. Change all four criteria controls and confirm no additional endpoint request occurs. Then click the shared **Refresh Data** button and confirm one opportunity reload occurs because the card was previously requested.
+
+If the connector does not advertise both required read-only tools, the card must show its capability message. If a live response shape is unsupported, use the displayed Reference ID to inspect sanitized runtime diagnostics before extending the adapter. Do not infer or publish “Not targeted” from an aggregate, absent, or ambiguous coverage result.

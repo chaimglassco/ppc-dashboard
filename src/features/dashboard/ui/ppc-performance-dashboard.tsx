@@ -21,6 +21,7 @@ import {
 import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfolio-panel";
 import { ProductPerformanceChat, type PerformanceChatPeriod } from "./product-performance-chat";
 import { CampaignWeeklyComparison } from "./campaign-weekly-comparison";
+import { UntargetedSalesOpportunities } from "./untargeted-sales-opportunities";
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, type PerformanceCache } from "../domain/ppc-performance-cache";
 import { getScaleInsightsAnalysisHref, PPC_ANALYSIS_COLUMNS } from "../domain/ppc-analysis-navigation";
 import styles from "./ppc-performance-dashboard.module.css";
@@ -753,6 +754,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
           </div>
 
           <CampaignWeeklyComparison asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={performanceRefresh} />
+          <UntargetedSalesOpportunities asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={performanceRefresh} />
 
           <section className={ws.card} aria-labelledby="actions-heading"><div className={ws.cardTitle}><div><h3 id="actions-heading">Action Items</h3><p className={ws.actionDescription}>Operational tasks generated from this week’s performance analysis</p></div><button type="button" onClick={addAction}><Plus />Add Action Item</button></div><div className={ws.actionList}>{report.actions.map(action => <div className={ws.actionRow} key={action.id}><button type="button" className={action.done ? ws.actionDone : ""} aria-label={action.done ? `Mark ${action.title} incomplete` : `Mark ${action.title} complete`} onClick={() => updateAction(action.id, { done: !action.done })}>{action.done ? <Check /> : null}</button><input aria-label="Action item" value={action.title} onChange={event => updateAction(action.id, { title: event.target.value })} /><select aria-label={`${action.title} priority`} className={priorityTone(action.priority)} value={action.priority} onChange={event => updateAction(action.id, { priority: event.target.value as ActionItem["priority"] })}><option>High</option><option>Medium</option><option>Low</option></select><span className={ws.assigneePlaceholder} aria-label="Assignee unavailable">—</span><button type="button" aria-label={`Remove ${action.title}`} onClick={() => removeAction(action.id)}><Trash2 /></button></div>)}</div></section>
         </div></div>

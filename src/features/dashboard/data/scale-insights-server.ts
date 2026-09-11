@@ -30,6 +30,11 @@ import {
   type ScaleInsightsCampaignComparisonParams,
 } from "./scale-insights-campaign-comparison";
 import type { CampaignSpendBaseline, CampaignWeeklyComparison } from "../domain/campaign-weekly-comparison";
+import {
+  loadUntargetedSalesOpportunities,
+  type UntargetedOpportunityParams,
+} from "./scale-insights-untargeted-opportunities";
+import type { UntargetedSalesOpportunities } from "../domain/untargeted-sales-opportunities";
 
 const DEFAULT_SCALE_INSIGHTS_MCP_URL = "https://mcp.scaleinsights.com/mcp";
 const DEFAULT_SCALE_INSIGHTS_CONNECTOR = "mcp.scaleinsights.com/glassco-scale-insights";
@@ -66,12 +71,29 @@ export type ScaleInsightsCampaignDiagnosticContext = {
   requestId: string;
 };
 
+export type ScaleInsightsOpportunityDiagnosticContext = {
+  requestId: string;
+};
+
 function createCampaignDiagnosticReporter(requestId: string): CampaignDiagnosticReporter {
   return (event, details) => {
     console.warn(JSON.stringify({
       level: "warning",
       message: "Scale Insights campaign provider diagnostic",
       route: "/api/dashboard/campaign-comparison",
+      requestId,
+      event,
+      ...details,
+    }));
+  };
+}
+
+function createOpportunityDiagnosticReporter(requestId: string) {
+  return (event: string, details: Record<string, unknown>) => {
+    console.warn(JSON.stringify({
+      level: "warning",
+      message: "Scale Insights untargeted-opportunity provider diagnostic",
+      route: "/api/dashboard/untargeted-opportunities",
       requestId,
       event,
       ...details,
@@ -174,6 +196,19 @@ export async function getScaleInsightsCampaignSpendBaseline(
     }
     return loadScaleInsightsCampaignSpendBaseline(params, callTool, capabilities, reportDiagnostic);
   });
+}
+
+export async function getScaleInsightsUntargetedSalesOpportunities(
+  params: UntargetedOpportunityParams,
+  identity: ScaleInsightsRequestIdentity,
+  diagnostic: ScaleInsightsOpportunityDiagnosticContext,
+): Promise<UntargetedSalesOpportunities> {
+  return withScaleInsightsToolSession(identity, ({ definitions, callTool }) => loadUntargetedSalesOpportunities(
+    params,
+    definitions,
+    callTool,
+    createOpportunityDiagnosticReporter(diagnostic.requestId),
+  ));
 }
 
 async function withConnectedScaleInsightsClient<T>(
