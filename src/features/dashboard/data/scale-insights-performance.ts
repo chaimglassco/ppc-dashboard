@@ -130,6 +130,7 @@ export async function loadScaleInsightsWeeklyPerformance(
   const ppcOrders = nonNegativeInteger(adsTotals.total_orders, "PPC Orders");
   const totalSales = finiteNonNegative(salesSummary.TotalSales, "Total Sales");
   const totalOrders = nonNegativeInteger(salesSummary.TotalOrders, "Total Orders");
+  const totalSessions = nonNegativeInteger(salesSummary.TotalSessions, "Total Sessions");
   const salesPpcCost = finiteNonNegative(salesSummary.TotalPPCCost, "sales-report PPC Cost");
   const salesPpcSales = finiteNonNegative(salesSummary.TotalPPCSales, "sales-report PPC Sales");
   const warnings: string[] = [];
@@ -144,7 +145,7 @@ export async function loadScaleInsightsWeeklyPerformance(
   return {
     ...params,
     currency: stringValue(adsAggregate.Currency) || "USD",
-    metrics: calculateWeeklyPerformance({ spend, ppcSales, ppcOrders, totalSales, totalOrders }),
+    metrics: calculateWeeklyPerformance({ spend, ppcSales, ppcOrders, totalSales, totalOrders, totalSessions }),
     freshness: {
       adsDataAsOf: stringValue(adsMeta.data_as_of),
       salesDataAsOf: stringValue(salesMeta.data_as_of),

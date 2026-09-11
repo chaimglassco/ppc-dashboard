@@ -39,7 +39,7 @@ describe("PpcPerformanceDashboard", () => {
       if (fail) return { ok: false, status: 502, json: async () => ({ error: "Unavailable" }) } as Response;
       return { ok: true, status: 200, json: async () => ({ performance: {
         asin: "B012345678", country: "US", startDate, endDate, currency: "USD",
-        metrics: { spend, ppcSales: 481.75, ppcOrders: 23, totalSales: 1317.35, totalOrders: 59 },
+        metrics: { spend, ppcSales: 481.75, ppcOrders: 23, totalSales: 1317.35, totalOrders: 59, totalSessions: 122 },
         freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: startDate }, warnings: [],
       } }) } as Response;
     });
@@ -72,6 +72,7 @@ describe("PpcPerformanceDashboard", () => {
     await screen.findByText("Refresh failed. Previously saved metrics are still displayed.");
     expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("99");
     expect(screen.getByRole("textbox", { name: "Spend" })).toHaveAttribute("readonly");
+    expect(screen.getByLabelText("Conversion Rate 48.36%")).toBeVisible();
   }, 15_000);
 
   it("loads a Pipeline product and automatically saves the selected weekly report", async () => {
@@ -94,7 +95,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(currentPeriod).toHaveAttribute("aria-pressed", "true");
     expect(within(screen.getByLabelText("Reporting periods")).getAllByRole("button")[0]).toBe(currentPeriod);
 
-    expect(within(screen.getByRole("region", { name: "Current Week Summary" })).getByText("Draft", { exact: true })).toBeVisible();
+    expect(within(screen.getByRole("region", { name: "Current Week Summary" })).queryByText("Draft", { exact: true })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save Draft" })).not.toBeInTheDocument();
     const monthTrigger = screen.getByRole("button", { name: "Choose reporting months, July–September 2026" });
     expect(monthTrigger.querySelector("svg")).not.toBeNull();
@@ -283,7 +284,7 @@ describe("PpcPerformanceDashboard", () => {
     const previousSpend = within(performanceCard).getByLabelText("Previous Spend: $90, decreased");
     expect(previousSpend.className).not.toMatch(/metricIncrease|metricDecrease/);
     expect(within(performanceCard).getByLabelText("Spend decreased by 9% from previous week").className).toMatch(/metricIncrease/);
-    expect(within(performanceCard).getAllByText("Prev. Week")).toHaveLength(9);
+    expect(within(performanceCard).getAllByText("Prev. Week")).toHaveLength(10);
     expect(screen.queryByText(/total sales ·/i)).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
   }, 10_000);
@@ -393,6 +394,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(goalStatus.className).toMatch(/success/);
     fireEvent.change(goalStatus, { target: { value: "At Risk" } });
     expect(goalStatus.className).toMatch(/warning/);
+    expect(goalStatus.parentElement).toContainElement(screen.getByRole("button", { name: "Mark ACOS achieved" }));
     expect(within(goalStatus).queryByRole("option", { name: "Missed" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Mark ACOS achieved" }));
     expect(screen.queryByRole("combobox", { name: "ACOS status" })).not.toBeInTheDocument();
@@ -418,7 +420,12 @@ describe("PpcPerformanceDashboard", () => {
 
     const documentation = screen.getByRole("textbox", { name: "Performance documentation" }) as HTMLTextAreaElement;
     expect(screen.queryByRole("textbox", { name: "Carry-forward result and lessons" })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Previous week performance documentation" })).toHaveAttribute("readonly");
     expect(screen.queryByText("No outcome summary was entered.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Archived")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Status:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^ROAS:/)).not.toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Current Week Summary" })).queryByText("Draft", { exact: true })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Bulleted list Performance documentation" }));
     expect(documentation).toHaveValue("• ");
     fireEvent.change(documentation, { target: { value: "First action\nSecond action" } });
@@ -488,7 +495,7 @@ describe("PpcPerformanceDashboard", () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
-    expect(screen.getByText("Keep the winning exact campaign.")).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Previous week performance documentation" })).toHaveValue("Keep the winning exact campaign.");
     expect(screen.queryByRole("textbox", { name: "Carry-forward result and lessons" })).not.toBeInTheDocument();
   });
 

@@ -21,7 +21,7 @@ function salesPayload(overrides: Record<string, unknown> = {}) {
     StartDate: "2026-08-26",
     EndDate: "2026-09-01",
     Meta: { total_count: 1, data_as_of: "synced 2026-09-04 00:26 UTC", data_through: "2026-09-01" },
-    Summary: { TotalSales: 1317.35, TotalOrders: 59, TotalPPCCost: 81.75, TotalPPCSales: 481.75 },
+    Summary: { TotalSales: 1317.35, TotalOrders: 59, TotalSessions: 122, TotalPPCCost: 81.75, TotalPPCSales: 481.75 },
     ...overrides,
   };
 }
@@ -43,10 +43,12 @@ describe("Scale Insights weekly performance", () => {
         ppcOrders: 23,
         totalSales: 1317.35,
         totalOrders: 59,
+        totalSessions: 122,
         organicSales: 835.6,
         organicOrders: 36,
         acos: 16.97,
         tacos: 6.21,
+        conversionRate: 48.36,
       },
       freshness: {
         adsDataAsOf: "synced 2026-09-03 21:34 UTC",
@@ -65,7 +67,7 @@ describe("Scale Insights weekly performance", () => {
   it("warns when the independently synced paid totals disagree", async () => {
     const callTool = vi.fn(async (name: string) => name === "get_ads_performance"
       ? adsPayload()
-      : salesPayload({ Summary: { TotalSales: 1317.35, TotalOrders: 59, TotalPPCCost: 82, TotalPPCSales: 482 } }));
+      : salesPayload({ Summary: { TotalSales: 1317.35, TotalOrders: 59, TotalSessions: 122, TotalPPCCost: 82, TotalPPCSales: 482 } }));
 
     const result = await loadScaleInsightsWeeklyPerformance(params, callTool);
     expect(result.warnings).toEqual([expect.stringContaining("synced at different times")]);

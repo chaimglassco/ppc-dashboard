@@ -15,11 +15,12 @@ export function parsePerformanceSnapshot(value: unknown): ScaleInsightsWeeklyPer
   const start = new Date(`${startDate}T00:00:00Z`);
   const end = new Date(`${endDate}T00:00:00Z`);
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || start.toISOString().slice(0, 10) !== startDate || end.toISOString().slice(0, 10) !== endDate || start.getUTCDay() !== 3 || end.getTime() - start.getTime() > 6 * 86_400_000) return null;
-  const { spend, ppcSales, ppcOrders, totalSales, totalOrders } = metrics;
+  const { spend, ppcSales, ppcOrders, totalSales, totalOrders, totalSessions } = metrics;
   if (![spend, ppcSales, ppcOrders, totalSales, totalOrders].every(n => typeof n === "number" && Number.isFinite(n) && n >= 0) || !Number.isInteger(ppcOrders) || !Number.isInteger(totalOrders)) return null;
+  if (totalSessions != null && (typeof totalSessions !== "number" || !Number.isFinite(totalSessions) || totalSessions < 0 || !Number.isInteger(totalSessions))) return null;
   return {
     asin, country, startDate, endDate, currency: text(value.currency),
-    metrics: calculateWeeklyPerformance({ spend: spend as number, ppcSales: ppcSales as number, ppcOrders: ppcOrders as number, totalSales: totalSales as number, totalOrders: totalOrders as number }),
+    metrics: calculateWeeklyPerformance({ spend: spend as number, ppcSales: ppcSales as number, ppcOrders: ppcOrders as number, totalSales: totalSales as number, totalOrders: totalOrders as number, ...(totalSessions == null ? {} : { totalSessions }) }),
     freshness: { adsDataAsOf: text(value.freshness.adsDataAsOf), salesDataAsOf: text(value.freshness.salesDataAsOf), salesDataThrough: text(value.freshness.salesDataThrough) },
     warnings: Array.isArray(value.warnings) ? value.warnings.filter((warning): warning is string => typeof warning === "string").slice(0, 10).map(text) : [],
   };

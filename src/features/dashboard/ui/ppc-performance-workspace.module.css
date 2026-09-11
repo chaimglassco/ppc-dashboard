@@ -61,21 +61,21 @@
 .goalHeaderActions button:hover { background: #f4f4f5; }
 .goalList { display: flex; flex-direction: column; gap: 12px; }
 .goalRow { padding: 14px; background: #fafafa; border: 1px solid var(--border); border-radius: 8px; }
-.goalDefinition { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.goalDefinition { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
 .goalDefinition label, .goalMetrics label { display: grid; min-width: 0; gap: 3px; color: var(--muted); font: 10px var(--mono); }
 .goalDefinition label { flex: 1; }
 .goalDefinition select { width: 100%; border: 0; color: #09090b; background: transparent; padding: 3px 0; font-family: var(--font-workspace-sans), sans-serif; font-size: 12px; font-weight: 700; }
-.goalDefinition > select { width: auto; max-width: 90px; border: 1px solid var(--border); border-radius: 4px; padding: 3px; font: 10px var(--mono); }
-.goalInlineValues { display: flex; align-items: center; gap: 4px; font: 12px var(--mono); color: var(--muted); }
-.goalInlineValues input { width: 65px; min-width: 0; padding: 0; border: 0; background: transparent; font: 700 12px var(--mono); color: #09090b; }
-.goalInlineValues input[readonly] { width: 50px; text-align: right; }
-.goalRowFooter { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 6px; font: 10px var(--mono); }
+.goalStatusActions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.goalStatusActions > select { width: auto; max-width: 90px; border: 1px solid var(--border); border-radius: 4px; padding: 3px; font: 10px var(--mono); }
+.goalInlineValues { display: grid; gap: 2px; min-width: 132px; font: 11px var(--mono); color: var(--muted); }
+.goalInlineValues label { display: grid; grid-template-columns: 42px minmax(0,1fr); align-items: baseline; gap: 4px; }
+.goalInlineValues input { width: 78px; min-width: 0; padding: 0; border: 0; background: transparent; font: 700 12px var(--mono); color: #09090b; text-align: right; }
 .goalMetrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .goalMetrics input, .goalMetrics select { width: 100%; min-width: 0; height: 28px; border: 1px solid var(--border); background: white; border-radius: 4px; padding: 3px 5px; color: #09090b; font: 11px var(--mono); }
 .goalActualField { display: grid; gap: 3px; }
 .goalActualField small { font: 9px var(--mono); }
 .goalActualFinal { color: #047857; }.goalActualPartial { color: #a16207; }.goalActualWaiting { color: #71717a; }
-.goalOutcomeActions { grid-column: 1/-1; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.goalOutcomeActions { display: flex; align-items: center; gap: 4px; }
 .goalOutcomeActions button { display: grid; place-items: center; width: 24px; height: 24px; background: white; border: 1px solid var(--border); border-radius: 4px; color: #52525b; }
 .goalOutcomeActions button:hover { color: #09090b; border-color: #09090b; }
 .goalProgress { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
@@ -83,6 +83,7 @@
 .goalProgress i { display: block; height: 100%; border-radius: 99px; background: #09090b; }
 .goalProgress strong { font: 700 12px/1.4 var(--mono); }
 .goalProgress small { color: var(--muted); font-weight: 400; }
+.goalDataState { display: block; margin-top: 4px; font: 10px var(--mono); }
 .budgetPrimaryGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
 .budgetPrimaryGrid > label { display: grid; justify-items: center; gap: 4px; padding: 12px; background: #fafafa; border: 1px solid var(--border); border-radius: 8px; text-align: center; }
 .budgetPrimaryGrid > label > span:first-child { font: 10px/1.5 var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
@@ -141,7 +142,7 @@
 .metricPreviousRow { display: flex; justify-content: center; align-items: baseline; flex-wrap: wrap; gap: 6px; width: 100%; padding-top: 8px; margin-top: auto; border-top: 1px solid var(--border); color: var(--muted); font: 12px/1.4 var(--mono); }
 .metricPreviousRow small { font: inherit; }
 .metricPreviousRow strong { color: black; font-weight: 700; }
-.unavailableValue { margin-block: auto; color: black; font: 800 30px/1.4 var(--mono); }
+.unavailableValue, .metricDisplayValue { margin-block: auto; color: black; font: 800 30px/1.4 var(--mono); }
 .radialGauge { position: relative; width: 56px; height: 56px; display: grid; place-items: center; flex: none; }
 .radialGauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .radialGauge circle { fill: none; stroke: #e4e4e7; stroke-width: 3.6; }
@@ -156,8 +157,8 @@
 .acosStatus, .acosWarning { padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; font: 10px/1.5 var(--mono); }
 .acosWarning { background: #fff1f2; border-color: #fecdd3; color: #be123c; }
 .acosStatus input, .acosWarning input { width: 26px; padding: 0; background: transparent; border: 0; color: inherit; text-align: right; }
-.previousSummary { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: #fafafa; color: #52525b; font: 12px/1.6 var(--mono); }
-.previousSummary p { margin: 0; white-space: pre-wrap; }
+.readOnlySummary { display: flex; flex: 1; flex-direction: column; gap: 10px; color: var(--muted); font: 700 10px var(--mono); text-transform: uppercase; }
+.readOnlySummary textarea { width: 100%; min-height: 180px; flex: 1; resize: vertical; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: #fafafa; color: #52525b; font: 12px/1.6 var(--mono); text-transform: none; }
 .textAreaLabel { display: flex; flex-direction: column; position: relative; gap: 10px; color: var(--muted); font: 10px var(--mono); }
 .formatToolbar { display: flex; align-self: flex-end; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 4px; background: #f4f4f5; }
 .formatToolbar button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #52525b; }
@@ -199,7 +200,7 @@
 .workspaceEmpty { display: grid; place-content: center; justify-items: center; height: 100%; padding: 24px; color: #71717a; text-align: center; }
 .workspaceEmpty h2 { color: #09090b; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-@container (max-width: 850px) { .metricInputWrap input, .metricInputWrap i, .unavailableValue { font-size: 24px; }.goalInlineValues { flex-wrap: wrap; max-width: 145px; }.asinNavigation { gap: 12px; }.asinNavigationColumn + .asinNavigationColumn { padding-left: 12px; } }
+@container (max-width: 850px) { .metricInputWrap input, .metricInputWrap i, .unavailableValue, .metricDisplayValue { font-size: 24px; }.goalInlineValues { max-width: 145px; }.asinNavigation { gap: 12px; }.asinNavigationColumn + .asinNavigationColumn { padding-left: 12px; } }
 @media (max-width: 1279px) { .twoColumn { grid-template-columns: 1fr; }.asinNavigation { display: none; } }
 @media (max-width: 1023px) { .metricGroupGrid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 @media (max-width: 767px) { .metricGroupGrid { grid-template-columns: repeat(2,minmax(0,1fr)); }.workspaceHeader { align-items: flex-start; }.performanceSync { justify-content: flex-start; }.metricGroupHeading { align-items: flex-start; flex-wrap: wrap; } }

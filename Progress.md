@@ -1,8 +1,12 @@
 # Project Progress
 
+## September 11, 2026 — Compact goals, resizable prior summary, and Conversion Rate
+
+Moved weekly-goal Actual below Target and placed the three outcome icons beside the status selector. Replaced the prior-summary display with a labeled, vertically resizable, read-only Performance Documentation field and removed archive/report-state/Draft/Status/ROAS metadata from the two summary cards. Added live Conversion Rate from Scale Insights Total Orders divided by Total Sessions, including prior-week comparison and backward-compatible unavailable rendering for older cached weeks. The existing sales-summary request already supplies Total Sessions, so no new provider call is required.
+
 ## September 11, 2026 — Workspace control refinements
 
-Condensed the workspace header to vertically stacked Save and Refresh Data actions and removed the duplicate refresh control from Weekly PPC Performance. Made Previous Week Summary read-only, removed its empty-result warning, renamed the final card Action Items, and removed action due-date inputs without changing stored action compatibility. Weekly goals now present Target before Actual and stack outcome controls vertically. Budget Utilization now shows Daily limit inside Weekly Limit and removes the duplicated secondary detail row. No API or browser-storage schema changed.
+Condensed the workspace header to vertically stacked Save and Refresh Data actions and removed the duplicate refresh control from Weekly PPC Performance. Made Previous Week Summary read-only, removed its empty-result warning, renamed the final card Action Items, and removed action due-date inputs without changing stored action compatibility. Weekly goals now present Target before Actual. Budget Utilization now shows Daily limit inside Weekly Limit and removes the duplicated secondary detail row.
 
 ## September 11, 2026 — Tag-driven product selection
 
@@ -26,7 +30,7 @@ Rebuilt Reporting Periods from the supplied HTML and image as a 340px white pane
 
 ## September 10, 2026 — Reference-based third-panel rebuild
 
-Rebuilt the workspace from the supplied HTML with the corrected Total Orders tile and unavailable Conversion Rate card. Added isolated reference typography/layout, compact editable goals, expandable budget history, summary footers, and action completion. Retained the original first two panels and all existing API/storage boundaries at that stage. Later refinements removed the export and visible action dates. Browser fixture checks cover desktop/mobile layout and note persistence; final validation results are recorded in HANDOFF.md.
+Rebuilt the workspace from the supplied HTML with the corrected Total Orders tile and initial Conversion Rate placeholder. Added isolated reference typography/layout, compact editable goals, expandable budget history, summary footers, and action completion. Retained the original first two panels and all existing API/storage boundaries at that stage. Later refinements connected Conversion Rate and removed the export and visible action dates. Browser fixture checks cover desktop/mobile layout and note persistence; final validation results are recorded in HANDOFF.md.
 
 Last updated: September 9, 2026
 

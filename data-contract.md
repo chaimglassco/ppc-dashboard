@@ -1,8 +1,14 @@
 # Data Contract
 
+## September 11 conversion and summary revision
+
+Weekly performance responses add `metrics.totalSessions` and calculated `metrics.conversionRate`. `totalSessions` is the nonnegative integer `Summary.TotalSessions` returned by the existing Scale Insights `get_sales_data` request. `conversionRate` is `totalOrders / totalSessions * 100`, rounded to two decimals; a zero-session period returns zero. The fields are optional only when parsing older `glassco.ppcPerformanceCache.v1` and `glassco.ppcPerformanceNotes.v1` records, so no version bump or destructive migration is required. Missing legacy denominators render Conversion Rate as unavailable until that week is refreshed.
+
+The Previous Week Summary and Current Week Summary status badges plus the prior Status/ROAS footer are no longer rendered. Previous documentation remains stored in `previousWeekResult`/`notes` and is displayed through a read-only resizable textarea; no new summary field is introduced. Goal layout changes do not alter goal values or outcomes.
+
 ## September 11 workspace control revision
 
-No data shape changed. `glassco.ppcPerformanceNotes.v1` continues to accept `previousWeekResult` and `actions[].dueDate` for backward compatibility, but the revised dashboard renders the previous-week result as read-only and omits action date inputs. Target-first goal ordering, vertical outcome actions, the header Save/Refresh controls, and the daily-limit placement are presentation changes. Daily limit remains derived from and stored with the weekly budget through the existing normalization path.
+No data shape changed. `glassco.ppcPerformanceNotes.v1` continues to accept `previousWeekResult` and `actions[].dueDate` for backward compatibility, but the revised dashboard renders the previous-week result as read-only and omits action date inputs. Target/Actual placement, inline outcome actions, the header Save/Refresh controls, and the daily-limit placement are presentation changes. Daily limit remains derived from and stored with the weekly budget through the existing normalization path.
 
 ## September 11 product ordering
 
@@ -22,7 +28,7 @@ The verified September 10 production schema exposes `account_ref`, `ad_type`, `a
 
 ## September 10 workspace presentation
 
-The workspace redesign consumes the existing version-1 report and performance cache. Conversion Rate has no stored field and displays unavailable; do not derive it without an appropriate denominator. The second row uses the existing ACOS and TACOS calculated fields. The current-week summary underline control inserts literal <u> markers into the existing plain-text notes field, like the existing bold/list markers; notes are never rendered as arbitrary raw HTML.
+The workspace redesign consumes the existing version-1 report and performance cache. The second row uses the existing ACOS and TACOS calculated fields. The current-week summary underline control inserts literal <u> markers into the existing plain-text notes field, like the existing bold/list markers; notes are never rendered as arbitrary raw HTML.
 
 ## Product performance AI request
 
@@ -307,9 +313,9 @@ For unfinished reporting weeks, the derived Tuesday end date is capped at yester
 
 Authenticated GET route: `/ppc/api/dashboard/performance?asin=<ASIN>&country=<marketplace>&weekStart=<YYYY-MM-DD>`
 
-The route accepts a ten-character alphanumeric ASIN, an allowlisted marketplace, and a valid Wednesday week start. It derives the inclusive Tuesday end date and returns `Cache-Control: no-store`. The response contains the normalized scope, currency, five upstream source metrics (`spend`, `ppcSales`, `ppcOrders`, `totalSales`, `totalOrders`), four calculated metrics (`organicSales`, `organicOrders`, `acos`, `tacos`), freshness timestamps, and non-secret consistency warnings. Before consent, the authenticated route returns `409` with `{ error, authorizationRequired: true, authorizationUrl }`; `authorizationUrl` must be HTTPS on `vercel.com` or a `*.vercel.com` host and is the only authorization artifact exposed to the browser.
+The route accepts a ten-character alphanumeric ASIN, an allowlisted marketplace, and a valid Wednesday week start. It derives the inclusive Tuesday end date and returns `Cache-Control: no-store`. The response contains the normalized scope, currency, six upstream source metrics (`spend`, `ppcSales`, `ppcOrders`, `totalSales`, `totalOrders`, `totalSessions`), five calculated metrics (`organicSales`, `organicOrders`, `acos`, `tacos`, `conversionRate`), freshness timestamps, and non-secret consistency warnings. Before consent, the authenticated route returns `409` with `{ error, authorizationRequired: true, authorizationUrl }`; `authorizationUrl` must be HTTPS on `vercel.com` or a `*.vercel.com` host and is the only authorization artifact exposed to the browser.
 
-Advertising source metrics come from `get_ads_performance` totals. Total-sales metrics come from `get_sales_data` summary values. The server rejects malformed, negative, non-integer order, empty, or differently scoped data rather than estimating. Organic metrics are clamped at zero; ACOS and TACOS are zero when their sales denominator is zero and otherwise rounded to two decimal places. Vercel Connect keys the upstream OAuth grant to `{ type: "user", id: <verified Pipeline user ID>, issuer: <Pipeline origin> }`; Vercel OIDC authenticates the project. OIDC credentials, OAuth grants, Connect-issued access tokens, and raw MCP payloads are excluded from every response and storage contract.
+Advertising source metrics come from `get_ads_performance` totals. Total-sales, order, and session metrics come from `get_sales_data` summary values. The server rejects malformed, negative, non-integer order/session, empty, or differently scoped data rather than estimating. Organic metrics are clamped at zero; ACOS, TACOS, and Conversion Rate are zero when their denominator is zero and otherwise rounded to two decimal places. Vercel Connect keys the upstream OAuth grant to `{ type: "user", id: <verified Pipeline user ID>, issuer: <Pipeline origin> }`; Vercel OIDC authenticates the project. OIDC credentials, OAuth grants, Connect-issued access tokens, and raw MCP payloads are excluded from every response and storage contract.
 
 ### Weekly PPC performance drafts
 

@@ -2,12 +2,20 @@
 
 Last updated: September 11, 2026
 
+## September 11, 2026 — compact goals, prior documentation, and Conversion Rate
+
+- Goal Actual now sits directly below Target. The active status selector and achieved, missed, and delete buttons form one compact inline group.
+- Previous Week Summary always shows a Performance Documentation label and vertically resizable read-only textarea. Archived/Completed/Status/ROAS metadata is removed, and Current Week Summary no longer shows Draft or another report-status badge.
+- Weekly performance now reads `Summary.TotalSessions` from the existing Scale Insights sales request and calculates Conversion Rate as Total Orders divided by Total Sessions. A live Sep 2–8 check for B0H8P24MP4 returned 42 orders and 87 sessions, matching Scale Insights at 48.28%.
+- `totalSessions` and `conversionRate` are optional in version-1 report/cache parsing for backward compatibility. Old snapshots stay valid with an unavailable dash and populate after Refresh Data; no new storage key or migration exists.
+- Lint, typecheck, all 310 tests across 51 files (6 skipped), the production build, and `git diff --check` pass. Controlled browser QA at the app browser's 327px viewport confirmed Actual below Target, the status and three icons on one row, native vertical resizing on the read-only prior documentation, all removed summary metadata absent, Conversion Rate at 48.28% with a 48.36% prior value, zero horizontal overflow, and no console or hydration errors.
+
 ## September 11, 2026 — workspace control refinements
 
 - Workspace actions are now stacked in the product header as Save then Refresh Data; Weekly PPC Performance retains its sync/authorization text without a second refresh control.
 - Previous Week Summary is read-only and suppresses the former “No outcome summary was entered” placeholder. Existing `previousWeekResult` values and preceding notes remain visible through the current fallback order.
 - The final card is Action Items. Due-date inputs are hidden while the optional stored `dueDate` field remains accepted for backward compatibility.
-- Weekly goals render Target before the read-only Actual and stack achieved, missed, and delete buttons vertically. Budget Utilization places Daily limit inside Weekly Limit and removes the duplicated secondary daily/balance row.
+- Weekly goals render the read-only Actual directly below Target and place achieved, missed, and delete buttons beside the status selector. Budget Utilization places Daily limit inside Weekly Limit and removes the duplicated secondary daily/balance row.
 - This is a presentation-only change: no storage key, report schema, API, authentication, or provider contract changed.
 - Lint, typecheck, all 310 tests across 51 files (6 skipped), the production build, and `git diff --check` pass. A live browser fixture loaded a stored prior result and action due date, then confirmed the new controls, target/action geometry, empty-summary behavior, budget copy, no horizontal overflow, and no hydration or console errors at the app browser's 327px mobile viewport. Desktop structure and order are covered by the same responsive component and regression assertions.
 
@@ -45,7 +53,7 @@ Last updated: September 11, 2026
 ## September 10, 2026 — local third-panel redesign
 
 - The PPC Dashboard third panel was rebuilt from the supplied HTML reference. Its order is product header; Strategic Weekly Goals and Budget Utilization; two five-card performance rows; Previous/Current Week Summary; and action items.
-- The first metric row is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Conversion Rate displays `—` because the current data contract has no valid source. The second row is PPC Orders, Org. Orders, Total Orders, Organic Sales, and TACOS.
+- The first metric row is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Conversion Rate uses Scale Insights Total Orders divided by Total Sessions and shows `—` only for legacy periods without session data. The second row is PPC Orders, Org. Orders, Total Orders, ACOS, and TACOS.
 - The third panel now uses isolated Geist/JetBrains Mono styling with a 1152px canvas, 24px spacing, neutral monochrome surfaces, 190px desktop metric cards, and responsive mobile stacking. The Products and Reporting Periods panels were not redesigned in that change.
 - Existing goals, Goal History, budget editing/history, Scale Insights refresh, notes, action completion, and browser-local persistence remain active. Later revisions removed Export and the visible action due-date controls while preserving stored-field compatibility.
 - The Next.js route helper for dashboard product normalization moved into `src/features/dashboard/domain/pipeline-products.ts`; behavior is unchanged, and the route now conforms to Next.js route-export constraints.

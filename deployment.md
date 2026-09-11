@@ -1,8 +1,12 @@
 # Deployment Guide
 
+## September 11 compact-goal and Conversion Rate release
+
+This release extends the existing weekly-performance DTO and version-1 browser records with optional `totalSessions` and `conversionRate` values. It needs no environment variable, new provider request, database change, storage-key change, or migration. After deployment, refresh a live week and reconcile Conversion Rate against Scale Insights `TotalOrders / TotalSessions`; confirm older cached weeks remain valid and display a dash until refreshed. Also verify compact goal geometry, the resizable read-only prior documentation, and the absence of all requested summary badges/footer metadata.
+
 ## September 11 workspace-control release
 
-This client-only release adds no environment variable, API change, dependency, or persistence migration. After deployment, verify Save/Refresh Data in the workspace header, the read-only empty-safe Previous Week Summary, date-free Action Items rows, target-first goals with vertical outcome controls, and the consolidated Budget Utilization tiles. Confirm stored reports containing `previousWeekResult` and `actions[].dueDate` still load without validation loss.
+This client-only release adds no environment variable, API change, dependency, or persistence migration. After deployment, verify Save/Refresh Data in the workspace header, the read-only empty-safe Previous Week Summary, date-free Action Items rows, Target above Actual with outcome controls beside status, and the consolidated Budget Utilization tiles. Confirm stored reports containing `previousWeekResult` and `actions[].dueDate` still load without validation loss.
 
 ## September 11 dashboard presentation release
 

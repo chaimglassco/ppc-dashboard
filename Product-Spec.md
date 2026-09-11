@@ -1,8 +1,14 @@
 # Glassco Back Office Library — Product Specification
 
+## September 11 compact goals and conversion rate
+
+Each active goal displays Target on the first line and Actual directly below it. The On Track/At Risk selector and achieved, missed, and delete icon buttons share the same top-row control group. Previous Week Summary contains the label Performance Documentation and a vertically resizable read-only field. Both summary headers omit report-state badges, and the prior summary omits Completed, Status, archive, and ROAS metadata.
+
+Conversion Rate is the selected period's Total Orders divided by Total Sessions from Scale Insights, displayed with up to two decimal places. When the prior period also has sessions, the card shows its previous value and week-over-week direction. Legacy weeks without Total Sessions remain unavailable until refreshed.
+
 ## September 11 dashboard control revision
 
-The workspace header presents **Save** with **Refresh Data** directly below it. Previous Week Summary is view-only and stays blank when no result was entered. The final card is titled **Action Items** and contains completion, title, priority, assignee placeholder, and delete controls without a due-date picker. Weekly goal progress reads Target before Actual, and achieved/missed/delete buttons form a vertical control group. Budget Utilization places the calculated daily limit inside the Weekly Limit tile and does not repeat daily limit or over/remaining balance outside the primary tiles.
+The workspace header presents **Save** with **Refresh Data** directly below it. Previous Week Summary is view-only and stays blank when no result was entered. The final card is titled **Action Items** and contains completion, title, priority, assignee placeholder, and delete controls without a due-date picker. Weekly goal progress places Actual below Target, and achieved/missed/delete buttons sit beside the status selector. Budget Utilization places the calculated daily limit inside the Weekly Limit tile and does not repeat daily limit or over/remaining balance outside the primary tiles.
 
 ## September 11 dashboard catalog behavior
 
@@ -34,7 +40,7 @@ The second panel follows the supplied HTML reference as a 340px white reporting 
 
 ## Third-panel workspace hierarchy
 
-The third panel follows the supplied HTML reference: product header; Strategic Weekly Goals and Budget Utilization; Weekly PPC Performance; side-by-side Previous/Current Week Summary; Campaign Week-over-Week Comparison; and Action Items. Desktop metrics are two rows of five equal cards. Row one is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Row two is PPC Orders, Org. Orders, Total Orders, ACOS, and TACOS. Conversion Rate displays an unavailable dash because the existing metrics contract has no conversion denominator. Goals, budget history, current-week notes formatting, and action completion remain functional. Save retains local auto-save.
+The third panel follows the supplied HTML reference: product header; Strategic Weekly Goals and Budget Utilization; Weekly PPC Performance; side-by-side Previous/Current Week Summary; Campaign Week-over-Week Comparison; and Action Items. Desktop metrics are two rows of five equal cards. Row one is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Row two is PPC Orders, Org. Orders, Total Orders, ACOS, and TACOS. Goals, budget history, current-week notes formatting, and action completion remain functional. Save retains local auto-save.
 
 ## Goal history and previous-week metric comparisons
 
@@ -56,7 +62,7 @@ Reporting-period cards summarize Spend, PPC Sales, PPC Order, and ACOS for the s
 
 ## Budget history, report controls, and multi-month timeline
 
-Each product/week report shows a compact budget-history table with `Date of Change`, `From`, and `To` columns. One entry is recorded when a Weekly limit edit is committed by blur or Enter; intermediate keystrokes do not create rows. Reporting-period cards expose their existing report status in the reference status chip; the separate Save Draft button remains absent. The Current Week Summary displays report status and the primary control is Save.
+Each product/week report shows a compact budget-history table with `Date of Change`, `From`, and `To` columns. One entry is recorded when a Weekly limit edit is committed by blur or Enter; intermediate keystrokes do not create rows. Reporting-period cards expose their existing report status in the reference status chip; the separate Save Draft button remains absent. The Current Week Summary omits its report-status badge, and the primary control is Save.
 
 The reporting-period picker supports multiple selected months across years, plus a one-click full-year selection. The timeline displays the unique Wednesday–Tuesday weeks that intersect a selected month, includes weeks crossing a month boundary, omits future weeks, and labels the header with the months actually covered.
 

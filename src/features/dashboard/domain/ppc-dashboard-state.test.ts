@@ -150,6 +150,9 @@ describe("PPC dashboard state", () => {
       spend: 12.34, ppcSales: 0, totalSales: 20.1, ppcOrders: 4, totalOrders: 3,
       organicSales: 20.1, organicOrders: 0, acos: 0, tacos: 61.39,
     });
+    expect(calculateWeeklyPerformance({
+      spend: 86.54, ppcSales: 287.73, totalSales: 491.45, ppcOrders: 27, totalOrders: 42, totalSessions: 87,
+    }).conversionRate).toBe(48.28);
   });
 
   it("carries unfinished goals into the following week and resets their progress", () => {

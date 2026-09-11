@@ -1,11 +1,20 @@
 # QA Checklist
 
+## September 11 compact-goal, summary, and conversion checks
+
+- [x] Confirm Actual renders directly below Target for every goal and all three icon buttons share the status-selector row.
+- [x] Confirm Previous Week Summary is labeled Performance Documentation, contains a read-only textarea, and can be resized vertically without changing its value.
+- [x] Confirm Archived, Completed, Status, ROAS, and the Current Week Summary Draft/status badge are absent from the summary cards.
+- [x] With a live Scale Insights week, confirm Conversion Rate equals Total Orders divided by Total Sessions to two decimals and its previous-week value/direction are correct.
+- [x] Restore a legacy performance cache entry without Total Sessions and confirm it remains valid, shows a dash, then gains Conversion Rate after Refresh Data.
+- [x] Verify keyboard focus, desktop/mobile wrapping, horizontal overflow, hydration, and console errors.
+
 ## September 11 workspace-control checks
 
 - [x] Confirm Save is followed vertically by Refresh Data in the workspace header and no Refresh button remains in Weekly PPC Performance.
-- [x] Confirm previous-week text is readable but has no textarea, formatting toolbar, or empty-result warning.
+- [x] Confirm previous-week text appears in a read-only, vertically resizable textarea with no formatting toolbar or empty-result warning.
 - [x] Confirm the final card is named Action Items and each row has no due-date input while existing stored records still parse.
-- [x] Confirm every weekly goal displays Target before Actual and its achieved, missed, and delete controls are vertical and keyboard accessible.
+- [x] Confirm every weekly goal displays Target before Actual and its achieved, missed, and delete controls remain keyboard accessible.
 - [x] Confirm Weekly Limit shows Daily limit inside its tile, Spend retains the single remaining/overspent detail, and no duplicate balance row appears below the tiles.
 - [x] Verify the affected workspace at desktop and mobile widths with no horizontal overflow, hydration warning, or console error.
 
@@ -53,7 +62,7 @@ Use this checklist before merging or deploying changes.
 
 - Verify goals/budget precede performance, followed by previous/current summaries and the action section.
 - Verify five cards in each desktop metric row, Conversion Rate after Total Sales, and Total Orders after Org. Orders.
-- Verify unavailable Conversion Rate stays a dash and no fabricated comparisons appear.
+- Verify Conversion Rate uses Total Orders ÷ Total Sessions; older periods without sessions stay a dash and never receive fabricated comparisons.
 - Verify reference fonts, 24px spacing, 190px tiles, green/red deltas, TACOS gauge, and mobile wrapping.
 - Exercise goal target/status/history, budget edits and expanded history, current-note formatting/save/reload, action completion, Save, and Refresh Data.
 - Check that product and reporting-period panels retain their styling and behavior.

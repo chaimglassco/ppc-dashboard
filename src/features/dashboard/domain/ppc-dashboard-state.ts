@@ -16,6 +16,7 @@ export type WeeklyPpcReport = {
   budgetHistory: BudgetChange[];
   spend: number; ppcSales: number; organicSales: number; totalSales: number;
   ppcOrders: number; organicOrders: number; totalOrders: number; targetAcos: number; acos: number; tacos: number;
+  totalSessions?: number; conversionRate?: number;
   goals: WeeklyGoal[]; goalHistory: GoalHistoryEntry[]; previousWeekResult: string; notes: string; actions: ActionItem[]; updatedAt: string | null;
 };
 export type WeeklyPerformanceSourceMetrics = {
@@ -24,12 +25,14 @@ export type WeeklyPerformanceSourceMetrics = {
   ppcOrders: number;
   totalSales: number;
   totalOrders: number;
+  totalSessions?: number;
 };
 export type WeeklyPerformanceCalculatedMetrics = WeeklyPerformanceSourceMetrics & {
   organicSales: number;
   organicOrders: number;
   acos: number;
   tacos: number;
+  conversionRate?: number;
 };
 export type PpcDashboardStore = { version: 1; reports: Record<string, WeeklyPpcReport> };
 
@@ -80,6 +83,7 @@ export function calculateWeeklyPerformance(metrics: WeeklyPerformanceSourceMetri
     organicOrders: Math.max(0, metrics.totalOrders - metrics.ppcOrders),
     acos: metrics.ppcSales ? Math.round((metrics.spend / metrics.ppcSales) * 10000) / 100 : 0,
     tacos: metrics.totalSales ? Math.round((metrics.spend / metrics.totalSales) * 10000) / 100 : 0,
+    ...(metrics.totalSessions == null ? {} : { conversionRate: metrics.totalSessions ? Math.round((metrics.totalOrders / metrics.totalSessions) * 10000) / 100 : 0 }),
   };
 }
 
@@ -220,11 +224,13 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
   const organicSales = finiteNumber(value.organicSales);
   const ppcOrders = finiteNumber(value.ppcOrders ?? value.orders);
   const organicOrders = finiteNumber(value.organicOrders);
+  const totalSessions = value.totalSessions == null ? undefined : finiteNumber(value.totalSessions);
   return withCalculatedPerformance({
     productId, weekStart, status: statuses.includes(value.status as ReportStatus) ? value.status as ReportStatus : "Draft",
     weeklyBudget: finiteNumber(value.weeklyBudget), dailyBudget: finiteNumber(value.dailyBudget), budgetHistory, spend: finiteNumber(value.spend),
     ppcSales, organicSales, totalSales: value.totalSales == null ? ppcSales + organicSales : finiteNumber(value.totalSales),
     ppcOrders, organicOrders, totalOrders: value.totalOrders == null ? ppcOrders + organicOrders : finiteNumber(value.totalOrders),
+    ...(totalSessions == null ? {} : { totalSessions }),
     targetAcos: finiteNumber(value.targetAcos), acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
     goals: Array.isArray(value.goals) ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), goalHistory, previousWeekResult: String(value.previousWeekResult ?? ""), notes: String(value.notes ?? ""),
     actions: actions.length ? actions : DEFAULT_ACTIONS.map(action => ({ ...action })), updatedAt,
