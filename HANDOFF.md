@@ -205,6 +205,7 @@ Read [README.md](README.md), [Architecture.md](Architecture.md), [data-contract.
 - The API joins `get_search_query_data` with `get_ppc_exact_coverage`; only explicit uncovered matches may receive the `Not targeted` badge.
 - Client criteria and Show all operate on the validated in-memory response and add no MCP calls. Shared Refresh Data reloads the card only if it was previously requested in that mounted dashboard session.
 - Fetch Again is always visible after a successful opportunity response, including an empty filtered state, and explicitly reloads the selected ASIN/week.
+- Authenticated production diagnostics confirmed `get_ppc_exact_coverage` expects `query_list`; the adapter batches all parsed search rows through it. Blank criteria preserve zero-sales and zero-order rows and the table includes Impressions, Clicks, Spend, Sales, Orders, and ACOS.
 - The response does not extend `glassco.ppcPerformanceNotes.v1` or any other browser-storage contract.
 - After deployment, authenticated QA must reconcile at least one displayed result against Scale Insights for the same ASIN and date range. Use the card Reference ID for sanitized logs if the live response contract differs.
 

@@ -44,8 +44,8 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
   const [retryVersion, setRetryVersion] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const [typeFilter, setTypeFilter] = useState<"All" | UntargetedOpportunityType>("All");
-  const [minimumSales, setMinimumSales] = useState("1");
-  const [minimumOrders, setMinimumOrders] = useState("1");
+  const [minimumSales, setMinimumSales] = useState("");
+  const [minimumOrders, setMinimumOrders] = useState("");
   const [maximumAcos, setMaximumAcos] = useState("");
   const [loadState, setLoadState] = useState<LoadState>({ key: "", status: "idle", message: "" });
   const generation = `${refreshVersion}:${retryVersion}`;
@@ -59,7 +59,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
       return () => controller.abort();
     }
     setShowAll(false);
-    setLoadState({ key: reportKey, status: "loading", message: "Checking converting queries against exact-target coverage…" });
+    setLoadState({ key: reportKey, status: "loading", message: "Checking search queries against exact-target coverage…" });
     const query = new URLSearchParams({ asin, country, weekStart });
     void fetch(withPpcBasePath(`/api/dashboard/untargeted-opportunities?${query}`), {
       headers: getPipelineAuthorizationHeader(), cache: "no-store", signal: controller.signal,
@@ -120,7 +120,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
 
   return <section className={`${ws.card} ${styles.comparisonCard}`} aria-labelledby="untargeted-opportunities-heading">
     <header className={styles.comparisonHeader}>
-      <div><h3 id="untargeted-opportunities-heading"><Target aria-hidden="true" />Untargeted Sales Opportunities</h3><p>Converting search terms and product ASINs that are not covered by an exact PPC target.</p></div>
+      <div><h3 id="untargeted-opportunities-heading"><Target aria-hidden="true" />Untargeted Sales Opportunities</h3><p>Search terms and product ASINs that are not covered by an exact PPC target, including rows without sales.</p></div>
       {report ? <div className={styles.opportunityHeaderActions}><span className={report.dataState === "Partial" ? styles.partialBadge : styles.finalBadge}>{report.dataState}</span><button type="button" onClick={requestReport}><RefreshCw aria-hidden="true" />Fetch Again</button></div> : null}
     </header>
 
@@ -135,15 +135,15 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
       {report.warnings.length ? <ul className={styles.warnings}>{report.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}
       <div className={styles.opportunityFilters} aria-label="Opportunity criteria">
         <label><span>Type</span><select aria-label="Opportunity type" value={typeFilter} onChange={event => setTypeFilter(event.target.value as "All" | UntargetedOpportunityType)}><option>All</option><option>Search term</option><option>Product ASIN</option></select></label>
-        <label><span>Minimum Sales</span><input aria-label="Minimum PPC Sales" type="number" min="0" step="1" value={minimumSales} onChange={event => setMinimumSales(event.target.value)} /></label>
-        <label><span>Minimum Orders</span><input aria-label="Minimum PPC Orders" type="number" min="0" step="1" value={minimumOrders} onChange={event => setMinimumOrders(event.target.value)} /></label>
+        <label><span>Minimum Sales</span><input aria-label="Minimum PPC Sales" type="number" min="0" step="1" placeholder="Any" value={minimumSales} onChange={event => setMinimumSales(event.target.value)} /></label>
+        <label><span>Minimum Orders</span><input aria-label="Minimum PPC Orders" type="number" min="0" step="1" placeholder="Any" value={minimumOrders} onChange={event => setMinimumOrders(event.target.value)} /></label>
         <label><span>Maximum ACOS</span><span className={styles.percentFilter}><input aria-label="Maximum ACOS" type="number" min="0" step="1" placeholder="Any" value={maximumAcos} onChange={event => setMaximumAcos(event.target.value)} /><i>%</i></span></label>
       </div>
       {filteredRows.length ? <div className={styles.baselineTable}>
         <div className={styles.baselineSummary}><strong>{filteredRows.length} match{filteredRows.length === 1 ? "" : "es"}</strong><span>Filtered locally — no additional MCP usage</span></div>
-        <div className={styles.tableScroll}><table aria-label="Untargeted sales opportunities"><thead><tr><th>Opportunity</th><th>Type</th><th>PPC Sales</th><th>Orders</th><th>Spend</th><th>ACOS</th><th>Status</th></tr></thead><tbody>{visibleRows.map(row => <tr key={`${row.type}:${row.term}`}>
+        <div className={styles.tableScroll}><table aria-label="Untargeted sales opportunities"><thead><tr><th>Search Term</th><th>Impressions</th><th>Clicks</th><th>Spend</th><th>Sales</th><th>Orders</th><th>ACOS</th><th>Status</th></tr></thead><tbody>{visibleRows.map(row => <tr key={`${row.type}:${row.term}`}>
           <th scope="row">{row.type === "Product ASIN" ? <a href={`https://www.amazon.com/dp/${encodeURIComponent(row.term)}`} target="_blank" rel="noopener noreferrer"><span>{row.term}</span><ExternalLink aria-hidden="true" /></a> : <span className={styles.campaignName}>{row.term}</span>}</th>
-          <td>{row.type}</td><td><strong>{formatCurrency(row.sales, report.currency)}</strong></td><td>{row.orders}</td><td>{formatCurrency(row.spend, report.currency)}</td><td>{row.acos == null ? "—" : `${Math.round(row.acos)}%`}</td><td><span className={styles.untargetedBadge}>Not targeted</span></td>
+          <td>{new Intl.NumberFormat("en-US").format(row.impressions)}</td><td>{new Intl.NumberFormat("en-US").format(row.clicks)}</td><td>{formatCurrency(row.spend, report.currency)}</td><td><strong>{formatCurrency(row.sales, report.currency)}</strong></td><td>{row.orders}</td><td>{row.acos == null ? "—" : `${Math.round(row.acos)}%`}</td><td><span className={styles.untargetedBadge}>Not targeted</span></td>
         </tr>)}</tbody></table></div>
         {filteredRows.length > INITIAL_ROW_COUNT ? <button type="button" className={styles.showAllButton} onClick={() => setShowAll(value => !value)}>{showAll ? "Show first 10" : `Show all ${filteredRows.length}`}</button> : null}
       </div> : <p className={styles.emptyCategory}>No confirmed untargeted sales opportunities match these criteria.</p>}

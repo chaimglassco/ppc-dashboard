@@ -296,8 +296,8 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] No hydration or browser-console errors appear.
 - [ ] The Untargeted Sales Opportunities card appears immediately below Campaign Week-over-Week Comparison and makes no MCP/API request before **Load Opportunities** is clicked.
 - [ ] Loading the card requests the selected ASIN and Wednesday week only; an in-progress week ends yesterday and shows `Partial`, while a completed week shows `Final`.
-- [ ] Every displayed opportunity has positive PPC Sales, at least one PPC Order, and explicit uncovered exact-target status from Scale Insights. Unknown, absent, aggregate-only, and already-targeted coverage never appears as `Not targeted`.
-- [ ] Search terms and product ASINs render with Sales, Orders, Spend, whole-number ACOS, and a blue `Not targeted` badge; product ASIN links open Amazon safely.
+- [ ] With all metric criteria blank, every explicitly uncovered search-query row appears, including zero-Sales and zero-Order rows. Unknown, absent, aggregate-only, and already-targeted coverage never appears as `Not targeted`.
+- [ ] Search terms and product ASINs render with Impressions, Clicks, Spend, Sales, Orders, whole-number ACOS, and a blue `Not targeted` badge; product ASIN links open Amazon safely.
 - [ ] Type, minimum Sales, minimum Orders, and maximum ACOS criteria filter locally without additional MCP/API calls; Show all expands beyond the first ten rows.
 - [ ] After the report is loaded, shared **Refresh Data** reloads it once. Before it is loaded, shared refresh does not request it.
 - [ ] **Fetch Again** remains visible after successful populated and empty responses, including when local criteria hide every row, and triggers exactly one new provider request.

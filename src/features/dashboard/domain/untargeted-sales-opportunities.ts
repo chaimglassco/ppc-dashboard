@@ -6,6 +6,7 @@ export type UntargetedSalesOpportunity = {
   sales: number;
   orders: number;
   spend: number;
+  impressions: number;
   clicks: number;
   acos: number | null;
 };
@@ -57,11 +58,12 @@ export function parseUntargetedSalesOpportunities(value: unknown): UntargetedSal
     const sales = finiteNonNegative(candidate.sales);
     const orders = finiteNonNegative(candidate.orders);
     const spend = finiteNonNegative(candidate.spend);
+    const impressions = finiteNonNegative(candidate.impressions);
     const clicks = finiteNonNegative(candidate.clicks);
     const acos = candidate.acos == null ? null : finiteNonNegative(candidate.acos);
-    if (!term || !type || sales == null || orders == null || !Number.isInteger(orders) || spend == null || clicks == null || !Number.isInteger(clicks) || (candidate.acos != null && acos == null)) return null;
+    if (!term || !type || sales == null || orders == null || !Number.isInteger(orders) || spend == null || impressions == null || !Number.isInteger(impressions) || clicks == null || !Number.isInteger(clicks) || (candidate.acos != null && acos == null)) return null;
     if (type === "Product ASIN" && !/^[A-Z0-9]{10}$/.test(term)) return null;
-    opportunities.push({ term, type, sales, orders, spend, clicks, acos });
+    opportunities.push({ term, type, sales, orders, spend, impressions, clicks, acos });
   }
   if (!value.warnings.every(warning => typeof warning === "string")) return null;
   return {

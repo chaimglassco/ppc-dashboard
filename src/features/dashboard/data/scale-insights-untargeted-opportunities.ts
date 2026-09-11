@@ -26,18 +26,19 @@ type CoverageValue = { term: string; targeted: boolean };
 
 const TERM_KEYS = ["search_term", "searchTerm", "SearchTerm", "customer_search_term", "customerSearchTerm", "search_query", "searchQuery", "SearchQuery", "query", "Query", "keyword_text", "keywordText", "KeywordText", "keyword", "Keyword", "target_asin", "targetAsin", "TargetASIN", "target", "Target"];
 const SALES_KEYS = ["sales", "Sales", "total_sales", "totalSales", "TotalSales", "ppc_sales", "ppcSales", "PPCSales", "attributed_sales", "attributedSales"];
-const ORDERS_KEYS = ["orders", "Orders", "total_orders", "totalOrders", "TotalOrders", "ppc_orders", "ppcOrders", "PPCOrders", "attributed_orders", "attributedOrders"];
+const ORDERS_KEYS = ["orders", "Orders", "order", "Order", "total_orders", "totalOrders", "TotalOrders", "ppc_orders", "ppcOrders", "PPCOrders", "attributed_orders", "attributedOrders"];
 const SPEND_KEYS = ["spend", "Spend", "total_spend", "totalSpend", "TotalSpend", "cost", "Cost", "ppc_cost", "ppcCost", "PPCCost"];
+const IMPRESSION_KEYS = ["impression", "Impression", "impressions", "Impressions", "total_impressions", "totalImpressions", "TotalImpressions", "ppc_impressions", "ppcImpressions", "PPCImpressions"];
 const CLICK_KEYS = ["clicks", "Clicks", "total_clicks", "totalClicks", "TotalClicks", "ppc_clicks", "ppcClicks", "PPCClicks"];
 const ACOS_KEYS = ["acos", "ACOS", "aCoS", "total_acos", "totalAcos", "TotalACOS"];
-const TARGETED_KEYS = ["is_exact_targeted", "isExactTargeted", "exact_targeted", "exactTargeted", "is_targeted", "isTargeted", "targeted", "Targeted", "has_exact_target", "hasExactTarget", "exact_coverage", "exactCoverage", "covered", "Covered", "coverage_status", "coverageStatus", "CoverageStatus", "status", "Status"];
+const TARGETED_KEYS = ["is_exact_targeted", "isExactTargeted", "exact_targeted", "exactTargeted", "is_exact_covered", "isExactCovered", "exact_covered", "exactCovered", "is_targeted", "isTargeted", "targeted", "Targeted", "has_exact_target", "hasExactTarget", "has_exact_match", "hasExactMatch", "exact_coverage", "exactCoverage", "covered", "Covered", "coverage_status", "coverageStatus", "CoverageStatus", "status", "Status"];
 const PAGE_SIZE = 500;
 const MAX_PAGES = 5;
 const ASIN_INPUT_KEYS = ["asin_list", "asinList", "asins", "asin"];
 const PERIOD_START_KEYS = ["start_date", "startDate", "from_date", "fromDate"];
 const PERIOD_END_KEYS = ["end_date", "endDate", "to_date", "toDate"];
 const PERIOD_DAYS_KEYS = ["days", "lookback_days", "lookbackDays"];
-const TERM_LIST_INPUT_KEYS = ["search_terms", "searchTerms", "search_queries", "searchQueries", "queries", "keywords", "targets"];
+const TERM_LIST_INPUT_KEYS = ["query_list", "queryList", "search_terms", "searchTerms", "search_queries", "searchQueries", "queries", "keywords", "targets"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -52,6 +53,17 @@ function fieldValue(record: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
     const value = values.get(normalizedKey(key));
     if (value != null && !isRecord(value) && !Array.isArray(value)) return value;
+  }
+  return undefined;
+}
+
+function nestedFieldValue(record: Record<string, unknown>, keys: string[], depth = 0): unknown {
+  const direct = fieldValue(record, keys);
+  if (direct !== undefined || depth >= 2) return direct;
+  for (const candidate of Object.values(record)) {
+    if (!isRecord(candidate)) continue;
+    const nested = nestedFieldValue(candidate, keys, depth + 1);
+    if (nested !== undefined) return nested;
   }
   return undefined;
 }
@@ -86,20 +98,39 @@ function parseTargeted(value: unknown): boolean | null {
   return null;
 }
 
-function recordTerm(record: Record<string, unknown>) {
-  return stringValue(fieldValue(record, TERM_KEYS)).trim();
+function recordTerm(record: Record<string, unknown>): string {
+  const direct = stringValue(fieldValue(record, TERM_KEYS)).trim();
+  if (direct) return direct;
+  const accepted = new Set(TERM_KEYS.map(normalizedKey));
+  for (const [key, candidate] of Object.entries(record)) {
+    if (!accepted.has(normalizedKey(key)) || !isRecord(candidate)) continue;
+    const nested = stringValue(fieldValue(candidate, ["value", "text", "name", "term", "query"])).trim();
+    if (nested) return nested;
+  }
+  for (const candidate of Object.values(record)) {
+    if (!isRecord(candidate)) continue;
+    const nested: string = recordTerm(candidate);
+    if (nested) return nested;
+  }
+  return "";
 }
 
 function metricsFromRecord(record: Record<string, unknown>): ProviderMetrics | null {
   const term = recordTerm(record);
-  const sales = numberValue(fieldValue(record, SALES_KEYS));
-  const orders = integerValue(fieldValue(record, ORDERS_KEYS));
-  if (!term || sales == null || sales <= 0 || orders < 1) return null;
-  const spend = numberValue(fieldValue(record, SPEND_KEYS)) ?? 0;
-  const clicks = integerValue(fieldValue(record, CLICK_KEYS));
-  const providerAcos = numberValue(fieldValue(record, ACOS_KEYS));
+  const salesValue = nestedFieldValue(record, SALES_KEYS);
+  const ordersValue = nestedFieldValue(record, ORDERS_KEYS);
+  const spendValue = nestedFieldValue(record, SPEND_KEYS);
+  const impressionValue = nestedFieldValue(record, IMPRESSION_KEYS);
+  const clickValue = nestedFieldValue(record, CLICK_KEYS);
+  if (!term || [salesValue, ordersValue, spendValue, impressionValue, clickValue].every(value => value === undefined)) return null;
+  const sales = numberValue(salesValue) ?? 0;
+  const orders = integerValue(ordersValue);
+  const spend = numberValue(spendValue) ?? 0;
+  const impressions = integerValue(impressionValue);
+  const clicks = integerValue(clickValue);
+  const providerAcos = numberValue(nestedFieldValue(record, ACOS_KEYS));
   const acos = providerAcos ?? (sales > 0 ? Math.round((spend / sales) * 10_000) / 100 : null);
-  return { term, sales, orders, spend, clicks, acos };
+  return { term, sales, orders, spend, impressions, clicks, acos };
 }
 
 function collectMetricRows(value: unknown, depth = 0): ProviderMetrics[] {
@@ -116,7 +147,7 @@ function collectCoverageRows(value: unknown, path = "$", depth = 0): CoverageVal
   if (Array.isArray(value)) return value.flatMap(candidate => collectCoverageRows(candidate, path, depth + 1));
   if (!isRecord(value)) return [];
   const term = recordTerm(value);
-  let targeted = parseTargeted(fieldValue(value, TARGETED_KEYS));
+  let targeted = parseTargeted(nestedFieldValue(value, TARGETED_KEYS));
   const normalizedPath = path.toLowerCase();
   if (targeted == null && term && /(uncovered|missing|untargeted|opportunit)/.test(normalizedPath)) targeted = false;
   if (targeted == null && term && /(covered|targeted)/.test(normalizedPath)) targeted = true;
@@ -283,6 +314,7 @@ export async function loadUntargetedSalesOpportunities(
   });
   const searchResults = await loadPages(searchTool, params, callTool);
   const metrics = uniqueMetrics(searchResults);
+  reportDiagnostic?.("opportunity_search_result", { providerResultCount: totalCount(searchResults[0]), parsedRowCount: metrics.size });
   if (!metrics.size) {
     reportDiagnostic?.("opportunity_rows_unreadable", { resultCount: totalCount(searchResults[0]), tool: searchTool.name });
     if ((totalCount(searchResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("opportunity_rows_unreadable", "Scale Insights returned a search-query format this version cannot read.");
@@ -291,6 +323,7 @@ export async function loadUntargetedSalesOpportunities(
     ? await loadPages(coverageTool, params, callTool, [...metrics.values()].map(row => row.term))
     : [];
   const coverage = uniqueCoverage(coverageResults);
+  reportDiagnostic?.("opportunity_coverage_result", { providerResultCount: totalCount(coverageResults[0]), parsedRowCount: coverage.size });
   if (!coverage.size) {
     reportDiagnostic?.("coverage_rows_unreadable", { resultCount: totalCount(coverageResults[0]), tool: coverageTool.name });
     if ((totalCount(coverageResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("coverage_rows_unreadable", "Scale Insights returned an exact-coverage format this version cannot read.");

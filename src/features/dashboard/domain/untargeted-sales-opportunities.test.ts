@@ -5,7 +5,7 @@ const valid = {
   asin: "b012345678", country: "us", currency: "usd", dataState: "Partial",
   period: { startDate: "2026-09-02", endDate: "2026-09-08" },
   freshness: { searchDataAsOf: "2026-09-09", coverageDataAsOf: "2026-09-09" },
-  opportunities: [{ term: "lead knife", type: "Search term", sales: 25, orders: 1, spend: 5, clicks: 3, acos: 20 }], warnings: [],
+  opportunities: [{ term: "lead knife", type: "Search term", sales: 25, orders: 1, spend: 5, impressions: 100, clicks: 3, acos: 20 }], warnings: [],
 };
 
 describe("untargeted opportunity response validation", () => {

@@ -287,4 +287,5 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Added strict provider normalization for structured and Markdown responses, safe capability/shape errors, sanitized correlation diagnostics, and no-store API delivery.
 - Added local criteria filters, top-ten expansion, final/partial metadata, product-ASIN links, shared-refresh integration, and memory-only caching.
 - Kept an explicit Fetch Again action visible after successful loads so empty criteria results can be re-fetched without changing product or week.
+- Corrected blank criteria to include zero-sales and zero-order terms, added Impressions to the table, and matched the live Scale Insights exact-coverage `query_list` contract discovered from the authenticated production request.
 - Added domain, adapter, API, and component regression coverage. Full repository gates and authenticated production data reconciliation are recorded during release verification.
