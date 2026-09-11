@@ -4,7 +4,7 @@
 
 Removed the manual Save action while retaining debounced browser-local persistence. Reporting-period Completed/Partial badges now derive from cached coverage dates, Action Items starts empty, goal controls moved into the data-state footer, current-summary formatting moved beside its label, and Sales WoW moved from the SKU block into Total Sales.
 
-Corrected the conversion definition to PPC Orders divided by PPC Clicks. The provider/cache/report contracts accept optional exact PPC Clicks, calculate 27 / 78 as 34.62%, and explicitly remain unavailable when the connected Scale Insights response omits clicks. A live connector check confirmed search-term clicks do not reconcile to the ASIN advertising totals, so they were rejected as a fallback.
+Corrected the conversion definition to PPC Orders divided by PPC Clicks. The provider/cache/report contracts accept optional exact PPC Clicks and calculate 27 / 78 as 34.62%. When the connected Scale Insights response omits clicks, the card accepts an exact manual count through autosave; a live connector check confirmed search-term clicks do not reconcile to the ASIN advertising totals, so they were rejected as an automatic fallback.
 
 Lint, typecheck, all 312 tests across 51 files (6 skipped), the production build, and `git diff --check` pass.
 

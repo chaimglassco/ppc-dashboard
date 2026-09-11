@@ -4,7 +4,7 @@
 
 The report editor persists through the existing debounced browser-storage effect and exposes no manual completion mutation. Reporting-period badges derive from Scale Insights snapshot coverage: `endDate >= weekStart + 6 days` is Completed, shorter cached coverage is Partial, the current uncached week is Partial, and an uncached past week is Draft. New and normalized reports preserve an explicitly empty `actions` array instead of seeding an operational task.
 
-PPC Conversion Rate derives only from optional exact `ppcClicks` and PPC Orders. The provider adapter accepts PPC-click fields only from the ASIN advertising aggregate or sales summary, validates them as nonnegative integers, and warns when they are absent. It does not use Total Sessions or search-term totals as a fallback. `totalSessions` remains readable for backward compatibility but no longer drives the conversion card.
+PPC Conversion Rate derives only from optional exact `ppcClicks` and PPC Orders. The provider adapter accepts PPC-click fields only from the ASIN advertising aggregate or sales summary, validates them as nonnegative integers, and warns when they are absent. When absent, the metric card accepts a validated browser-local click count through the normal autosave path; provider-supplied clicks lock that input. It does not use Total Sessions or search-term totals as a fallback. `totalSessions` remains readable for backward compatibility but no longer drives the conversion card.
 
 ## Custom goals and independent planning-card height
 

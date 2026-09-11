@@ -73,6 +73,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("99");
     expect(screen.getByRole("textbox", { name: "Spend" })).toHaveAttribute("readonly");
     expect(screen.getByLabelText("PPC Conversion Rate 47.92%")).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "PPC Clicks" })).toHaveValue("48");
+    expect(screen.getByRole("textbox", { name: "PPC Clicks" })).toHaveAttribute("readonly");
   }, 15_000);
 
   it("loads a Pipeline product and automatically saves the selected weekly report", async () => {
@@ -381,13 +383,15 @@ describe("PpcPerformanceDashboard", () => {
     expect(totalOrdersCard.nextElementSibling).toBe(acosCard);
     expect(acosCard.nextElementSibling).toBe(tacosCard);
     expect(within(performanceCard).getAllByRole("textbox").map(input => input.getAttribute("aria-label"))).toEqual([
-      "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "ACOS summary", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
+      "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "PPC Clicks", "ACOS summary", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
     ]);
     expect(within(performanceCard).queryByText(/Performance overview for/i)).not.toBeInTheDocument();
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Sales" }), { target: { value: "100" } });
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "Total Sales" }), { target: { value: "300" } });
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Orders" }), { target: { value: "3" } });
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "Total Orders" }), { target: { value: "8" } });
+    fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Clicks" }), { target: { value: "6" } });
+    expect(within(performanceCard).getByLabelText("PPC Conversion Rate 50%")).toHaveTextContent("PPC orders ÷ PPC clicks");
     expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveValue("200");
     expect(within(performanceCard).getByRole("textbox", { name: "Organic Orders" })).toHaveValue("5");
     expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveValue("75");

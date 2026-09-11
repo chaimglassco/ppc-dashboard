@@ -4,7 +4,7 @@
 
 The workspace has no manual Save button because edits are automatically saved. Reporting Periods labels cached full weeks Completed and cached incomplete weeks Partial from their actual coverage dates. Action Items begins empty until Add Action Item is selected. Goal status and outcome controls sit at the lower right beside the Partial/Final label; summary formatting controls sit at the upper right of the documentation label; the Sales WoW line sits below the Total Sales value.
 
-PPC Conversion Rate equals PPC Orders divided by exact PPC Clicks. If Scale Insights omits PPC Clicks, the card remains unavailable and identifies the missing denominator. Overall Orders/Sessions and non-reconciling search-term click totals are never substituted.
+PPC Conversion Rate equals PPC Orders divided by exact PPC Clicks. If Scale Insights omits PPC Clicks, the card accepts the exact click count manually and auto-saves it; provider-supplied clicks are read-only. Overall Orders/Sessions and non-reconciling search-term click totals are never substituted.
 
 ## September 11 custom-goal and budget-card behavior
 

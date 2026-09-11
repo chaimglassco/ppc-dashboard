@@ -136,7 +136,7 @@ function MetricInput({ metric, report, previousValue, comparisonAvailable, impor
   </label>;
 }
 
-function ConversionRateCard({ value, previousValue, comparisonAvailable }: { value?: number; previousValue?: number; comparisonAvailable: boolean }) {
+function ConversionRateCard({ value, previousValue, ppcClicks, clicksImported, comparisonAvailable, onClicksChange }: { value?: number; previousValue?: number; ppcClicks?: number; clicksImported: boolean; comparisonAvailable: boolean; onClicksChange: (value?: number) => void }) {
   const available = value != null;
   const formattedValue = available ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value) : "—";
   const comparison = available && previousValue != null ? value - previousValue : 0;
@@ -146,7 +146,8 @@ function ConversionRateCard({ value, previousValue, comparisonAvailable }: { val
   return <div className={ws.metricCard} aria-label={available ? `PPC Conversion Rate ${formattedValue}%` : "PPC Conversion Rate unavailable"}>
     <span className={ws.metricCardHeader}><span>PPC Conv. Rate</span>{comparisonAvailable && previousValue != null && comparison !== 0 ? <span className={`${ws.metricDelta} ${comparison > 0 ? ws.metricIncrease : ws.metricDecrease}`} aria-label={`PPC Conversion Rate ${comparisonDirection} by ${trendLabel} from previous week`}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}{trendLabel}</span> : null}</span>
     <strong className={ws.metricDisplayValue}>{formattedValue}{available ? "%" : ""}</strong>
-    <span className={ws.metricCardHint}>{available ? "PPC orders ÷ PPC clicks" : "PPC clicks unavailable"}</span>
+    <label className={ws.ppcClicksField}><span>PPC Clicks</span><input aria-label="PPC Clicks" aria-readonly={clicksImported || undefined} readOnly={clicksImported} inputMode="numeric" value={ppcClicks ?? ""} placeholder="Enter clicks" onChange={event => { const raw = event.target.value.replace(/[^0-9]/g, ""); onClicksChange(raw ? Number(raw) : undefined); }} /></label>
+    <span className={ws.metricCardHint}>{available ? "PPC orders ÷ PPC clicks" : "Enter exact PPC clicks"}</span>
     <span className={ws.metricPreviousRow} aria-label={previousValue == null ? "Previous PPC Conversion Rate: unavailable" : comparisonAvailable ? `Previous PPC Conversion Rate: ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(previousValue)}%, ${comparisonDirection}` : `Previous PPC Conversion Rate: ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(previousValue)}%`}><small>Prev. Week</small><strong>{previousValue == null ? "—" : `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(previousValue)}%`}</strong></span>
   </div>;
 }
@@ -399,16 +400,16 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const previousDraft = selectedProductId && activeWeekStart ? reports[reportKey(selectedProductId, previousWeekStart)] ?? null : null;
   const previousSnapshot = performanceCache[performanceCacheKey(selectedAsin, previousWeekStart)];
   const previousReport = previousSnapshot && selectedProductId
-    ? { ...(previousDraft ?? createWeeklyPpcReport(selectedProductId, previousWeekStart)), ...previousSnapshot.metrics }
+    ? withCalculatedPerformance({ ...(previousDraft ?? createWeeklyPpcReport(selectedProductId, previousWeekStart)), ...previousSnapshot.metrics })
     : previousDraft;
   const savedReport = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, activeWeekStart, previousReport) : null;
-  const report = savedReport && cachedPerformance ? { ...savedReport, ...cachedPerformance.metrics } : savedReport;
+  const report = savedReport && cachedPerformance ? withCalculatedPerformance({ ...savedReport, ...cachedPerformance.metrics }) : savedReport;
   const chatPeriods: PerformanceChatPeriod[] = [...new Set([activeWeekStart, previousWeekStart, ...weekStarts])].slice(0, 60).flatMap(weekStart => {
     if (weekStart === activeWeekStart && report) return [{ weekStart, dataState: goalDataState, report }];
     const storedReport = selectedProductId ? reports[reportKey(selectedProductId, weekStart)] : null;
     const snapshot = performanceCache[performanceCacheKey(selectedAsin, weekStart)];
     if (!storedReport && !snapshot) return [];
-    const periodReport = { ...(storedReport ?? createWeeklyPpcReport(selectedProductId, weekStart)), ...(snapshot?.metrics ?? {}) };
+    const periodReport = withCalculatedPerformance({ ...(storedReport ?? createWeeklyPpcReport(selectedProductId, weekStart)), ...(snapshot?.metrics ?? {}) });
     const dataState: GoalDataState | null = snapshot ? snapshot.endDate >= addDaysIso(weekStart, 6) ? "Final" : "Partial" : null;
     return [{ weekStart, dataState, report: periodReport }];
   });
@@ -716,7 +717,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
               <div className={ws.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? ws.performanceError : ""}><i />{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}</div>
             </div>
             {displayedPerformanceLoad.warnings.length ? <ul className={ws.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}
-            <section className={ws.metricGroup} aria-label="Sales metrics"><div className={ws.metricGroupHeading}><h4><DollarSign aria-hidden="true" />Sales &amp; Spend Metrics</h4><span>Total Revenue: <strong>{preciseCurrency(report.totalSales)}</strong></span></div><div className={ws.metricGroupGrid}>{METRIC_GROUPS[0].metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}<ConversionRateCard value={report.conversionRate} previousValue={previousReport?.conversionRate} comparisonAvailable={currentPerformanceAvailable} /></div></section>
+            <section className={ws.metricGroup} aria-label="Sales metrics"><div className={ws.metricGroupHeading}><h4><DollarSign aria-hidden="true" />Sales &amp; Spend Metrics</h4><span>Total Revenue: <strong>{preciseCurrency(report.totalSales)}</strong></span></div><div className={ws.metricGroupGrid}>{METRIC_GROUPS[0].metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}<ConversionRateCard value={report.conversionRate} previousValue={previousReport?.conversionRate} ppcClicks={report.ppcClicks} clicksImported={cachedPerformance?.metrics.ppcClicks != null} comparisonAvailable={currentPerformanceAvailable} onClicksChange={ppcClicks => patchReport({ ppcClicks })} /></div></section>
             <section className={ws.metricGroup} aria-label="Orders metrics">
               <div className={ws.metricGroupHeading}><h4><SlidersHorizontal aria-hidden="true" />Order Volume &amp; Efficiency Targets</h4><div className={ws.efficiencySummary}><span>{roundedMetricValue(report.totalOrders)} Units Sold</span><label className={isAcosAboveTarget ? ws.acosWarning : ws.acosStatus} data-warning={isAcosAboveTarget || undefined}>ACOS <input aria-label="ACOS summary" aria-describedby={isAcosAboveTarget ? "acos-summary-warning" : undefined} readOnly value={roundedMetricValue(report.acos)} />%{isAcosAboveTarget ? " · Attention req." : ""}</label>{isAcosAboveTarget ? <span id="acos-summary-warning" className={ws.srOnly}>Target: {report.targetAcos}% · +{Math.round(report.acos - report.targetAcos)}% over limit</span> : null}</div></div>
               <div className={ws.metricGroupGrid}>

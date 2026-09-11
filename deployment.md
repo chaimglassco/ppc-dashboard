@@ -2,7 +2,7 @@
 
 ## September 11 automatic-save and PPC-conversion correction
 
-This release adds optional `ppcClicks` to the existing weekly-performance DTO and version-1 browser records. It requires no environment variable, provider call, database change, storage-key change, or migration. After deployment, verify Refresh Data is the only header action; report edits auto-save; full/partial cached periods receive data-derived badges; new Action Items is empty; and 27 PPC Orders with 78 PPC Clicks renders 34.62%. A response without exact PPC Clicks must show an unavailable state and safe warning.
+This release adds optional `ppcClicks` to the existing weekly-performance DTO and version-1 browser records. It requires no environment variable, provider call, database change, storage-key change, or migration. After deployment, verify Refresh Data is the only header action; report edits auto-save; full/partial cached periods receive data-derived badges; new Action Items is empty; and 27 PPC Orders with 78 PPC Clicks renders 34.62%. A response without exact PPC Clicks must show a safe warning and editable exact-click fallback; provider-supplied clicks must lock the field.
 
 ## September 11 custom-goal and planning-alignment release
 

@@ -7,7 +7,7 @@
 - [x] Confirm a new report has no Action Items row until Add Action Item is selected, and an explicitly empty stored array remains empty after reload.
 - [x] Confirm goal status/outcome controls share the footer with Partial/Final, the summary toolbar shares the documentation-label row, and Sales WoW is absent below SKU and present below Total Sales.
 - [x] Confirm 27 PPC Orders / 78 PPC Clicks renders 34.62%, while Total Sessions alone does not populate PPC Conversion Rate.
-- [x] Confirm missing PPC Clicks yields a safe provider warning and explicit unavailable card without substituting search-term totals.
+- [x] Confirm missing PPC Clicks yields a safe provider warning and editable exact-click fallback; entering 6 clicks with 3 PPC orders renders 50% and auto-saves without substituting search-term totals.
 
 ## September 11 custom-goal and planning-alignment checks
 

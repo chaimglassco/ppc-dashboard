@@ -2,7 +2,7 @@
 
 ## September 11 PPC conversion and automatic-status revision
 
-Weekly performance, `glassco.ppcPerformanceCache.v1`, and `glassco.ppcPerformanceNotes.v1` accept optional nonnegative integer `ppcClicks`. `conversionRate` is calculated as `ppcOrders / ppcClicks * 100`, rounded to two decimals; zero PPC Clicks produces zero. Missing PPC Clicks leaves `conversionRate` unavailable. `totalSessions` remains optional for backward compatibility and no longer drives this metric. The existing version and storage keys remain unchanged.
+Weekly performance, `glassco.ppcPerformanceCache.v1`, and `glassco.ppcPerformanceNotes.v1` accept optional nonnegative integer `ppcClicks`. `conversionRate` is calculated as `ppcOrders / ppcClicks * 100`, rounded to two decimals; zero PPC Clicks produces zero. Missing PPC Clicks leaves `conversionRate` unavailable until an exact count is supplied through the metric card. Provider-supplied clicks are read-only; manual clicks use normal report autosave. `totalSessions` remains optional for backward compatibility and no longer drives this metric. The existing version and storage keys remain unchanged.
 
 New reports use `actions: []`, and normalization preserves an explicitly empty list. The untouched historical seeded task is removed by its exact ID, title, priority, empty due date, and incomplete state; any edited or user-created action remains intact. The report `status` field remains readable for version-1 compatibility, but visible period status is derived from cached `startDate`/`endDate` coverage and is no longer changed by a manual Save action.
 
