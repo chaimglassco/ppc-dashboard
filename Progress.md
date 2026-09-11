@@ -4,9 +4,11 @@
 
 Removed the manual Save action while retaining debounced browser-local persistence. Reporting-period Completed/Partial badges now derive from cached coverage dates, Action Items starts empty, goal controls moved into the data-state footer, current-summary formatting moved beside its label, and Sales WoW moved from the SKU block into Total Sales.
 
-Corrected the conversion definition to PPC Orders divided by PPC Clicks. The provider/cache/report contracts accept optional exact PPC Clicks and calculate 27 / 78 as 34.62%. When the connected Scale Insights response omits clicks, the card accepts an exact manual count through autosave; a live connector check confirmed search-term clicks do not reconcile to the ASIN advertising totals, so they were rejected as an automatic fallback.
+Corrected the conversion definition to PPC Orders divided by PPC Clicks. The provider request now retrieves one raw ASIN row and automatically reads an exact, unambiguous click count from that row or aggregate totals without another MCP call. The manual click field is removed, and current/previous conversion values display as whole percentages while the stored calculation retains two-decimal precision. Search-term clicks and Total Sessions remain excluded.
 
-Lint, typecheck, all 312 tests across 51 files (6 skipped), the production build, and `git diff --check` pass.
+Added an accessible ASIN copy control, rounded displayed ACOS goal Targets to whole percentages, removed the active-goal counter, and moved Goal History plus Add Goal into the planning-card header.
+
+Lint, typecheck, all 314 tests across 51 files (6 skipped), the production build, and `git diff --check` pass.
 
 ## September 11, 2026 — Independent budget alignment and custom goals
 

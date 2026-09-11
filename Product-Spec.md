@@ -4,7 +4,9 @@
 
 The workspace has no manual Save button because edits are automatically saved. Reporting Periods labels cached full weeks Completed and cached incomplete weeks Partial from their actual coverage dates. Action Items begins empty until Add Action Item is selected. Goal status and outcome controls sit at the lower right beside the Partial/Final label; summary formatting controls sit at the upper right of the documentation label; the Sales WoW line sits below the Total Sales value.
 
-PPC Conversion Rate equals PPC Orders divided by exact PPC Clicks. If Scale Insights omits PPC Clicks, the card accepts the exact click count manually and auto-saves it; provider-supplied clicks are read-only. Overall Orders/Sessions and non-reconciling search-term click totals are never substituted.
+PPC Conversion Rate equals PPC Orders divided by exact PPC Clicks. Scale Insights supplies clicks automatically from its single-ASIN advertising row or aggregate totals; the card contains no manual click field and displays the result as a whole percentage. If the connector omits an exact, unambiguous click count, the rate remains unavailable. Overall Orders/Sessions and non-reconciling search-term click totals are never substituted.
+
+The ASIN row includes a keyboard-accessible copy button with copied feedback. ACOS goal Targets display without decimals. Strategic Weekly Goals omits the active-count badge and places Goal History and Add Goal together at the upper right.
 
 ## September 11 custom-goal and budget-card behavior
 
@@ -14,7 +16,7 @@ Budget Utilization remains top-aligned beside Strategic Weekly Goals and does no
 
 Each active goal displays Target on the first line and Actual directly below it. The On Track/At Risk selector and achieved, missed, and delete icon buttons share the same top-row control group. Previous Week Summary contains the label Performance Documentation and a vertically resizable read-only field. Both summary headers omit report-state badges, and the prior summary omits Completed, Status, archive, and ROAS metadata.
 
-PPC Conversion Rate is displayed with up to two decimal places. When the prior period also has PPC Clicks, the card shows its previous value and week-over-week direction.
+PPC Conversion Rate is displayed as a whole percentage. When the prior period also has PPC Clicks, the card shows its whole-number previous value and week-over-week direction.
 
 ## September 11 dashboard control revision
 
@@ -56,7 +58,7 @@ The third panel follows the supplied HTML reference: product header; Strategic W
 
 Each active weekly goal has explicit Achieved and Missed actions beside Delete. Resolving a goal removes it from the active list and records its title, target, actual, outcome, completion time, and reporting week in the selected product's Goal History. The history button sits beside Add Goal and shows resolved goals across that product's saved weeks. Active status choices remain On Track or At Risk. Older terminal goals are migrated into history when restored.
 
-Add Goal creates a structured selector with Increase Spend, Decrease Spend, PPC Sales, Total Sales, PPC Order, Organic Order, Total Orders, ACOS, and TACOS. Organic Order additionally supports Number or Percentage, where Percentage is organic orders divided by total orders. Actual is read-only and follows the matching selected-report metric; both Spend directions use actual spend. Currency and percentage Targets display two decimal places outside edit mode, while count Targets remain whole numbers. An available snapshot is labeled Partial until it covers the full Wednesday–Tuesday period and Final once complete; before data is available the field shows Waiting. Resolving a goal snapshots its current actual value and data state into Goal History.
+Add Goal creates a structured selector with Increase Spend, Decrease Spend, PPC Sales, Total Sales, PPC Order, Organic Order, Total Orders, ACOS, and TACOS. Organic Order additionally supports Number or Percentage, where Percentage is organic orders divided by total orders. Actual is read-only and follows the matching selected-report metric; both Spend directions use actual spend. Currency and non-ACOS percentage Targets display two decimal places outside edit mode; ACOS and count Targets display as whole values. An available snapshot is labeled Partial until it covers the full Wednesday–Tuesday period and Final once complete; before data is available the field shows Waiting. Resolving a goal snapshots its current actual value and data state into Goal History.
 
 Weekly Performance uses small grouped cards: four Sales Metrics cards across the first row, then three Order Volume cards and two Efficiency & Targets cards beneath them. Each card keeps its single-line centered title, current rounded value, helper copy, and centered `Prev. Week` footer in a stable vertical stack. A compact percentage-change badge appears only when current-period metrics are available. Favorable movement is green and unfavorable movement is red: lower is favorable for Spend, ACOS, and TACOS, while higher is favorable for sales and orders. Whole-number metric presentation uses thousands separators and unavailable current metrics render as an orderly zero instead of a detached symbol. The ACOS warning card also shows how far it is above Target ACOS; TACOS identifies itself as the total advertising ratio. Budget Weekly limit and Actual spend values remain centered, and the duplicate previous-week sales/TACOS summary remains removed from Previous Week Result.
 

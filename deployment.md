@@ -2,7 +2,9 @@
 
 ## September 11 automatic-save and PPC-conversion correction
 
-This release adds optional `ppcClicks` to the existing weekly-performance DTO and version-1 browser records. It requires no environment variable, provider call, database change, storage-key change, or migration. After deployment, verify Refresh Data is the only header action; report edits auto-save; full/partial cached periods receive data-derived badges; new Action Items is empty; and 27 PPC Orders with 78 PPC Clicks renders 34.62%. A response without exact PPC Clicks must show a safe warning and editable exact-click fallback; provider-supplied clicks must lock the field.
+This release keeps optional `ppcClicks` in the existing weekly-performance DTO and version-1 browser records. It changes the existing advertising request to return one raw ASIN row (`summary_only: false`, `count: 1`, `page: 1`) so exact Clicks can be collected automatically without a third MCP call. It requires no environment variable, database change, storage-key change, or migration. After deployment, verify Refresh Data populates PPC Conversion Rate as a whole percentage with no manual click input; an exact-click omission must remain unavailable with a safe warning.
+
+Also verify the ASIN copy button, whole-number ACOS goal Target, absence of the active-goal count, and the Goal History/Add Goal controls in the upper-right planning header.
 
 ## September 11 custom-goal and planning-alignment release
 
@@ -44,7 +46,7 @@ The third-panel redesign is presentation-only and requires no environment, API, 
 
 Goal History extends the existing version-1 browser report value with an optional array and requires no environment variable, database, or server migration. The small Weekly Performance card layout is presentation-only. After deployment, verify resolving one Achieved and one Missed goal survives reload, is scoped to the selected product, and does not reappear in the active list. Also verify the four-card Sales row, split Orders/Efficiency row, centered single-line titles and values, stable vertical card flow, percentage badges only for available current data, centered `Prev. Week` footers, metric-specific favorable colors, ACOS target-gap copy, comma-formatted whole metrics, centered budget values, and removal of the redundant previous sales/TACOS summary.
 
-Structured goals use the existing optional `metric`, `unit`, and history `dataState` fields in the version-1 browser value. No backend, environment, storage-key, or database migration is required. The parser maps legacy `spend`/`sales` values into the expanded taxonomy. After rollout, verify all nine goal choices against a live Scale Insights week, Organic Order's two measures, two-decimal currency/percentage Targets, read-only Actual fields, Partial/Final transitions after refresh, preservation of derived values in Goal History, and previous-result carry-forward into the following week.
+Structured goals use the existing optional `metric`, `unit`, and history `dataState` fields in the version-1 browser value. No backend, environment, storage-key, or database migration is required. The parser maps legacy `spend`/`sales` values into the expanded taxonomy. After rollout, verify all nine goal choices against a live Scale Insights week, Organic Order's two measures, two-decimal currency/non-ACOS percentage Targets, whole-number ACOS Targets, read-only Actual fields, Partial/Final transitions after refresh, preservation of derived values in Goal History, and previous-result carry-forward into the following week.
 
 ## Prerequisites
 

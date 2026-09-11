@@ -6,8 +6,9 @@ Last updated: September 11, 2026
 
 - Removed the manual Save button/function; the existing debounced browser-local autosave remains authoritative. Reporting-period badges now use cached coverage dates, so complete Wednesday–Tuesday data is Completed and shorter coverage is Partial.
 - Action Items starts empty and preserves an explicitly empty stored list. The exact untouched legacy seeded task is suppressed while edited/user-created actions remain. Goal status/outcome controls moved beside the Partial/Final label, the current-summary toolbar moved beside Performance Documentation, and Sales WoW moved from the SKU block into Total Sales.
-- Conversion is now labeled PPC Conversion Rate and uses PPC Orders divided by exact PPC Clicks. The response/cache/report contracts accept optional `ppcClicks`; 27 orders / 78 clicks is covered at 34.62%. Missing provider clicks can be entered exactly in the card and auto-save, while provider-supplied clicks lock the input. Total Sessions and non-reconciling search-term click totals are not used as fallbacks.
-- Lint, typecheck, all 312 tests across 51 files (6 skipped), the production build, and `git diff --check` pass.
+- Conversion is labeled PPC Conversion Rate and uses PPC Orders divided by exact PPC Clicks. The existing advertising request now returns one raw ASIN row and accepts an unambiguous exact-click alias from that row or aggregate totals without another MCP call. The manual click field is removed; the displayed current/previous rate is a whole percentage while calculations retain two-decimal precision. Total Sessions and non-reconciling search-term click totals are not used as fallbacks.
+- The product header has an accessible ASIN copy control with copied feedback. ACOS goal Targets display without decimals. Goal History and Add Goal occupy the right side of the Strategic Weekly Goals header, replacing the active-goal count.
+- Lint, typecheck, all 314 tests across 51 files (6 skipped), the production build, and `git diff --check` pass. Local browser smoke verification reached the expected Pipeline sign-in redirect with no console or hydration errors; authenticated live-data verification remains a post-deploy check.
 
 ## September 11, 2026 — custom goals and stable budget placement
 

@@ -49,9 +49,80 @@ function nonNegativeInteger(value: unknown, field: string): number {
   return number;
 }
 
-function optionalNonNegativeInteger(candidates: unknown[], field: string): number | undefined {
-  const value = candidates.find(candidate => candidate != null);
-  return value == null ? undefined : nonNegativeInteger(value, field);
+const PPC_CLICK_KEYS = [
+  "total_clicks", "TotalClicks", "totalClicks", "PPCClicks", "ppcClicks", "TotalPPCClicks", "totalPpcClicks",
+  "clicks", "Clicks", "click_count", "clickCount", "PPC_Clicks",
+];
+const ASIN_KEYS = ["asin", "ASIN", "product_asin", "productAsin", "ProductASIN"];
+
+function normalizedKey(value: string) {
+  return value.replace(/[^a-z0-9]/gi, "").toLowerCase();
+}
+
+function directPrimitive(record: Record<string, unknown>, keys: string[]) {
+  const accepted = new Set(keys.map(normalizedKey));
+  for (const [key, value] of Object.entries(record)) {
+    if (accepted.has(normalizedKey(key)) && value != null && !isRecord(value) && !Array.isArray(value)) return value;
+  }
+  return undefined;
+}
+
+function numericInteger(value: unknown) {
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0 && Number.isInteger(value) ? value : undefined;
+  if (typeof value !== "string" || !/^\d+$/.test(value.trim())) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
+function collectScopedClickCounts(value: unknown, asin: string, depth = 0): number[] {
+  if (depth > 5) return [];
+  if (Array.isArray(value)) return value.flatMap(item => collectScopedClickCounts(item, asin, depth + 1));
+  if (!isRecord(value)) return [];
+  const rowAsin = String(directPrimitive(value, ASIN_KEYS) ?? "").trim().toUpperCase();
+  const clickCount = numericInteger(directPrimitive(value, PPC_CLICK_KEYS));
+  const current = rowAsin === asin && clickCount != null ? [clickCount] : [];
+  return [...current, ...Object.values(value).flatMap(item => collectScopedClickCounts(item, asin, depth + 1))];
+}
+
+function collectTextClickCounts(result: unknown, asin: string) {
+  if (!isRecord(result) || !Array.isArray(result.content)) return [];
+  return result.content.flatMap(block => {
+    if (!isRecord(block) || block.type !== "text" || typeof block.text !== "string") return [];
+    const text = block.text.trim();
+    try {
+      const parsed: unknown = JSON.parse(text);
+      const counts = collectScopedClickCounts(parsed, asin);
+      if (counts.length) return counts;
+    } catch {
+      // Continue with a provider-rendered Markdown table.
+    }
+    const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line.includes("|"));
+    for (let index = 0; index < lines.length - 2; index += 1) {
+      const headers = lines[index].replace(/^\||\|$/g, "").split("|").map(value => value.trim());
+      const separator = lines[index + 1].replace(/^\||\|$/g, "").split("|").map(value => value.trim());
+      if (separator.length !== headers.length || !separator.every(value => /^:?-{3,}:?$/.test(value))) continue;
+      const asinIndex = headers.findIndex(header => ASIN_KEYS.map(normalizedKey).includes(normalizedKey(header)));
+      const clickIndex = headers.findIndex(header => PPC_CLICK_KEYS.map(normalizedKey).includes(normalizedKey(header)));
+      if (asinIndex < 0 || clickIndex < 0) continue;
+      return lines.slice(index + 2).flatMap(line => {
+        const cells = line.replace(/^\||\|$/g, "").split("|").map(value => value.trim());
+        if (cells.length !== headers.length || cells[asinIndex].toUpperCase() !== asin) return [];
+        const count = numericInteger(cells[clickIndex]);
+        return count == null ? [] : [count];
+      });
+    }
+    return [];
+  });
+}
+
+function exactPpcClicks(result: unknown, payload: Record<string, unknown>, totals: Record<string, unknown>, aggregate: Record<string, unknown>, asin: string) {
+  const direct = [
+    directPrimitive(totals, PPC_CLICK_KEYS),
+    directPrimitive(aggregate, PPC_CLICK_KEYS),
+  ].map(numericInteger).find(value => value != null);
+  if (direct != null) return direct;
+  const candidates = [...new Set([...collectScopedClickCounts(payload, asin), ...collectTextClickCounts(result, asin)])];
+  return candidates.length === 1 ? candidates[0] : undefined;
 }
 
 function stringValue(value: unknown) {
@@ -109,11 +180,10 @@ export async function loadScaleInsightsWeeklyPerformance(
     start_date: params.startDate,
     end_date: params.endDate,
     mode: "raw",
-    summary_only: true,
   };
   const [adsResult, salesResult] = await Promise.all([
-    callTool("get_ads_performance", commonArgs),
-    callTool("get_sales_data", { ...commonArgs, group_by: "total", include_growth: false }),
+    callTool("get_ads_performance", { ...commonArgs, summary_only: false, count: 1, page: 1 }),
+    callTool("get_sales_data", { ...commonArgs, summary_only: true, group_by: "total", include_growth: false }),
   ]);
 
   const ads = unwrapScaleInsightsPayload(adsResult);
@@ -136,15 +206,8 @@ export async function loadScaleInsightsWeeklyPerformance(
   const totalSales = finiteNonNegative(salesSummary.TotalSales, "Total Sales");
   const totalOrders = nonNegativeInteger(salesSummary.TotalOrders, "Total Orders");
   const totalSessions = nonNegativeInteger(salesSummary.TotalSessions, "Total Sessions");
-  const ppcClicks = optionalNonNegativeInteger([
-    adsTotals.total_clicks,
-    adsTotals.TotalClicks,
-    adsAggregate.PPCClicks,
-    adsAggregate.TotalPPCClicks,
-    adsAggregate.TotalClicks,
-    salesSummary.PPCClicks,
-    salesSummary.TotalPPCClicks,
-  ], "PPC Clicks");
+  const ppcClicks = exactPpcClicks(adsResult, ads, adsTotals, adsAggregate, params.asin)
+    ?? numericInteger(directPrimitive(salesSummary, PPC_CLICK_KEYS));
   const salesPpcCost = finiteNonNegative(salesSummary.TotalPPCCost, "sales-report PPC Cost");
   const salesPpcSales = finiteNonNegative(salesSummary.TotalPPCSales, "sales-report PPC Sales");
   const warnings: string[] = [];

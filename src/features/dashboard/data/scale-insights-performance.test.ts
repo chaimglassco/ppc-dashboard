@@ -60,9 +60,36 @@ describe("Scale Insights weekly performance", () => {
     });
     expect(callTool).toHaveBeenCalledTimes(2);
     expect(callTool).toHaveBeenCalledWith("get_ads_performance", expect.objectContaining({
-      asin_list: [params.asin], country: "US", start_date: params.startDate, end_date: params.endDate, summary_only: true,
+      asin_list: [params.asin], country: "US", start_date: params.startDate, end_date: params.endDate, summary_only: false, count: 1, page: 1,
     }));
     expect(callTool).toHaveBeenCalledWith("get_sales_data", expect.objectContaining({ group_by: "total", include_growth: false }));
+  });
+
+  it("reads exact PPC Clicks automatically from the single-ASIN advertising row", async () => {
+    const callTool = vi.fn(async (name: string) => name === "get_ads_performance"
+      ? {
+        ...adsPayload({ totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23 } }),
+        rows: [{ ASIN: params.asin, Clicks: "48" }],
+      }
+      : salesPayload());
+
+    const result = await loadScaleInsightsWeeklyPerformance(params, callTool);
+    expect(result.metrics.ppcClicks).toBe(48);
+    expect(result.metrics.conversionRate).toBe(47.92);
+    expect(result.warnings).not.toContain(expect.stringContaining("PPC Clicks"));
+  });
+
+  it("reads the exact single-ASIN click value from the provider text table", async () => {
+    const callTool = vi.fn(async (name: string) => name === "get_ads_performance"
+      ? {
+        structuredContent: adsPayload({ totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23 } }),
+        content: [{ type: "text", text: `| ASIN | Clicks |\n| --- | --- |\n| ${params.asin} | 48 |` }],
+      }
+      : salesPayload());
+
+    const result = await loadScaleInsightsWeeklyPerformance(params, callTool);
+    expect(result.metrics.ppcClicks).toBe(48);
+    expect(result.metrics.conversionRate).toBe(47.92);
   });
 
   it("warns when the independently synced paid totals disagree", async () => {

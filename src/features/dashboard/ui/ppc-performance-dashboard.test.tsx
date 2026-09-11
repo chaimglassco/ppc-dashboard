@@ -6,8 +6,13 @@ import { PPC_PERFORMANCE_CACHE_KEY } from "../domain/ppc-performance-cache";
 import { PpcPerformanceDashboard } from "./ppc-performance-dashboard";
 
 describe("PpcPerformanceDashboard", () => {
+  const writeText = vi.fn<(value: string) => Promise<void>>();
+
   beforeEach(() => {
     window.localStorage.clear();
+    writeText.mockReset();
+    writeText.mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", { configurable: true, value: { writeText } });
     vi.stubGlobal("fetch", vi.fn(async input => String(input).includes("/api/dashboard/performance?")
       ? { ok: false, status: 503, json: async () => ({ error: "Scale Insights is not configured on this server." }) }
       : {
@@ -72,15 +77,18 @@ describe("PpcPerformanceDashboard", () => {
     await screen.findByText("Refresh failed. Previously saved metrics are still displayed.");
     expect(screen.getByRole("textbox", { name: "Spend" })).toHaveValue("99");
     expect(screen.getByRole("textbox", { name: "Spend" })).toHaveAttribute("readonly");
-    expect(screen.getByLabelText("PPC Conversion Rate 47.92%")).toBeVisible();
-    expect(screen.getByRole("textbox", { name: "PPC Clicks" })).toHaveValue("48");
-    expect(screen.getByRole("textbox", { name: "PPC Clicks" })).toHaveAttribute("readonly");
+    expect(screen.getByLabelText("PPC Conversion Rate 48%")).toBeVisible();
+    expect(screen.queryByRole("textbox", { name: "PPC Clicks" })).not.toBeInTheDocument();
   }, 15_000);
 
   it("loads a Pipeline product and automatically saves the selected weekly report", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
+    const copyAsin = screen.getByRole("button", { name: "Copy ASIN B012345678" });
+    fireEvent.click(copyAsin);
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("B012345678"));
+    expect(screen.getByRole("button", { name: "Copied ASIN B012345678" })).toHaveAttribute("title", "Copied");
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/dashboard/products"), expect.any(Object));
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Open current week" })).not.toBeInTheDocument();
@@ -246,7 +254,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(performanceCard).getByRole("textbox", { name: "Total Sales" })).toHaveValue("1,317");
     expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveValue("17");
     expect(within(performanceCard).getByRole("textbox", { name: "TACOS" })).toHaveValue("6");
-    expect(within(performanceCard).getByLabelText("PPC Conversion Rate 47.92%")).toHaveTextContent("PPC orders ÷ PPC clicks");
+    expect(within(performanceCard).getByLabelText("PPC Conversion Rate 48%")).toHaveTextContent("PPC orders ÷ PPC clicks");
+    expect(screen.getByRole("textbox", { name: "ACOS target" })).toHaveValue("25%");
     expect(within(screen.getByRole("button", { name: /August 26 to September 1/ })).getByText("17%")).toBeVisible();
     expect(within(screen.getByRole("button", { name: /August 26 to September 1/ })).getByText("Completed").className).not.toMatch(/partialStatus/);
     expect(within(performanceCard).getByRole("textbox", { name: "PPC Sales" })).toHaveAttribute("readonly");
@@ -362,6 +371,8 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "75" } });
     const goalsCard = screen.getByRole("region", { name: "Weekly Goals" });
     const budgetCard = screen.getByRole("region", { name: "Budget Utilization" });
+    expect(within(goalsCard).queryByText(/Goals? Active/)).not.toBeInTheDocument();
+    expect(within(goalsCard).getByRole("button", { name: "Goal History" }).parentElement).toContainElement(within(goalsCard).getByRole("button", { name: "Add Goal" }));
     expect(within(budgetCard).getByText("Over Budget")).toBeVisible();
     expect(within(budgetCard).getByText((_, element) => element?.tagName === "SMALL" && element.textContent === "$25 overspent")).toBeVisible();
     expect(within(budgetCard).getByText("$7.14").closest("small")).toHaveTextContent("Daily limit $7.14");
@@ -383,15 +394,15 @@ describe("PpcPerformanceDashboard", () => {
     expect(totalOrdersCard.nextElementSibling).toBe(acosCard);
     expect(acosCard.nextElementSibling).toBe(tacosCard);
     expect(within(performanceCard).getAllByRole("textbox").map(input => input.getAttribute("aria-label"))).toEqual([
-      "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "PPC Clicks", "ACOS summary", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
+      "Target ACOS", "Spend", "PPC Sales", "Organic Sales", "Total Sales", "ACOS summary", "PPC Orders", "Organic Orders", "Total Orders", "ACOS", "TACOS",
     ]);
     expect(within(performanceCard).queryByText(/Performance overview for/i)).not.toBeInTheDocument();
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Sales" }), { target: { value: "100" } });
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "Total Sales" }), { target: { value: "300" } });
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Orders" }), { target: { value: "3" } });
     fireEvent.change(within(performanceCard).getByRole("textbox", { name: "Total Orders" }), { target: { value: "8" } });
-    fireEvent.change(within(performanceCard).getByRole("textbox", { name: "PPC Clicks" }), { target: { value: "6" } });
-    expect(within(performanceCard).getByLabelText("PPC Conversion Rate 50%")).toHaveTextContent("PPC orders ÷ PPC clicks");
+    expect(within(performanceCard).queryByRole("textbox", { name: "PPC Clicks" })).not.toBeInTheDocument();
+    expect(within(performanceCard).getByLabelText("PPC Conversion Rate unavailable")).toHaveTextContent("Waiting for Scale Insights clicks");
     expect(within(performanceCard).getByRole("textbox", { name: "Organic Sales" })).toHaveValue("200");
     expect(within(performanceCard).getByRole("textbox", { name: "Organic Orders" })).toHaveValue("5");
     expect(within(performanceCard).getByRole("textbox", { name: "ACOS" })).toHaveValue("75");

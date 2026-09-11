@@ -33,6 +33,10 @@
 .workspaceHeader p a:hover { color: #09090b; text-decoration: underline; }
 .productIdentifiers { display: grid; justify-items: start; gap: 2px; }
 .productIdentifiers > span { min-width: 0; }
+.asinIdentifier { display: inline-flex; align-items: center; gap: 4px; }
+.copyAsinButton { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--muted); }
+.copyAsinButton:hover, .copyAsinButton:focus-visible { background: #f4f4f5; color: #09090b; }
+.copyAsinButton svg { width: 13px; height: 13px; }
 .asinNavigation { display: flex; align-items: flex-start; gap: 24px; margin-left: auto; }
 .asinNavigationColumn { display: flex; flex-direction: column; gap: 4px; }
 .asinNavigationColumn + .asinNavigationColumn { padding-left: 24px; border-left: 1px solid var(--border); }
@@ -141,9 +145,6 @@
 .metricInputWrap input, .metricInputWrap i { min-width: 0; width: auto; max-width: 100%; padding: 0; border: 0; background: transparent; color: black; font: 800 30px/1.4 var(--mono); letter-spacing: -.04em; text-align: center; }
 .metricInputWrap i { flex-shrink: 0; font-style: normal; }
 .metricCardHint { color: var(--muted); font: 10px/1.5 var(--mono); }
-.ppcClicksField { display: flex; align-items: center; justify-content: center; gap: 5px; color: var(--muted); font: 9px/1.4 var(--mono); text-transform: uppercase; }
-.ppcClicksField input { width: 64px; min-width: 0; padding: 3px 5px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #09090b; font: 10px/1.4 var(--mono); text-align: right; }
-.ppcClicksField input[readonly] { background: #f4f4f5; }
 .salesCardTrend { display: inline-flex; align-items: center; justify-content: center; gap: 2px; font: 600 10px/1.5 var(--mono); }
 .salesCardTrend svg { width: 13px; height: 13px; }
 .metricPreviousRow { display: flex; justify-content: center; align-items: baseline; flex-wrap: wrap; gap: 6px; width: 100%; padding-top: 8px; margin-top: auto; border-top: 1px solid var(--border); color: var(--muted); font: 12px/1.4 var(--mono); }

@@ -4,7 +4,9 @@
 
 Dashboard edits now save automatically; the workspace header contains Refresh Data and no manual Save action. Reporting-period status comes from the cached Scale Insights coverage end date: a full Wednesday–Tuesday range is Completed and a shorter range is Partial. New weekly reports start with an empty Action Items list. Goal status/outcome controls sit in the footer beside the data-state label, current-summary formatting controls share its label row, and the Sales WoW line appears inside Total Sales.
 
-The conversion card is now explicitly **PPC Conversion Rate** and calculates `PPC Orders / PPC Clicks`. Optional `ppcClicks` is accepted from exact advertising totals without changing version-1 storage keys. If the connected Scale Insights response omits PPC Clicks, the card provides an auto-saved exact-click entry and does not substitute overall Orders/Sessions or search-term clicks that do not reconcile to the ASIN total.
+The conversion card is now explicitly **PPC Conversion Rate** and calculates `PPC Orders / PPC Clicks`. The Scale Insights request loads one ASIN performance row and accepts exact click fields from that row or the advertising totals without adding another MCP call. The card is provider-driven, has no manual click input, and displays a whole percentage. Missing exact clicks remain unavailable rather than substituting overall sessions or non-reconciling search-term totals.
+
+The selected-product ASIN has an accessible copy button with temporary copied feedback. Weekly-goal ACOS targets also render as whole percentages while their saved target values retain their original precision. Goal History and Add Goal occupy the planning-card header; the active-goal count is removed.
 
 ## Dashboard goal and budget alignment update (September 11, 2026)
 

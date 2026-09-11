@@ -130,7 +130,10 @@ export function formatWeeklyGoalTarget(goal: WeeklyGoal) {
   if (!Number.isFinite(value) || value < 0) return raw;
   const unit = goal.metric ? weeklyGoalUnit(goal.metric, goal.unit) : goal.unit;
   if (unit === "currency") return `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`;
-  if (unit === "percentage") return `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}%`;
+  if (unit === "percentage") {
+    if (goal.metric === "acos") return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(value))}%`;
+    return `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}%`;
+  }
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(value));
 }
 
