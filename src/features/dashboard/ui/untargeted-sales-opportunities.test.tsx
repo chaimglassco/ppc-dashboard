@@ -32,6 +32,8 @@ describe("UntargetedSalesOpportunities", () => {
     expect(within(table).getAllByRole("row")).toHaveLength(2);
     expect(within(table).getByRole("link", { name: "B0ABCDEF12" })).toHaveAttribute("href", "https://www.amazon.com/dp/B0ABCDEF12");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(region).getByRole("button", { name: "Fetch Again" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 
   it("reloads with shared Refresh Data only after the report was requested", async () => {

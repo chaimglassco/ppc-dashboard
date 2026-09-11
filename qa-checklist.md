@@ -300,6 +300,7 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] Search terms and product ASINs render with Sales, Orders, Spend, whole-number ACOS, and a blue `Not targeted` badge; product ASIN links open Amazon safely.
 - [ ] Type, minimum Sales, minimum Orders, and maximum ACOS criteria filter locally without additional MCP/API calls; Show all expands beyond the first ten rows.
 - [ ] After the report is loaded, shared **Refresh Data** reloads it once. Before it is loaded, shared refresh does not request it.
+- [ ] **Fetch Again** remains visible after successful populated and empty responses, including when local criteria hide every row, and triggers exactly one new provider request.
 - [ ] Opportunity authorization, empty, capability-missing, malformed-search, malformed-coverage, partial, retry, and provider-error states are actionable and contain no sensitive provider values.
 
 ## Rich-text composer

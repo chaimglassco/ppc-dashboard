@@ -72,6 +72,11 @@
 .showAllButton:hover { border-color: #09090b; background: #fafafa; }
 .emptyCategory { margin: 12px 0 0; padding: 18px; border-radius: 6px; background: #fafafa; color: #71717a; font: 11px/1.5 var(--mono); text-align: center; }
 .opportunityMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: #fafafa; }
+.opportunityHeaderActions { display: flex; align-items: center; gap: 8px; }
+.opportunityHeaderActions button { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 9px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #27272a; font: 600 10px/1.4 var(--font-workspace-sans), sans-serif; }
+.opportunityHeaderActions button:hover { border-color: #09090b; background: #fafafa; }
+.opportunityHeaderActions button:focus-visible { outline: 2px solid #09090b; outline-offset: 2px; }
+.opportunityHeaderActions button svg { width: 13px; height: 13px; }
 .opportunityMeta > span { display: grid; gap: 2px; }
 .opportunityMeta small { color: #71717a; font: 9px/1.4 var(--mono); }
 .opportunityMeta strong { color: #27272a; font: 600 11px/1.5 var(--mono); }

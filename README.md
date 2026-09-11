@@ -189,7 +189,7 @@ See [deployment.md](deployment.md) for the full rollout, verification, and rollb
 
 The PPC dashboard includes an on-demand **Untargeted Sales Opportunities** report directly below Campaign Week-over-Week Comparison. It combines the connected Scale Insights `get_search_query_data` and `get_ppc_exact_coverage` read-only tools for the selected ASIN and reporting week. Only converting search terms or product ASINs that Scale Insights explicitly marks as missing exact coverage are displayed.
 
-Loading is manual to preserve MCP usage. Type, minimum Sales, minimum Orders, and maximum ACOS filters run entirely in the browser against the loaded response. The shared **Refresh Data** button reloads this report only after the user has requested it during the current dashboard session.
+Loading is manual to preserve MCP usage. Type, minimum Sales, minimum Orders, and maximum ACOS filters run entirely in the browser against the loaded response. **Fetch Again** remains visible after every successful load, including an empty filtered state; the shared **Refresh Data** button also reloads this report after it has been requested during the current dashboard session.
 
 ## Documentation
 

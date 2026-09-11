@@ -121,7 +121,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
   return <section className={`${ws.card} ${styles.comparisonCard}`} aria-labelledby="untargeted-opportunities-heading">
     <header className={styles.comparisonHeader}>
       <div><h3 id="untargeted-opportunities-heading"><Target aria-hidden="true" />Untargeted Sales Opportunities</h3><p>Converting search terms and product ASINs that are not covered by an exact PPC target.</p></div>
-      {report ? <span className={report.dataState === "Partial" ? styles.partialBadge : styles.finalBadge}>{report.dataState}</span> : null}
+      {report ? <div className={styles.opportunityHeaderActions}><span className={report.dataState === "Partial" ? styles.partialBadge : styles.finalBadge}>{report.dataState}</span><button type="button" onClick={requestReport}><RefreshCw aria-hidden="true" />Fetch Again</button></div> : null}
     </header>
 
     {displayedState.status === "idle" ? <div className={styles.stateMessage}><span>{displayedState.message}</span>{asin ? <button type="button" onClick={requestReport}><Search aria-hidden="true" />Load Opportunities</button> : null}</div> : null}

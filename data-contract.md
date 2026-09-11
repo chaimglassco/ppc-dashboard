@@ -353,7 +353,7 @@ Parsing is fail-closed: malformed records reset to an empty overlay; malformed a
 
 `GET /ppc/api/dashboard/untargeted-opportunities?asin=<ASIN>&country=<marketplace>&weekStart=<Wednesday>` returns `{ opportunities }` with the normalized ASIN, marketplace, currency, selected/capped period, `Final` or `Partial` state, source freshness, warnings, and zero or more rows. Each row contains `term`, `type` (`Search term` or `Product ASIN`), finite non-negative `sales`, integer `orders`, finite non-negative `spend`, integer `clicks`, and nullable finite non-negative `acos`.
 
-The response is accepted only when every field validates. A Product ASIN term must be ten alphanumeric characters. The server includes rows only when the search-query source reports Sales greater than zero and at least one Order and the exact-coverage source explicitly reports that same normalized term as uncovered. The response is no-store and is not written to `localStorage` or the weekly-report schema. Errors may add `code` and `requestId`; authorization responses may add an allowlisted hosted consent URL.
+The response is accepted only when every field validates. A Product ASIN term must be ten alphanumeric characters. The server includes rows only when the search-query source reports Sales greater than zero and at least one Order and the exact-coverage source explicitly reports that same normalized term as uncovered. Load Opportunities, Fetch Again, and shared Refresh Data use the same request and response contract. The response is no-store and is not written to `localStorage` or the weekly-report schema. Errors may add `code` and `requestId`; authorization responses may add an allowlisted hosted consent URL.
 
 ## Validation and fallback rules
 
