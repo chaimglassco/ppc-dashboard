@@ -254,8 +254,15 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.getByRole("textbox", { name: "PPC Sales actual" })).toHaveAttribute("readonly");
     fireEvent.click(screen.getByRole("button", { name: "Add Goal" }));
     const addedGoalMetric = screen.getAllByRole("combobox", { name: /Goal metric/ }).at(-1)!;
-    expect(within(addedGoalMetric).getAllByRole("option").map(option => option.textContent)).toEqual(["Choose goal", "Increase Spend", "Decrease Spend", "PPC Sales", "Total Sales", "PPC Order", "Organic Order", "Total Orders", "ACOS", "TACOS"]);
+    expect(within(addedGoalMetric).getAllByRole("option").map(option => option.textContent)).toEqual(["Choose goal", "Custom Goal", "Increase Spend", "Decrease Spend", "PPC Sales", "Total Sales", "PPC Order", "Organic Order", "Total Orders", "ACOS", "TACOS"]);
+    fireEvent.change(addedGoalMetric, { target: { value: "custom" } });
+    const customGoalText = screen.getByRole("textbox", { name: "Custom goal text" });
+    expect(customGoalText).toHaveAttribute("placeholder", "Write your goal…");
+    fireEvent.change(customGoalText, { target: { value: "Improve exact-match keyword quality" } });
+    expect(screen.getByRole("combobox", { name: "Improve exact-match keyword quality status" })).toBeVisible();
+    expect(within(customGoalText.closest("[class*=goalRow]")!).getByText("Manual goal")).toBeVisible();
     fireEvent.change(addedGoalMetric, { target: { value: "increaseSpend" } });
+    expect(screen.queryByRole("textbox", { name: "Custom goal text" })).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Increase Spend actual" })).toHaveValue("$82");
     fireEvent.change(addedGoalMetric, { target: { value: "decreaseSpend" } });
     expect(screen.getByRole("textbox", { name: "Decrease Spend actual" })).toHaveValue("$82");

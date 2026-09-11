@@ -1,5 +1,9 @@
 # Glassco Team SOP Library and PPC Dashboard
 
+## Dashboard goal and budget alignment update (September 11, 2026)
+
+Strategic Weekly Goals and Budget Utilization now top-align independently, so adding goals no longer creates blank space above the budget controls or pushes them downward. The goal selector includes **Custom Goal**; selecting it reveals a manual goal-text field while retaining Target, status, and outcome controls. Custom goals persist in the existing version-1 report store through an optional marker, and older reports remain compatible.
+
 ## Dashboard goal, summary, and conversion update (September 11, 2026)
 
 Weekly goal Target and Actual values now form a compact vertical pair, with Actual directly below Target and the achieved, missed, and delete controls beside the status selector. Previous Week Summary is a labeled, vertically resizable, read-only Performance Documentation field; report-status, archive, Draft, Status, and ROAS badges were removed from the paired summary cards. Conversion Rate now comes from Scale Insights Total Orders divided by Total Sessions, retains two-decimal precision, and compares with the previous week when both periods provide session data. Older reports and performance-cache entries without sessions remain valid and display a dash until refreshed.

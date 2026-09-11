@@ -2,6 +2,14 @@
 
 Last updated: September 11, 2026
 
+## September 11, 2026 — custom goals and stable budget placement
+
+- Strategic Weekly Goals and Budget Utilization now top-align independently. Removing grid stretching and the budget auto spacer keeps the budget controls directly under their header as goals are added.
+- The goal selector includes Custom Goal. It reveals a manual goal-text field while retaining Target, status, and outcome controls; Actual remains unavailable because no performance metric is mapped.
+- Custom goals add optional `custom: true` to the existing version-1 goal record so manual titles that resemble metric names survive validation and reload. Predefined goals omit it; no migration or storage-key change exists.
+- Browser QA added three goals at a 1600px layout and measured both planning cards at the same top coordinate while Budget Utilization retained its 335px natural height and Weekly Limit began 16px below the header. A custom title containing “PPC Sales,” Target, and At Risk status survived reload as Custom Goal; switching it to PPC Sales removed the manual field and restored the live Actual. The direct 1265px layout had no horizontal overflow, warnings, console errors, or hydration errors.
+- Lint, typecheck, all 310 tests across 51 files (6 skipped), the production build, and `git diff --check` pass.
+
 ## September 11, 2026 — compact goals, prior documentation, and Conversion Rate
 
 - Goal Actual now sits directly below Target. The active status selector and achieved, missed, and delete buttons form one compact inline group.

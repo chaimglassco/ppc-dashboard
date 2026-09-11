@@ -1,5 +1,13 @@
 # QA Checklist
 
+## September 11 custom-goal and planning-alignment checks
+
+- [x] Add at least three goals and confirm Budget Utilization remains top-aligned with no blank spacer above Weekly Limit.
+- [x] Select Custom Goal, enter arbitrary text including a predefined metric phrase, set a Target and status, then reload and confirm it remains a custom goal.
+- [x] Switch a custom goal back to a predefined metric and confirm the manual field disappears and automatic Actual resumes.
+- [x] Resolve and delete custom goals and confirm Goal History and removal behavior use the manual title.
+- [x] Verify keyboard operation, narrow wrapping, horizontal overflow, hydration, and console errors.
+
 ## September 11 compact-goal, summary, and conversion checks
 
 - [x] Confirm Actual renders directly below Target for every goal and all three icon buttons share the status-selector row.

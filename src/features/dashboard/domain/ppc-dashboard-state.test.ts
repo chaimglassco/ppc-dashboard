@@ -51,6 +51,7 @@ describe("PPC dashboard state", () => {
         { id: "legacy-done", title: "Legacy completed goal", target: "10", actual: "10", status: "Achieved" },
       ],
       goalHistory: [
+        { id: "custom-achieved", title: "Increase PPC Sales quality", target: "Review weekly", actual: "", status: "Achieved", resolvedAt: "2026-09-01T02:00:00.000Z", custom: true },
         { id: "missed", title: "Missed goal", target: "20", actual: "12", status: "Missed", resolvedAt: "2026-09-01T01:00:00.000Z" },
         { id: "invalid", title: "Invalid history", target: "", actual: "", status: "On Track", resolvedAt: "not-a-date" },
       ],
@@ -59,6 +60,7 @@ describe("PPC dashboard state", () => {
     const report = parsed.reports["product-1:2026-08-26"];
     expect(report.goals.map(goal => goal.id)).toEqual(["active"]);
     expect(report.goalHistory).toEqual([
+      { id: "custom-achieved", title: "Increase PPC Sales quality", target: "Review weekly", actual: "", status: "Achieved", resolvedAt: "2026-09-01T02:00:00.000Z", custom: true },
       { id: "missed", title: "Missed goal", target: "20", actual: "12", status: "Missed", resolvedAt: "2026-09-01T01:00:00.000Z" },
       { id: "legacy-done", title: "Legacy completed goal", target: "10", actual: "10", status: "Achieved", resolvedAt: "2026-09-02T01:00:00.000Z" },
     ]);
@@ -87,6 +89,7 @@ describe("PPC dashboard state", () => {
     const parsed = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { report: {
       ...report,
       goals: [
+        { id: "custom", title: "Increase PPC Sales quality", target: "Review weekly", actual: "", status: "On Track", custom: true },
         { id: "legacy-acos", title: "Reduce ACOS", target: "25%", actual: "", status: "On Track" },
         { id: "bad-unit", title: "Spend", metric: "spend", unit: "percentage", target: "100", actual: "", status: "On Track" },
         { id: "legacy-sales", title: "Sales", metric: "sales", unit: "currency", target: "500", actual: "", status: "On Track" },
@@ -95,12 +98,14 @@ describe("PPC dashboard state", () => {
       ],
     } } }));
     expect(parsed.reports["product-1:2026-08-26"].goals).toEqual([
+      expect.objectContaining({ id: "custom", title: "Increase PPC Sales quality", target: "Review weekly", custom: true }),
       expect.objectContaining({ id: "legacy-acos", metric: "acos", unit: "percentage" }),
       expect.objectContaining({ id: "bad-unit", metric: "decreaseSpend", unit: "currency" }),
       expect.objectContaining({ id: "legacy-sales", metric: "ppcSales", unit: "currency" }),
       expect.objectContaining({ id: "total-orders", metric: "totalOrders", unit: "number" }),
       expect.objectContaining({ id: "tacos", metric: "tacos", unit: "percentage" }),
     ]);
+    expect(parsed.reports["product-1:2026-08-26"].goals[0].metric).toBeUndefined();
   });
 
   it("unions selected months, includes boundary weeks, and describes their full coverage", () => {

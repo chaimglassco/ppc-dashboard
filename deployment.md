@@ -1,5 +1,9 @@
 # Deployment Guide
 
+## September 11 custom-goal and planning-alignment release
+
+This release adds only the optional `goals[].custom` flag to the existing version-1 browser report. It requires no environment variable, server API, database, storage-key change, or migration. After deployment, add multiple goals and confirm Budget Utilization stays top-aligned; create, reload, resolve, and remove a Custom Goal; then confirm predefined automatic goal Actual values still work.
+
 ## September 11 compact-goal and Conversion Rate release
 
 This release extends the existing weekly-performance DTO and version-1 browser records with optional `totalSessions` and `conversionRate` values. It needs no environment variable, new provider request, database change, storage-key change, or migration. After deployment, refresh a live week and reconcile Conversion Rate against Scale Insights `TotalOrders / TotalSessions`; confirm older cached weeks remain valid and display a dash until refreshed. Also verify compact goal geometry, the resizable read-only prior documentation, and the absence of all requested summary badges/footer metadata.

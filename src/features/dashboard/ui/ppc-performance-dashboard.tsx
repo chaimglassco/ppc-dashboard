@@ -152,6 +152,7 @@ function ConversionRateCard({ value, previousValue, comparisonAvailable }: { val
 
 function WeeklyGoalRow({ goal, report, dataState, onUpdate, onResolve, onRemove }: { goal: WeeklyGoal; report: WeeklyPpcReport; dataState: GoalDataState | null; onUpdate: (patch: Partial<WeeklyGoal>) => void; onResolve: (status: GoalOutcome) => void; onRemove: () => void }) {
   const [targetEditing, setTargetEditing] = useState(false);
+  const isCustomGoal = goal.custom === true || (!goal.metric && goal.title !== "Choose goal");
   const label = goal.metric ? weeklyGoalLabel(goal.metric) : goal.title || "Choose goal";
   const actualState = goal.metric ? dataState : null;
   const actualValue = weeklyGoalActualValue(goal, report);
@@ -160,18 +161,24 @@ function WeeklyGoalRow({ goal, report, dataState, onUpdate, onResolve, onRemove 
   const goalProgress = targetValue > 0 && actualValue != null
     ? Math.min(100, Math.round((actualValue / targetValue) * 100))
     : 0;
-  const selectMetric = (metric: WeeklyGoalMetric) => onUpdate({
-    metric, title: weeklyGoalLabel(metric), unit: weeklyGoalUnit(metric), target: "", actual: "",
-  });
+  const selectMetric = (selection: string) => {
+    if (selection === "custom") {
+      onUpdate({ metric: undefined, title: "Custom goal", unit: undefined, custom: true, target: "", actual: "" });
+      return;
+    }
+    const metric = selection as WeeklyGoalMetric;
+    onUpdate({ metric, title: weeklyGoalLabel(metric), unit: weeklyGoalUnit(metric), custom: undefined, target: "", actual: "" });
+  };
 
   return <div className={ws.goalRow}>
     <div className={ws.goalDefinition}>
-      <CheckCircle2 aria-hidden="true" /><label><span className={ws.srOnly}>Goal</span><select aria-label={`Goal metric ${goal.id}`} value={goal.metric ?? ""} onChange={event => selectMetric(event.target.value as WeeklyGoalMetric)}><option value="" disabled>Choose goal</option>{WEEKLY_GOAL_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+      <CheckCircle2 aria-hidden="true" /><label><span className={ws.srOnly}>Goal</span><select aria-label={`Goal metric ${goal.id}`} value={goal.metric ?? (isCustomGoal ? "custom" : "")} onChange={event => selectMetric(event.target.value)}><option value="" disabled>Choose goal</option><option value="custom">Custom Goal</option>{WEEKLY_GOAL_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
       {goal.metric === "organicOrders" ? <label>Measure<select aria-label="Organic Order measurement" value={weeklyGoalUnit(goal.metric, goal.unit)} onChange={event => onUpdate({ unit: event.target.value as "number" | "percentage", target: "", actual: "" })}><option value="number">Number</option><option value="percentage">Percentage</option></select></label> : null}
       <div className={ws.goalStatusActions}><select aria-label={`${label} status`} className={workspaceStatusTone(goal.status)} value={goal.status} onChange={event => onUpdate({ status: event.target.value as GoalStatus })}>{ACTIVE_GOAL_STATUSES.map(status => <option className={workspaceStatusTone(status)} key={status}>{status}</option>)}</select><div className={ws.goalOutcomeActions}><button type="button" aria-label={`Mark ${label} achieved`} title="Mark achieved" onClick={() => onResolve("Achieved")}><CheckCircle2 aria-hidden="true" /></button><button type="button" aria-label={`Mark ${label} missed`} title="Mark missed" onClick={() => onResolve("Missed")}><X aria-hidden="true" /></button><button type="button" aria-label={`Remove ${label}`} onClick={onRemove}><Trash2 aria-hidden="true" /></button></div></div>
+      {isCustomGoal ? <label className={ws.customGoalName}>Goal text<input aria-label="Custom goal text" value={goal.title === "Custom goal" ? "" : goal.title} placeholder="Write your goal…" onChange={event => onUpdate({ title: event.target.value || "Custom goal" })} /></label> : null}
     </div>
     <div className={ws.goalProgress}><span><i style={{ width: `${goalProgress}%` }} /></span><div className={ws.goalInlineValues}><label><span>Target</span><input aria-label={`${label} target`} inputMode="decimal" value={targetEditing ? goal.target.replace(/[^0-9.-]/g, "") : formatWeeklyGoalTarget(goal)} placeholder="—" onFocus={() => setTargetEditing(true)} onBlur={() => setTargetEditing(false)} onChange={event => onUpdate({ target: event.target.value })} /></label><label><span>Actual</span><input aria-label={`${label} actual`} aria-readonly="true" readOnly value={actual} placeholder="—" /></label></div></div>
-    <small className={`${ws.goalDataState} ${actualState === "Final" ? ws.goalActualFinal : actualState === "Partial" ? ws.goalActualPartial : ws.goalActualWaiting}`}>{actualState ?? (goal.metric ? "Waiting" : "Select goal")}</small>
+    <small className={`${ws.goalDataState} ${actualState === "Final" ? ws.goalActualFinal : actualState === "Partial" ? ws.goalActualPartial : ws.goalActualWaiting}`}>{actualState ?? (goal.metric ? "Waiting" : isCustomGoal ? "Manual goal" : "Select goal")}</small>
   </div>;
 }
 

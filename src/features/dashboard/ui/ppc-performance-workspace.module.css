@@ -50,7 +50,7 @@
 .workspaceCanvas { width: 100%; max-width: 1152px; margin-inline: auto; display: flex; flex-direction: column; gap: 24px; padding-bottom: 48px; }
 .card { min-width: 0; padding: 24px; background: white; border: 1px solid var(--border); border-radius: 8px; }
 .twoColumn { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-.workspaceTopGrid { align-items: stretch; }
+.workspaceTopGrid { align-items: start; }
 .cardTitle { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; }
 .cardTitle h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
 .cardTitle h3 svg { width: 18px; height: 18px; }
@@ -67,6 +67,8 @@
 .goalDefinition select { width: 100%; border: 0; color: #09090b; background: transparent; padding: 3px 0; font-family: var(--font-workspace-sans), sans-serif; font-size: 12px; font-weight: 700; }
 .goalStatusActions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 .goalStatusActions > select { width: auto; max-width: 90px; border: 1px solid var(--border); border-radius: 4px; padding: 3px; font: 10px var(--mono); }
+.goalDefinition .customGoalName { flex: 1 0 100%; margin-top: 4px; }
+.customGoalName input { width: 100%; height: 30px; min-width: 0; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #09090b; font: 12px var(--font-workspace-sans), sans-serif; }
 .goalInlineValues { display: grid; gap: 2px; min-width: 132px; font: 11px var(--mono); color: var(--muted); }
 .goalInlineValues label { display: grid; grid-template-columns: 42px minmax(0,1fr); align-items: baseline; gap: 4px; }
 .goalInlineValues input { width: 78px; min-width: 0; padding: 0; border: 0; background: transparent; font: 700 12px var(--mono); color: #09090b; text-align: right; }
@@ -187,7 +189,6 @@
 .actionRow:has(.actionDone) > input { color: #a1a1aa; text-decoration: line-through; }
 .priorityHigh { background: #09090b; color: white; }.priorityMedium, .priorityLow { background: white; color: #52525b; }
 .goalCard, .budgetCard { display: flex; flex-direction: column; }
-.budgetCard .budgetPrimaryGrid { margin-top: auto; }
 .budgetHistoryPagination { display: flex; gap: 4px; justify-content: flex-end; margin-top: 8px; }
 .budgetHistoryPagination button { display: grid; place-items: center; min-width: 24px; height: 24px; border: 1px solid var(--border); background: white; border-radius: 4px; }
 .budgetHistoryPagination button[aria-current] { background: black; color: white; }

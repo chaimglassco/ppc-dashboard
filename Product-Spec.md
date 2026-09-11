@@ -1,5 +1,9 @@
 # Glassco Back Office Library — Product Specification
 
+## September 11 custom-goal and budget-card behavior
+
+Budget Utilization remains top-aligned beside Strategic Weekly Goals and does not move its controls when the goal list becomes taller. The goal selector offers Custom Goal. A custom selection displays a manual goal-text field, keeps Target editable, leaves Actual unavailable because no live metric is mapped, and retains On Track/At Risk plus achieved, missed, and delete controls.
+
 ## September 11 compact goals and conversion rate
 
 Each active goal displays Target on the first line and Actual directly below it. The On Track/At Risk selector and achieved, missed, and delete icon buttons share the same top-row control group. Previous Week Summary contains the label Performance Documentation and a vertically resizable read-only field. Both summary headers omit report-state badges, and the prior summary omits Completed, Status, archive, and ROAS metadata.

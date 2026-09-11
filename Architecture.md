@@ -1,5 +1,9 @@
 # Glassco Back Office Library — Architecture
 
+## Custom goals and independent planning-card height
+
+The planning grid uses start alignment, and Budget Utilization no longer uses an automatic top margin. Each card therefore keeps its own content height when the goal list grows. Custom goal selection reuses `WeeklyGoal.title`, target, status, and outcome behavior; the optional `custom: true` marker prevents legacy metric-name inference from converting manual text into a predefined metric during version-1 report validation.
+
 ## Conversion and summary presentation
 
 The performance adapter reads `TotalSessions` from the already-requested Scale Insights sales summary and derives Conversion Rate as `TotalOrders / TotalSessions * 100`, rounded to two decimals. The authenticated route, version-1 performance cache, and version-1 weekly report accept `totalSessions` and `conversionRate`; both fields are optional when parsing older records. A refreshed live snapshot supplies them, while legacy entries continue to render the unavailable state. Conversion comparisons use the same current/previous availability guard as the other metric cards.

@@ -1,5 +1,9 @@
 # Project Progress
 
+## September 11, 2026 — Independent budget alignment and custom goals
+
+Top-aligned the two planning cards and removed the budget content's automatic top spacer, so any number of goals can grow only the Strategic Weekly Goals card. Added Custom Goal to the selector with manual text, target, status, and outcome controls. Custom intent survives reload through an optional version-1 goal marker without changing the storage key or requiring migration.
+
 ## September 11, 2026 — Compact goals, resizable prior summary, and Conversion Rate
 
 Moved weekly-goal Actual below Target and placed the three outcome icons beside the status selector. Replaced the prior-summary display with a labeled, vertically resizable, read-only Performance Documentation field and removed archive/report-state/Draft/Status/ROAS metadata from the two summary cards. Added live Conversion Rate from Scale Insights Total Orders divided by Total Sessions, including prior-week comparison and backward-compatible unavailable rendering for older cached weeks. The existing sales-summary request already supplies Total Sessions, so no new provider call is required.

@@ -1,5 +1,9 @@
 # Data Contract
 
+## September 11 custom-goal compatibility
+
+`WeeklyGoal` accepts optional `custom: true`. Custom goals continue to use the existing `title`, `target`, `actual`, `status`, and history fields. The marker prevents title-based legacy metric inference and is omitted for predefined goals. Version remains `1`; reports without the marker parse exactly as before, and no storage key or migration changes.
+
 ## September 11 conversion and summary revision
 
 Weekly performance responses add `metrics.totalSessions` and calculated `metrics.conversionRate`. `totalSessions` is the nonnegative integer `Summary.TotalSessions` returned by the existing Scale Insights `get_sales_data` request. `conversionRate` is `totalOrders / totalSessions * 100`, rounded to two decimals; a zero-session period returns zero. The fields are optional only when parsing older `glassco.ppcPerformanceCache.v1` and `glassco.ppcPerformanceNotes.v1` records, so no version bump or destructive migration is required. Missing legacy denominators render Conversion Rate as unavailable until that week is refreshed.

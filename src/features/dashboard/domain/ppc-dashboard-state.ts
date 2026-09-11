@@ -7,7 +7,7 @@ export type WeeklyGoalMetric = "increaseSpend" | "decreaseSpend" | "ppcSales" | 
 export type WeeklyGoalUnit = "currency" | "number" | "percentage";
 export type GoalDataState = "Partial" | "Final";
 export type ReportStatus = "Draft" | "In Progress" | "Completed" | "Needs Review";
-export type WeeklyGoal = { id: string; title: string; target: string; actual: string; status: GoalStatus; metric?: WeeklyGoalMetric; unit?: WeeklyGoalUnit };
+export type WeeklyGoal = { id: string; title: string; target: string; actual: string; status: GoalStatus; metric?: WeeklyGoalMetric; unit?: WeeklyGoalUnit; custom?: true };
 export type GoalHistoryEntry = WeeklyGoal & { status: GoalOutcome; resolvedAt: string; dataState?: GoalDataState };
 export type ActionItem = { id: string; title: string; priority: "High" | "Medium" | "Low"; dueDate: string; done: boolean };
 export type BudgetChange = { id: string; changedAt: string; from: number; to: number };
@@ -162,10 +162,12 @@ function normalizeGoal(value: unknown, index: number): WeeklyGoal | null {
                   : undefined;
   const metric = storedMetric ?? inferredMetric;
   const preferredUnit = value.unit === "percentage" || value.unit === "number" || value.unit === "currency" ? value.unit : undefined;
+  const custom = value.custom === true;
   return {
     id: String(value.id ?? `goal-${index}`), title, target: String(value.target ?? ""), actual: String(value.actual ?? ""),
     status: statuses.includes(value.status as GoalStatus) ? value.status as GoalStatus : "On Track",
-    ...(metric ? { metric, unit: weeklyGoalUnit(metric, preferredUnit) } : {}),
+    ...(!custom && metric ? { metric, unit: weeklyGoalUnit(metric, preferredUnit) } : {}),
+    ...(custom ? { custom: true as const } : {}),
   };
 }
 
