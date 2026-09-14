@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Target, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, ExternalLink, Target, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
@@ -14,6 +14,7 @@ import {
   type UntargetedOpportunityType,
   type UntargetedSalesOpportunities,
 } from "../domain/untargeted-sales-opportunities";
+import { getScaleInsightsSearchTermHref } from "../domain/ppc-analysis-navigation";
 import ws from "./ppc-performance-workspace.module.css";
 import styles from "./campaign-weekly-comparison.module.css";
 
@@ -27,6 +28,17 @@ type LoadState = {
 };
 
 const INITIAL_ROW_COUNT = 10;
+type SortMetric = "impressions" | "clicks" | "spend" | "sales" | "orders" | "acos";
+type SortDirection = "asc" | "desc";
+
+const SORT_LABELS: Record<SortMetric, string> = {
+  impressions: "Impressions",
+  clicks: "Clicks",
+  spend: "Spend",
+  sales: "Sales",
+  orders: "Orders",
+  acos: "ACOS",
+};
 
 function formatCurrency(value: number, currency: string) {
   try {
@@ -46,6 +58,15 @@ function numericFilter(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
+function SortableMetricHeader({ metric, activeMetric, direction, onSort }: { metric: SortMetric; activeMetric: SortMetric; direction: SortDirection; onSort: (metric: SortMetric) => void }) {
+  const active = metric === activeMetric;
+  const nextDirection = active && direction === "desc" ? "lowest to highest" : "highest to lowest";
+  const Icon = active ? (direction === "desc" ? ArrowDown : ArrowUp) : ChevronsUpDown;
+  return <th scope="col" aria-sort={active ? (direction === "desc" ? "descending" : "ascending") : "none"}>
+    <button type="button" className={styles.sortButton} aria-label={`Sort ${SORT_LABELS[metric]} ${nextDirection}`} onClick={() => onSort(metric)}>{SORT_LABELS[metric]}<Icon aria-hidden="true" /></button>
+  </th>;
+}
+
 export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, refreshVersion }: { asin: string; country?: string; weekStart: string; refreshVersion: number }) {
   const reportKey = untargetedOpportunityCacheKey(country, asin, weekStart);
   const cacheRef = useRef<UntargetedOpportunityCache | null>(null);
@@ -59,6 +80,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
   const [typeFilter, setTypeFilter] = useState<"All" | UntargetedOpportunityType>("All");
   const [minimumSales, setMinimumSales] = useState("");
   const [maximumAcos, setMaximumAcos] = useState("");
+  const [sort, setSort] = useState<{ metric: SortMetric; direction: SortDirection }>({ metric: "sales", direction: "desc" });
   const [loadState, setLoadState] = useState<LoadState>({ key: "", status: "idle", message: "" });
 
   useEffect(() => {
@@ -131,7 +153,30 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
       && row.orders >= 1 && row.sales >= minSales
       && (maxAcos == null || (row.acos != null && row.acos <= maxAcos)));
   }, [maximumAcos, minimumSales, report, typeFilter]);
-  const visibleRows = showAll ? filteredRows : filteredRows.slice(0, INITIAL_ROW_COUNT);
+  const sortedRows = useMemo(() => [...filteredRows].sort((first, second) => {
+    const firstValue = first[sort.metric];
+    const secondValue = second[sort.metric];
+    if (firstValue == null && secondValue == null) return first.term.localeCompare(second.term);
+    if (firstValue == null) return 1;
+    if (secondValue == null) return -1;
+    const difference = sort.direction === "desc" ? secondValue - firstValue : firstValue - secondValue;
+    return difference || first.term.localeCompare(second.term);
+  }), [filteredRows, sort]);
+  const totals = useMemo(() => {
+    const values = filteredRows.reduce((current, row) => ({
+      spend: current.spend + row.spend,
+      sales: current.sales + row.sales,
+      orders: current.orders + row.orders,
+    }), { spend: 0, sales: 0, orders: 0 });
+    return { ...values, acos: values.sales > 0 ? (values.spend / values.sales) * 100 : null };
+  }, [filteredRows]);
+  const visibleRows = showAll ? sortedRows : sortedRows.slice(0, INITIAL_ROW_COUNT);
+  const updateSort = (metric: SortMetric) => {
+    setSort(current => current.metric === metric
+      ? { metric, direction: current.direction === "desc" ? "asc" : "desc" }
+      : { metric, direction: "desc" });
+    setShowAll(false);
+  };
 
   return <section className={`${ws.card} ${styles.comparisonCard}`} aria-labelledby="untargeted-opportunities-heading">
     <header className={styles.comparisonHeader}>
@@ -154,9 +199,9 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
         <label><span>Maximum ACOS</span><span className={styles.percentFilter}><input aria-label="Maximum ACOS" type="number" min="0" step="1" placeholder="Any" value={maximumAcos} onChange={event => setMaximumAcos(event.target.value)} /><i>%</i></span></label>
       </div>
       {filteredRows.length ? <div className={styles.baselineTable}>
-        <div className={styles.baselineSummary}><strong>{filteredRows.length} match{filteredRows.length === 1 ? "" : "es"}</strong><span>Filtered locally — no additional MCP usage</span></div>
-        <div className={styles.tableScroll}><table aria-label="Untargeted sales opportunities"><thead><tr><th>Search Term</th><th>Impressions</th><th>Clicks</th><th>Spend</th><th>Sales</th><th>Orders</th><th>ACOS</th><th>Status</th></tr></thead><tbody>{visibleRows.map(row => <tr key={`${row.type}:${row.term}`}>
-          <th scope="row">{row.type === "Product ASIN" ? <a href={`https://www.amazon.com/dp/${encodeURIComponent(row.term)}`} target="_blank" rel="noopener noreferrer"><span>{row.term}</span><ExternalLink aria-hidden="true" /></a> : <span className={styles.campaignName}>{row.term}</span>}</th>
+        <div className={styles.baselineSummary}><strong>{filteredRows.length} match{filteredRows.length === 1 ? "" : "es"}</strong><div className={styles.opportunityTotals} aria-label="Filtered opportunity totals"><span><small>Spend</small><strong>{formatCurrency(totals.spend, report.currency)}</strong></span><span><small>Sales</small><strong>{formatCurrency(totals.sales, report.currency)}</strong></span><span><small>Orders</small><strong>{totals.orders}</strong></span><span><small>ACOS</small><strong>{totals.acos == null ? "—" : `${Math.round(totals.acos)}%`}</strong></span></div><span className={styles.localFilterNotice}>Filtered locally — no additional MCP usage</span></div>
+        <div className={styles.tableScroll}><table aria-label="Untargeted sales opportunities"><thead><tr><th>Search Term</th><SortableMetricHeader metric="impressions" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="clicks" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="spend" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="sales" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="orders" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="acos" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><th>Status</th></tr></thead><tbody>{visibleRows.map(row => <tr key={`${row.type}:${row.term}`}>
+          <th scope="row"><span className={styles.opportunityTerm}>{row.type === "Product ASIN" ? <a className={styles.productAsinLink} href={`https://www.amazon.com/dp/${encodeURIComponent(row.term)}`} target="_blank" rel="noopener noreferrer"><span>{row.term}</span></a> : <span className={styles.campaignName}>{row.term}</span>}<a className={styles.sourceLink} href={getScaleInsightsSearchTermHref(asin, row.term, report.period.startDate, report.period.endDate)} target="_blank" rel="noopener noreferrer" aria-label={`Open Scale Insights source for ${row.term}`} title="Open this search term in Scale Insights"><ExternalLink aria-hidden="true" /></a></span></th>
           <td>{new Intl.NumberFormat("en-US").format(row.impressions)}</td><td>{new Intl.NumberFormat("en-US").format(row.clicks)}</td><td>{formatCurrency(row.spend, report.currency)}</td><td><strong>{formatCurrency(row.sales, report.currency)}</strong></td><td>{row.orders}</td><td>{row.acos == null ? "—" : `${Math.round(row.acos)}%`}</td><td><span className={styles.untargetedBadge}>Not targeted</span></td>
         </tr>)}</tbody></table></div>
         {filteredRows.length > INITIAL_ROW_COUNT ? <button type="button" className={styles.showAllButton} onClick={() => setShowAll(value => !value)}>{showAll ? "Show first 10" : `Show all ${filteredRows.length}`}</button> : null}

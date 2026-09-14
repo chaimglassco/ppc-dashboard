@@ -195,7 +195,7 @@ See [deployment.md](deployment.md) for the full rollout, verification, and rollb
 
 The PPC dashboard includes **Untargeted Sales Opportunities** directly below Campaign Week-over-Week Comparison. It combines the connected Scale Insights `get_search_term_performance` and `get_ppc_exact_coverage` read-only tools for the selected ASIN and reporting week. Only PPC search terms or product ASINs with at least one attributed order that Scale Insights explicitly marks as missing exact coverage are displayed. The table shows Impressions, Clicks, Spend, Sales, Orders, and ACOS.
 
-The shared **Refresh Data** button loads both weekly performance and this report for the active product/week. Validated opportunity results are retained under `glassco.ppcUntargetedOpportunitiesCache.v1` and restored without another request. Type, minimum Sales, and maximum ACOS filters run entirely in the browser.
+The shared **Refresh Data** button loads both weekly performance and this report for the active product/week. Validated opportunity results are retained under `glassco.ppcUntargetedOpportunitiesCache.v1` and restored without another request. Type, minimum Sales, maximum ACOS, and metric sorting run entirely in the browser. The result header totals filtered Spend, Sales, and Orders and derives weighted ACOS from total Spend divided by total Sales. Every row includes a Scale Insights source link scoped to the selected ASIN, week, and search term.
 
 ## Documentation
 

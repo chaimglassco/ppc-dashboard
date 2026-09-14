@@ -48,3 +48,12 @@ export function getScaleInsightsAnalysisHref(asinValue: string, section: PpcAnal
   url.searchParams.set("asinList", asin);
   return url.toString();
 }
+
+export function getScaleInsightsSearchTermHref(asinValue: string, searchTermValue: string, from: string, to: string) {
+  const searchTerm = searchTermValue.trim();
+  const baseHref = getScaleInsightsAnalysisHref(asinValue, "search-terms", from, to);
+  if (!searchTerm || baseHref === "https://portal.scaleinsights.com/Ads") return baseHref;
+  const url = new URL(baseHref);
+  url.searchParams.set("searchTerm", searchTerm);
+  return url.toString();
+}

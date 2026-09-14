@@ -24,8 +24,13 @@
 .periodComparison > small { margin-left: auto; text-transform: none; letter-spacing: 0; }
 .warnings { margin: 0; padding: 10px 12px 10px 28px; border: 1px solid #fde68a; border-radius: 6px; background: #fffbeb; color: #92400e; font: 11px/1.5 var(--mono); }
 .baselineTable { overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: white; }
-.baselineSummary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); background: #fafafa; color: #52525b; font: 10px/1.4 var(--mono); }
+.baselineSummary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); background: #fafafa; color: #52525b; font: 10px/1.4 var(--mono); }
 .baselineSummary strong { color: #18181b; font-family: var(--font-workspace-sans), sans-serif; font-size: 11px; }
+.opportunityTotals { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.opportunityTotals > span { display: inline-flex; align-items: baseline; gap: 4px; padding: 4px 7px; border: 1px solid var(--border); border-radius: 4px; background: white; }
+.opportunityTotals small { color: #71717a; font: 8px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.opportunityTotals strong { font: 600 10px/1.4 var(--mono); }
+.localFilterNotice { white-space: nowrap; }
 .accordionList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .moverAccordion { min-width: 0; border: 1px solid var(--border); border-radius: 8px; background: white; }
 .moverAccordion[open] { grid-column: 1 / -1; }
@@ -49,11 +54,19 @@
 .tableScroll thead { background: #fafafa; }
 .tableScroll th, .tableScroll td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .tableScroll thead th { color: #71717a; font: 600 10px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.sortButton { display: inline-flex; align-items: center; gap: 4px; margin: -6px; padding: 6px; border: 0; border-radius: 3px; background: transparent; color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit; white-space: nowrap; cursor: pointer; }
+.sortButton:hover { background: #e4e4e7; color: #18181b; }
+.sortButton:focus-visible { outline: 2px solid #09090b; outline-offset: 1px; }
+.sortButton svg { width: 12px; height: 12px; }
 .tableScroll thead th:first-child { width: 31%; }
 .tableScroll tbody th { max-width: 320px; }
-.tableScroll tbody th a { display: flex; align-items: flex-start; gap: 6px; color: #18181b; font-size: 11px; font-weight: 700; line-height: 1.4; text-decoration: none; }
-.tableScroll tbody th a:hover span { text-decoration: underline; }
-.tableScroll tbody th a svg { width: 13px; height: 13px; flex: none; margin-top: 1px; color: #71717a; }
+.opportunityTerm { display: flex; align-items: flex-start; gap: 7px; }
+.productAsinLink { color: #18181b; font-size: 11px; font-weight: 700; line-height: 1.4; text-decoration: none; }
+.productAsinLink:hover span { text-decoration: underline; }
+.sourceLink { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; margin-top: -3px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #52525b; text-decoration: none; }
+.sourceLink:hover { border-color: #09090b; background: #f4f4f5; color: #09090b; }
+.sourceLink:focus-visible { outline: 2px solid #09090b; outline-offset: 2px; }
+.sourceLink svg { width: 11px; height: 11px; }
 .campaignName { color: #18181b; font-size: 11px; font-weight: 700; line-height: 1.4; }
 .tableScroll tbody th > small { display: block; margin-top: 4px; color: #a16207; font: 9px/1.4 var(--mono); }
 .tableScroll tbody tr:last-child th, .tableScroll tbody tr:last-child td { border-bottom: 0; }
@@ -96,4 +109,6 @@
   .chevron { grid-column: 3; grid-row: 1 / span 2; }
   .opportunityMeta > small { width: 100%; margin-left: 0; }
   .opportunityFilters { grid-template-columns: 1fr 1fr; }
+  .opportunityTotals { width: 100%; margin-left: 0; justify-content: flex-start; }
+  .localFilterNotice { width: 100%; white-space: normal; }
 }

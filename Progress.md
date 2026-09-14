@@ -4,6 +4,8 @@
 
 Replaced Search Query Performance with PPC Search Term Performance for Untargeted Sales Opportunities. The corrected provider returns reconciled PPC Impressions, Clicks, Spend, Sales, Orders, and ACOS from nested `entity`/`metrics` rows. Missing metric fields no longer become misleading zeroes, and only explicitly uncovered terms with at least one attributed order are returned.
 
+Added local ascending/descending sorting to every opportunity metric, filtered Spend/Sales/Orders/weighted-ACOS totals above the table, and a per-row Scale Insights source link scoped to the active ASIN, reporting dates, and search term. These controls reuse the cached report and do not consume additional MCP units.
+
 The workspace Refresh Data action now refreshes this report with the selected product/week's weekly metrics. Removed the separate Load Opportunities and Fetch Again controls. Validated results persist in a capped version-1 browser cache and restore without another MCP request; the refresh token remains scoped to the active product/week.
 
 Focused adapter, cache, and UI tests pass, and TypeScript validation passes. Full repository checks and browser verification are recorded in HANDOFF.md after completion.

@@ -28,9 +28,24 @@ describe("UntargetedSalesOpportunities", () => {
     view.rerender(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={1} />);
     const table = await within(region).findByRole("table", { name: "Untargeted sales opportunities" });
     expect(within(table).getAllByRole("columnheader").map(header => header.textContent)).toEqual(["Search Term", "Impressions", "Clicks", "Spend", "Sales", "Orders", "ACOS", "Status"]);
+    expect(within(table).getByRole("columnheader", { name: /Sales/ })).toHaveAttribute("aria-sort", "descending");
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(within(table).getAllByRole("row")).toHaveLength(11);
     expect(within(table).getAllByText("Not targeted")).toHaveLength(10);
+    const totals = within(region).getByLabelText("Filtered opportunity totals");
+    expect(within(totals).getByText("$110.00")).toBeVisible();
+    expect(within(totals).getByText("$660.00")).toBeVisible();
+    expect(within(totals).getByText("66")).toBeVisible();
+    expect(within(totals).getByText("17%")).toBeVisible();
+    expect(within(table).getByRole("link", { name: "Open Scale Insights source for search term 1" })).toHaveAttribute(
+      "href",
+      "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-09-02&to=2026-09-08&asinList=B012345678&searchTerm=search+term+1",
+    );
+    fireEvent.click(within(table).getByRole("button", { name: "Sort Impressions highest to lowest" }));
+    expect(within(table).getByRole("columnheader", { name: /Impressions/ })).toHaveAttribute("aria-sort", "descending");
+    fireEvent.click(within(table).getByRole("button", { name: "Sort Impressions lowest to highest" }));
+    expect(within(table).getByRole("columnheader", { name: /Impressions/ })).toHaveAttribute("aria-sort", "ascending");
+    expect(table.querySelector("tbody th")?.textContent).toContain("search term 11");
     expect(within(region).getByLabelText("Minimum PPC Sales")).toHaveValue(null);
     expect(within(region).queryByLabelText("Minimum PPC Orders")).not.toBeInTheDocument();
     fireEvent.click(within(region).getByRole("button", { name: "Show all 11" }));

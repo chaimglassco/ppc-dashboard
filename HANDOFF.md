@@ -8,7 +8,8 @@ Last updated: September 14, 2026
 - Untargeted Sales Opportunities now uses `get_search_term_performance` plus `get_ppc_exact_coverage`, reads nested `entity`/`metrics` rows, and rejects missing required metrics. Only terms with `orders >= 1` are sent to exact-coverage checking and only explicit uncovered matches are returned.
 - The single workspace Refresh Data action requests the active product/week opportunity report alongside weekly performance. Separate Load Opportunities, Fetch Again, and Retry actions are removed. A scoped refresh token prevents product changes from issuing implicit calls.
 - Validated results persist under capped browser key `glassco.ppcUntargetedOpportunitiesCache.v1`; scope mismatches and malformed entries are discarded. Revisiting or reloading restores the last result without another MCP request.
-- Lint, typecheck, all 328 tests across 55 files (6 skipped), the production build, and `git diff --check` pass. Local browser verification reached the expected Pipeline sign-in boundary through `/ppc/library`; authenticated live-data verification remains a post-deploy check.
+- Opportunity metric headers now toggle descending/ascending local sorting. The table header shows filtered Spend, Sales, Orders, and weighted ACOS totals, and every row has a Scale Insights source link scoped to the active ASIN, report dates, and encoded search term.
+- Lint, typecheck, all 329 tests across 55 files (6 skipped), the production build, and `git diff --check` pass. Local browser verification reached the expected Pipeline sign-in boundary through `/ppc/library`; authenticated live-data verification remains a post-deploy check.
 
 ## September 11, 2026 — automatic save, coverage status, and PPC conversion correction
 
