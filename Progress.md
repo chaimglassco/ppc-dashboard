@@ -1,5 +1,11 @@
 # Project Progress
 
+## September 14, 2026 — Product-target coverage correction
+
+Corrected false-positive Product ASIN opportunities by separating keyword coverage from product-target coverage. Live reconciliation for advertised ASIN `B0DYSBW3X5`, US, September 2–8 showed `B095WV5YZ4` with `HasExactMatch: false` in exact keyword coverage while the same ASIN existed as an SP `TargetType=product`. The opportunity adapter now conditionally loads Product Target Performance when ASIN candidates exist and excludes ASINs already targeted under the selected advertised ASIN.
+
+Product ASIN classification now fails closed: unavailable, unreadable, or incomplete target coverage omits ASIN candidates and returns a warning rather than publishing an unsupported `Not targeted` claim. Text search-term behavior and the existing two-call path remain unchanged; the third provider call occurs only when the converting harvest result contains Product ASIN candidates.
+
 ## September 14, 2026 — Centralized converting-search-term refresh
 
 Replaced Search Query Performance with PPC Search Term Performance for Untargeted Sales Opportunities. The corrected provider returns reconciled PPC Impressions, Clicks, Spend, Sales, Orders, and ACOS from nested `entity`/`metrics` rows. Missing metric fields no longer become misleading zeroes, and only explicitly uncovered terms with at least one attributed order are returned.

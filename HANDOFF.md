@@ -4,12 +4,13 @@ Last updated: September 14, 2026
 
 ## September 14, 2026 — centralized PPC opportunity refresh
 
+- Fixed Product ASIN false positives by checking candidates against ASIN/date-scoped `get_target_performance`. Live data proved `B095WV5YZ4` had no exact keyword but was already an SP product target for advertised ASIN `B0DYSBW3X5`; it is now excluded. Product candidates are omitted whenever the target inventory is unavailable or incomplete, and the extra provider call is conditional on at least one Product ASIN candidate.
 - Production diagnostics proved the prior source mismatch: `get_search_query_data` returned shopper-query Impressions and Clicks but no PPC Spend/Sales/Orders, which the adapter incorrectly displayed as zero. A direct read-only `get_search_term_performance` check for `B0DYSBW3X5`, US, August 26–September 1 returned 194 PPC rows totaling $160.67 Spend, $2,322.47 Sales, and 96 Orders.
 - Untargeted Sales Opportunities now uses `get_search_term_performance` plus harvest-mode `get_search_term_keyword_analysis`, reads nested `entity`/`metrics` rows, and rejects missing required metrics. Only terms with `orders >= 1` and a CampaignId mapping are returned; duplicate mappings choose greatest attributed Sales, then Orders and Spend.
 - The single workspace Refresh Data action requests the active product/week opportunity report alongside weekly performance. Separate Load Opportunities, Fetch Again, and Retry actions are removed. A scoped refresh token prevents product changes from issuing implicit calls.
 - Validated results persist under capped browser key `glassco.ppcUntargetedOpportunitiesCache.v1`; scope mismatches and malformed entries are discarded. Revisiting or reloading restores the last result without another MCP request.
 - Opportunity metric headers now toggle descending/ascending local sorting. The table header shows filtered Spend, Sales, Orders, and weighted ACOS totals. Every row has a copy-term control and a source link to Scale Insights Search terms, scoped by active ASIN and report dates; the link also copies the row value for pasting into Instant Search.
-- Lint, typecheck, all 330 tests across 55 files (6 skipped), the production build, and `git diff --check` pass. Local browser verification reached the expected Pipeline sign-in boundary through `/ppc/library`; authenticated live-data verification remains a post-deploy check.
+- Lint, typecheck, all 331 tests across 55 files (6 skipped), the production build, and `git diff --check` pass. Local browser verification reached the expected Pipeline sign-in boundary through `/ppc/dashboard` with no console errors using the documented webpack fallback; authenticated live-data verification remains a post-deploy check.
 
 ## September 11, 2026 — automatic save, coverage status, and PPC conversion correction
 

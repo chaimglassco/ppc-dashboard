@@ -35,6 +35,8 @@ const CAMPAIGN_ID_KEYS = ["campaign_id", "campaignId", "CampaignId", "CampaignID
 const AD_GROUP_ID_KEYS = ["ad_group_id", "adGroupId", "AdGroupId", "AdGroupID"];
 const PARENT_KEYWORD_KEYS = ["parent_keyword", "parentKeyword", "ParentKeyword"];
 const PARENT_MATCH_TYPE_KEYS = ["parent_match_type", "parentMatchType", "ParentMatchType"];
+const TARGET_TYPE_KEYS = ["target_type", "targetType", "TargetType"];
+const TARGET_ENTITY_KEYS = ["target_asin", "targetAsin", "TargetASIN", "target", "Target", "entity", "Entity"];
 const PAGE_SIZE = 500;
 const MAX_PAGES = 5;
 const ASIN_INPUT_KEYS = ["asin_list", "asinList", "asins", "asin"];
@@ -209,6 +211,24 @@ function freshness(result: unknown) {
   return stringValue(fieldValue(metadata(payload), ["data_as_of", "dataAsOf", "DataAsOf"]));
 }
 
+function booleanValue(value: unknown) {
+  if (typeof value === "boolean") return value;
+  const normalized = stringValue(value).toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  return null;
+}
+
+function paginationHasNext(result: unknown) {
+  const payload = structuredPayload(result);
+  return booleanValue(fieldValue(metadata(payload), ["has_next_page", "hasNextPage", "HasNextPage"]));
+}
+
+function returnedCount(result: unknown) {
+  const payload = structuredPayload(result);
+  return numberValue(fieldValue(metadata(payload), ["returned_count", "returnedCount", "ReturnedCount"]));
+}
+
 function currency(result: unknown) {
   const payload = structuredPayload(result);
   const scope = isRecord(payload.agg) ? payload.agg : payload;
@@ -263,9 +283,13 @@ async function loadPages(tool: Tool, params: UntargetedOpportunityParams, callTo
   for (let page = 1; page <= MAX_PAGES; page += 1) {
     const result = await callTool(tool.name, buildOpportunityToolArgs(tool, params, page));
     results.push(result);
+    const hasNextPage = paginationHasNext(result);
+    if (hasNextPage === false) break;
+    if (hasNextPage === true) continue;
     const count = totalCount(result);
     const hasPage = Object.keys(properties(tool)).some(key => ["page", "page_number", "pageNumber"].includes(key));
-    if (!hasPage || count == null || count <= page * PAGE_SIZE) break;
+    const pageSize = numberValue(fieldValue(metadata(structuredPayload(result)), ["page_size", "pageSize", "PageSize"])) ?? PAGE_SIZE;
+    if (!hasPage || count == null || count <= page * pageSize) break;
   }
   return results;
 }
@@ -296,6 +320,34 @@ function uniqueSources(results: unknown[]) {
     }
   }
   return map;
+}
+
+function productTargetAsin(record: Record<string, unknown>) {
+  if (stringValue(nestedFieldValue(record, TARGET_TYPE_KEYS)).toLowerCase() !== "product") return "";
+  const raw = stringValue(fieldValue(record, TARGET_ENTITY_KEYS));
+  const match = raw.match(/^([A-Z0-9]{10})(?:\s+\(product\))?$/i);
+  return match?.[1].toUpperCase() ?? "";
+}
+
+function collectProductTargets(value: unknown, depth = 0): string[] {
+  if (depth > 6) return [];
+  if (Array.isArray(value)) return value.flatMap(candidate => collectProductTargets(candidate, depth + 1));
+  if (!isRecord(value)) return [];
+  const asin = productTargetAsin(value);
+  return [...(asin ? [asin] : []), ...Object.values(value).flatMap(candidate => collectProductTargets(candidate, depth + 1))];
+}
+
+function uniqueProductTargets(results: unknown[]) {
+  return new Set(results.flatMap(result => payloads(result).flatMap(payload => collectProductTargets(payload))).map(normalizedKey));
+}
+
+function resultSetIsComplete(results: unknown[]) {
+  if (!results.length) return false;
+  if (paginationHasNext(results.at(-1)) === false) return true;
+  const count = totalCount(results[0]);
+  if (count === 0) return true;
+  const returned = results.reduce<number>((sum, result) => sum + (returnedCount(result) ?? 0), 0);
+  return count != null && returned >= count;
 }
 
 export async function loadUntargetedSalesOpportunities(
@@ -335,11 +387,31 @@ export async function loadUntargetedSalesOpportunities(
     if ((totalCount(sourceResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("source_rows_unreadable", "Scale Insights returned a campaign-attribution format this version cannot read.");
   }
 
+  const productCandidateKeys = new Set([...convertingMetrics.entries()]
+    .filter(([key]) => sources.has(key))
+    .filter(([, row]) => /^[A-Z0-9]{10}$/i.test(row.term.trim()))
+    .map(([key]) => key));
+  const targetTool = definitions.find(tool => tool.name === "get_target_performance");
+  const targetResults = productCandidateKeys.size && targetTool && supportsSearchScope(targetTool)
+    ? await loadPages(targetTool, params, callTool)
+    : [];
+  const targetedProductAsins = uniqueProductTargets(targetResults);
+  const productCoverageComplete = productCandidateKeys.size === 0 || resultSetIsComplete(targetResults);
+  reportDiagnostic?.("opportunity_product_target_result", {
+    candidateCount: productCandidateKeys.size,
+    targetTool: targetTool?.name ?? null,
+    targetProperties: targetTool ? Object.keys(properties(targetTool)).toSorted() : [],
+    providerResultCount: totalCount(targetResults[0]),
+    parsedProductTargetCount: targetedProductAsins.size,
+    complete: productCoverageComplete,
+  });
+
   const opportunities = [...convertingMetrics.entries()].flatMap(([key, row]): UntargetedSalesOpportunity[] => {
     const source = sources.get(key);
     if (!source) return [];
     const normalizedTerm = row.term.trim();
     const productAsin = /^[A-Z0-9]{10}$/i.test(normalizedTerm);
+    if (productAsin && (!productCoverageComplete || targetedProductAsins.has(key))) return [];
     return [{
       ...row,
       term: productAsin ? normalizedTerm.toUpperCase() : normalizedTerm,
@@ -354,6 +426,7 @@ export async function loadUntargetedSalesOpportunities(
   const warnings: string[] = [];
   if (searchResults.length === MAX_PAGES && (totalCount(searchResults.at(-1)) ?? 0) > MAX_PAGES * PAGE_SIZE) warnings.push(`Search-query results were limited to ${MAX_PAGES * PAGE_SIZE} rows.`);
   if (sourceResults.length === MAX_PAGES && (totalCount(sourceResults.at(-1)) ?? 0) > MAX_PAGES * PAGE_SIZE) warnings.push(`Campaign-attribution results were limited to ${MAX_PAGES * PAGE_SIZE} rows.`);
+  if (productCandidateKeys.size > 0 && !productCoverageComplete) warnings.push("Product ASIN opportunities were omitted because complete product-target coverage was unavailable.");
   return {
     asin: params.asin,
     country: params.country,

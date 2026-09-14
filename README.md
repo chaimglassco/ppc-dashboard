@@ -4,7 +4,7 @@
 
 The workspace **Refresh Data** action now refreshes the selected product/week's PPC performance and Untargeted Sales Opportunities together. The opportunity card reuses its latest validated browser-cached result on later visits, so changing products or weeks does not spend another MCP request. The separate Load Opportunities and Fetch Again actions are removed.
 
-Opportunity rows now combine Scale Insights `get_search_term_performance` with `get_search_term_keyword_analysis` in harvest mode. The table shows only PPC search terms or product ASINs with at least one attributed order and no exact keyword, together with Impressions, Clicks, Spend, Sales, Orders, ACOS, and their strongest campaign attribution.
+Opportunity rows combine Scale Insights `get_search_term_performance` with `get_search_term_keyword_analysis` in harvest mode. Text terms must have at least one attributed order and no exact keyword. Product ASIN candidates are also checked against ASIN-scoped `get_target_performance`, so an ASIN already present as a product target under the selected advertised ASIN is excluded. Incomplete product-target coverage omits ASIN candidates instead of labeling them untargeted.
 
 ## Dashboard automatic-save and PPC metric correction (September 11, 2026)
 
@@ -193,7 +193,7 @@ See [deployment.md](deployment.md) for the full rollout, verification, and rollb
 
 ## Untargeted sales opportunities
 
-The PPC dashboard includes **Untargeted Sales Opportunities** directly below Campaign Week-over-Week Comparison. It combines the connected Scale Insights `get_search_term_performance` and `get_search_term_keyword_analysis` read-only tools for the selected ASIN and reporting week. Harvest analysis supplies the campaign, ad group, parent keyword, and match type for converting terms without an exact keyword; when a term has several sources, the highest attributed-Sales mapping is selected. The table shows Impressions, Clicks, Spend, Sales, Orders, and ACOS.
+The PPC dashboard includes **Untargeted Sales Opportunities** directly below Campaign Week-over-Week Comparison. It combines the connected Scale Insights `get_search_term_performance` and `get_search_term_keyword_analysis` read-only tools for the selected ASIN and reporting week. Harvest analysis supplies the campaign, ad group, parent keyword, and match type for converting terms without an exact keyword; when a term has several sources, the highest attributed-Sales mapping is selected. If the result contains Product ASIN candidates, the server makes one conditional `get_target_performance` call and excludes existing product targets under that advertised ASIN. The table shows Impressions, Clicks, Spend, Sales, Orders, and ACOS.
 
 The shared **Refresh Data** button loads both weekly performance and this report for the active product/week. Validated opportunity results are retained under `glassco.ppcUntargetedOpportunitiesCache.v1` and restored without another request. Type, minimum Sales, maximum ACOS, and metric sorting run entirely in the browser. The result header totals filtered Spend, Sales, and Orders and derives weighted ACOS from total Spend divided by total Sales. Every row includes a copy control and a Scale Insights Search terms link scoped to the selected ASIN and week. Opening that link also copies the selected term or product ASIN for pasting into Scale Insights Instant Search because that third-party grid does not accept its search value through the page URL.
 
