@@ -299,7 +299,7 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] Clicking each Impressions, Clicks, Spend, Sales, Orders, and ACOS header toggles descending/ascending order locally and does not call the opportunity endpoint again.
 - [ ] The table summary totals the currently filtered Spend, Sales, and Orders and shows weighted ACOS as total Spend divided by total Sales.
 - [ ] Every opportunity row has an accessible copy button with Copied feedback and writes the exact term to the clipboard.
-- [ ] After Refresh Data, every opportunity source icon contains the selected ASIN, report start/end dates, and strongest attributed CampaignId and opens Scale Insights Performance → Campaigns; a legacy cached row may use the Search Terms fallback until refreshed.
+- [ ] After Refresh Data, every opportunity source icon opens Scale Insights Search terms with the selected ASIN and report start/end dates and copies the selected row value for pasting into Instant Search.
 - [ ] Every displayed row comes from PPC Search Term Performance, has at least one attributed Order, and is explicitly uncovered. Unknown, absent, aggregate-only, zero-order, and already-targeted coverage never appears as `Not targeted`.
 - [ ] Search terms and product ASINs render with Impressions, Clicks, Spend, Sales, Orders, whole-number ACOS, and a blue `Not targeted` badge; product ASIN links open Amazon safely.
 - [ ] Type, minimum Sales, and maximum ACOS criteria filter locally without additional MCP/API calls; Show all expands beyond the first ten rows.

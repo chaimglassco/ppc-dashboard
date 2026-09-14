@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getScaleInsightsAnalysisHref, getScaleInsightsCampaignSourceHref, getScaleInsightsSearchTermHref, normalizeDashboardAsin } from "./ppc-analysis-navigation";
+import { getScaleInsightsAnalysisHref, getScaleInsightsSearchTermHref, normalizeDashboardAsin } from "./ppc-analysis-navigation";
 
 describe("PPC analysis navigation", () => {
   it("builds only validated ASIN-scoped destinations", () => {
@@ -27,18 +27,15 @@ describe("PPC analysis navigation", () => {
     );
   });
 
-  it("builds a search-term source destination with the active product and reporting period", () => {
-    expect(getScaleInsightsSearchTermHref("b012345678", " 3/16 lead came ", "2026-08-26", "2026-09-01")).toBe(
-      "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-08-26&to=2026-09-01&asinList=B012345678&searchTerm=3%2F16+lead+came",
-    );
-    expect(getScaleInsightsSearchTermHref("b012345678", "", "2026-08-26", "2026-09-01")).toBe(
+  it("builds a Search terms destination with the active product and reporting period", () => {
+    expect(getScaleInsightsSearchTermHref("b012345678", "2026-08-26", "2026-09-01")).toBe(
       "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-08-26&to=2026-09-01&asinList=B012345678",
     );
   });
 
-  it("builds a campaign source destination with the active product and reporting period", () => {
-    expect(getScaleInsightsCampaignSourceHref("b012345678", " 477249359263376 ", "2026-08-26", "2026-09-01")).toBe(
-      "https://portal.scaleinsights.com/Ads/Performance/Campaigns/Index?from=2026-08-26&to=2026-09-01&asinList=B012345678&campaignId=477249359263376",
+  it("falls back when a Search terms source scope is invalid", () => {
+    expect(getScaleInsightsSearchTermHref("invalid", "2026-08-26", "2026-09-01")).toBe(
+      "https://portal.scaleinsights.com/Ads",
     );
   });
 });

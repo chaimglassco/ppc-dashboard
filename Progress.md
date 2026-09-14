@@ -4,7 +4,7 @@
 
 Replaced Search Query Performance with PPC Search Term Performance for Untargeted Sales Opportunities. The corrected provider returns reconciled PPC Impressions, Clicks, Spend, Sales, Orders, and ACOS from nested `entity`/`metrics` rows. Missing metric fields no longer become misleading zeroes, and only explicitly uncovered terms with at least one attributed order are returned.
 
-Added local ascending/descending sorting to every opportunity metric, filtered Spend/Sales/Orders/weighted-ACOS totals above the table, and a per-row Scale Insights source link scoped to the active ASIN, reporting dates, and search term. These controls reuse the cached report and do not consume additional MCP units.
+Added local ascending/descending sorting to every opportunity metric, filtered Spend/Sales/Orders/weighted-ACOS totals above the table, and a per-row Scale Insights Search terms link scoped to the active ASIN and reporting dates. The link copies the selected value for pasting into the third-party Instant Search field. These controls reuse the cached report and do not consume additional MCP units.
 
 Added a copy-search-term control and replaced the row source destination with the strongest real campaign mapping. The refresh now joins PPC Search Term Performance with harvest-mode Search Term Keyword Analysis, retaining two provider calls while adding optional CampaignId, AdGroupId, parent keyword, and match type fields. Multiple sources resolve by attributed Sales, Orders, then Spend.
 

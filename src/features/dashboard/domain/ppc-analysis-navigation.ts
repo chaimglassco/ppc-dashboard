@@ -49,20 +49,6 @@ export function getScaleInsightsAnalysisHref(asinValue: string, section: PpcAnal
   return url.toString();
 }
 
-export function getScaleInsightsSearchTermHref(asinValue: string, searchTermValue: string, from: string, to: string) {
-  const searchTerm = searchTermValue.trim();
-  const baseHref = getScaleInsightsAnalysisHref(asinValue, "search-terms", from, to);
-  if (!searchTerm || baseHref === "https://portal.scaleinsights.com/Ads") return baseHref;
-  const url = new URL(baseHref);
-  url.searchParams.set("searchTerm", searchTerm);
-  return url.toString();
-}
-
-export function getScaleInsightsCampaignSourceHref(asinValue: string, campaignIdValue: string, from: string, to: string) {
-  const campaignId = campaignIdValue.trim();
-  const baseHref = getScaleInsightsAnalysisHref(asinValue, "campaigns", from, to);
-  if (!campaignId || baseHref === "https://portal.scaleinsights.com/Ads") return baseHref;
-  const url = new URL(baseHref);
-  url.searchParams.set("campaignId", campaignId);
-  return url.toString();
+export function getScaleInsightsSearchTermHref(asinValue: string, from: string, to: string) {
+  return getScaleInsightsAnalysisHref(asinValue, "search-terms", from, to);
 }

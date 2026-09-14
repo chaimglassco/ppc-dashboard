@@ -39,12 +39,15 @@ describe("UntargetedSalesOpportunities", () => {
     expect(within(totals).getByText("$660.00")).toBeVisible();
     expect(within(totals).getByText("66")).toBeVisible();
     expect(within(totals).getByText("17%")).toBeVisible();
-    expect(within(table).getByRole("link", { name: "Open primary source campaign in Scale Insights for search term 1" })).toHaveAttribute(
+    const sourceLink = within(table).getByRole("link", { name: "Open Scale Insights Search terms for search term 1" });
+    expect(sourceLink).toHaveAttribute(
       "href",
-      "https://portal.scaleinsights.com/Ads/Performance/Campaigns/Index?from=2026-09-02&to=2026-09-08&asinList=B012345678&campaignId=campaign-1",
+      "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-09-02&to=2026-09-08&asinList=B012345678",
     );
-    fireEvent.click(within(table).getByRole("button", { name: "Copy search term search term 1" }));
+    fireEvent.click(sourceLink);
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("search term 1"));
+    fireEvent.click(within(table).getByRole("button", { name: "Copy search term search term 1" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
     expect(within(table).getByRole("button", { name: "Copied search term search term 1" })).toBeVisible();
     fireEvent.click(within(table).getByRole("button", { name: "Sort Impressions highest to lowest" }));
     expect(within(table).getByRole("columnheader", { name: /Impressions/ })).toHaveAttribute("aria-sort", "descending");

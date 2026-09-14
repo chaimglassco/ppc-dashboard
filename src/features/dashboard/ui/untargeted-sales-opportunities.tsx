@@ -14,7 +14,7 @@ import {
   type UntargetedOpportunityType,
   type UntargetedSalesOpportunities,
 } from "../domain/untargeted-sales-opportunities";
-import { getScaleInsightsCampaignSourceHref, getScaleInsightsSearchTermHref } from "../domain/ppc-analysis-navigation";
+import { getScaleInsightsSearchTermHref } from "../domain/ppc-analysis-navigation";
 import ws from "./ppc-performance-workspace.module.css";
 import styles from "./campaign-weekly-comparison.module.css";
 
@@ -81,6 +81,11 @@ function CopyTermButton({ term }: { term: string }) {
   return <button type="button" className={styles.copyTermButton} aria-label={label} title={copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy search term"} onClick={copyTerm}>
     {copyState === "copied" ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
   </button>;
+}
+
+function copyTermForScaleInsights(term: string) {
+  if (!navigator.clipboard?.writeText) return;
+  void navigator.clipboard.writeText(term).catch(() => undefined);
 }
 
 export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, refreshVersion }: { asin: string; country?: string; weekStart: string; refreshVersion: number }) {
@@ -217,7 +222,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
       {filteredRows.length ? <div className={styles.baselineTable}>
         <div className={styles.baselineSummary}><strong>{filteredRows.length} match{filteredRows.length === 1 ? "" : "es"}</strong><div className={styles.opportunityTotals} aria-label="Filtered opportunity totals"><span><small>Spend</small><strong>{formatCurrency(totals.spend, report.currency)}</strong></span><span><small>Sales</small><strong>{formatCurrency(totals.sales, report.currency)}</strong></span><span><small>Orders</small><strong>{totals.orders}</strong></span><span><small>ACOS</small><strong>{totals.acos == null ? "—" : `${Math.round(totals.acos)}%`}</strong></span></div><span className={styles.localFilterNotice}>Filtered locally — no additional MCP usage</span></div>
         <div className={styles.tableScroll}><table aria-label="Untargeted sales opportunities"><thead><tr><th>Search Term</th><SortableMetricHeader metric="impressions" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="clicks" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="spend" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="sales" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="orders" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="acos" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><th>Status</th></tr></thead><tbody>{visibleRows.map(row => <tr key={`${row.type}:${row.term}`}>
-          <th scope="row"><span className={styles.opportunityTerm}>{row.type === "Product ASIN" ? <a className={styles.productAsinLink} href={`https://www.amazon.com/dp/${encodeURIComponent(row.term)}`} target="_blank" rel="noopener noreferrer"><span>{row.term}</span></a> : <span className={styles.campaignName}>{row.term}</span>}<CopyTermButton term={row.term} /><a className={styles.sourceLink} href={row.sourceCampaignId ? getScaleInsightsCampaignSourceHref(asin, row.sourceCampaignId, report.period.startDate, report.period.endDate) : getScaleInsightsSearchTermHref(asin, row.term, report.period.startDate, report.period.endDate)} target="_blank" rel="noopener noreferrer" aria-label={row.sourceCampaignId ? `Open primary source campaign in Scale Insights for ${row.term}` : `Open Scale Insights source for ${row.term}`} title={row.sourceCampaignId ? `Open primary source campaign${row.sourceKeyword ? ` (${row.sourceKeyword}${row.sourceMatchType ? `, ${row.sourceMatchType}` : ""})` : ""}` : "Open this search term in Scale Insights"}><ExternalLink aria-hidden="true" /></a></span></th>
+          <th scope="row"><span className={styles.opportunityTerm}>{row.type === "Product ASIN" ? <a className={styles.productAsinLink} href={`https://www.amazon.com/dp/${encodeURIComponent(row.term)}`} target="_blank" rel="noopener noreferrer"><span>{row.term}</span></a> : <span className={styles.campaignName}>{row.term}</span>}<CopyTermButton term={row.term} /><a className={styles.sourceLink} href={getScaleInsightsSearchTermHref(asin, report.period.startDate, report.period.endDate)} target="_blank" rel="noopener noreferrer" aria-label={`Open Scale Insights Search terms for ${row.term}`} title="Open Scale Insights Search terms and copy this value for Instant Search" onClick={() => copyTermForScaleInsights(row.term)}><ExternalLink aria-hidden="true" /></a></span></th>
           <td>{new Intl.NumberFormat("en-US").format(row.impressions)}</td><td>{new Intl.NumberFormat("en-US").format(row.clicks)}</td><td>{formatCurrency(row.spend, report.currency)}</td><td><strong>{formatCurrency(row.sales, report.currency)}</strong></td><td>{row.orders}</td><td>{row.acos == null ? "—" : `${Math.round(row.acos)}%`}</td><td><span className={styles.untargetedBadge}>Not targeted</span></td>
         </tr>)}</tbody></table></div>
         {filteredRows.length > INITIAL_ROW_COUNT ? <button type="button" className={styles.showAllButton} onClick={() => setShowAll(value => !value)}>{showAll ? "Show first 10" : `Show all ${filteredRows.length}`}</button> : null}
