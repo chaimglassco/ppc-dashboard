@@ -6,6 +6,8 @@ Replaced Search Query Performance with PPC Search Term Performance for Untargete
 
 Added local ascending/descending sorting to every opportunity metric, filtered Spend/Sales/Orders/weighted-ACOS totals above the table, and a per-row Scale Insights source link scoped to the active ASIN, reporting dates, and search term. These controls reuse the cached report and do not consume additional MCP units.
 
+Added a copy-search-term control and replaced the row source destination with the strongest real campaign mapping. The refresh now joins PPC Search Term Performance with harvest-mode Search Term Keyword Analysis, retaining two provider calls while adding optional CampaignId, AdGroupId, parent keyword, and match type fields. Multiple sources resolve by attributed Sales, Orders, then Spend.
+
 The workspace Refresh Data action now refreshes this report with the selected product/week's weekly metrics. Removed the separate Load Opportunities and Fetch Again controls. Validated results persist in a capped version-1 browser cache and restore without another MCP request; the refresh token remains scoped to the active product/week.
 
 Focused adapter, cache, and UI tests pass, and TypeScript validation passes. Full repository checks and browser verification are recorded in HANDOFF.md after completion.

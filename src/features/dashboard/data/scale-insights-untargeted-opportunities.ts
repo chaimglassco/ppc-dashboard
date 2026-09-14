@@ -10,7 +10,7 @@ export type UntargetedOpportunityParams = {
   dataState: "Final" | "Partial";
 };
 
-export type OpportunityProviderErrorCode = "opportunity_capability_missing" | "opportunity_rows_unreadable" | "coverage_rows_unreadable";
+export type OpportunityProviderErrorCode = "opportunity_capability_missing" | "opportunity_rows_unreadable" | "source_rows_unreadable";
 
 export class ScaleInsightsOpportunityProviderError extends Error {
   constructor(readonly providerCode: OpportunityProviderErrorCode, message: string) {
@@ -21,8 +21,8 @@ export class ScaleInsightsOpportunityProviderError extends Error {
 
 export type OpportunityDiagnosticReporter = (event: string, details: Record<string, unknown>) => void;
 
-type ProviderMetrics = Omit<UntargetedSalesOpportunity, "type">;
-type CoverageValue = { term: string; targeted: boolean };
+type ProviderMetrics = Omit<UntargetedSalesOpportunity, "type" | "sourceCampaignId" | "sourceAdGroupId" | "sourceKeyword" | "sourceMatchType">;
+type SourceValue = Pick<UntargetedSalesOpportunity, "sourceCampaignId" | "sourceAdGroupId" | "sourceKeyword" | "sourceMatchType"> & { term: string; sales: number; orders: number; spend: number };
 
 const TERM_KEYS = ["search_term", "searchTerm", "SearchTerm", "customer_search_term", "customerSearchTerm", "search_query", "searchQuery", "SearchQuery", "query", "Query", "keyword_text", "keywordText", "KeywordText", "keyword", "Keyword", "target_asin", "targetAsin", "TargetASIN", "target", "Target", "entity", "Entity"];
 const SALES_KEYS = ["sales", "Sales", "total_sales", "totalSales", "TotalSales", "ppc_sales", "ppcSales", "PPCSales", "attributed_sales", "attributedSales"];
@@ -31,14 +31,16 @@ const SPEND_KEYS = ["spend", "Spend", "total_spend", "totalSpend", "TotalSpend",
 const IMPRESSION_KEYS = ["impression", "Impression", "impressions", "Impressions", "total_impressions", "totalImpressions", "TotalImpressions", "ppc_impressions", "ppcImpressions", "PPCImpressions"];
 const CLICK_KEYS = ["clicks", "Clicks", "total_clicks", "totalClicks", "TotalClicks", "ppc_clicks", "ppcClicks", "PPCClicks"];
 const ACOS_KEYS = ["acos", "ACOS", "aCoS", "total_acos", "totalAcos", "TotalACOS"];
-const TARGETED_KEYS = ["is_exact_targeted", "isExactTargeted", "exact_targeted", "exactTargeted", "is_exact_covered", "isExactCovered", "exact_covered", "exactCovered", "is_targeted", "isTargeted", "targeted", "Targeted", "has_exact_target", "hasExactTarget", "has_exact_match", "hasExactMatch", "exact_coverage", "exactCoverage", "covered", "Covered", "coverage_status", "coverageStatus", "CoverageStatus", "status", "Status"];
+const CAMPAIGN_ID_KEYS = ["campaign_id", "campaignId", "CampaignId", "CampaignID"];
+const AD_GROUP_ID_KEYS = ["ad_group_id", "adGroupId", "AdGroupId", "AdGroupID"];
+const PARENT_KEYWORD_KEYS = ["parent_keyword", "parentKeyword", "ParentKeyword"];
+const PARENT_MATCH_TYPE_KEYS = ["parent_match_type", "parentMatchType", "ParentMatchType"];
 const PAGE_SIZE = 500;
 const MAX_PAGES = 5;
 const ASIN_INPUT_KEYS = ["asin_list", "asinList", "asins", "asin"];
 const PERIOD_START_KEYS = ["start_date", "startDate", "from_date", "fromDate"];
 const PERIOD_END_KEYS = ["end_date", "endDate", "to_date", "toDate"];
 const PERIOD_DAYS_KEYS = ["days", "lookback_days", "lookbackDays"];
-const TERM_LIST_INPUT_KEYS = ["query_list", "queryList", "search_terms", "searchTerms", "search_queries", "searchQueries", "queries", "keywords", "targets"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -88,16 +90,6 @@ function integerValue(value: unknown) {
   return parsed != null && Number.isInteger(parsed) ? parsed : null;
 }
 
-function parseTargeted(value: unknown): boolean | null {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number" && Number.isFinite(value)) return value > 0;
-  const normalized = stringValue(value).toLowerCase().replace(/[_-]/g, " ").replace(/\s+/g, " ");
-  if (!normalized) return null;
-  if (/^(false|no|none|missing|uncovered|untargeted|not targeted|not covered|0)$/.test(normalized)) return false;
-  if (/^(true|yes|covered|targeted|exact|1)$/.test(normalized)) return true;
-  return null;
-}
-
 function recordTerm(record: Record<string, unknown>): string {
   const normalizeTerm = (value: string) => value.trim().replace(/\s+\([A-Z0-9]{10}\)$/i, "").trim();
   const direct = normalizeTerm(stringValue(fieldValue(record, TERM_KEYS)));
@@ -145,17 +137,20 @@ function collectMetricRows(value: unknown, depth = 0): ProviderMetrics[] {
   return Object.values(value).flatMap(candidate => collectMetricRows(candidate, depth + 1));
 }
 
-function collectCoverageRows(value: unknown, path = "$", depth = 0): CoverageValue[] {
+function collectSourceRows(value: unknown, depth = 0): SourceValue[] {
   if (depth > 6) return [];
-  if (Array.isArray(value)) return value.flatMap(candidate => collectCoverageRows(candidate, path, depth + 1));
+  if (Array.isArray(value)) return value.flatMap(candidate => collectSourceRows(candidate, depth + 1));
   if (!isRecord(value)) return [];
   const term = recordTerm(value);
-  let targeted = parseTargeted(nestedFieldValue(value, TARGETED_KEYS));
-  const normalizedPath = path.toLowerCase();
-  if (targeted == null && term && /(uncovered|missing|untargeted|opportunit)/.test(normalizedPath)) targeted = false;
-  if (targeted == null && term && /(covered|targeted)/.test(normalizedPath)) targeted = true;
-  const current = term && targeted != null ? [{ term, targeted }] : [];
-  return [...current, ...Object.entries(value).flatMap(([key, candidate]) => collectCoverageRows(candidate, `${path}.${key}`, depth + 1))];
+  const sourceCampaignId = stringValue(nestedFieldValue(value, CAMPAIGN_ID_KEYS));
+  const sourceAdGroupId = stringValue(nestedFieldValue(value, AD_GROUP_ID_KEYS)) || undefined;
+  const sourceKeyword = stringValue(nestedFieldValue(value, PARENT_KEYWORD_KEYS)) || undefined;
+  const sourceMatchType = stringValue(nestedFieldValue(value, PARENT_MATCH_TYPE_KEYS)) || undefined;
+  const sales = numberValue(nestedFieldValue(value, SALES_KEYS)) ?? 0;
+  const orders = integerValue(nestedFieldValue(value, ORDERS_KEYS)) ?? 0;
+  const spend = numberValue(nestedFieldValue(value, SPEND_KEYS)) ?? 0;
+  const current: SourceValue[] = term && sourceCampaignId ? [{ term, sourceCampaignId, sourceAdGroupId, sourceKeyword, sourceMatchType, sales, orders, spend }] : [];
+  return [...current, ...Object.values(value).flatMap(candidate => collectSourceRows(candidate, depth + 1))];
 }
 
 function parseMarkdownRecords(text: string) {
@@ -224,7 +219,7 @@ function properties(tool: Tool) {
   return isRecord(tool.inputSchema) && isRecord(tool.inputSchema.properties) ? tool.inputSchema.properties : {};
 }
 
-export function buildOpportunityToolArgs(tool: Tool, params: UntargetedOpportunityParams, page = 1, terms: string[] = []) {
+export function buildOpportunityToolArgs(tool: Tool, params: UntargetedOpportunityParams, page = 1) {
   const available = properties(tool);
   const args: Record<string, unknown> = {};
   const set = (keys: string[], value: unknown) => {
@@ -238,9 +233,13 @@ export function buildOpportunityToolArgs(tool: Tool, params: UntargetedOpportuni
   set(["start_date", "startDate", "from_date", "fromDate"], params.startDate);
   set(["end_date", "endDate", "to_date", "toDate"], params.endDate);
   set(["days", "lookback_days", "lookbackDays"], days);
-  if (terms.length) set(TERM_LIST_INPUT_KEYS, terms);
-  set(["mode"], "raw");
-  set(["waste_only", "wasteOnly"], false);
+  if (tool.name === "get_search_term_keyword_analysis") {
+    set(["mode"], "harvest");
+    set(["result_mode", "resultMode"], "raw");
+  } else {
+    set(["mode"], "raw");
+    set(["waste_only", "wasteOnly"], false);
+  }
   set(["sort_by", "sortBy"], "sales");
   set(["sort_direction", "sortDirection"], "desc");
   set(["summary_only", "summaryOnly"], false);
@@ -259,14 +258,10 @@ function supportsSearchScope(tool: Tool) {
     && ((hasAnyProperty(tool, PERIOD_START_KEYS) && hasAnyProperty(tool, PERIOD_END_KEYS)) || hasAnyProperty(tool, PERIOD_DAYS_KEYS));
 }
 
-function supportsCoverageScope(tool: Tool) {
-  return hasAnyProperty(tool, ASIN_INPUT_KEYS) || hasAnyProperty(tool, TERM_LIST_INPUT_KEYS);
-}
-
-async function loadPages(tool: Tool, params: UntargetedOpportunityParams, callTool: ScaleInsightsToolCaller, terms: string[] = []) {
+async function loadPages(tool: Tool, params: UntargetedOpportunityParams, callTool: ScaleInsightsToolCaller) {
   const results: unknown[] = [];
   for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const result = await callTool(tool.name, buildOpportunityToolArgs(tool, params, page, terms));
+    const result = await callTool(tool.name, buildOpportunityToolArgs(tool, params, page));
     results.push(result);
     const count = totalCount(result);
     const hasPage = Object.keys(properties(tool)).some(key => ["page", "page_number", "pageNumber"].includes(key));
@@ -289,11 +284,15 @@ function uniqueMetrics(results: unknown[]) {
   return map;
 }
 
-function uniqueCoverage(results: unknown[]) {
-  const map = new Map<string, boolean>();
+function uniqueSources(results: unknown[]) {
+  const map = new Map<string, SourceValue>();
   for (const result of results) {
     for (const payload of payloads(result)) {
-      for (const row of collectCoverageRows(payload)) map.set(normalizedKey(row.term), row.targeted);
+      for (const row of collectSourceRows(payload)) {
+        const key = normalizedKey(row.term);
+        const existing = map.get(key);
+        if (!existing || row.sales > existing.sales || (row.sales === existing.sales && (row.orders > existing.orders || (row.orders === existing.orders && row.spend > existing.spend)))) map.set(key, row);
+      }
     }
   }
   return map;
@@ -306,16 +305,16 @@ export async function loadUntargetedSalesOpportunities(
   reportDiagnostic?: OpportunityDiagnosticReporter,
 ): Promise<UntargetedSalesOpportunities> {
   const searchTool = definitions.find(tool => tool.name === "get_search_term_performance");
-  const coverageTool = definitions.find(tool => tool.name === "get_ppc_exact_coverage");
-  if (!searchTool || !coverageTool || !supportsSearchScope(searchTool) || !supportsCoverageScope(coverageTool)) {
-    throw new ScaleInsightsOpportunityProviderError("opportunity_capability_missing", "The connected Scale Insights tools do not expose safely scoped PPC search-term and exact-coverage reporting.");
+  const sourceTool = definitions.find(tool => tool.name === "get_search_term_keyword_analysis");
+  if (!searchTool || !sourceTool || !supportsSearchScope(searchTool) || !supportsSearchScope(sourceTool)) {
+    throw new ScaleInsightsOpportunityProviderError("opportunity_capability_missing", "The connected Scale Insights tools do not expose safely scoped PPC search-term performance and campaign-attribution reporting.");
   }
 
   reportDiagnostic?.("opportunity_tool_contract", {
     searchTool: searchTool.name,
     searchProperties: Object.keys(properties(searchTool)).toSorted(),
-    coverageTool: coverageTool.name,
-    coverageProperties: Object.keys(properties(coverageTool)).toSorted(),
+    sourceTool: sourceTool.name,
+    sourceProperties: Object.keys(properties(sourceTool)).toSorted(),
     period: { startDate: params.startDate, endDate: params.endDate },
   });
   const searchResults = await loadPages(searchTool, params, callTool);
@@ -326,33 +325,42 @@ export async function loadUntargetedSalesOpportunities(
     reportDiagnostic?.("opportunity_rows_unreadable", { resultCount: totalCount(searchResults[0]), tool: searchTool.name });
     if ((totalCount(searchResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("opportunity_rows_unreadable", "Scale Insights returned a PPC search-term format this version cannot read.");
   }
-  const coverageResults = convertingMetrics.size
-    ? await loadPages(coverageTool, params, callTool, [...convertingMetrics.values()].map(row => row.term))
+  const sourceResults = convertingMetrics.size
+    ? await loadPages(sourceTool, params, callTool)
     : [];
-  const coverage = uniqueCoverage(coverageResults);
-  reportDiagnostic?.("opportunity_coverage_result", { providerResultCount: totalCount(coverageResults[0]), parsedRowCount: coverage.size });
-  if (convertingMetrics.size > 0 && !coverage.size) {
-    reportDiagnostic?.("coverage_rows_unreadable", { resultCount: totalCount(coverageResults[0]), tool: coverageTool.name });
-    if ((totalCount(coverageResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("coverage_rows_unreadable", "Scale Insights returned an exact-coverage format this version cannot read.");
+  const sources = uniqueSources(sourceResults);
+  reportDiagnostic?.("opportunity_source_result", { providerResultCount: totalCount(sourceResults[0]), parsedRowCount: sources.size });
+  if (convertingMetrics.size > 0 && !sources.size) {
+    reportDiagnostic?.("source_rows_unreadable", { resultCount: totalCount(sourceResults[0]), tool: sourceTool.name });
+    if ((totalCount(sourceResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("source_rows_unreadable", "Scale Insights returned a campaign-attribution format this version cannot read.");
   }
 
   const opportunities = [...convertingMetrics.entries()].flatMap(([key, row]): UntargetedSalesOpportunity[] => {
-    if (coverage.get(key) !== false) return [];
+    const source = sources.get(key);
+    if (!source) return [];
     const normalizedTerm = row.term.trim();
     const productAsin = /^[A-Z0-9]{10}$/i.test(normalizedTerm);
-    return [{ ...row, term: productAsin ? normalizedTerm.toUpperCase() : normalizedTerm, type: productAsin ? "Product ASIN" : "Search term" }];
+    return [{
+      ...row,
+      term: productAsin ? normalizedTerm.toUpperCase() : normalizedTerm,
+      type: productAsin ? "Product ASIN" : "Search term",
+      sourceCampaignId: source.sourceCampaignId,
+      sourceAdGroupId: source.sourceAdGroupId,
+      sourceKeyword: source.sourceKeyword,
+      sourceMatchType: source.sourceMatchType,
+    }];
   }).toSorted((first, second) => second.sales - first.sales || second.orders - first.orders || first.term.localeCompare(second.term));
 
   const warnings: string[] = [];
   if (searchResults.length === MAX_PAGES && (totalCount(searchResults.at(-1)) ?? 0) > MAX_PAGES * PAGE_SIZE) warnings.push(`Search-query results were limited to ${MAX_PAGES * PAGE_SIZE} rows.`);
-  if (coverageResults.length === MAX_PAGES && (totalCount(coverageResults.at(-1)) ?? 0) > MAX_PAGES * PAGE_SIZE) warnings.push(`Exact-coverage results were limited to ${MAX_PAGES * PAGE_SIZE} rows.`);
+  if (sourceResults.length === MAX_PAGES && (totalCount(sourceResults.at(-1)) ?? 0) > MAX_PAGES * PAGE_SIZE) warnings.push(`Campaign-attribution results were limited to ${MAX_PAGES * PAGE_SIZE} rows.`);
   return {
     asin: params.asin,
     country: params.country,
     dataState: params.dataState,
     period: { startDate: params.startDate, endDate: params.endDate },
     currency: currency(searchResults[0]),
-    freshness: { searchDataAsOf: freshness(searchResults[0]), coverageDataAsOf: freshness(coverageResults[0]) },
+    freshness: { searchDataAsOf: freshness(searchResults[0]), coverageDataAsOf: freshness(sourceResults[0]) },
     opportunities,
     warnings,
   };

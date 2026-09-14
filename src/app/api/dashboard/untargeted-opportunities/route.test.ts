@@ -61,9 +61,9 @@ describe("untargeted sales opportunities API", () => {
     expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
     expect((await response.json()).authorizationUrl).toBe("https://vercel.com/api/v1/connect/authorize/scl_test");
 
-    vi.mocked(getScaleInsightsUntargetedSalesOpportunities).mockRejectedValueOnce(new ScaleInsightsOpportunityProviderError("coverage_rows_unreadable", "Coverage shape unsupported."));
+    vi.mocked(getScaleInsightsUntargetedSalesOpportunities).mockRejectedValueOnce(new ScaleInsightsOpportunityProviderError("source_rows_unreadable", "Campaign attribution shape unsupported."));
     response = await GET(new Request(requestUrl));
     expect(response.status).toBe(502);
-    await expect(response.json()).resolves.toEqual({ error: "Coverage shape unsupported.", code: "coverage_rows_unreadable", requestId: expect.any(String) });
+    await expect(response.json()).resolves.toEqual({ error: "Campaign attribution shape unsupported.", code: "source_rows_unreadable", requestId: expect.any(String) });
   });
 });

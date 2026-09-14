@@ -5,11 +5,11 @@ Last updated: September 14, 2026
 ## September 14, 2026 — centralized PPC opportunity refresh
 
 - Production diagnostics proved the prior source mismatch: `get_search_query_data` returned shopper-query Impressions and Clicks but no PPC Spend/Sales/Orders, which the adapter incorrectly displayed as zero. A direct read-only `get_search_term_performance` check for `B0DYSBW3X5`, US, August 26–September 1 returned 194 PPC rows totaling $160.67 Spend, $2,322.47 Sales, and 96 Orders.
-- Untargeted Sales Opportunities now uses `get_search_term_performance` plus `get_ppc_exact_coverage`, reads nested `entity`/`metrics` rows, and rejects missing required metrics. Only terms with `orders >= 1` are sent to exact-coverage checking and only explicit uncovered matches are returned.
+- Untargeted Sales Opportunities now uses `get_search_term_performance` plus harvest-mode `get_search_term_keyword_analysis`, reads nested `entity`/`metrics` rows, and rejects missing required metrics. Only terms with `orders >= 1` and a CampaignId mapping are returned; duplicate mappings choose greatest attributed Sales, then Orders and Spend.
 - The single workspace Refresh Data action requests the active product/week opportunity report alongside weekly performance. Separate Load Opportunities, Fetch Again, and Retry actions are removed. A scoped refresh token prevents product changes from issuing implicit calls.
 - Validated results persist under capped browser key `glassco.ppcUntargetedOpportunitiesCache.v1`; scope mismatches and malformed entries are discarded. Revisiting or reloading restores the last result without another MCP request.
-- Opportunity metric headers now toggle descending/ascending local sorting. The table header shows filtered Spend, Sales, Orders, and weighted ACOS totals, and every row has a Scale Insights source link scoped to the active ASIN, report dates, and encoded search term.
-- Lint, typecheck, all 329 tests across 55 files (6 skipped), the production build, and `git diff --check` pass. Local browser verification reached the expected Pipeline sign-in boundary through `/ppc/library`; authenticated live-data verification remains a post-deploy check.
+- Opportunity metric headers now toggle descending/ascending local sorting. The table header shows filtered Spend, Sales, Orders, and weighted ACOS totals. Every row has a copy-term control and a source link to its attributed Scale Insights campaign, scoped by CampaignId, active ASIN, and report dates.
+- Lint, typecheck, all 330 tests across 55 files (6 skipped), the production build, and `git diff --check` pass. Local browser verification reached the expected Pipeline sign-in boundary through `/ppc/library`; authenticated live-data verification remains a post-deploy check.
 
 ## September 11, 2026 — automatic save, coverage status, and PPC conversion correction
 

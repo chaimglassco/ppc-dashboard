@@ -3,6 +3,10 @@ export type UntargetedOpportunityType = "Search term" | "Product ASIN";
 export type UntargetedSalesOpportunity = {
   term: string;
   type: UntargetedOpportunityType;
+  sourceCampaignId?: string;
+  sourceAdGroupId?: string;
+  sourceKeyword?: string;
+  sourceMatchType?: string;
   sales: number;
   orders: number;
   spend: number;
@@ -65,9 +69,14 @@ export function parseUntargetedSalesOpportunities(value: unknown): UntargetedSal
     const impressions = finiteNonNegative(candidate.impressions);
     const clicks = finiteNonNegative(candidate.clicks);
     const acos = candidate.acos == null ? null : finiteNonNegative(candidate.acos);
+    const sourceCampaignId = candidate.sourceCampaignId == null ? undefined : text(candidate.sourceCampaignId);
+    const sourceAdGroupId = candidate.sourceAdGroupId == null ? undefined : text(candidate.sourceAdGroupId);
+    const sourceKeyword = candidate.sourceKeyword == null ? undefined : text(candidate.sourceKeyword);
+    const sourceMatchType = candidate.sourceMatchType == null ? undefined : text(candidate.sourceMatchType);
     if (!term || !type || sales == null || orders == null || !Number.isInteger(orders) || spend == null || impressions == null || !Number.isInteger(impressions) || clicks == null || !Number.isInteger(clicks) || (candidate.acos != null && acos == null)) return null;
+    if ((candidate.sourceCampaignId != null && !sourceCampaignId) || (candidate.sourceAdGroupId != null && !sourceAdGroupId) || (candidate.sourceKeyword != null && !sourceKeyword) || (candidate.sourceMatchType != null && !sourceMatchType)) return null;
     if (type === "Product ASIN" && !/^[A-Z0-9]{10}$/.test(term)) return null;
-    opportunities.push({ term, type, sales, orders, spend, impressions, clicks, acos });
+    opportunities.push({ term, type, sourceCampaignId, sourceAdGroupId, sourceKeyword, sourceMatchType, sales, orders, spend, impressions, clicks, acos });
   }
   if (!value.warnings.every(warning => typeof warning === "string")) return null;
   return {

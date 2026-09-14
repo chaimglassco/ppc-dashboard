@@ -9,7 +9,7 @@ function payload() {
     freshness: { searchDataAsOf: "2026-09-09", coverageDataAsOf: "2026-09-09" }, warnings: [],
     opportunities: Array.from({ length: 11 }, (_, index) => ({
       term: index === 1 ? "B0ABCDEF12" : `search term ${index + 1}`,
-      type: index === 1 ? "Product ASIN" : "Search term", sales: 110 - index * 10, orders: index + 1, spend: 10, impressions: 1000 - index, clicks: 5, acos: 10 + index,
+      type: index === 1 ? "Product ASIN" : "Search term", sourceCampaignId: `campaign-${index + 1}`, sourceAdGroupId: `ad-group-${index + 1}`, sourceKeyword: `keyword ${index + 1}`, sourceMatchType: "broad", sales: 110 - index * 10, orders: index + 1, spend: 10, impressions: 1000 - index, clicks: 5, acos: 10 + index,
     })),
   };
 }
@@ -18,6 +18,8 @@ describe("UntargetedSalesOpportunities", () => {
   afterEach(() => { cleanup(); window.localStorage.clear(); vi.unstubAllGlobals(); });
 
   it("loads with shared Refresh Data, shows converting matches, and filters without another request", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", { configurable: true, value: { writeText } });
     const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ opportunities: payload() }) }));
     vi.stubGlobal("fetch", fetchMock);
     const view = render(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
@@ -37,10 +39,13 @@ describe("UntargetedSalesOpportunities", () => {
     expect(within(totals).getByText("$660.00")).toBeVisible();
     expect(within(totals).getByText("66")).toBeVisible();
     expect(within(totals).getByText("17%")).toBeVisible();
-    expect(within(table).getByRole("link", { name: "Open Scale Insights source for search term 1" })).toHaveAttribute(
+    expect(within(table).getByRole("link", { name: "Open primary source campaign in Scale Insights for search term 1" })).toHaveAttribute(
       "href",
-      "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-09-02&to=2026-09-08&asinList=B012345678&searchTerm=search+term+1",
+      "https://portal.scaleinsights.com/Ads/Performance/Campaigns/Index?from=2026-09-02&to=2026-09-08&asinList=B012345678&campaignId=campaign-1",
     );
+    fireEvent.click(within(table).getByRole("button", { name: "Copy search term search term 1" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("search term 1"));
+    expect(within(table).getByRole("button", { name: "Copied search term search term 1" })).toBeVisible();
     fireEvent.click(within(table).getByRole("button", { name: "Sort Impressions highest to lowest" }));
     expect(within(table).getByRole("columnheader", { name: /Impressions/ })).toHaveAttribute("aria-sort", "descending");
     fireEvent.click(within(table).getByRole("button", { name: "Sort Impressions lowest to highest" }));

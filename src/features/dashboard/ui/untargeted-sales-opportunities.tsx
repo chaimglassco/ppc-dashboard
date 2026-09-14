@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ChevronsUpDown, ExternalLink, Target, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronsUpDown, Copy, ExternalLink, Target, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
@@ -14,7 +14,7 @@ import {
   type UntargetedOpportunityType,
   type UntargetedSalesOpportunities,
 } from "../domain/untargeted-sales-opportunities";
-import { getScaleInsightsSearchTermHref } from "../domain/ppc-analysis-navigation";
+import { getScaleInsightsCampaignSourceHref, getScaleInsightsSearchTermHref } from "../domain/ppc-analysis-navigation";
 import ws from "./ppc-performance-workspace.module.css";
 import styles from "./campaign-weekly-comparison.module.css";
 
@@ -67,6 +67,22 @@ function SortableMetricHeader({ metric, activeMetric, direction, onSort }: { met
   </th>;
 }
 
+function CopyTermButton({ term }: { term: string }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const copyTerm = async () => {
+    try {
+      await navigator.clipboard.writeText(term);
+      setCopyState("copied");
+    } catch {
+      setCopyState("error");
+    }
+  };
+  const label = copyState === "copied" ? `Copied search term ${term}` : copyState === "error" ? `Copy search term ${term} failed` : `Copy search term ${term}`;
+  return <button type="button" className={styles.copyTermButton} aria-label={label} title={copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy search term"} onClick={copyTerm}>
+    {copyState === "copied" ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+  </button>;
+}
+
 export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, refreshVersion }: { asin: string; country?: string; weekStart: string; refreshVersion: number }) {
   const reportKey = untargetedOpportunityCacheKey(country, asin, weekStart);
   const cacheRef = useRef<UntargetedOpportunityCache | null>(null);
@@ -96,7 +112,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
     }
     handledRefreshes.current.set(reportKey, refreshVersion);
     setShowAll(false);
-    setLoadState({ key: reportKey, status: "loading", message: "Checking converting PPC search terms against exact-target coverage…", report: cached });
+    setLoadState({ key: reportKey, status: "loading", message: "Finding converting PPC search terms and their primary source campaigns…", report: cached });
     const query = new URLSearchParams({ asin, country, weekStart });
     void fetch(withPpcBasePath(`/api/dashboard/untargeted-opportunities?${query}`), {
       headers: getPipelineAuthorizationHeader(), cache: "no-store", signal: controller.signal,
@@ -116,7 +132,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
       if (!response.ok || !value || typeof value !== "object") {
         const candidate = value && typeof value === "object" ? value as { error?: unknown; code?: unknown; requestId?: unknown } : {};
         if (candidate.code === "opportunity_capability_missing") {
-          setLoadState({ key: reportKey, status: "unsupported", message: "The connected Scale Insights account does not expose both PPC search-term and exact-coverage reporting.", requestId: typeof candidate.requestId === "string" ? candidate.requestId : undefined, report: cached });
+          setLoadState({ key: reportKey, status: "unsupported", message: "The connected Scale Insights account does not expose both PPC search-term performance and campaign-attribution reporting.", requestId: typeof candidate.requestId === "string" ? candidate.requestId : undefined, report: cached });
           return;
         }
         const error = new Error(typeof candidate.error === "string" ? candidate.error : "Untargeted sales opportunities are temporarily unavailable.") as Error & { requestId?: string };
@@ -201,7 +217,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
       {filteredRows.length ? <div className={styles.baselineTable}>
         <div className={styles.baselineSummary}><strong>{filteredRows.length} match{filteredRows.length === 1 ? "" : "es"}</strong><div className={styles.opportunityTotals} aria-label="Filtered opportunity totals"><span><small>Spend</small><strong>{formatCurrency(totals.spend, report.currency)}</strong></span><span><small>Sales</small><strong>{formatCurrency(totals.sales, report.currency)}</strong></span><span><small>Orders</small><strong>{totals.orders}</strong></span><span><small>ACOS</small><strong>{totals.acos == null ? "—" : `${Math.round(totals.acos)}%`}</strong></span></div><span className={styles.localFilterNotice}>Filtered locally — no additional MCP usage</span></div>
         <div className={styles.tableScroll}><table aria-label="Untargeted sales opportunities"><thead><tr><th>Search Term</th><SortableMetricHeader metric="impressions" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="clicks" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="spend" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="sales" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="orders" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="acos" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><th>Status</th></tr></thead><tbody>{visibleRows.map(row => <tr key={`${row.type}:${row.term}`}>
-          <th scope="row"><span className={styles.opportunityTerm}>{row.type === "Product ASIN" ? <a className={styles.productAsinLink} href={`https://www.amazon.com/dp/${encodeURIComponent(row.term)}`} target="_blank" rel="noopener noreferrer"><span>{row.term}</span></a> : <span className={styles.campaignName}>{row.term}</span>}<a className={styles.sourceLink} href={getScaleInsightsSearchTermHref(asin, row.term, report.period.startDate, report.period.endDate)} target="_blank" rel="noopener noreferrer" aria-label={`Open Scale Insights source for ${row.term}`} title="Open this search term in Scale Insights"><ExternalLink aria-hidden="true" /></a></span></th>
+          <th scope="row"><span className={styles.opportunityTerm}>{row.type === "Product ASIN" ? <a className={styles.productAsinLink} href={`https://www.amazon.com/dp/${encodeURIComponent(row.term)}`} target="_blank" rel="noopener noreferrer"><span>{row.term}</span></a> : <span className={styles.campaignName}>{row.term}</span>}<CopyTermButton term={row.term} /><a className={styles.sourceLink} href={row.sourceCampaignId ? getScaleInsightsCampaignSourceHref(asin, row.sourceCampaignId, report.period.startDate, report.period.endDate) : getScaleInsightsSearchTermHref(asin, row.term, report.period.startDate, report.period.endDate)} target="_blank" rel="noopener noreferrer" aria-label={row.sourceCampaignId ? `Open primary source campaign in Scale Insights for ${row.term}` : `Open Scale Insights source for ${row.term}`} title={row.sourceCampaignId ? `Open primary source campaign${row.sourceKeyword ? ` (${row.sourceKeyword}${row.sourceMatchType ? `, ${row.sourceMatchType}` : ""})` : ""}` : "Open this search term in Scale Insights"}><ExternalLink aria-hidden="true" /></a></span></th>
           <td>{new Intl.NumberFormat("en-US").format(row.impressions)}</td><td>{new Intl.NumberFormat("en-US").format(row.clicks)}</td><td>{formatCurrency(row.spend, report.currency)}</td><td><strong>{formatCurrency(row.sales, report.currency)}</strong></td><td>{row.orders}</td><td>{row.acos == null ? "—" : `${Math.round(row.acos)}%`}</td><td><span className={styles.untargetedBadge}>Not targeted</span></td>
         </tr>)}</tbody></table></div>
         {filteredRows.length > INITIAL_ROW_COUNT ? <button type="button" className={styles.showAllButton} onClick={() => setShowAll(value => !value)}>{showAll ? "Show first 10" : `Show all ${filteredRows.length}`}</button> : null}

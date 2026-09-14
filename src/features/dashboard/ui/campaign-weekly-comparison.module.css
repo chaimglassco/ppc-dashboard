@@ -63,6 +63,9 @@
 .opportunityTerm { display: flex; align-items: flex-start; gap: 7px; }
 .productAsinLink { color: #18181b; font-size: 11px; font-weight: 700; line-height: 1.4; text-decoration: none; }
 .productAsinLink:hover span { text-decoration: underline; }
+.copyTermButton { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; margin-top: -3px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #71717a; }
+.copyTermButton:hover, .copyTermButton:focus-visible { background: #f4f4f5; color: #09090b; }
+.copyTermButton svg { width: 12px; height: 12px; }
 .sourceLink { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; margin-top: -3px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #52525b; text-decoration: none; }
 .sourceLink:hover { border-color: #09090b; background: #f4f4f5; color: #09090b; }
 .sourceLink:focus-visible { outline: 2px solid #09090b; outline-offset: 2px; }
