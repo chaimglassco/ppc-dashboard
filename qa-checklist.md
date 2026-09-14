@@ -294,14 +294,14 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] The application cards remain keyboard accessible on desktop and mobile, preserve hover/focus states, scroll horizontally when needed, and do not overlap account controls.
 - [ ] `glasscoppc.vercel.app` redirects to the equivalent canonical `/ppc` route without a loop.
 - [ ] No hydration or browser-console errors appear.
-- [ ] The Untargeted Sales Opportunities card appears immediately below Campaign Week-over-Week Comparison and makes no MCP/API request before **Load Opportunities** is clicked.
-- [ ] Loading the card requests the selected ASIN and Wednesday week only; an in-progress week ends yesterday and shows `Partial`, while a completed week shows `Final`.
-- [ ] With all metric criteria blank, every explicitly uncovered search-query row appears, including zero-Sales and zero-Order rows. Unknown, absent, aggregate-only, and already-targeted coverage never appears as `Not targeted`.
+- [ ] The Untargeted Sales Opportunities card appears immediately below Campaign Week-over-Week Comparison and has no separate Load Opportunities, Fetch Again, or Retry control.
+- [ ] Workspace **Refresh Data** requests the selected ASIN and Wednesday week once for weekly performance and once for PPC search-term opportunities; an in-progress week ends yesterday and shows `Partial`, while a completed week shows `Final`.
+- [ ] Every displayed row comes from PPC Search Term Performance, has at least one attributed Order, and is explicitly uncovered. Unknown, absent, aggregate-only, zero-order, and already-targeted coverage never appears as `Not targeted`.
 - [ ] Search terms and product ASINs render with Impressions, Clicks, Spend, Sales, Orders, whole-number ACOS, and a blue `Not targeted` badge; product ASIN links open Amazon safely.
-- [ ] Type, minimum Sales, minimum Orders, and maximum ACOS criteria filter locally without additional MCP/API calls; Show all expands beyond the first ten rows.
-- [ ] After the report is loaded, shared **Refresh Data** reloads it once. Before it is loaded, shared refresh does not request it.
-- [ ] **Fetch Again** remains visible after successful populated and empty responses, including when local criteria hide every row, and triggers exactly one new provider request.
-- [ ] Opportunity authorization, empty, capability-missing, malformed-search, malformed-coverage, partial, retry, and provider-error states are actionable and contain no sensitive provider values.
+- [ ] Type, minimum Sales, and maximum ACOS criteria filter locally without additional MCP/API calls; Show all expands beyond the first ten rows.
+- [ ] Switching products/weeks and returning, including after a page reload, restores the latest validated cached result without another MCP request.
+- [ ] A later workspace **Refresh Data** request replaces the cache only for its active product/week and does not implicitly fetch another selected product.
+- [ ] Opportunity authorization, empty, capability-missing, malformed-search, malformed-coverage, partial, and provider-error states are actionable and contain no sensitive provider values.
 
 ## Rich-text composer
 

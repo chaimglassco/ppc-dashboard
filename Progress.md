@@ -1,5 +1,13 @@
 # Project Progress
 
+## September 14, 2026 — Centralized converting-search-term refresh
+
+Replaced Search Query Performance with PPC Search Term Performance for Untargeted Sales Opportunities. The corrected provider returns reconciled PPC Impressions, Clicks, Spend, Sales, Orders, and ACOS from nested `entity`/`metrics` rows. Missing metric fields no longer become misleading zeroes, and only explicitly uncovered terms with at least one attributed order are returned.
+
+The workspace Refresh Data action now refreshes this report with the selected product/week's weekly metrics. Removed the separate Load Opportunities and Fetch Again controls. Validated results persist in a capped version-1 browser cache and restore without another MCP request; the refresh token remains scoped to the active product/week.
+
+Focused adapter, cache, and UI tests pass, and TypeScript validation passes. Full repository checks and browser verification are recorded in HANDOFF.md after completion.
+
 ## September 11, 2026 — Automatic save, data-derived status, and PPC conversion correction
 
 Removed the manual Save action while retaining debounced browser-local persistence. Reporting-period Completed/Partial badges now derive from cached coverage dates, Action Items starts empty, goal controls moved into the data-state footer, current-summary formatting moved beside its label, and Sales WoW moved from the SKU block into Total Sales.
@@ -281,9 +289,9 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Replaced the corner-sized previous-week annotation with equal-size Current and Previous columns in every Weekly Performance metric card.
 - Added a center divider and moved red/green direction styling to the current value and arrow only.
 - Tightened the shared comparison typography to prevent percentage overflow and shortened the three Scale Insights performance-link labels.
-## September 11, 2026 — Untargeted sales opportunities
+## September 11, 2026 — Untargeted sales opportunities (superseded September 14)
 
-- Added an on-demand report below Campaign Week-over-Week Comparison using Scale Insights search-query and exact-coverage tools.
+- Added the initial on-demand report below Campaign Week-over-Week Comparison using Scale Insights search-query and exact-coverage tools; the September 14 correction replaces the search-query source with PPC Search Term Performance.
 - Added strict provider normalization for structured and Markdown responses, safe capability/shape errors, sanitized correlation diagnostics, and no-store API delivery.
 - Added local criteria filters, top-ten expansion, final/partial metadata, product-ASIN links, shared-refresh integration, and memory-only caching.
 - Kept an explicit Fetch Again action visible after successful loads so empty criteria results can be re-fetched without changing product or week.

@@ -22,6 +22,10 @@ export type UntargetedSalesOpportunities = {
   warnings: string[];
 };
 
+export const PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY = "glassco.ppcUntargetedOpportunitiesCache.v1";
+export const untargetedOpportunityCacheKey = (country: string, asin: string, weekStart: string) => `${country.trim().toUpperCase()}:${asin.trim().toUpperCase()}:${weekStart}`;
+export type UntargetedOpportunityCache = Record<string, UntargetedSalesOpportunities>;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -76,4 +80,26 @@ export function parseUntargetedSalesOpportunities(value: unknown): UntargetedSal
     opportunities: opportunities.toSorted((first, second) => second.sales - first.sales || second.orders - first.orders || first.term.localeCompare(second.term)),
     warnings: value.warnings.map(warning => String(warning).trim()).filter(Boolean),
   };
+}
+
+export function parseUntargetedOpportunityCache(value: string | null): UntargetedOpportunityCache {
+  if (!value) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return {};
+  }
+  if (!isRecord(parsed) || parsed.version !== 1 || !isRecord(parsed.entries)) return {};
+  return Object.fromEntries(Object.entries(parsed.entries).flatMap(([key, candidate]) => {
+    const report = parseUntargetedSalesOpportunities(candidate);
+    if (!report || key !== untargetedOpportunityCacheKey(report.country, report.asin, report.period.startDate)) return [];
+    return [[key, report]];
+  }));
+}
+
+export function withUntargetedOpportunityCacheEntry(cache: UntargetedOpportunityCache, report: UntargetedSalesOpportunities, maximumEntries = 50) {
+  const key = untargetedOpportunityCacheKey(report.country, report.asin, report.period.startDate);
+  const entries = [...Object.entries(cache).filter(([entryKey]) => entryKey !== key), [key, report] as const];
+  return Object.fromEntries(entries.slice(-Math.max(1, maximumEntries))) as UntargetedOpportunityCache;
 }

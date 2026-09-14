@@ -24,7 +24,7 @@ export type OpportunityDiagnosticReporter = (event: string, details: Record<stri
 type ProviderMetrics = Omit<UntargetedSalesOpportunity, "type">;
 type CoverageValue = { term: string; targeted: boolean };
 
-const TERM_KEYS = ["search_term", "searchTerm", "SearchTerm", "customer_search_term", "customerSearchTerm", "search_query", "searchQuery", "SearchQuery", "query", "Query", "keyword_text", "keywordText", "KeywordText", "keyword", "Keyword", "target_asin", "targetAsin", "TargetASIN", "target", "Target"];
+const TERM_KEYS = ["search_term", "searchTerm", "SearchTerm", "customer_search_term", "customerSearchTerm", "search_query", "searchQuery", "SearchQuery", "query", "Query", "keyword_text", "keywordText", "KeywordText", "keyword", "Keyword", "target_asin", "targetAsin", "TargetASIN", "target", "Target", "entity", "Entity"];
 const SALES_KEYS = ["sales", "Sales", "total_sales", "totalSales", "TotalSales", "ppc_sales", "ppcSales", "PPCSales", "attributed_sales", "attributedSales"];
 const ORDERS_KEYS = ["orders", "Orders", "order", "Order", "total_orders", "totalOrders", "TotalOrders", "ppc_orders", "ppcOrders", "PPCOrders", "attributed_orders", "attributedOrders"];
 const SPEND_KEYS = ["spend", "Spend", "total_spend", "totalSpend", "TotalSpend", "cost", "Cost", "ppc_cost", "ppcCost", "PPCCost"];
@@ -85,7 +85,7 @@ function numberValue(value: unknown) {
 
 function integerValue(value: unknown) {
   const parsed = numberValue(value);
-  return parsed != null && Number.isInteger(parsed) ? parsed : 0;
+  return parsed != null && Number.isInteger(parsed) ? parsed : null;
 }
 
 function parseTargeted(value: unknown): boolean | null {
@@ -99,17 +99,19 @@ function parseTargeted(value: unknown): boolean | null {
 }
 
 function recordTerm(record: Record<string, unknown>): string {
-  const direct = stringValue(fieldValue(record, TERM_KEYS)).trim();
+  const normalizeTerm = (value: string) => value.trim().replace(/\s+\([A-Z0-9]{10}\)$/i, "").trim();
+  const direct = normalizeTerm(stringValue(fieldValue(record, TERM_KEYS)));
   if (direct) return direct;
   const accepted = new Set(TERM_KEYS.map(normalizedKey));
   for (const [key, candidate] of Object.entries(record)) {
     if (!accepted.has(normalizedKey(key)) || !isRecord(candidate)) continue;
-    const nested = stringValue(fieldValue(candidate, ["value", "text", "name", "term", "query"])).trim();
+    const nested = normalizeTerm(stringValue(fieldValue(candidate, ["value", "text", "name", "term", "query"])));
     if (nested) return nested;
   }
-  for (const candidate of Object.values(record)) {
+  for (const key of ["identity", "Identity"]) {
+    const candidate = record[key];
     if (!isRecord(candidate)) continue;
-    const nested: string = recordTerm(candidate);
+    const nested = normalizeTerm(stringValue(fieldValue(candidate, TERM_KEYS)));
     if (nested) return nested;
   }
   return "";
@@ -123,11 +125,12 @@ function metricsFromRecord(record: Record<string, unknown>): ProviderMetrics | n
   const impressionValue = nestedFieldValue(record, IMPRESSION_KEYS);
   const clickValue = nestedFieldValue(record, CLICK_KEYS);
   if (!term || [salesValue, ordersValue, spendValue, impressionValue, clickValue].every(value => value === undefined)) return null;
-  const sales = numberValue(salesValue) ?? 0;
+  const sales = numberValue(salesValue);
   const orders = integerValue(ordersValue);
-  const spend = numberValue(spendValue) ?? 0;
+  const spend = numberValue(spendValue);
   const impressions = integerValue(impressionValue);
   const clicks = integerValue(clickValue);
+  if (sales == null || orders == null || spend == null || impressions == null || clicks == null) return null;
   const providerAcos = numberValue(nestedFieldValue(record, ACOS_KEYS));
   const acos = providerAcos ?? (sales > 0 ? Math.round((spend / sales) * 10_000) / 100 : null);
   return { term, sales, orders, spend, impressions, clicks, acos };
@@ -237,6 +240,9 @@ export function buildOpportunityToolArgs(tool: Tool, params: UntargetedOpportuni
   set(["days", "lookback_days", "lookbackDays"], days);
   if (terms.length) set(TERM_LIST_INPUT_KEYS, terms);
   set(["mode"], "raw");
+  set(["waste_only", "wasteOnly"], false);
+  set(["sort_by", "sortBy"], "sales");
+  set(["sort_direction", "sortDirection"], "desc");
   set(["summary_only", "summaryOnly"], false);
   set(["count", "limit", "page_size", "pageSize"], PAGE_SIZE);
   set(["page", "page_number", "pageNumber"], page);
@@ -299,10 +305,10 @@ export async function loadUntargetedSalesOpportunities(
   callTool: ScaleInsightsToolCaller,
   reportDiagnostic?: OpportunityDiagnosticReporter,
 ): Promise<UntargetedSalesOpportunities> {
-  const searchTool = definitions.find(tool => tool.name === "get_search_query_data");
+  const searchTool = definitions.find(tool => tool.name === "get_search_term_performance");
   const coverageTool = definitions.find(tool => tool.name === "get_ppc_exact_coverage");
   if (!searchTool || !coverageTool || !supportsSearchScope(searchTool) || !supportsCoverageScope(coverageTool)) {
-    throw new ScaleInsightsOpportunityProviderError("opportunity_capability_missing", "The connected Scale Insights tools do not expose safely scoped search-query and exact-coverage reporting.");
+    throw new ScaleInsightsOpportunityProviderError("opportunity_capability_missing", "The connected Scale Insights tools do not expose safely scoped PPC search-term and exact-coverage reporting.");
   }
 
   reportDiagnostic?.("opportunity_tool_contract", {
@@ -314,22 +320,23 @@ export async function loadUntargetedSalesOpportunities(
   });
   const searchResults = await loadPages(searchTool, params, callTool);
   const metrics = uniqueMetrics(searchResults);
-  reportDiagnostic?.("opportunity_search_result", { providerResultCount: totalCount(searchResults[0]), parsedRowCount: metrics.size });
+  const convertingMetrics = new Map([...metrics].filter(([, row]) => row.orders >= 1));
+  reportDiagnostic?.("opportunity_search_result", { providerResultCount: totalCount(searchResults[0]), parsedRowCount: metrics.size, convertingRowCount: convertingMetrics.size });
   if (!metrics.size) {
     reportDiagnostic?.("opportunity_rows_unreadable", { resultCount: totalCount(searchResults[0]), tool: searchTool.name });
-    if ((totalCount(searchResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("opportunity_rows_unreadable", "Scale Insights returned a search-query format this version cannot read.");
+    if ((totalCount(searchResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("opportunity_rows_unreadable", "Scale Insights returned a PPC search-term format this version cannot read.");
   }
-  const coverageResults = metrics.size
-    ? await loadPages(coverageTool, params, callTool, [...metrics.values()].map(row => row.term))
+  const coverageResults = convertingMetrics.size
+    ? await loadPages(coverageTool, params, callTool, [...convertingMetrics.values()].map(row => row.term))
     : [];
   const coverage = uniqueCoverage(coverageResults);
   reportDiagnostic?.("opportunity_coverage_result", { providerResultCount: totalCount(coverageResults[0]), parsedRowCount: coverage.size });
-  if (!coverage.size) {
+  if (convertingMetrics.size > 0 && !coverage.size) {
     reportDiagnostic?.("coverage_rows_unreadable", { resultCount: totalCount(coverageResults[0]), tool: coverageTool.name });
     if ((totalCount(coverageResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("coverage_rows_unreadable", "Scale Insights returned an exact-coverage format this version cannot read.");
   }
 
-  const opportunities = [...metrics.entries()].flatMap(([key, row]): UntargetedSalesOpportunity[] => {
+  const opportunities = [...convertingMetrics.entries()].flatMap(([key, row]): UntargetedSalesOpportunity[] => {
     if (coverage.get(key) !== false) return [];
     const normalizedTerm = row.term.trim();
     const productAsin = /^[A-Z0-9]{10}$/i.test(normalizedTerm);

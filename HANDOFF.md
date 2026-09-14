@@ -1,6 +1,14 @@
 # Glassco PPC Dashboard Handoff
 
-Last updated: September 11, 2026
+Last updated: September 14, 2026
+
+## September 14, 2026 — centralized PPC opportunity refresh
+
+- Production diagnostics proved the prior source mismatch: `get_search_query_data` returned shopper-query Impressions and Clicks but no PPC Spend/Sales/Orders, which the adapter incorrectly displayed as zero. A direct read-only `get_search_term_performance` check for `B0DYSBW3X5`, US, August 26–September 1 returned 194 PPC rows totaling $160.67 Spend, $2,322.47 Sales, and 96 Orders.
+- Untargeted Sales Opportunities now uses `get_search_term_performance` plus `get_ppc_exact_coverage`, reads nested `entity`/`metrics` rows, and rejects missing required metrics. Only terms with `orders >= 1` are sent to exact-coverage checking and only explicit uncovered matches are returned.
+- The single workspace Refresh Data action requests the active product/week opportunity report alongside weekly performance. Separate Load Opportunities, Fetch Again, and Retry actions are removed. A scoped refresh token prevents product changes from issuing implicit calls.
+- Validated results persist under capped browser key `glassco.ppcUntargetedOpportunitiesCache.v1`; scope mismatches and malformed entries are discarded. Revisiting or reloading restores the last result without another MCP request.
+- Lint, typecheck, all 328 tests across 55 files (6 skipped), the production build, and `git diff --check` pass. Local browser verification reached the expected Pipeline sign-in boundary through `/ppc/library`; authenticated live-data verification remains a post-deploy check.
 
 ## September 11, 2026 — automatic save, coverage status, and PPC conversion correction
 
@@ -199,14 +207,10 @@ git status --short --branch
 
 Read [README.md](README.md), [Architecture.md](Architecture.md), [data-contract.md](data-contract.md), and [deployment.md](deployment.md) before changing routing, authentication, persistence, or deployment behavior.
 
-## September 11, 2026 — Untargeted sales opportunities
+## September 11, 2026 — Untargeted sales opportunities (superseded September 14)
 
-- The dashboard card below Campaign Week-over-Week Comparison is intentionally on demand to reduce Scale Insights MCP consumption.
-- The API joins `get_search_query_data` with `get_ppc_exact_coverage`; only explicit uncovered matches may receive the `Not targeted` badge.
-- Client criteria and Show all operate on the validated in-memory response and add no MCP calls. Shared Refresh Data reloads the card only if it was previously requested in that mounted dashboard session.
-- Fetch Again is always visible after a successful opportunity response, including an empty filtered state, and explicitly reloads the selected ASIN/week.
-- Authenticated production diagnostics confirmed `get_ppc_exact_coverage` expects `query_list`; the adapter batches all parsed search rows through it. Blank criteria preserve zero-sales and zero-order rows and the table includes Impressions, Clicks, Spend, Sales, Orders, and ACOS.
-- The response does not extend `glassco.ppcPerformanceNotes.v1` or any other browser-storage contract.
+- The initial card used `get_search_query_data` and separate on-demand controls. Production evidence later showed that source did not supply the PPC attribution metrics required by the table.
+- The September 14 correction supersedes its source, zero-order behavior, request controls, and memory-only cache while preserving the API route and strict explicit-coverage rule.
 - After deployment, authenticated QA must reconcile at least one displayed result against Scale Insights for the same ASIN and date range. Use the card Reference ID for sanitized logs if the live response contract differs.
 
 ## Persistence rollout still required

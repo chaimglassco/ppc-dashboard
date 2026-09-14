@@ -1,5 +1,11 @@
 # Glassco Team SOP Library and PPC Dashboard
 
+## Centralized PPC opportunity refresh (September 14, 2026)
+
+The workspace **Refresh Data** action now refreshes the selected product/week's PPC performance and Untargeted Sales Opportunities together. The opportunity card reuses its latest validated browser-cached result on later visits, so changing products or weeks does not spend another MCP request. The separate Load Opportunities and Fetch Again actions are removed.
+
+Opportunity rows now come from Scale Insights `get_search_term_performance` and are checked with `get_ppc_exact_coverage`. The table shows only explicitly uncovered PPC search terms or product ASINs with at least one attributed order, together with Impressions, Clicks, Spend, Sales, Orders, and ACOS.
+
 ## Dashboard automatic-save and PPC metric correction (September 11, 2026)
 
 Dashboard edits now save automatically; the workspace header contains Refresh Data and no manual Save action. Reporting-period status comes from the cached Scale Insights coverage end date: a full Wednesday–Tuesday range is Completed and a shorter range is Partial. New weekly reports start with an empty Action Items list. Goal status/outcome controls sit in the footer beside the data-state label, current-summary formatting controls share its label row, and the Sales WoW line appears inside Total Sales.
@@ -187,9 +193,9 @@ See [deployment.md](deployment.md) for the full rollout, verification, and rollb
 
 ## Untargeted sales opportunities
 
-The PPC dashboard includes an on-demand **Untargeted Sales Opportunities** report directly below Campaign Week-over-Week Comparison. It combines the connected Scale Insights `get_search_query_data` and `get_ppc_exact_coverage` read-only tools for the selected ASIN and reporting week. Every returned search term or product ASIN that Scale Insights explicitly marks as missing exact coverage is displayed by default, including rows with zero Sales or Orders. The table shows Impressions, Clicks, Spend, Sales, Orders, and ACOS.
+The PPC dashboard includes **Untargeted Sales Opportunities** directly below Campaign Week-over-Week Comparison. It combines the connected Scale Insights `get_search_term_performance` and `get_ppc_exact_coverage` read-only tools for the selected ASIN and reporting week. Only PPC search terms or product ASINs with at least one attributed order that Scale Insights explicitly marks as missing exact coverage are displayed. The table shows Impressions, Clicks, Spend, Sales, Orders, and ACOS.
 
-Loading is manual to preserve MCP usage. Type, minimum Sales, minimum Orders, and maximum ACOS filters run entirely in the browser against the loaded response. **Fetch Again** remains visible after every successful load, including an empty filtered state; the shared **Refresh Data** button also reloads this report after it has been requested during the current dashboard session.
+The shared **Refresh Data** button loads both weekly performance and this report for the active product/week. Validated opportunity results are retained under `glassco.ppcUntargetedOpportunitiesCache.v1` and restored without another request. Type, minimum Sales, and maximum ACOS filters run entirely in the browser.
 
 ## Documentation
 

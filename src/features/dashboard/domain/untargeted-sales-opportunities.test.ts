@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseUntargetedSalesOpportunities } from "./untargeted-sales-opportunities";
+import { parseUntargetedOpportunityCache, parseUntargetedSalesOpportunities, untargetedOpportunityCacheKey, withUntargetedOpportunityCacheEntry } from "./untargeted-sales-opportunities";
 
 const valid = {
   asin: "b012345678", country: "us", currency: "usd", dataState: "Partial",
@@ -13,5 +13,12 @@ describe("untargeted opportunity response validation", () => {
   it("rejects invalid metrics and product ASINs", () => {
     expect(parseUntargetedSalesOpportunities({ ...valid, opportunities: [{ ...valid.opportunities[0], orders: 1.5 }] })).toBeNull();
     expect(parseUntargetedSalesOpportunities({ ...valid, opportunities: [{ ...valid.opportunities[0], type: "Product ASIN", term: "bad" }] })).toBeNull();
+  });
+  it("validates cached reports by their normalized product and week key", () => {
+    const report = parseUntargetedSalesOpportunities(valid)!;
+    const cache = withUntargetedOpportunityCacheEntry({}, report);
+    const key = untargetedOpportunityCacheKey("US", "B012345678", "2026-09-02");
+    expect(parseUntargetedOpportunityCache(JSON.stringify({ version: 1, entries: cache }))[key]).toEqual(report);
+    expect(parseUntargetedOpportunityCache(JSON.stringify({ version: 1, entries: { wrong: report } }))).toEqual({});
   });
 });
