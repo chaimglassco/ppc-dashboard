@@ -33,11 +33,13 @@ describe("CampaignWeeklyComparison CSV import", () => {
       "SP Manual,New high,0,0,0,222",
       "SP Manual,Lost sales,2,100,20,333",
       "SP Auto,Flat,1,50,10,444",
+      "SP Manual,Wasted spend,0,0,10,555",
     ].join("\r\n"));
     const current = csvFile("Sept 2 - 8.csv", [
       "SP Manual,Good up,2,80,20,111",
       "SP Manual,New high,1,100,15,222",
       "SP Auto,Flat,1,50,10,444",
+      "SP Manual,Wasted spend,0,0,5,555",
     ].join("\r\n"));
     fireEvent.change(await screen.findByLabelText("Previous week campaign CSV"), { target: { files: [previous] } });
     fireEvent.change(screen.getByLabelText("Current week campaign CSV"), { target: { files: [current] } });
@@ -47,12 +49,14 @@ describe("CampaignWeeklyComparison CSV import", () => {
     expect(screen.getByText("New high")).toBeInTheDocument();
     expect(screen.getByText("Lost sales")).toBeInTheDocument();
     expect(screen.getByText("Flat")).toBeInTheDocument();
+    expect(screen.getByText("Wasted spend")).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Spend Up, Sales Up campaigns" })).toBeInTheDocument();
-    expect(screen.getByRole("table", { name: "New Spend, No Sales or High ACOS campaigns" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Spend but No Sales campaigns" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "New Spend, High ACOS campaigns" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Lost Current-Week Sales campaigns" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Unchanged or Mixed campaigns" })).toBeInTheDocument();
     const stored = JSON.parse(window.localStorage.getItem(PPC_CAMPAIGN_CSV_CACHE_KEY) || "{}");
-    expect(stored.entries["US:B012345678:2026-09-02"].comparison.campaigns).toHaveLength(4);
+    expect(stored.entries["US:B012345678:2026-09-02"].comparison.campaigns).toHaveLength(5);
   });
 
   it("rejects a filename whose recognizable range does not match its weekly slot", async () => {

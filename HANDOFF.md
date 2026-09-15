@@ -5,11 +5,12 @@ Last updated: September 15, 2026
 ## September 15, 2026 — full-width campaign outcome rows
 
 - Campaign comparison situation dropdowns now render one per row at every viewport size instead of sharing two columns on desktop.
+- Added a dedicated Bad “Spend but No Sales” rule covering previous week, current week, or both. It takes priority over movement, Lost Sales, and new-spend rules; Lost Sales still captures campaigns that stopped spending and lost their prior Sales, while the new-spend rule now covers high ACOS with Sales.
 
 ## September 15, 2026 — CSV campaign week-over-week comparison
 
 - Replaced the unavailable ASIN-scoped MCP campaign table with two local Scale Insights Campaign CSV slots for the exact preceding/current Wednesday–Tuesday periods. CSVs join by CampaignId, validate name/type/numeric metrics, aggregate compatible duplicate IDs, and zero-fill campaigns absent from one week.
-- Added Good, Bad, and Neutral groups with seven collapsible rule tables. Lost current-week Sales and new Spend with zero Sales or at least 15% ACOS take priority over general Spend/Sales direction rules. Tables compare Spend, Sales, Orders, changes, and current calculated ACOS.
+- Added Good, Bad, and Neutral groups with eight collapsible rule tables. Spend without Sales, lost current-week Sales, and new Spend at 15% ACOS or higher take priority over general Spend/Sales direction rules. Tables compare Spend, Sales, Orders, changes, and current calculated ACOS.
 - Added validated capped browser storage under `glassco.ppcCampaignCsvComparison.v1`, scoped by country, selected ASIN, and current Wednesday. Replace CSVs updates the active entry. Scale Insights omits report dates and advertised ASIN, so the UI labels exact slots, warns users to export after product filtering, and rejects recognizable filename ranges that conflict with the expected week.
 - The supplied exports have complete matching columns and stable IDs: 120 unique previous-file campaigns, 98 unique current-file campaigns, 96 matches, no duplicate/missing IDs, and no cross-file identity conflicts. The file named `July 26 - Sept. 1.csv` totals $593.50 Spend and $6,073.36 Sales and appears to cover several weeks; it is intentionally rejected for the required August 26–September 1 slot.
 - Lint, typecheck, all 338 tests across 56 files (6 skipped), the production build, and `git diff --check` pass. Local browser verification reached the Pipeline session boundary with no console errors; the importer and all classification paths are covered by DOM and domain tests.

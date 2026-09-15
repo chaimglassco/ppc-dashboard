@@ -54,7 +54,7 @@ describe("campaign weekly comparison domain", () => {
     expect(getCampaignOutcomes(campaigns, CAMPAIGN_OUTCOME_CATEGORIES[0]).map(campaign => campaign.campaignName)).toEqual(["up-up"]);
   });
 
-  it("gives the two special Bad rules precedence and uses 15% as the inclusive ACOS threshold", () => {
+  it("gives the special Bad rules precedence and uses 15% as the inclusive ACOS threshold", () => {
     const row = (name: string, previousSpend: number, currentSpend: number, previousSales: number, currentSales: number) => createCampaignComparisonRow({
       campaignId: name,
       sponsoredType: 0,
@@ -65,10 +65,18 @@ describe("campaign weekly comparison domain", () => {
       current: { spend: currentSpend, sales: currentSales, orders: 0 },
     });
     const lostSales = row("lost", 20, 30, 100, 0);
+    const previousSpendWithoutSales = row("previous-waste", 20, 10, 0, 100);
+    const currentSpendWithoutSales = row("current-waste", 20, 10, 100, 0);
+    const bothWeeksSpendWithoutSales = row("both-waste", 20, 30, 0, 0);
+    const lostSalesWithoutCurrentSpend = row("lost-no-current-spend", 20, 0, 100, 0);
     const newAtThreshold = row("new-high-acos", 0, 15, 0, 100);
     const newEfficient = row("new-efficient", 0, 14.99, 0, 100);
 
-    expect(classifyCampaignOutcome(lostSales)).toBe("bad-lost-sales");
+    expect(classifyCampaignOutcome(lostSales)).toBe("bad-spend-without-sales");
+    expect(classifyCampaignOutcome(previousSpendWithoutSales)).toBe("bad-spend-without-sales");
+    expect(classifyCampaignOutcome(currentSpendWithoutSales)).toBe("bad-spend-without-sales");
+    expect(classifyCampaignOutcome(bothWeeksSpendWithoutSales)).toBe("bad-spend-without-sales");
+    expect(classifyCampaignOutcome(lostSalesWithoutCurrentSpend)).toBe("bad-lost-sales");
     expect(classifyCampaignOutcome(newAtThreshold)).toBe("bad-new-spend-inefficient");
     expect(classifyCampaignOutcome(newEfficient)).toBe("good-spend-up-sales-up");
     expect(getCampaignAcos(newAtThreshold.current)).toBe(15);

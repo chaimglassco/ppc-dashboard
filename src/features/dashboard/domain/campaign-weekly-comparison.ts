@@ -73,6 +73,7 @@ export type CampaignOutcomeCategoryId =
   | "good-spend-down-sales-up"
   | "bad-spend-up-sales-down"
   | "bad-spend-down-sales-down"
+  | "bad-spend-without-sales"
   | "bad-new-spend-inefficient"
   | "bad-lost-sales"
   | "neutral-unchanged-or-mixed";
@@ -91,7 +92,8 @@ export const CAMPAIGN_OUTCOME_CATEGORIES: CampaignOutcomeCategory[] = [
   { id: "good-spend-down-sales-up", group: "Good", label: "Spend Down, Sales Up", description: "Spend decreased while attributed sales increased." },
   { id: "bad-spend-up-sales-down", group: "Bad", label: "Spend Up, Sales Down", description: "Spend increased while attributed sales decreased." },
   { id: "bad-spend-down-sales-down", group: "Bad", label: "Spend Down, Sales Down", description: "Spend and attributed sales both decreased." },
-  { id: "bad-new-spend-inefficient", group: "Bad", label: "New Spend, No Sales or High ACOS", description: `Previous-week Spend was zero, then current-week Spend produced no Sales or at least ${HIGH_ACOS_THRESHOLD}% ACOS.` },
+  { id: "bad-spend-without-sales", group: "Bad", label: "Spend but No Sales", description: "Spend was greater than zero while Sales were zero in the previous week, current week, or both." },
+  { id: "bad-new-spend-inefficient", group: "Bad", label: "New Spend, High ACOS", description: `Previous-week Spend was zero, then current-week Spend produced Sales at ${HIGH_ACOS_THRESHOLD}% ACOS or higher.` },
   { id: "bad-lost-sales", group: "Bad", label: "Lost Current-Week Sales", description: "The campaign had previous-week Sales and zero current-week Sales." },
   { id: "neutral-unchanged-or-mixed", group: "Neutral", label: "Unchanged or Mixed", description: "Spend or Sales was unchanged, or the movement does not match another rule." },
 ];
@@ -185,7 +187,11 @@ export function classifyCampaignOutcome(
   const currentSales = campaign.current.sales;
   const currentAcos = getCampaignAcos(campaign.current);
 
-  // Explicit loss and efficiency rules take precedence over general direction rules.
+  // Explicit waste, loss, and efficiency rules take precedence over general direction rules.
+  if (
+    (previousSpend > 0 && previousSales === 0)
+    || (currentSpend > 0 && currentSales === 0)
+  ) return "bad-spend-without-sales";
   if (previousSales > 0 && currentSales === 0) return "bad-lost-sales";
   if (
     previousSpend === 0
