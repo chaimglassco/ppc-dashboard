@@ -244,7 +244,7 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 - Confirmed the Scale Insights Campaign CSV contract from two supplied exports: Type, Campaign, Orders, Sales, Spent, CampaignId and supporting performance columns. All 218 sample rows had unique nonblank campaign IDs; 96 IDs matched across files without identity conflicts.
 - Added browser-side CSV validation, CampaignId joining, zero-fill for missing weekly rows, filename-period mismatch detection, and capped validated local persistence scoped to country/ASIN/week.
-- Added eight collapsible Good, Bad, and Neutral classifications with the agreed 15% high-ACOS threshold and special-rule precedence, including the later Spend but No Sales rule.
+- Added seven collapsible Good, Bad, and Neutral classifications with the agreed 15% high-ACOS threshold and special-rule precedence, including the later current-week Spend but No Sales rule.
 - The first sample is not a valid seven-day baseline: its filename and totals indicate July 26–September 1, while the selected previous slot is August 26–September 1. The importer rejects the mismatch rather than presenting a misleading WoW result.
 
 # Unified Glassco integration
@@ -317,5 +317,5 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 # September 15, 2026 — full-width campaign outcome rows
 
 - Campaign comparison situation dropdowns now use one full-width row each across Good, Bad, and Neutral groups, keeping labels, campaign counts, and explanations readable before expansion.
-- Added a Bad “Spend but No Sales” situation for wasted Spend in the previous week, current week, or both. This rule has first precedence so overlapping campaigns appear once; the existing Lost Sales and new-spend high-ACOS rules retain their non-overlapping cases.
+- Narrowed the Bad situation to “Spend but No Sales This Week,” requiring positive current-week Spend and zero current-week Sales. Removed the redundant Lost Current-Week Sales dropdown; campaigns with no current Spend and declining Sales remain in Spend Down/Sales Down.
 - Added independent sorting to every dropdown's Previous Spend, Current Spend, Spend Change, Previous Sales, Current Sales, Sales Change, Orders, and Current ACOS headers. First click sorts highest-to-lowest and the next click reverses it.

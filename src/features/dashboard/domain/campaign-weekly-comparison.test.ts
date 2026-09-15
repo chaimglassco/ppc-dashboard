@@ -64,7 +64,7 @@ describe("campaign weekly comparison domain", () => {
       previous: { spend: previousSpend, sales: previousSales, orders: 1 },
       current: { spend: currentSpend, sales: currentSales, orders: 0 },
     });
-    const lostSales = row("lost", 20, 30, 100, 0);
+    const currentWeekNoSales = row("current-no-sales", 20, 30, 100, 0);
     const previousSpendWithoutSales = row("previous-waste", 20, 10, 0, 100);
     const currentSpendWithoutSales = row("current-waste", 20, 10, 100, 0);
     const bothWeeksSpendWithoutSales = row("both-waste", 20, 30, 0, 0);
@@ -72,11 +72,11 @@ describe("campaign weekly comparison domain", () => {
     const newAtThreshold = row("new-high-acos", 0, 15, 0, 100);
     const newEfficient = row("new-efficient", 0, 14.99, 0, 100);
 
-    expect(classifyCampaignOutcome(lostSales)).toBe("bad-spend-without-sales");
-    expect(classifyCampaignOutcome(previousSpendWithoutSales)).toBe("bad-spend-without-sales");
+    expect(classifyCampaignOutcome(currentWeekNoSales)).toBe("bad-spend-without-sales");
+    expect(classifyCampaignOutcome(previousSpendWithoutSales)).toBe("good-spend-down-sales-up");
     expect(classifyCampaignOutcome(currentSpendWithoutSales)).toBe("bad-spend-without-sales");
     expect(classifyCampaignOutcome(bothWeeksSpendWithoutSales)).toBe("bad-spend-without-sales");
-    expect(classifyCampaignOutcome(lostSalesWithoutCurrentSpend)).toBe("bad-lost-sales");
+    expect(classifyCampaignOutcome(lostSalesWithoutCurrentSpend)).toBe("bad-spend-down-sales-down");
     expect(classifyCampaignOutcome(newAtThreshold)).toBe("bad-new-spend-inefficient");
     expect(classifyCampaignOutcome(newEfficient)).toBe("good-spend-up-sales-up");
     expect(getCampaignAcos(newAtThreshold.current)).toBe(15);

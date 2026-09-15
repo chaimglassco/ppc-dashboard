@@ -54,9 +54,9 @@ describe("CampaignWeeklyComparison CSV import", () => {
     expect(screen.getByText("Wasted spend")).toBeInTheDocument();
     expect(screen.getByText("Good high spend")).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Spend Up, Sales Up campaigns" })).toBeInTheDocument();
-    expect(screen.getByRole("table", { name: "Spend but No Sales campaigns" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Spend but No Sales This Week campaigns" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "New Spend, High ACOS campaigns" })).toBeInTheDocument();
-    expect(screen.getByRole("table", { name: "Lost Current-Week Sales campaigns" })).toBeInTheDocument();
+    expect(screen.queryByText("Lost Current-Week Sales")).not.toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Unchanged or Mixed campaigns" })).toBeInTheDocument();
     const stored = JSON.parse(window.localStorage.getItem(PPC_CAMPAIGN_CSV_CACHE_KEY) || "{}");
     expect(stored.entries["US:B012345678:2026-09-02"].comparison.campaigns).toHaveLength(6);
