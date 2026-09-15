@@ -1,5 +1,12 @@
 # Project Progress
 
+## September 15, 2026 — Account dashboard scaffold and Total Sales trend placement
+
+- Added Dashboard and Products switch tabs above the PPC workspace. Products remains the initial view and preserves the existing product, reporting-period, and weekly documentation flow.
+- Built a full-width monochrome Dashboard from the supplied HTML direction: five temporal cards, an ASIN velocity table, coverage summaries, and keyword, campaign, product-target, and search-term ledger scaffolds.
+- The 7-, 14-, and 30-day cards plus ASIN ranking use available browser-local weekly reports. Today, Yesterday, and unconnected detail datasets show explicit unavailable states instead of sample values.
+- Moved the Total Sales WoW indicator above the Total Sales value.
+
 ## September 14, 2026 — Product-target coverage correction
 
 Corrected false-positive Product ASIN opportunities by separating keyword coverage from product-target coverage. Live reconciliation for advertised ASIN `B0DYSBW3X5`, US, September 2–8 showed `B095WV5YZ4` with `HasExactMatch: false` in exact keyword coverage while the same ASIN existed as an SP `TargetType=product`. The opportunity adapter now conditionally loads Product Target Performance when ASIN candidates exist and excludes ASINs already targeted under the selected advertised ASIN.

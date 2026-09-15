@@ -1,5 +1,12 @@
 # QA Checklist
 
+## September 15 dashboard-view checks
+
+- [ ] Confirm Products is initially selected and Dashboard/Products tabs expose correct `aria-selected` state while switching without losing the selected product or reporting week.
+- [ ] Confirm Dashboard renders five temporal cards, the ASIN Velocity table, and four detailed ledger scaffolds. Today/Yesterday and unconnected datasets must say unavailable/source pending rather than showing reference sample data.
+- [ ] With saved current and prior weekly reports, confirm 7/14/30-day totals, weighted ACOS/TACOS, account shares, and ASIN Sales momentum derive from those records.
+- [ ] Confirm Total Sales WoW appears above the Total Sales value and below its title.
+
 ## September 11 automatic-save and PPC-conversion checks
 
 - [x] Confirm the header has Refresh Data and no Save action; edit notes/goals/actions and verify the existing debounce persists changes.

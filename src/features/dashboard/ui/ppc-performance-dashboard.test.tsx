@@ -333,7 +333,9 @@ describe("PpcPerformanceDashboard", () => {
     expect(previousSales).toHaveTextContent("$1,200");
     expect(previousSales.className).toMatch(/metricPrevious/);
     expect(previousSales.className).not.toMatch(/metricIncrease|metricDecrease/);
-    expect(within(performanceCard).getByLabelText("Sales increased by 10% from previous week").className).toMatch(/metricIncrease/);
+    const salesTrend = within(performanceCard).getByLabelText("Sales increased by 10% from previous week");
+    expect(salesTrend.className).toMatch(/metricIncrease/);
+    expect(salesTrend.nextElementSibling).toContainElement(within(performanceCard).getByRole("textbox", { name: "Total Sales" }));
     expect(screen.getByRole("link", { name: /Open selected product SKU/ }).closest("p")).not.toHaveTextContent("WoW");
     const previousSpend = within(performanceCard).getByLabelText("Previous Spend: $90, decreased");
     expect(previousSpend.className).not.toMatch(/metricIncrease|metricDecrease/);
@@ -342,6 +344,25 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.queryByText(/total sales ·/i)).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
   }, 10_000);
+
+  it("switches between the Products workspace and the account Dashboard", async () => {
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    const productsTab = screen.getByRole("tab", { name: /Products/ });
+    const dashboardTab = screen.getByRole("tab", { name: "Dashboard" });
+    expect(productsTab).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("heading", { name: "Products" })).toBeVisible();
+
+    fireEvent.click(dashboardTab);
+    expect(dashboardTab).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Performance Overview" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Today" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /ASIN Velocity/ })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Products" })).not.toBeInTheDocument();
+
+    fireEvent.click(productsTab);
+    expect(productsTab).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("heading", { name: "Products" })).toBeVisible();
+  });
 
   it("marks live goal actuals partial while the reporting week is incomplete", async () => {
     vi.mocked(fetch).mockImplementation(async input => {

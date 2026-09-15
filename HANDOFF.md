@@ -2,6 +2,13 @@
 
 Last updated: September 15, 2026
 
+## September 15, 2026 — Dashboard/Products switch and overview scaffold
+
+- Added a route-level Dashboard/Products tablist. Products is initially active; Dashboard replaces the three-panel editor with the new full-width overview and switching back restores the existing workspace state.
+- The overview follows the supplied monochrome ledger layout. It derives weekly timeframe summaries and ASIN ranking from current browser-local reports, while daily and detailed Scale Insights matrices are marked source pending until their data contracts are added.
+- Total Sales now renders its WoW indicator between the card title and value.
+- Lint, typecheck, all 346 tests across 57 files (6 skipped), the production build, and `git diff --check` pass. Local browser verification reached the expected Pipeline sign-in boundary; authenticated Dashboard/Products interactions are covered by component tests.
+
 ## September 15, 2026 — full-width campaign outcome rows
 
 - Campaign comparison situation dropdowns now render one per row at every viewport size instead of sharing two columns on desktop.

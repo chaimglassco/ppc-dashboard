@@ -3,7 +3,7 @@
 import Image from "next/image";
 import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, Clock3, Copy, DollarSign,
-  FileText, Flag, Italic, Underline, List, ListOrdered, Plus, RefreshCw, Tag, SlidersHorizontal, Trash2, X,
+  FileText, Flag, Italic, LayoutDashboard, Underline, List, ListOrdered, Package, Plus, RefreshCw, Tag, SlidersHorizontal, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
@@ -22,6 +22,7 @@ import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfoli
 import { ProductPerformanceChat, type PerformanceChatPeriod } from "./product-performance-chat";
 import { CampaignWeeklyComparison } from "./campaign-weekly-comparison";
 import { UntargetedSalesOpportunities, type OpportunityPpcClickTotal } from "./untargeted-sales-opportunities";
+import { PerformanceOverviewDashboard } from "./performance-overview-dashboard";
 import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, type PerformanceCache } from "../domain/ppc-performance-cache";
 import { getScaleInsightsAnalysisHref, PPC_ANALYSIS_COLUMNS } from "../domain/ppc-analysis-navigation";
@@ -138,9 +139,10 @@ function MetricInput({ metric, report, previousValue, comparisonAvailable, impor
   const showSalesTrend = metric.field === "totalSales" && comparisonAvailable && previousValue != null && previousValue > 0;
   return <label className={`${ws.metricCard} ${isEfficiency ? ws.efficiencyMetric : ""}`} data-warning={warning || (isEfficiency && report.tacos >= 30) || undefined}>
     <span className={ws.metricCardHeader}><span>{metric.field === "spend" ? "Total Spend" : metric.field === "organicOrders" ? "Org. Orders" : metric.label}</span>{metric.field !== "totalSales" && comparisonAvailable && previousValue != null && comparison !== 0 ? <span className={`${ws.metricDelta} ${trendTone}`} aria-label={`${metric.label} ${comparisonDirection} by ${trendLabel} from previous week`}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}{trendLabel}</span> : null}</span>
+    {showSalesTrend ? <span className={`${ws.salesCardTrend} ${trendTone}`} aria-label={`Sales ${comparisonDirection} by ${trendLabel} from previous week`}>{comparison >= 0 ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}Sales {comparison >= 0 ? "+" : "−"}{deltaPercentage}% WoW</span> : null}
     {isEfficiency ? <RadialGauge value={report[metric.field]} label={`${displayValue}%`} /> : null}
     <span className={ws.metricInputWrap}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-describedby={warning ? "acos-target-warning" : undefined} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" size={Math.max(1, displayValue.length)} style={{ width: `${Math.max(1, displayValue.length)}ch` }} value={displayValue} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
-    {warning ? <span id="acos-target-warning" className={ws.metricCardHint}>Target: {new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(targetAcos || 0)}% · +{targetDifference}% over limit</span> : metric.field === "tacos" ? <span className={ws.metricCardHint}>{report.tacos < 30 ? "Healthy" : "Above target"} · Target &lt; 30%</span> : showSalesTrend ? <span className={`${ws.salesCardTrend} ${trendTone}`} aria-label={`Sales ${comparisonDirection} by ${trendLabel} from previous week`}>{comparison >= 0 ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}Sales {comparison >= 0 ? "+" : "−"}{deltaPercentage}% WoW</span> : <span className={ws.metricCardHint} aria-hidden="true">&nbsp;</span>}
+    {warning ? <span id="acos-target-warning" className={ws.metricCardHint}>Target: {new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(targetAcos || 0)}% · +{targetDifference}% over limit</span> : metric.field === "tacos" ? <span className={ws.metricCardHint}>{report.tacos < 30 ? "Healthy" : "Above target"} · Target &lt; 30%</span> : <span className={ws.metricCardHint} aria-hidden="true">&nbsp;</span>}
     <span className={ws.metricPreviousRow} aria-label={previousValue == null ? `Previous ${metric.label}: unavailable` : comparisonAvailable ? `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}, ${comparisonDirection}` : `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}`}>
       <small>Prev. Week</small>
       <strong>{previousValue == null ? "—" : previousMetricValue(metric, previousValue)}</strong>
@@ -303,6 +305,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const initialWeekStart = startOfWeekIso(initialToday);
   const initialMonthKey = initialToday.slice(0, 7);
   const [pipelineProducts, setPipelineProducts] = useState<DashboardProduct[]>([]);
+  const [activeView, setActiveView] = useState<"dashboard" | "products">("products");
   const [catalog, setCatalog] = useState<DashboardCatalogStore>(emptyDashboardCatalog);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState("");
@@ -703,6 +706,12 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const removeAction = (actionId: string) => { if (report) patchReport({ actions: report.actions.filter(action => action.id !== actionId) }); };
 
   return <section className={styles.dashboard} aria-label="Weekly PPC Performance Notes">
+    <nav className={styles.viewTabs} aria-label="PPC workspace views" role="tablist">
+      <button type="button" role="tab" aria-selected={activeView === "dashboard"} className={activeView === "dashboard" ? styles.activeViewTab : ""} onClick={() => setActiveView("dashboard")}><LayoutDashboard aria-hidden="true" />Dashboard</button>
+      <button type="button" role="tab" aria-selected={activeView === "products"} className={activeView === "products" ? styles.activeViewTab : ""} onClick={() => setActiveView("products")}><Package aria-hidden="true" />Products<span>{products.length}</span></button>
+    </nav>
+
+    {activeView === "dashboard" ? <PerformanceOverviewDashboard products={products} reports={reports} currentWeekStart={currentWeekStart} todayIso={initialToday} /> : <>
     <ProductPortfolioPanel products={products} tags={catalog.tags} loading={productsLoading} error={productsError} selectedProductId={selectedProductId} onSelectProduct={selectProduct} onRetry={() => void loadProducts()} onCreateTag={createTag} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} onReorderProducts={reorderProducts} />
 
     <aside className={periods.periodsPanel} aria-labelledby="periods-heading">
@@ -782,8 +791,9 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         </div></div>
       </>}
     </main>
+    </>}
 
-    {selectedProduct && report ? <ProductPerformanceChat product={selectedProduct} activeWeekStart={activeWeekStart} periods={chatPeriods} /> : null}
+    {activeView === "products" && selectedProduct && report ? <ProductPerformanceChat product={selectedProduct} activeWeekStart={activeWeekStart} periods={chatPeriods} /> : null}
 
     {monthPickerOpen ? <div className={styles.monthDialogBackdrop} onMouseDown={event => { if (event.target === event.currentTarget) setMonthPickerOpen(false); }}>
       <section className={styles.monthDialog} role="dialog" aria-modal="true" aria-labelledby="month-dialog-heading">
