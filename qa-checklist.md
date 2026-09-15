@@ -294,6 +294,10 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] The application cards remain keyboard accessible on desktop and mobile, preserve hover/focus states, scroll horizontally when needed, and do not overlap account controls.
 - [ ] `glasscoppc.vercel.app` redirects to the equivalent canonical `/ppc` route without a loop.
 - [ ] No hydration or browser-console errors appear.
+- [ ] Campaign Week-over-Week Comparison labels the exact previous/current Wednesday–Tuesday CSV slots for the selected ASIN, accepts the Scale Insights Campaign export headers, and rejects missing/malformed columns, negative values, identity conflicts, and recognizable filename ranges that do not match the slot.
+- [ ] A valid CSV pair joins by CampaignId, aggregates only compatible duplicate IDs, treats a missing weekly campaign as zero, saves under `glassco.ppcCampaignCsvComparison.v1`, restores after reload, and remains isolated when switching product or week. Replace CSVs updates only the active scope.
+- [ ] Every imported campaign appears exactly once across the seven dropdowns. Verify the two Good rules, four Bad rules, Neutral, the inclusive 15% new-spend ACOS threshold, and precedence for Lost Current-Week Sales and New Spend with zero Sales/high ACOS.
+- [ ] Each campaign table shows previous/current Spend and Sales, changes, Orders, and whole-number current ACOS. High ACOS is visually distinct, horizontal overflow remains contained, and campaign links open the fixed Scale Insights trend for both periods with protected new-tab attributes.
 - [ ] The Untargeted Sales Opportunities card appears immediately below Campaign Week-over-Week Comparison and has no separate Load Opportunities, Fetch Again, or Retry control.
 - [ ] Workspace **Refresh Data** requests the selected ASIN and Wednesday week once for weekly performance and once for PPC search-term opportunities; an in-progress week ends yesterday and shows `Partial`, while a completed week shows `Final`.
 - [ ] Clicking each Impressions, Clicks, Spend, Sales, Orders, and ACOS header toggles descending/ascending order locally and does not call the opportunity endpoint again.

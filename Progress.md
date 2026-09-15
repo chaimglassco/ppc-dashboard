@@ -240,6 +240,13 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 3. Create the protected immutable legacy Blob backup, then initialize the revision-zero Postgres catalog with the complete validated legacy catalog.
 4. Complete authenticated multi-account browser verification for ADMIN, USER, VIEWER, conflict, deletion, recovery, and outage behavior.
 5. Add committed Playwright coverage and secure cookie-based page authentication.
+# September 15, 2026 — CSV campaign week-over-week comparison
+
+- Confirmed the Scale Insights Campaign CSV contract from two supplied exports: Type, Campaign, Orders, Sales, Spent, CampaignId and supporting performance columns. All 218 sample rows had unique nonblank campaign IDs; 96 IDs matched across files without identity conflicts.
+- Added browser-side CSV validation, CampaignId joining, zero-fill for missing weekly rows, filename-period mismatch detection, and capped validated local persistence scoped to country/ASIN/week.
+- Added seven collapsible Good, Bad, and Neutral classifications with the agreed 15% high-ACOS threshold and special-rule precedence.
+- The first sample is not a valid seven-day baseline: its filename and totals indicate July 26–September 1, while the selected previous slot is August 26–September 1. The importer rejects the mismatch rather than presenting a misleading WoW result.
+
 # Unified Glassco integration
 
 - Production deployment `dpl_6xM9bVCRqW8dLUqGL8GXtymQRR1V` was released first on 2026-07-22 and aliased to `glasscoppc.vercel.app`; the canonical Pipeline gateway serves `/ppc/dashboard` with HTTP 200 and rejects unsigned session checks with HTTP 401.

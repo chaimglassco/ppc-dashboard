@@ -54,7 +54,7 @@ It is deployed as the PPC application inside the unified Glassco website:
 - PPC verifies the existing Pipeline session through Pipeline’s `/api/auth/session` endpoint.
 - PPC Dashboard loads the authenticated user’s compact Pipeline product catalog and provides a three-panel product, reporting-period, and weekly documentation workspace.
 - For products with an ASIN, the selected Wednesday–Tuesday period automatically loads Spend, PPC Sales, PPC Orders, Total Sales, and Total Orders from Scale Insights through an authenticated server route. Organic Sales, Organic Orders, ACOS, and TACOS are calculated by this application.
-- Campaign Week-over-Week Comparison is staged as a previous-week Spend baseline, but the production Scale Insights connection currently exposes no campaign grouping field or dedicated campaign-reporting tool. The dashboard shows a neutral capability notice and never treats ASIN totals as campaign rows. The prepared table will request the preceding matched period, list campaigns by Spend, leave Current Week Spend blank, and retain results only in memory when a campaign-level source becomes available.
+- Campaign Week-over-Week Comparison imports two product-filtered Scale Insights Campaign CSVs, joins them by CampaignId, and stores the validated result locally for the selected ASIN/week. Seven collapsible tables group campaigns as Good, Bad, or Neutral using Spend/Sales movement, with special priority for lost Sales and newly inefficient Spend at 15% ACOS or higher. Because Scale Insights omits report dates and advertised ASIN from these exports, the UI labels the exact required weeks, rejects recognizable mismatched filename ranges, and tells the operator to export after filtering to the selected product.
 - A session-only Performance AI widget combines the selected product, active week, populated visible reporting periods, and planning notes with live read-only Scale Insights MCP tools. Server-side enforcement limits every tool call to that ASIN, US, and the visible completed-date range without changing the saved report schema.
 - The Products panel can add dashboard-only products, apply local edits and images, create reusable tags, filter by tag, and remove dashboard-added products. These catalog customizations use the validated `glassco.ppcDashboardCatalog.v1` browser record and do not mutate Product Pipeline records.
 - Weekly goals, budget limits, performance figures, prior-week outcomes, notes, and action items save to the versioned `glassco.ppcPerformanceNotes.v1` browser record in this initial UI milestone; they are not yet shared across browsers.
@@ -161,7 +161,7 @@ src/app/                            Next.js routes, APIs, layout, and global sty
 src/app/api/library/                Authenticated shared-library API
 src/app/api/pipeline-session/       Pipeline session verification endpoint
 src/app/api/dashboard/performance/ Authenticated Scale Insights performance endpoint
-src/app/api/dashboard/campaign-comparison/ Authenticated campaign comparison endpoint
+src/app/api/dashboard/campaign-comparison/ Legacy authenticated campaign comparison endpoint retained for compatibility
 src/components/                     Application shell and session provider
 src/features/dashboard/data/       Scale Insights validation and server-only MCP transport
 src/features/library/data/          Markdown bootstrap and legacy Blob migration adapters

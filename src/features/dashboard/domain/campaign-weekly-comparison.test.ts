@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   CAMPAIGN_MOVER_CATEGORIES,
+  CAMPAIGN_OUTCOME_CATEGORIES,
+  classifyCampaignOutcome,
   createCampaignComparisonRow,
+  getCampaignAcos,
   getCampaignMovers,
   getCampaignMoverTotal,
+  getCampaignOutcomes,
   getScaleInsightsCampaignTrendHref,
   parseCampaignSpendBaseline,
   parseCampaignWeeklyComparison,
@@ -22,6 +26,54 @@ function campaign(name: string, previousSales: number, currentSales: number) {
 }
 
 describe("campaign weekly comparison domain", () => {
+  it("classifies the agreed Good, Bad, and Neutral campaign outcomes", () => {
+    const row = (name: string, previousSpend: number, currentSpend: number, previousSales: number, currentSales: number) => createCampaignComparisonRow({
+      campaignId: name,
+      sponsoredType: 0,
+      campaignName: name,
+      previousActive: previousSpend > 0,
+      currentActive: currentSpend > 0,
+      previous: { spend: previousSpend, sales: previousSales, orders: 0 },
+      current: { spend: currentSpend, sales: currentSales, orders: 0 },
+    });
+    const campaigns = [
+      row("up-up", 10, 20, 50, 80),
+      row("down-up", 20, 10, 50, 80),
+      row("up-down", 10, 20, 80, 50),
+      row("down-down", 20, 10, 80, 50),
+      row("flat", 10, 10, 50, 50),
+    ];
+
+    expect(campaigns.map(campaign => classifyCampaignOutcome(campaign))).toEqual([
+      "good-spend-up-sales-up",
+      "good-spend-down-sales-up",
+      "bad-spend-up-sales-down",
+      "bad-spend-down-sales-down",
+      "neutral-unchanged-or-mixed",
+    ]);
+    expect(getCampaignOutcomes(campaigns, CAMPAIGN_OUTCOME_CATEGORIES[0]).map(campaign => campaign.campaignName)).toEqual(["up-up"]);
+  });
+
+  it("gives the two special Bad rules precedence and uses 15% as the inclusive ACOS threshold", () => {
+    const row = (name: string, previousSpend: number, currentSpend: number, previousSales: number, currentSales: number) => createCampaignComparisonRow({
+      campaignId: name,
+      sponsoredType: 0,
+      campaignName: name,
+      previousActive: previousSpend > 0,
+      currentActive: currentSpend > 0,
+      previous: { spend: previousSpend, sales: previousSales, orders: 1 },
+      current: { spend: currentSpend, sales: currentSales, orders: 0 },
+    });
+    const lostSales = row("lost", 20, 30, 100, 0);
+    const newAtThreshold = row("new-high-acos", 0, 15, 0, 100);
+    const newEfficient = row("new-efficient", 0, 14.99, 0, 100);
+
+    expect(classifyCampaignOutcome(lostSales)).toBe("bad-lost-sales");
+    expect(classifyCampaignOutcome(newAtThreshold)).toBe("bad-new-spend-inefficient");
+    expect(classifyCampaignOutcome(newEfficient)).toBe("good-spend-up-sales-up");
+    expect(getCampaignAcos(newAtThreshold.current)).toBe(15);
+  });
+
   it("classifies and ranks movers by the selected metric", () => {
     const campaigns = [campaign("small", 100, 90), campaign("largest", 100, 20), campaign("increase", 20, 60), campaign("flat", 20, 20)];
     const decline = CAMPAIGN_MOVER_CATEGORIES[0];

@@ -1,84 +1,78 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { PPC_CAMPAIGN_CSV_CACHE_KEY } from "../domain/campaign-comparison-csv";
 import { CampaignWeeklyComparison } from "./campaign-weekly-comparison";
 
-function baselinePayload() {
-  return {
-    asin: "B012345678",
-    country: "US",
-    currency: "USD",
-    dataState: "Final",
-    previousPeriod: { startDate: "2026-08-26", endDate: "2026-09-01" },
-    currentPeriod: { startDate: "2026-09-02", endDate: "2026-09-08" },
-    freshness: { previousDataAsOf: "2026-09-02" },
-    warnings: [],
-    campaigns: Array.from({ length: 11 }, (_, index) => ({
-      campaignId: String(1000 + index),
-      sponsoredType: index % 2,
-      campaignName: `Campaign ${index + 1}`,
-      previousSpend: 100 - index,
-    })),
-  };
+const header = "Type,Campaign,Orders,Sales,Spent,CampaignId\r\n";
+
+function csvFile(name: string, rows: string) {
+  const file = new File([`${header}${rows}`], name, { type: "text/csv" });
+  Object.defineProperty(file, "text", { value: async () => `${header}${rows}` });
+  return file;
 }
 
-describe("CampaignWeeklyComparison Spend baseline", () => {
+describe("CampaignWeeklyComparison CSV import", () => {
   afterEach(() => {
     cleanup();
-    vi.unstubAllGlobals();
+    window.localStorage.clear();
   });
 
-  it("shows previous-week campaign Spend and leaves every current-week value blank", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ comparison: baselinePayload() }) })));
+  it("shows two exact weekly CSV slots when no saved comparison exists", async () => {
     render(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
-
     const region = screen.getByRole("region", { name: "Campaign Week-over-Week Comparison" });
-    expect(within(region).getByText("Stage 1: previous-week campaign Spend. Current-week Spend will be connected next.")).toBeVisible();
-    expect(await within(region).findByText("Aug 26, 2026 – Sep 1, 2026")).toBeVisible();
+    expect(await within(region).findByLabelText("Previous week campaign CSV")).toBeVisible();
+    expect(within(region).getByText("Aug 26, 2026 – Sep 1, 2026")).toBeVisible();
     expect(within(region).getByText("Sep 2, 2026 – Sep 8, 2026")).toBeVisible();
-    const table = within(region).getByRole("table", { name: "Previous and current week campaign Spend" });
-    expect(within(table).getAllByRole("columnheader").map(header => header.textContent)).toEqual(["Campaign", "Previous Week Spend", "Current Week Spend"]);
-    expect(within(table).getAllByRole("row")).toHaveLength(11);
-    expect(within(table).getByText("Campaign 1")).toBeVisible();
-    expect(within(table).queryByText("Campaign 11")).not.toBeInTheDocument();
-    expect(within(table).getAllByLabelText("Current week Spend pending")).toHaveLength(10);
-    expect(within(table).getByText("$100.00")).toBeVisible();
-    const link = within(table).getByRole("link", { name: "Campaign 1" });
-    expect(link).toHaveAttribute("href", "https://portal.scaleinsights.com/PopupWindow/PPCTrendForCampaign?from=2026-08-26&to=2026-09-01&campaignId=1000&sponsoredType=0");
-    expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("rel", "noopener noreferrer");
-
-    fireEvent.click(within(region).getByRole("button", { name: "Show all 11 campaigns" }));
-    expect(within(table).getAllByRole("row")).toHaveLength(12);
-    expect(within(table).getByText("Campaign 11")).toBeVisible();
+    expect(within(region).getByRole("button", { name: "Import comparison" })).toBeDisabled();
   });
 
-  it("reloads the in-memory baseline when the shared refresh version changes", async () => {
-    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ comparison: baselinePayload() }) }));
-    vi.stubGlobal("fetch", fetchMock);
-    const view = render(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
-    await screen.findByText("Spend baseline");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    view.rerender(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={1} />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  it("imports, classifies, renders, and saves joined campaigns locally", async () => {
+    render(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
+    const previous = csvFile("Aug 26 - Sept 1.csv", [
+      "SP Manual,Good up,1,50,10,111",
+      "SP Manual,New high,0,0,0,222",
+      "SP Manual,Lost sales,2,100,20,333",
+      "SP Auto,Flat,1,50,10,444",
+    ].join("\r\n"));
+    const current = csvFile("Sept 2 - 8.csv", [
+      "SP Manual,Good up,2,80,20,111",
+      "SP Manual,New high,1,100,15,222",
+      "SP Auto,Flat,1,50,10,444",
+    ].join("\r\n"));
+    fireEvent.change(await screen.findByLabelText("Previous week campaign CSV"), { target: { files: [previous] } });
+    fireEvent.change(screen.getByLabelText("Current week campaign CSV"), { target: { files: [current] } });
+    fireEvent.click(screen.getByRole("button", { name: "Import comparison" }));
+
+    expect(await screen.findByText("Good up")).toBeInTheDocument();
+    expect(screen.getByText("New high")).toBeInTheDocument();
+    expect(screen.getByText("Lost sales")).toBeInTheDocument();
+    expect(screen.getByText("Flat")).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Spend Up, Sales Up campaigns" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "New Spend, No Sales or High ACOS campaigns" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Lost Current-Week Sales campaigns" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Unchanged or Mixed campaigns" })).toBeInTheDocument();
+    const stored = JSON.parse(window.localStorage.getItem(PPC_CAMPAIGN_CSV_CACHE_KEY) || "{}");
+    expect(stored.entries["US:B012345678:2026-09-02"].comparison.campaigns).toHaveLength(4);
   });
 
-  it("offers safe authorization and unsupported-capability states", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({ authorizationRequired: true, authorizationUrl: "https://vercel.com/api/v1/connect/authorize/scl_test" }) })
-      .mockResolvedValueOnce({ ok: false, status: 502, json: async () => ({
-        error: "Provider detail must stay hidden.",
-        code: "campaign_capability_missing",
-        requestId: "request-safe-123",
-      }) });
-    vi.stubGlobal("fetch", fetchMock);
+  it("rejects a filename whose recognizable range does not match its weekly slot", async () => {
+    render(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
+    fireEvent.change(await screen.findByLabelText("Previous week campaign CSV"), { target: { files: [csvFile("July 26 - Sept. 1.csv", "SP Manual,Campaign,1,10,2,111")] } });
+    fireEvent.change(screen.getByLabelText("Current week campaign CSV"), { target: { files: [csvFile("Sept. 2 - 8.csv", "SP Manual,Campaign,1,10,2,111")] } });
+    fireEvent.click(screen.getByRole("button", { name: "Import comparison" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("appears to cover Jul 26, 2026 – Sep 1, 2026");
+    expect(window.localStorage.getItem(PPC_CAMPAIGN_CSV_CACHE_KEY)).toBeNull();
+  });
+
+  it("restores a validated comparison after remounting", async () => {
     const view = render(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
-    expect(await screen.findByRole("link", { name: "Connect Scale Insights" })).toHaveAttribute("href", "https://vercel.com/api/v1/connect/authorize/scl_test");
-    view.rerender(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={1} />);
-    const status = await screen.findByRole("status");
-    expect(status).toHaveTextContent("Campaign-level data is unavailable from the connected Scale Insights tools");
-    expect(status).toHaveTextContent("Scale Insights provides weekly ASIN totals through this connection, but its current reporting tools do not provide campaign-level rows.");
-    expect(status).toHaveTextContent("Reference ID: request-safe-123");
-    expect(status).not.toHaveTextContent("Provider detail must stay hidden.");
-    expect(within(status).queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+    fireEvent.change(await screen.findByLabelText("Previous week campaign CSV"), { target: { files: [csvFile("Aug 26 - Sept 1.csv", "SP Manual,Campaign,1,10,2,111")] } });
+    fireEvent.change(screen.getByLabelText("Current week campaign CSV"), { target: { files: [csvFile("Sept 2 - 8.csv", "SP Manual,Campaign,2,20,3,111")] } });
+    fireEvent.click(screen.getByRole("button", { name: "Import comparison" }));
+    await screen.findByRole("button", { name: "Replace CSVs" });
+    view.unmount();
+    render(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={1} />);
+    await waitFor(() => expect(screen.queryByLabelText("Previous week campaign CSV")).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Replace CSVs" })).toBeVisible();
   });
 });

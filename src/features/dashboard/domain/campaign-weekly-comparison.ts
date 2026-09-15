@@ -66,6 +66,36 @@ export type CampaignMoverCategory = {
   label: string;
 };
 
+export type CampaignOutcomeGroup = "Good" | "Bad" | "Neutral";
+
+export type CampaignOutcomeCategoryId =
+  | "good-spend-up-sales-up"
+  | "good-spend-down-sales-up"
+  | "bad-spend-up-sales-down"
+  | "bad-spend-down-sales-down"
+  | "bad-new-spend-inefficient"
+  | "bad-lost-sales"
+  | "neutral-unchanged-or-mixed";
+
+export type CampaignOutcomeCategory = {
+  id: CampaignOutcomeCategoryId;
+  group: CampaignOutcomeGroup;
+  label: string;
+  description: string;
+};
+
+export const HIGH_ACOS_THRESHOLD = 15;
+
+export const CAMPAIGN_OUTCOME_CATEGORIES: CampaignOutcomeCategory[] = [
+  { id: "good-spend-up-sales-up", group: "Good", label: "Spend Up, Sales Up", description: "Spend increased and attributed sales also increased." },
+  { id: "good-spend-down-sales-up", group: "Good", label: "Spend Down, Sales Up", description: "Spend decreased while attributed sales increased." },
+  { id: "bad-spend-up-sales-down", group: "Bad", label: "Spend Up, Sales Down", description: "Spend increased while attributed sales decreased." },
+  { id: "bad-spend-down-sales-down", group: "Bad", label: "Spend Down, Sales Down", description: "Spend and attributed sales both decreased." },
+  { id: "bad-new-spend-inefficient", group: "Bad", label: "New Spend, No Sales or High ACOS", description: `Previous-week Spend was zero, then current-week Spend produced no Sales or at least ${HIGH_ACOS_THRESHOLD}% ACOS.` },
+  { id: "bad-lost-sales", group: "Bad", label: "Lost Current-Week Sales", description: "The campaign had previous-week Sales and zero current-week Sales." },
+  { id: "neutral-unchanged-or-mixed", group: "Neutral", label: "Unchanged or Mixed", description: "Spend or Sales was unchanged, or the movement does not match another rule." },
+];
+
 export const CAMPAIGN_MOVER_CATEGORIES: CampaignMoverCategory[] = [
   { id: "sales-decline", metric: "sales", direction: "decline", label: "Sales Decline" },
   { id: "sales-increase", metric: "sales", direction: "increase", label: "Sales Increase" },
@@ -139,6 +169,51 @@ export function getCampaignMovers(campaigns: CampaignComparisonRow[], category: 
 
 export function getCampaignMoverTotal(campaigns: CampaignComparisonRow[], category: CampaignMoverCategory) {
   return getCampaignMovers(campaigns, category).reduce((total, campaign) => total + campaign.delta[category.metric].absolute, 0);
+}
+
+export function getCampaignAcos(metrics: CampaignPeriodMetrics) {
+  return metrics.sales > 0 ? (metrics.spend / metrics.sales) * 100 : null;
+}
+
+export function classifyCampaignOutcome(
+  campaign: CampaignComparisonRow,
+  highAcosThreshold = HIGH_ACOS_THRESHOLD,
+): CampaignOutcomeCategoryId {
+  const previousSpend = campaign.previous.spend;
+  const currentSpend = campaign.current.spend;
+  const previousSales = campaign.previous.sales;
+  const currentSales = campaign.current.sales;
+  const currentAcos = getCampaignAcos(campaign.current);
+
+  // Explicit loss and efficiency rules take precedence over general direction rules.
+  if (previousSales > 0 && currentSales === 0) return "bad-lost-sales";
+  if (
+    previousSpend === 0
+    && currentSpend > 0
+    && (currentSales === 0 || (currentAcos != null && currentAcos >= highAcosThreshold))
+  ) return "bad-new-spend-inefficient";
+
+  const spendDirection = Math.sign(currentSpend - previousSpend);
+  const salesDirection = Math.sign(currentSales - previousSales);
+  if (spendDirection > 0 && salesDirection > 0) return "good-spend-up-sales-up";
+  if (spendDirection < 0 && salesDirection > 0) return "good-spend-down-sales-up";
+  if (spendDirection > 0 && salesDirection < 0) return "bad-spend-up-sales-down";
+  if (spendDirection < 0 && salesDirection < 0) return "bad-spend-down-sales-down";
+  return "neutral-unchanged-or-mixed";
+}
+
+export function getCampaignOutcomes(
+  campaigns: CampaignComparisonRow[],
+  category: CampaignOutcomeCategory,
+  highAcosThreshold = HIGH_ACOS_THRESHOLD,
+) {
+  return campaigns
+    .filter(campaign => classifyCampaignOutcome(campaign, highAcosThreshold) === category.id)
+    .toSorted((first, second) => {
+      const salesDifference = Math.abs(second.delta.sales.absolute) - Math.abs(first.delta.sales.absolute);
+      const spendDifference = Math.abs(second.delta.spend.absolute) - Math.abs(first.delta.spend.absolute);
+      return salesDifference || spendDifference || first.campaignName.localeCompare(second.campaignName);
+    });
 }
 
 export function getScaleInsightsCampaignTrendHref(campaign: Pick<CampaignComparisonRow, "campaignId" | "sponsoredType">, startDate: string, endDate: string) {
