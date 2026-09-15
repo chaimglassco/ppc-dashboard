@@ -53,6 +53,13 @@ export function getScaleInsightsSearchTermHref(asinValue: string, from: string, 
   return getScaleInsightsAnalysisHref(asinValue, "search-terms", from, to);
 }
 
-export function getScaleInsightsCampaignCreationHref(asinValue: string, from: string, to: string) {
-  return getScaleInsightsSearchTermHref(asinValue, from, to);
+export function getScaleInsightsKeywordCampaignCreationHref(asinValue: string, keywordValue: string) {
+  const asin = normalizeDashboardAsin(asinValue);
+  const keyword = keywordValue.trim();
+  if (!asin || !keyword) return "https://portal.scaleinsights.com/MassCampaigns/KeywordCampaigns";
+
+  const url = new URL("/MassCampaigns/KeywordCampaigns/Customize", "https://portal.scaleinsights.com");
+  url.searchParams.set("asin", asin);
+  url.searchParams.set("keyword", keyword);
+  return url.toString();
 }

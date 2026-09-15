@@ -45,17 +45,15 @@ describe("UntargetedSalesOpportunities", () => {
       "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-09-02&to=2026-09-08&asinList=B012345678",
     );
     const createLink = within(table).getByRole("link", { name: "Create SKC campaign in Scale Insights for search term 1" });
-    expect(createLink).toHaveAttribute("href", sourceLink.getAttribute("href"));
-    fireEvent.click(createLink);
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith("search term 1"));
+    expect(createLink).toHaveAttribute("href", "https://portal.scaleinsights.com/MassCampaigns/KeywordCampaigns/Customize?asin=B012345678&keyword=search+term+1");
     fireEvent.click(sourceLink);
-    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("search term 1"));
     vi.useFakeTimers();
     await act(async () => {
       fireEvent.click(within(table).getByRole("button", { name: "Copy search term search term 1" }));
       await Promise.resolve();
     });
-    expect(writeText).toHaveBeenCalledTimes(3);
+    expect(writeText).toHaveBeenCalledTimes(2);
     expect(within(table).getByRole("button", { name: "Copied search term search term 1" })).toBeVisible();
     act(() => vi.advanceTimersByTime(2_000));
     expect(within(table).getByRole("button", { name: "Copy search term search term 1" })).toBeVisible();
@@ -73,7 +71,7 @@ describe("UntargetedSalesOpportunities", () => {
     fireEvent.change(within(region).getByLabelText("Opportunity type"), { target: { value: "Product ASIN" } });
     expect(within(table).getAllByRole("row")).toHaveLength(2);
     expect(within(table).getByRole("link", { name: "B0ABCDEF12" })).toHaveAttribute("href", "https://www.amazon.com/dp/B0ABCDEF12");
-    expect(within(table).getByRole("link", { name: "Create SPC campaign in Scale Insights for B0ABCDEF12" })).toBeVisible();
+    expect(within(table).queryByRole("link", { name: /Create .* campaign in Scale Insights for B0ABCDEF12/ })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(within(region).queryByRole("button", { name: "Fetch Again" })).not.toBeInTheDocument();
   });

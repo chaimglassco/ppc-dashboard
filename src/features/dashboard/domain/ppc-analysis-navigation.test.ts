@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getScaleInsightsAnalysisHref, getScaleInsightsCampaignCreationHref, getScaleInsightsSearchTermHref, normalizeDashboardAsin } from "./ppc-analysis-navigation";
+import { getScaleInsightsAnalysisHref, getScaleInsightsKeywordCampaignCreationHref, getScaleInsightsSearchTermHref, normalizeDashboardAsin } from "./ppc-analysis-navigation";
 
 describe("PPC analysis navigation", () => {
   it("builds only validated ASIN-scoped destinations", () => {
@@ -39,9 +39,10 @@ describe("PPC analysis navigation", () => {
     );
   });
 
-  it("opens campaign creation from the ASIN-scoped Search terms page", () => {
-    expect(getScaleInsightsCampaignCreationHref("b012345678", "2026-08-26", "2026-09-01")).toBe(
-      "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-08-26&to=2026-09-01&asinList=B012345678",
+  it("opens direct SKC customization with the advertised ASIN and keyword", () => {
+    expect(getScaleInsightsKeywordCampaignCreationHref("b012345678", " hobby came for stained glass ")).toBe(
+      "https://portal.scaleinsights.com/MassCampaigns/KeywordCampaigns/Customize?asin=B012345678&keyword=hobby+came+for+stained+glass",
     );
+    expect(getScaleInsightsKeywordCampaignCreationHref("invalid", "hobby came")).toBe("https://portal.scaleinsights.com/MassCampaigns/KeywordCampaigns");
   });
 });
