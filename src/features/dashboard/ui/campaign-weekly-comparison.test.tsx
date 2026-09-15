@@ -104,7 +104,7 @@ describe("CampaignWeeklyComparison CSV import", () => {
     await screen.findByRole("button", { name: "Replace CSVs" });
     view.unmount();
     render(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={1} />);
-    await waitFor(() => expect(screen.queryByLabelText("Previous week campaign CSV")).not.toBeInTheDocument());
-    expect(screen.getByRole("button", { name: "Replace CSVs" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Replace CSVs" })).toBeVisible();
+    expect(screen.queryByLabelText("Previous week campaign CSV")).not.toBeInTheDocument();
   });
 });

@@ -110,6 +110,8 @@
 .sourceLink:hover { border-color: #09090b; background: #f4f4f5; color: #09090b; }
 .sourceLink:focus-visible { outline: 2px solid #09090b; outline-offset: 2px; }
 .sourceLink svg { width: 11px; height: 11px; }
+.createCampaignLink { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
+.createCampaignLink:hover { border-color: #047857; background: #d1fae5; color: #065f46; }
 .campaignName { color: #18181b; font-size: 11px; font-weight: 700; line-height: 1.4; }
 .tableScroll tbody th > small { display: block; margin-top: 4px; color: #a16207; font: 9px/1.4 var(--mono); }
 .tableScroll tbody tr:last-child th, .tableScroll tbody tr:last-child td { border-bottom: 0; }

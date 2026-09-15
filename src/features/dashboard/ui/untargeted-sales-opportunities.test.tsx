@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { UntargetedSalesOpportunities } from "./untargeted-sales-opportunities";
 
@@ -15,7 +15,7 @@ function payload() {
 }
 
 describe("UntargetedSalesOpportunities", () => {
-  afterEach(() => { cleanup(); window.localStorage.clear(); vi.unstubAllGlobals(); });
+  afterEach(() => { cleanup(); window.localStorage.clear(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
   it("loads with shared Refresh Data, shows converting matches, and filters without another request", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
@@ -44,12 +44,22 @@ describe("UntargetedSalesOpportunities", () => {
       "href",
       "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-09-02&to=2026-09-08&asinList=B012345678",
     );
-    fireEvent.click(sourceLink);
+    const createLink = within(table).getByRole("link", { name: "Create SKC campaign in Scale Insights for search term 1" });
+    expect(createLink).toHaveAttribute("href", sourceLink.getAttribute("href"));
+    fireEvent.click(createLink);
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("search term 1"));
-    fireEvent.click(within(table).getByRole("button", { name: "Copy search term search term 1" }));
+    fireEvent.click(sourceLink);
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+    vi.useFakeTimers();
+    await act(async () => {
+      fireEvent.click(within(table).getByRole("button", { name: "Copy search term search term 1" }));
+      await Promise.resolve();
+    });
+    expect(writeText).toHaveBeenCalledTimes(3);
     expect(within(table).getByRole("button", { name: "Copied search term search term 1" })).toBeVisible();
-    await waitFor(() => expect(within(table).getByRole("button", { name: "Copy search term search term 1" })).toBeVisible(), { timeout: 3_000 });
+    act(() => vi.advanceTimersByTime(2_000));
+    expect(within(table).getByRole("button", { name: "Copy search term search term 1" })).toBeVisible();
+    vi.useRealTimers();
     fireEvent.click(within(table).getByRole("button", { name: "Sort Impressions highest to lowest" }));
     expect(within(table).getByRole("columnheader", { name: /Impressions/ })).toHaveAttribute("aria-sort", "descending");
     fireEvent.click(within(table).getByRole("button", { name: "Sort Impressions lowest to highest" }));
@@ -63,6 +73,7 @@ describe("UntargetedSalesOpportunities", () => {
     fireEvent.change(within(region).getByLabelText("Opportunity type"), { target: { value: "Product ASIN" } });
     expect(within(table).getAllByRole("row")).toHaveLength(2);
     expect(within(table).getByRole("link", { name: "B0ABCDEF12" })).toHaveAttribute("href", "https://www.amazon.com/dp/B0ABCDEF12");
+    expect(within(table).getByRole("link", { name: "Create SPC campaign in Scale Insights for B0ABCDEF12" })).toBeVisible();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(within(region).queryByRole("button", { name: "Fetch Again" })).not.toBeInTheDocument();
   });

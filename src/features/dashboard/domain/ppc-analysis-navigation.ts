@@ -52,3 +52,7 @@ export function getScaleInsightsAnalysisHref(asinValue: string, section: PpcAnal
 export function getScaleInsightsSearchTermHref(asinValue: string, from: string, to: string) {
   return getScaleInsightsAnalysisHref(asinValue, "search-terms", from, to);
 }
+
+export function getScaleInsightsCampaignCreationHref(asinValue: string, from: string, to: string) {
+  return getScaleInsightsSearchTermHref(asinValue, from, to);
+}
