@@ -81,6 +81,37 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.queryByRole("textbox", { name: "PPC Clicks" })).not.toBeInTheDocument();
   }, 15_000);
 
+  it("uses refreshed Scale Insights search-term clicks when advertising totals omit PPC clicks", async () => {
+    const missingClicksWarning = "Scale Insights did not include PPC Clicks for this reporting period; PPC Conversion Rate is unavailable.";
+    vi.mocked(fetch).mockImplementation(async input => {
+      const url = String(input);
+      if (url.includes("/api/dashboard/performance?")) {
+        const startDate = new URL(url, "http://localhost").searchParams.get("weekStart")!;
+        return { ok: true, status: 200, json: async () => ({ performance: {
+          asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
+          metrics: { spend: 82, ppcSales: 482, ppcOrders: 23, totalSales: 1317, totalOrders: 59 },
+          freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: addDaysIso(startDate, 6) }, warnings: [missingClicksWarning],
+        } }) } as Response;
+      }
+      if (url.includes("/api/dashboard/untargeted-opportunities?")) {
+        return { ok: true, status: 200, json: async () => ({ opportunities: {
+          asin: "B012345678", country: "US", currency: "USD", dataState: "Final", ppcClicks: 50,
+          period: { startDate: "2026-08-26", endDate: "2026-09-01" },
+          freshness: { searchDataAsOf: "2026-09-02", coverageDataAsOf: "2026-09-02" }, opportunities: [], warnings: [],
+        } }) } as Response;
+      }
+      return { ok: true, status: 200, json: async () => ({ products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }] }) } as Response;
+    });
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    const performanceCard = await screen.findByRole("region", { name: "Weekly PPC Performance" });
+    expect(await within(performanceCard).findByLabelText("PPC Conversion Rate unavailable")).toBeVisible();
+    expect(await screen.findByText(missingClicksWarning)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh Data" }));
+    expect(await within(performanceCard).findByLabelText("PPC Conversion Rate 46%")).toHaveTextContent("PPC orders ÷ PPC clicks");
+    expect(screen.queryByText(missingClicksWarning)).not.toBeInTheDocument();
+  }, 15_000);
+
   it("loads a Pipeline product and automatically saves the selected weekly report", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
@@ -261,6 +292,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(performanceCard).getByRole("textbox", { name: "PPC Sales" })).toHaveAttribute("readonly");
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveValue("82");
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveAttribute("readonly");
+    fireEvent.change(screen.getByRole("textbox", { name: "Weekly limit" }), { target: { value: "99.6" } });
+    expect(within(screen.getByRole("region", { name: "Budget Utilization" })).getByText("$82 / $100")).toBeVisible();
     expect(screen.getByRole("textbox", { name: "ACOS actual" })).toHaveValue("17%");
     expect(within(screen.getByRole("textbox", { name: "ACOS actual" }).closest("[class*=goalRow]")!).getByText("Final")).toBeVisible();
     expect(screen.getByRole("textbox", { name: "PPC Sales actual" })).toHaveValue("$482");

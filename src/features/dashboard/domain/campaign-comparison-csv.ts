@@ -147,16 +147,14 @@ function currencyForCountry(country: string) {
   return ({ US: "USD", CA: "CAD", MX: "MXN", UK: "GBP", DE: "EUR", FR: "EUR", IT: "EUR", ES: "EUR", NL: "EUR", JP: "JPY", SG: "SGD", AU: "AUD" } as Record<string, string>)[country] ?? "USD";
 }
 
-export function createCampaignComparisonFromCsv(input: {
+type CampaignComparisonInput = {
   asin: string;
   country: string;
-  previousText: string;
-  currentText: string;
   previousPeriod: CsvPeriod;
   currentPeriod: CsvPeriod;
-}) {
-  const previous = parseScaleInsightsCampaignCsv(input.previousText);
-  const current = parseScaleInsightsCampaignCsv(input.currentText);
+};
+
+function createCampaignComparisonFromMaps(input: CampaignComparisonInput, previous: Map<string, CsvCampaign>, current: Map<string, CsvCampaign>) {
   const keys = new Set([...previous.keys(), ...current.keys()]);
   const zero: CampaignPeriodMetrics = { spend: 0, sales: 0, orders: 0 };
   return {
@@ -187,6 +185,26 @@ export function createCampaignComparisonFromCsv(input: {
     }).toSorted((first, second) => first.campaignName.localeCompare(second.campaignName)),
     warnings: ["Scale Insights campaign CSVs do not contain the selected report dates. Confirm that each file matches the labeled week before importing."],
   } satisfies CampaignWeeklyComparison;
+}
+
+export function createCampaignComparisonFromCsv(input: CampaignComparisonInput & { previousText: string; currentText: string }) {
+  return createCampaignComparisonFromMaps(input, parseScaleInsightsCampaignCsv(input.previousText), parseScaleInsightsCampaignCsv(input.currentText));
+}
+
+export function createCampaignComparisonFromPreviousComparison(input: CampaignComparisonInput & { previousComparison: CampaignWeeklyComparison; currentText: string }) {
+  const asin = input.asin.trim().toUpperCase();
+  const country = input.country.trim().toUpperCase();
+  const source = input.previousComparison;
+  if (source.asin !== asin || source.country !== country || source.currentPeriod.startDate !== input.previousPeriod.startDate || source.currentPeriod.endDate !== input.previousPeriod.endDate) {
+    throw new Error("The saved previous-week campaign data does not match this product or reporting period.");
+  }
+  const previous = new Map(source.campaigns.flatMap((campaign): Array<[string, CsvCampaign]> => campaign.currentActive ? [[campaign.campaignId, {
+    campaignId: campaign.campaignId,
+    campaignName: campaign.campaignName,
+    sponsoredType: campaign.sponsoredType,
+    metrics: campaign.current,
+  }]] : []));
+  return createCampaignComparisonFromMaps(input, previous, parseScaleInsightsCampaignCsv(input.currentText));
 }
 
 export function campaignCsvCacheKey(country: string, asin: string, weekStart: string) {

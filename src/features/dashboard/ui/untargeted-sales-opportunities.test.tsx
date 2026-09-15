@@ -5,6 +5,7 @@ import { UntargetedSalesOpportunities } from "./untargeted-sales-opportunities";
 function payload() {
   return {
     asin: "B012345678", country: "US", currency: "USD", dataState: "Final",
+    ppcClicks: 55,
     period: { startDate: "2026-09-02", endDate: "2026-09-08" },
     freshness: { searchDataAsOf: "2026-09-09", coverageDataAsOf: "2026-09-09" }, warnings: [],
     opportunities: Array.from({ length: 11 }, (_, index) => ({
@@ -21,14 +22,16 @@ describe("UntargetedSalesOpportunities", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(window.navigator, "clipboard", { configurable: true, value: { writeText } });
     const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ opportunities: payload() }) }));
+    const onPpcClicksLoaded = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    const view = render(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
+    const view = render(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={0} onPpcClicksLoaded={onPpcClicksLoaded} />);
     const region = screen.getByRole("region", { name: "Untargeted Sales Opportunities" });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(within(region).queryByRole("button", { name: "Load Opportunities" })).not.toBeInTheDocument();
     expect(within(region).getByText(/loads with Refresh Data/i)).toBeVisible();
-    view.rerender(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={1} />);
+    view.rerender(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={1} onPpcClicksLoaded={onPpcClicksLoaded} />);
     const table = await within(region).findByRole("table", { name: "Untargeted sales opportunities" });
+    await waitFor(() => expect(onPpcClicksLoaded).toHaveBeenCalledWith({ asin: "B012345678", country: "US", weekStart: "2026-09-02", ppcClicks: 55 }));
     expect(within(table).getAllByRole("columnheader").map(header => header.textContent)).toEqual(["", "Search Term", "Impressions", "Clicks", "Spend", "Sales", "Orders", "ACOS", "Status"]);
     expect(within(table).getByRole("columnheader", { name: /Sales/ })).toHaveAttribute("aria-sort", "descending");
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -44,8 +47,7 @@ describe("UntargetedSalesOpportunities", () => {
       "href",
       "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-09-02&to=2026-09-08&asinList=B012345678",
     );
-    const createLink = within(table).getByRole("link", { name: "Create SKC campaign in Scale Insights for search term 1" });
-    expect(createLink).toHaveAttribute("href", "https://portal.scaleinsights.com/MassCampaigns/KeywordCampaigns/Customize?asin=B012345678&keyword=search+term+1");
+    expect(within(table).queryByRole("link", { name: "Create SKC campaign in Scale Insights for search term 1" })).not.toBeInTheDocument();
     expect(within(region).getByRole("button", { name: "Create Bulk Campaigns" })).toBeDisabled();
     fireEvent.click(within(table).getByRole("checkbox", { name: "Select search term search term 1" }));
     fireEvent.click(within(table).getByRole("checkbox", { name: "Select search term search term 3" }));

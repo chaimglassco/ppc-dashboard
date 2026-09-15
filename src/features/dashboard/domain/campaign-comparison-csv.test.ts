@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   campaignCsvCacheKey,
   createCampaignComparisonFromCsv,
+  createCampaignComparisonFromPreviousComparison,
   inferCsvPeriodFromFileName,
   parseCampaignCsvImportCache,
   parseScaleInsightsCampaignCsv,
@@ -61,5 +62,22 @@ describe("Scale Insights campaign CSV", () => {
     expect(campaignCsvCacheKey("us", "b012345678", "2026-09-02")).toBe("US:B012345678:2026-09-02");
     expect(parseCampaignCsvImportCache(JSON.stringify({ version: 1, entries: cache }))).toEqual(cache);
     expect(parseCampaignCsvImportCache(JSON.stringify({ key: PPC_CAMPAIGN_CSV_CACHE_KEY }))).toEqual({});
+  });
+
+  it("reuses the prior comparison's current week as the next previous week", () => {
+    const prior = createCampaignComparisonFromCsv({
+      asin: "B012345678", country: "US",
+      previousText: `${header}SP Manual,Campaign,1,10,2,111`,
+      currentText: `${header}SP Manual,Campaign,2,20,3,111`,
+      previousPeriod: { startDate: "2026-08-26", endDate: "2026-09-01" },
+      currentPeriod: { startDate: "2026-09-02", endDate: "2026-09-08" },
+    });
+    const next = createCampaignComparisonFromPreviousComparison({
+      asin: "B012345678", country: "US", previousComparison: prior,
+      currentText: `${header}SP Manual,Campaign,3,30,4,111`,
+      previousPeriod: { startDate: "2026-09-02", endDate: "2026-09-08" },
+      currentPeriod: { startDate: "2026-09-09", endDate: "2026-09-15" },
+    });
+    expect(next.campaigns[0]).toMatchObject({ previous: { spend: 3, sales: 20, orders: 2 }, current: { spend: 4, sales: 30, orders: 3 } });
   });
 });

@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent a
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
-  PPC_DASHBOARD_STORAGE_KEY, addDaysIso, addMonthsIso, createWeeklyPpcReport, currency,
+  PPC_DASHBOARD_STORAGE_KEY, addDaysIso, addMonthsIso, calculateWeeklyPerformance, createWeeklyPpcReport, currency,
   formatReportingMonthRange, formatWeekRange, formatWeeklyGoalTarget, formatWeeklyGoalValue, getIsoWeekNumber, getSelectedMonthWeekStarts, parsePpcDashboardStore, percentage, reportKey,
   startOfWeekIso, withCalculatedPerformance, type ActionItem, type DashboardProduct, type GoalOutcome, type GoalStatus,
   WEEKLY_GOAL_OPTIONS, weeklyGoalActualValue, weeklyGoalLabel, weeklyGoalUnit, type GoalDataState, type WeeklyGoal, type WeeklyGoalMetric, type WeeklyPpcReport,
@@ -21,7 +21,8 @@ import {
 import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfolio-panel";
 import { ProductPerformanceChat, type PerformanceChatPeriod } from "./product-performance-chat";
 import { CampaignWeeklyComparison } from "./campaign-weekly-comparison";
-import { UntargetedSalesOpportunities } from "./untargeted-sales-opportunities";
+import { UntargetedSalesOpportunities, type OpportunityPpcClickTotal } from "./untargeted-sales-opportunities";
+import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, type PerformanceCache } from "../domain/ppc-performance-cache";
 import { getScaleInsightsAnalysisHref, PPC_ANALYSIS_COLUMNS } from "../domain/ppc-analysis-navigation";
 import styles from "./ppc-performance-dashboard.module.css";
@@ -42,6 +43,7 @@ const ACTIVE_GOAL_STATUSES: GoalStatus[] = ["On Track", "At Risk"];
 const AUTO_SAVE_DELAY_MS = 500;
 const BUDGET_HISTORY_PAGE_SIZE = 5;
 const PERFORMANCE_BACKFILL_CONCURRENCY = 2;
+const MISSING_PPC_CLICKS_WARNING = "Scale Insights did not include PPC Clicks for this reporting period; PPC Conversion Rate is unavailable.";
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const METRIC_GROUPS: { title: string; displayTitle: string; metrics: MetricDefinition[] }[] = [
   { title: "Sales", displayTitle: "Sales Metrics", metrics: [
@@ -63,6 +65,15 @@ function numericValue(value: string) {
 
 function roundedMetricValue(value: number) {
   return Number.isFinite(value) ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(Math.max(0, value))) : "0";
+}
+
+function withSearchTermPpcClicks(snapshot: ScaleInsightsWeeklyPerformance | undefined, ppcClicks: number | undefined) {
+  if (!snapshot || snapshot.metrics.ppcClicks != null || ppcClicks == null) return snapshot;
+  return {
+    ...snapshot,
+    metrics: calculateWeeklyPerformance({ ...snapshot.metrics, ppcClicks }),
+    warnings: snapshot.warnings.filter(warning => warning !== MISSING_PPC_CLICKS_WARNING),
+  };
 }
 
 function formatPeriodCardRange(weekStart: string) {
@@ -310,11 +321,17 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const [performanceLoad, setPerformanceLoad] = useState<PerformanceLoadState>({ key: "", status: "idle", message: "", warnings: [] });
   const [performanceRefresh, setPerformanceRefresh] = useState(0);
   const [opportunityRefresh, setOpportunityRefresh] = useState({ key: "", version: 0 });
+  const [opportunityPpcClicks, setOpportunityPpcClicks] = useState<Record<string, number>>({});
   const [performanceCache, setPerformanceCache] = useState<PerformanceCache>({});
   const cacheRef = useRef<PerformanceCache>({});
   const refreshRequest = useRef("");
   const budgetEditStartRef = useRef<{ key: string; value: number } | null>(null);
   const [cacheReady, setCacheReady] = useState(false);
+
+  const receiveOpportunityPpcClicks = useCallback((total: OpportunityPpcClickTotal) => {
+    const key = performanceCacheKey(total.asin, total.weekStart);
+    setOpportunityPpcClicks(current => current[key] === total.ppcClicks ? current : { ...current, [key]: total.ppcClicks });
+  }, []);
 
   const loadProducts = useCallback(async (signal?: AbortSignal) => {
     setProductsLoading(true);
@@ -412,14 +429,15 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const selectedKey = selectedProductId && activeWeekStart ? reportKey(selectedProductId, activeWeekStart) : "";
   const selectedAsin = selectedProduct?.asin?.trim() || "";
   const snapshotKey = performanceCacheKey(selectedAsin, activeWeekStart);
-  const cachedPerformance = performanceCache[snapshotKey];
+  const cachedPerformance = withSearchTermPpcClicks(performanceCache[snapshotKey], opportunityPpcClicks[snapshotKey]);
   const goalDataState: GoalDataState | null = cachedPerformance
     ? cachedPerformance.endDate >= addDaysIso(activeWeekStart, 6) ? "Final" : "Partial"
     : null;
   const dirty = selectedKey ? dirtyReportKeys.has(selectedKey) : false;
   const previousWeekStart = addDaysIso(activeWeekStart, -7);
   const previousDraft = selectedProductId && activeWeekStart ? reports[reportKey(selectedProductId, previousWeekStart)] ?? null : null;
-  const previousSnapshot = performanceCache[performanceCacheKey(selectedAsin, previousWeekStart)];
+  const previousSnapshotKey = performanceCacheKey(selectedAsin, previousWeekStart);
+  const previousSnapshot = withSearchTermPpcClicks(performanceCache[previousSnapshotKey], opportunityPpcClicks[previousSnapshotKey]);
   const previousReport = previousSnapshot && selectedProductId
     ? withCalculatedPerformance({ ...(previousDraft ?? createWeeklyPpcReport(selectedProductId, previousWeekStart)), ...previousSnapshot.metrics, ppcClicks: previousSnapshot.metrics.ppcClicks })
     : previousDraft;
@@ -442,7 +460,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     .filter(candidate => candidate.productId === selectedProductId)
     .flatMap(candidate => candidate.goalHistory.map(goal => ({ ...goal, weekStart: candidate.weekStart })))
     .sort((first, second) => second.resolvedAt.localeCompare(first.resolvedAt)), [reports, selectedProductId]);
-  const displayedPerformanceLoad: PerformanceLoadState = !selectedKey
+  const basePerformanceLoad: PerformanceLoadState = !selectedKey
     ? { key: "", status: "idle", message: "", warnings: [] }
     : !selectedAsin
       ? { key: selectedKey, status: "idle", message: "Add an ASIN to retrieve Scale Insights performance.", warnings: [] }
@@ -451,6 +469,9 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         : cachedPerformance
           ? { key: snapshotKey, status: "ready", message: `Saved Scale Insights data through ${cachedPerformance.freshness.salesDataThrough || cachedPerformance.endDate}. Refresh to update.`, warnings: cachedPerformance.warnings }
         : { key: selectedKey, status: "loading", message: "Retrieving Scale Insights performance…", warnings: [] };
+  const displayedPerformanceLoad = cachedPerformance?.metrics.ppcClicks != null
+    ? { ...basePerformanceLoad, warnings: basePerformanceLoad.warnings.filter(warning => warning !== MISSING_PPC_CLICKS_WARNING) }
+    : basePerformanceLoad;
   const importedMetricsLocked = !!cachedPerformance || displayedPerformanceLoad.status === "ready";
   const currentPerformanceAvailable = Boolean(report && (importedMetricsLocked || METRIC_GROUPS.some(group => group.metrics.some(metric => report[metric.field] > 0))));
   const budgetUsage = report ? percentage(report.spend, report.weeklyBudget) : 0;
@@ -724,7 +745,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
                 <label><span>Weekly Limit</span><span className={ws.moneyInput}><i>$</i><input aria-label="Weekly limit" inputMode="decimal" style={{ width: `${Math.max(1, roundedMetricValue(report.weeklyBudget).length)}ch` }} value={report.weeklyBudget ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(report.weeklyBudget) : ""} placeholder="0" onFocus={() => { budgetEditStartRef.current = { key: selectedKey, value: report.weeklyBudget }; }} onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} onBlur={event => finishBudgetEdit(event.currentTarget.value)} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span><small>Daily limit <strong>{preciseCurrency(dailyLimitFromWeekly(report.weeklyBudget))}</strong></small></label>
                 <label className={isOverspent ? ws.budgetOver : ""}><span>Spent ({budgetUsage}%)</span><span className={ws.moneyInput}><i>$</i><input aria-label="Actual spend" aria-readonly={importedMetricsLocked || undefined} readOnly={importedMetricsLocked} inputMode="numeric" style={{ width: `${Math.max(1, roundedMetricValue(report.spend).length)}ch` }} value={roundedMetricValue(report.spend)} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span><small>{currency(Math.abs(budgetBalance))} {isOverspent ? "overspent" : "remaining"}</small></label>
               </div>
-              <div className={ws.budgetBurnRate}><RadialGauge value={budgetUsage} label={`${budgetUsage}%`} /><div><p><strong>Burn Rate Progress</strong><span>{preciseCurrency(report.spend)} / {preciseCurrency(report.weeklyBudget)}</span></p><div className={ws.progressTrack} aria-label={`${budgetUsage}% of weekly budget used`}><span className={budgetUsage >= 100 ? ws.progressDanger : budgetUsage >= 80 ? ws.progressWarning : ""} style={{ width: `${Math.min(100, budgetUsage)}%` }} /></div><small><span>Expected at day {activeWeekDay}: {expectedBudgetUsage}%</span><strong>{budgetPacingDelta === 0 ? "On pace" : `${budgetPacingDelta > 0 ? "Over" : "Under"}-pacing by ${Math.abs(budgetPacingDelta)}%`}</strong></small></div></div>
+              <div className={ws.budgetBurnRate}><RadialGauge value={budgetUsage} label={`${budgetUsage}%`} /><div><p><strong>Burn Rate Progress</strong><span>{currency(report.spend)} / {currency(report.weeklyBudget)}</span></p><div className={ws.progressTrack} aria-label={`${budgetUsage}% of weekly budget used`}><span className={budgetUsage >= 100 ? ws.progressDanger : budgetUsage >= 80 ? ws.progressWarning : ""} style={{ width: `${Math.min(100, budgetUsage)}%` }} /></div><small><span>Expected at day {activeWeekDay}: {expectedBudgetUsage}%</span><strong>{budgetPacingDelta === 0 ? "On pace" : `${budgetPacingDelta > 0 ? "Over" : "Under"}-pacing by ${Math.abs(budgetPacingDelta)}%`}</strong></small></div></div>
               <details className={ws.budgetHistory}><summary>Budget History</summary>
                 <table aria-label="Budget change history"><thead><tr><th>Date of Change</th><th>From</th><th>To</th></tr></thead><tbody>{visibleBudgetHistory.length ? visibleBudgetHistory.map(change => <tr key={change.id}><td>{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(change.changedAt))}</td><td>{preciseCurrency(change.from)}</td><td>{preciseCurrency(change.to)}</td></tr>) : <tr><td colSpan={3}>No budget changes recorded yet.</td></tr>}</tbody></table>
                 {budgetHistoryPageCount > 1 ? <nav className={ws.budgetHistoryPagination} aria-label="Budget history pages"><button type="button" aria-label="Previous budget history page" disabled={budgetHistoryPage === 1} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage - 1 })}><ArrowLeft aria-hidden="true" /></button>{Array.from({ length: budgetHistoryPageCount }, (_, index) => index + 1).map(page => <button type="button" key={page} aria-label={`Budget history page ${page}`} aria-current={page === budgetHistoryPage ? "page" : undefined} onClick={() => setBudgetHistoryView({ key: selectedKey, page })}>{page}</button>)}<button type="button" aria-label="Next budget history page" disabled={budgetHistoryPage === budgetHistoryPageCount} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage + 1 })}><ArrowRight aria-hidden="true" /></button></nav> : null}
@@ -755,7 +776,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
           </div>
 
           <CampaignWeeklyComparison asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={performanceRefresh} />
-          <UntargetedSalesOpportunities asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={opportunityRefresh.key === snapshotKey ? opportunityRefresh.version : 0} />
+          <UntargetedSalesOpportunities asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={opportunityRefresh.key === snapshotKey ? opportunityRefresh.version : 0} onPpcClicksLoaded={receiveOpportunityPpcClicks} />
 
           <section className={ws.card} aria-labelledby="actions-heading"><div className={ws.cardTitle}><div><h3 id="actions-heading">Action Items</h3><p className={ws.actionDescription}>Operational tasks generated from this week’s performance analysis</p></div><button type="button" onClick={addAction}><Plus />Add Action Item</button></div><div className={ws.actionList}>{report.actions.map(action => <div className={ws.actionRow} key={action.id}><button type="button" className={action.done ? ws.actionDone : ""} aria-label={action.done ? `Mark ${action.title} incomplete` : `Mark ${action.title} complete`} onClick={() => updateAction(action.id, { done: !action.done })}>{action.done ? <Check /> : null}</button><input aria-label="Action item" value={action.title} onChange={event => updateAction(action.id, { title: event.target.value })} /><select aria-label={`${action.title} priority`} className={priorityTone(action.priority)} value={action.priority} onChange={event => updateAction(action.id, { priority: event.target.value as ActionItem["priority"] })}><option>High</option><option>Medium</option><option>Low</option></select><span className={ws.assigneePlaceholder} aria-label="Assignee unavailable">—</span><button type="button" aria-label={`Remove ${action.title}`} onClick={() => removeAction(action.id)}><Trash2 /></button></div>)}</div></section>
         </div></div>

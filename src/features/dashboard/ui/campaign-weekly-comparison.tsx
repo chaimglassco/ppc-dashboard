@@ -17,6 +17,7 @@ import {
 import {
   campaignCsvCacheKey,
   createCampaignComparisonFromCsv,
+  createCampaignComparisonFromPreviousComparison,
   inferCsvPeriodFromFileName,
   parseCampaignCsvImportCache,
   PPC_CAMPAIGN_CSV_CACHE_KEY,
@@ -163,6 +164,7 @@ export function CampaignWeeklyComparison({ asin, country = "US", weekStart }: { 
   const [entry, setEntry] = useState<CampaignCsvImport | null>(null);
   const [previousFile, setPreviousFile] = useState<File | null>(null);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
+  const [carriedPreviousEntry, setCarriedPreviousEntry] = useState<CampaignCsvImport | null>(null);
   const [showImporter, setShowImporter] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
@@ -170,26 +172,36 @@ export function CampaignWeeklyComparison({ asin, country = "US", weekStart }: { 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const cache = parseCampaignCsvImportCache(window.localStorage.getItem(PPC_CAMPAIGN_CSV_CACHE_KEY));
-      setEntry(cache[comparisonKey] ?? null);
+      const nextEntry = cache[comparisonKey] ?? null;
+      const previousEntry = cache[campaignCsvCacheKey(country, asin, periods.previous.startDate)] ?? null;
+      const reusablePreviousEntry = previousEntry
+        && previousEntry.comparison.currentPeriod.startDate === periods.previous.startDate
+        && previousEntry.comparison.currentPeriod.endDate === periods.previous.endDate
+        ? previousEntry
+        : null;
+      setEntry(nextEntry);
+      setCarriedPreviousEntry(reusablePreviousEntry);
       setPreviousFile(null);
       setCurrentFile(null);
-      setShowImporter(!cache[comparisonKey]);
+      setShowImporter(!nextEntry);
       setError("");
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [comparisonKey]);
+  }, [asin, comparisonKey, country, periods]);
 
   const importComparison = async () => {
-    if (!previousFile || !currentFile || !asin) return;
+    if ((!previousFile && !carriedPreviousEntry) || !currentFile || !asin) return;
     setImporting(true);
     setError("");
     try {
-      const previousMismatch = periodMismatch(previousFile, periods.previous);
+      const previousMismatch = previousFile ? periodMismatch(previousFile, periods.previous) : "";
       const currentMismatch = periodMismatch(currentFile, periods.current);
       if (previousMismatch || currentMismatch) throw new Error([previousMismatch, currentMismatch].filter(Boolean).join(" "));
-      const [previousText, currentText] = await Promise.all([previousFile.text(), currentFile.text()]);
-      const comparison = createCampaignComparisonFromCsv({ asin, country, previousText, currentText, previousPeriod: periods.previous, currentPeriod: periods.current });
-      const nextEntry: CampaignCsvImport = { comparison, previousFileName: previousFile.name, currentFileName: currentFile.name, importedAt: new Date().toISOString() };
+      const currentText = await currentFile.text();
+      const comparison = previousFile
+        ? createCampaignComparisonFromCsv({ asin, country, previousText: await previousFile.text(), currentText, previousPeriod: periods.previous, currentPeriod: periods.current })
+        : createCampaignComparisonFromPreviousComparison({ asin, country, previousComparison: carriedPreviousEntry!.comparison, currentText, previousPeriod: periods.previous, currentPeriod: periods.current });
+      const nextEntry: CampaignCsvImport = { comparison, previousFileName: previousFile?.name ?? carriedPreviousEntry!.currentFileName, currentFileName: currentFile.name, importedAt: new Date().toISOString() };
       const cache = parseCampaignCsvImportCache(window.localStorage.getItem(PPC_CAMPAIGN_CSV_CACHE_KEY));
       window.localStorage.setItem(PPC_CAMPAIGN_CSV_CACHE_KEY, JSON.stringify({ version: 1, entries: withCampaignCsvImport(cache, nextEntry) }));
       setEntry(nextEntry);
@@ -209,13 +221,13 @@ export function CampaignWeeklyComparison({ asin, country = "US", weekStart }: { 
     </header>
 
     {showImporter ? <div className={styles.csvImporter}>
-      <div className={styles.importNotice}><FileUp aria-hidden="true" /><span><strong>Upload two Scale Insights Campaign CSV exports</strong><small>The files do not include report dates or advertised ASIN. They will be assigned to the labeled weeks and saved locally for {asin || "the selected ASIN"}. Export them after filtering Scale Insights to this product.</small></span></div>
+      <div className={styles.importNotice}><FileUp aria-hidden="true" /><span><strong>{carriedPreviousEntry ? "Upload the current-week Scale Insights Campaign CSV" : "Upload two Scale Insights Campaign CSV exports"}</strong><small>{carriedPreviousEntry ? `The saved ${formatPeriod(periods.previous.startDate, periods.previous.endDate)} export will be reused as the previous week. Upload only the new current week for ${asin || "the selected ASIN"}.` : `The files do not include report dates or advertised ASIN. They will be assigned to the labeled weeks and saved locally for ${asin || "the selected ASIN"}. Export them after filtering Scale Insights to this product.`}</small></span></div>
       <div className={styles.fileGrid}>
-        <label><span>Previous week</span><strong>{formatPeriod(periods.previous.startDate, periods.previous.endDate)}</strong><input aria-label="Previous week campaign CSV" type="file" accept=".csv,text/csv" onChange={event => setPreviousFile(event.target.files?.[0] ?? null)} /><small>{previousFile?.name || "Choose CSV file"}</small></label>
+        {carriedPreviousEntry ? <div className={styles.carriedFile} aria-label="Reused previous week campaign CSV"><span>Previous week · Reused</span><strong>{formatPeriod(periods.previous.startDate, periods.previous.endDate)}</strong><small>{carriedPreviousEntry.currentFileName}</small></div> : <label><span>Previous week</span><strong>{formatPeriod(periods.previous.startDate, periods.previous.endDate)}</strong><input aria-label="Previous week campaign CSV" type="file" accept=".csv,text/csv" onChange={event => setPreviousFile(event.target.files?.[0] ?? null)} /><small>{previousFile?.name || "Choose CSV file"}</small></label>}
         <label><span>Current week</span><strong>{formatPeriod(periods.current.startDate, periods.current.endDate)}</strong><input aria-label="Current week campaign CSV" type="file" accept=".csv,text/csv" onChange={event => setCurrentFile(event.target.files?.[0] ?? null)} /><small>{currentFile?.name || "Choose CSV file"}</small></label>
       </div>
       {error ? <p className={styles.importError} role="alert">{error}</p> : null}
-      <button type="button" className={styles.importButton} disabled={!asin || !previousFile || !currentFile || importing} onClick={() => void importComparison()}>{importing ? "Importing…" : "Import comparison"}</button>
+      <button type="button" className={styles.importButton} disabled={!asin || (!previousFile && !carriedPreviousEntry) || !currentFile || importing} onClick={() => void importComparison()}>{importing ? "Importing…" : "Import comparison"}</button>
     </div> : null}
 
     {!comparison && !showImporter ? <div className={styles.stateMessage}><span>No campaign comparison has been imported for this product and week.</span></div> : null}

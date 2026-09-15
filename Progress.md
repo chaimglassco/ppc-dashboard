@@ -22,7 +22,7 @@ Focused adapter, cache, and UI tests pass, and TypeScript validation passes. Ful
 
 Removed the manual Save action while retaining debounced browser-local persistence. Reporting-period Completed/Partial badges now derive from cached coverage dates, Action Items starts empty, goal controls moved into the data-state footer, current-summary formatting moved beside its label, and Sales WoW moved from the SKU block into Total Sales.
 
-Corrected the conversion definition to PPC Orders divided by PPC Clicks. The provider request now retrieves one raw ASIN row and automatically reads an exact, unambiguous click count from that row or aggregate totals without another MCP call. The manual click field is removed, and current/previous conversion values display as whole percentages while the stored calculation retains two-decimal precision. Search-term clicks and Total Sessions remain excluded.
+Corrected the conversion definition to PPC Orders divided by PPC Clicks. The provider request first reads the requested ASIN row or aggregate totals; when they omit clicks, Refresh Data reuses the complete Search Term Performance result for the same ASIN and week. The manual click field is removed, and current/previous conversion values display as whole percentages while the stored calculation retains two-decimal precision. Incomplete search-term results and Total Sessions remain excluded.
 
 Added an accessible ASIN copy control, rounded displayed ACOS goal Targets to whole percentages, removed the active-goal counter, and moved Goal History plus Add Goal into the planning-card header.
 
@@ -320,5 +320,8 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Narrowed the Bad situation to “Spend but No Sales This Week,” requiring positive current-week Spend and zero current-week Sales. Removed the redundant Lost Current-Week Sales dropdown; campaigns with no current Spend and declining Sales remain in Spend Down/Sales Down.
 - Added independent sorting to every dropdown's Previous Spend, Current Spend, Spend Change, Previous Sales, Current Sales, Sales Change, Orders, and Current ACOS headers. First click sorts highest-to-lowest and the next click reverses it.
 - Untargeted-opportunity copy buttons now show their success checkmark for two seconds, then automatically restore the square copy icon. Repeated copies restart the timer and unmounting clears it.
-- Corrected the green creation action for keyword opportunities to open Scale Insights' Split Keywords to Campaigns Customize page directly with the advertised ASIN and selected search term prefilled. Product ASIN rows omit the keyword-only action; Scale Insights still owns preview and execution.
-- Added per-row and select-all-visible checkboxes for keyword opportunities. Create Bulk Campaigns opens one Scale Insights Customize page with the advertised ASIN and all selected terms encoded as separate keyword lines; Product ASINs remain excluded.
+- Removed the green per-row keyword campaign-creation action. Copy and source actions remain available on each opportunity row.
+- Kept per-row and select-all-visible checkboxes for keyword opportunities. Create Bulk Campaigns opens one Scale Insights Customize page with the advertised ASIN and all selected terms encoded as separate keyword lines; Product ASINs remain excluded.
+- Rounded Budget Burn Rate Progress Spend and weekly limit to whole dollars, matching the Spend card.
+- Added a safe PPC Clicks fallback from a complete ASIN-and-week Search Term Performance result, allowing PPC Conversion Rate to populate when Scale Insights advertising totals omit clicks without adding another provider request.
+- Campaign comparison now carries a validated current-week import into the next week's previous slot for the same marketplace and ASIN. The operator uploads only the new current-week CSV when that exact prior period is available.

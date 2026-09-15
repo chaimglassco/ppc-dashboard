@@ -65,7 +65,7 @@ describe("Scale Insights untargeted sales opportunity adapter", () => {
       asin_list: ["B012345678"], mode: "raw", waste_only: false,
     }));
     expect(report).toMatchObject({
-      asin: "B012345678", country: "US", currency: "USD", dataState: "Final",
+      asin: "B012345678", country: "US", currency: "USD", dataState: "Final", ppcClicks: 19,
       period: { startDate: "2026-09-02", endDate: "2026-09-08" },
       freshness: { searchDataAsOf: "2026-09-09", coverageDataAsOf: "2026-09-09" },
       opportunities: [
@@ -105,7 +105,16 @@ describe("Scale Insights untargeted sales opportunity adapter", () => {
 
   it("does not spend a campaign-attribution call when the search report has no rows", async () => {
     const callTool = vi.fn(async () => ({ structuredContent: { rows: [], oppMeta: { total_count: 0 } } }));
-    await expect(loadUntargetedSalesOpportunities(params, definitions, callTool)).resolves.toMatchObject({ opportunities: [] });
+    await expect(loadUntargetedSalesOpportunities(params, definitions, callTool)).resolves.toMatchObject({ opportunities: [], ppcClicks: 0 });
     expect(callTool).toHaveBeenCalledTimes(1);
+  });
+
+  it("omits the click total when Scale Insights indicates that search-term coverage is incomplete", async () => {
+    const callTool = vi.fn(async (name: string) => name === "get_search_term_performance"
+      ? { structuredContent: { opps: [{ SearchTerm: "partial term", Impressions: 10, Sales: 0, Orders: 0, Spend: 1, Clicks: 2 }], oppMeta: { total_count: 600 } } }
+      : { structuredContent: { opps: [], oppMeta: { total_count: 0 } } });
+
+    const report = await loadUntargetedSalesOpportunities(params, definitions, callTool);
+    expect(report.ppcClicks).toBeUndefined();
   });
 });

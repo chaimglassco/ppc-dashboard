@@ -27,6 +27,8 @@ type LoadState = {
   requestId?: string;
 };
 
+export type OpportunityPpcClickTotal = { asin: string; country: string; weekStart: string; ppcClicks: number };
+
 const INITIAL_ROW_COUNT = 10;
 const COPY_FEEDBACK_MS = 2_000;
 const EMPTY_SELECTED_TERMS = new Set<string>();
@@ -99,7 +101,7 @@ function copyTermForScaleInsights(term: string) {
   void navigator.clipboard.writeText(term).catch(() => undefined);
 }
 
-export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, refreshVersion }: { asin: string; country?: string; weekStart: string; refreshVersion: number }) {
+export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, refreshVersion, onPpcClicksLoaded }: { asin: string; country?: string; weekStart: string; refreshVersion: number; onPpcClicksLoaded?: (total: OpportunityPpcClickTotal) => void }) {
   const reportKey = untargetedOpportunityCacheKey(country, asin, weekStart);
   const selectionKey = `${reportKey}:${refreshVersion}`;
   const cacheRef = useRef<UntargetedOpportunityCache | null>(null);
@@ -181,6 +183,10 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
       ? loadState
       : { key: reportKey, status: "idle", message: "This report loads with Refresh Data and reuses the latest saved result for this product and week." };
   const report = displayedState.report;
+  useEffect(() => {
+    if (report?.ppcClicks == null) return;
+    onPpcClicksLoaded?.({ asin: report.asin, country: report.country, weekStart: report.period.startDate, ppcClicks: report.ppcClicks });
+  }, [onPpcClicksLoaded, report]);
   const filteredRows = useMemo(() => {
     if (!report) return [];
     const minSales = numericFilter(minimumSales) ?? 0;
@@ -265,7 +271,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
         {filteredRows.some(row => row.type === "Search term") ? <div className={styles.bulkCampaignBar}><span role="status" aria-live="polite" aria-label={`${selectedTerms.size} search term${selectedTerms.size === 1 ? "" : "s"} selected`}><strong>{selectedTerms.size}</strong> search term{selectedTerms.size === 1 ? "" : "s"} selected</span>{selectedTerms.size ? <a className={styles.bulkCampaignButton} href={bulkCampaignHref} target="_blank" rel="noopener noreferrer" aria-label={`Create bulk campaigns for ${selectedTerms.size} selected search ${selectedTerms.size === 1 ? "term" : "terms"}`}><SquarePlus aria-hidden="true" />Create Bulk Campaigns</a> : <button type="button" className={styles.bulkCampaignButton} disabled><SquarePlus aria-hidden="true" />Create Bulk Campaigns</button>}</div> : null}
         <div className={styles.tableScroll}><table className={styles.opportunityTable} aria-label="Untargeted sales opportunities"><thead><tr><th className={styles.selectionCell}><input ref={selectAllRef} type="checkbox" aria-label="Select all visible search terms" checked={allVisibleSearchTermsSelected} disabled={!visibleSearchTerms.length} onChange={toggleVisibleSearchTerms} /></th><th>Search Term</th><SortableMetricHeader metric="impressions" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="clicks" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="spend" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="sales" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="orders" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="acos" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><th>Status</th></tr></thead><tbody>{visibleRows.map(row => <tr key={`${row.type}:${row.term}`}>
           <td className={styles.selectionCell}>{row.type === "Search term" ? <input type="checkbox" aria-label={`Select search term ${row.term}`} checked={selectedTerms.has(row.term)} onChange={() => toggleTerm(row.term)} /> : null}</td>
-          <th scope="row"><span className={styles.opportunityTerm}>{row.type === "Product ASIN" ? <a className={styles.productAsinLink} href={`https://www.amazon.com/dp/${encodeURIComponent(row.term)}`} target="_blank" rel="noopener noreferrer"><span>{row.term}</span></a> : <span className={styles.campaignName}>{row.term}</span>}<CopyTermButton term={row.term} /><a className={styles.sourceLink} href={getScaleInsightsSearchTermHref(asin, report.period.startDate, report.period.endDate)} target="_blank" rel="noopener noreferrer" aria-label={`Open Scale Insights Search terms for ${row.term}`} title="Open Scale Insights Search terms and copy this value for Instant Search" onClick={() => copyTermForScaleInsights(row.term)}><ExternalLink aria-hidden="true" /></a>{row.type === "Search term" ? <a className={`${styles.sourceLink} ${styles.createCampaignLink}`} href={getScaleInsightsKeywordCampaignCreationHref(asin, row.term)} target="_blank" rel="noopener noreferrer" aria-label={`Create SKC campaign in Scale Insights for ${row.term}`} title="Open the prefilled Scale Insights SKC campaign setup"><SquarePlus aria-hidden="true" /></a> : null}</span></th>
+          <th scope="row"><span className={styles.opportunityTerm}>{row.type === "Product ASIN" ? <a className={styles.productAsinLink} href={`https://www.amazon.com/dp/${encodeURIComponent(row.term)}`} target="_blank" rel="noopener noreferrer"><span>{row.term}</span></a> : <span className={styles.campaignName}>{row.term}</span>}<CopyTermButton term={row.term} /><a className={styles.sourceLink} href={getScaleInsightsSearchTermHref(asin, report.period.startDate, report.period.endDate)} target="_blank" rel="noopener noreferrer" aria-label={`Open Scale Insights Search terms for ${row.term}`} title="Open Scale Insights Search terms and copy this value for Instant Search" onClick={() => copyTermForScaleInsights(row.term)}><ExternalLink aria-hidden="true" /></a></span></th>
           <td>{new Intl.NumberFormat("en-US").format(row.impressions)}</td><td>{new Intl.NumberFormat("en-US").format(row.clicks)}</td><td>{formatCurrency(row.spend, report.currency)}</td><td><strong>{formatCurrency(row.sales, report.currency)}</strong></td><td>{row.orders}</td><td>{row.acos == null ? "—" : `${Math.round(row.acos)}%`}</td><td><span className={styles.untargetedBadge}>Not targeted</span></td>
         </tr>)}</tbody></table></div>
         {filteredRows.length > INITIAL_ROW_COUNT ? <button type="button" className={styles.showAllButton} onClick={() => setShowAll(value => !value)}>{showAll ? "Show first 10" : `Show all ${filteredRows.length}`}</button> : null}

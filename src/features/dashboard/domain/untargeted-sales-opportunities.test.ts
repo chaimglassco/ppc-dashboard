@@ -3,6 +3,7 @@ import { parseUntargetedOpportunityCache, parseUntargetedSalesOpportunities, unt
 
 const valid = {
   asin: "b012345678", country: "us", currency: "usd", dataState: "Partial",
+  ppcClicks: 12,
   period: { startDate: "2026-09-02", endDate: "2026-09-08" },
   freshness: { searchDataAsOf: "2026-09-09", coverageDataAsOf: "2026-09-09" },
   opportunities: [{ term: "lead knife", type: "Search term", sourceCampaignId: "123", sourceAdGroupId: "456", sourceKeyword: "knife", sourceMatchType: "broad", sales: 25, orders: 1, spend: 5, impressions: 100, clicks: 3, acos: 20 }], warnings: [],
@@ -10,11 +11,12 @@ const valid = {
 
 describe("untargeted opportunity response validation", () => {
   it("normalizes valid responses and accepts legacy rows without optional campaign attribution", () => {
-    expect(parseUntargetedSalesOpportunities(valid)).toMatchObject({ asin: "B012345678", country: "US", currency: "USD", opportunities: [{ sourceCampaignId: "123" }] });
+    expect(parseUntargetedSalesOpportunities(valid)).toMatchObject({ asin: "B012345678", country: "US", currency: "USD", ppcClicks: 12, opportunities: [{ sourceCampaignId: "123" }] });
     const legacyRow = { term: "lead knife", type: "Search term", sales: 25, orders: 1, spend: 5, impressions: 100, clicks: 3, acos: 20 };
     expect(parseUntargetedSalesOpportunities({ ...valid, opportunities: [legacyRow] })).not.toBeNull();
   });
   it("rejects invalid metrics and product ASINs", () => {
+    expect(parseUntargetedSalesOpportunities({ ...valid, ppcClicks: 1.5 })).toBeNull();
     expect(parseUntargetedSalesOpportunities({ ...valid, opportunities: [{ ...valid.opportunities[0], orders: 1.5 }] })).toBeNull();
     expect(parseUntargetedSalesOpportunities({ ...valid, opportunities: [{ ...valid.opportunities[0], type: "Product ASIN", term: "bad" }] })).toBeNull();
   });

@@ -21,6 +21,7 @@ export type UntargetedSalesOpportunities = {
   currency: string;
   period: { startDate: string; endDate: string };
   dataState: "Final" | "Partial";
+  ppcClicks?: number;
   freshness: { searchDataAsOf: string; coverageDataAsOf: string };
   opportunities: UntargetedSalesOpportunity[];
   warnings: string[];
@@ -56,7 +57,8 @@ export function parseUntargetedSalesOpportunities(value: unknown): UntargetedSal
   const startDate = text(value.period.startDate);
   const endDate = text(value.period.endDate);
   const dataState = value.dataState === "Final" || value.dataState === "Partial" ? value.dataState : null;
-  if (!/^[A-Z0-9]{10}$/.test(asin) || !/^[A-Z]{2}$/.test(country) || !/^[A-Z]{3}$/.test(currency) || !isoDate(startDate) || !isoDate(endDate) || startDate > endDate || !dataState) return null;
+  const ppcClicks = value.ppcClicks == null ? undefined : finiteNonNegative(value.ppcClicks);
+  if (!/^[A-Z0-9]{10}$/.test(asin) || !/^[A-Z]{2}$/.test(country) || !/^[A-Z]{3}$/.test(currency) || !isoDate(startDate) || !isoDate(endDate) || startDate > endDate || !dataState || (value.ppcClicks != null && (ppcClicks == null || !Number.isInteger(ppcClicks)))) return null;
 
   const opportunities: UntargetedSalesOpportunity[] = [];
   for (const candidate of value.opportunities) {
@@ -85,6 +87,7 @@ export function parseUntargetedSalesOpportunities(value: unknown): UntargetedSal
     currency,
     period: { startDate, endDate },
     dataState,
+    ...(ppcClicks == null ? {} : { ppcClicks }),
     freshness: { searchDataAsOf: text(value.freshness.searchDataAsOf), coverageDataAsOf: text(value.freshness.coverageDataAsOf) },
     opportunities: opportunities.toSorted((first, second) => second.sales - first.sales || second.orders - first.orders || first.term.localeCompare(second.term)),
     warnings: value.warnings.map(warning => String(warning).trim()).filter(Boolean),

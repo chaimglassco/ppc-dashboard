@@ -371,6 +371,12 @@ export async function loadUntargetedSalesOpportunities(
   });
   const searchResults = await loadPages(searchTool, params, callTool);
   const metrics = uniqueMetrics(searchResults);
+  const searchResultCount = totalCount(searchResults[0]);
+  const searchResultsComplete = resultSetIsComplete(searchResults)
+    || (searchResultCount != null && metrics.size >= searchResultCount);
+  const ppcClicks = searchResultsComplete
+    ? [...metrics.values()].reduce((total, row) => total + row.clicks, 0)
+    : undefined;
   const convertingMetrics = new Map([...metrics].filter(([, row]) => row.orders >= 1));
   reportDiagnostic?.("opportunity_search_result", { providerResultCount: totalCount(searchResults[0]), parsedRowCount: metrics.size, convertingRowCount: convertingMetrics.size });
   if (!metrics.size) {
@@ -431,6 +437,7 @@ export async function loadUntargetedSalesOpportunities(
     asin: params.asin,
     country: params.country,
     dataState: params.dataState,
+    ...(ppcClicks == null ? {} : { ppcClicks }),
     period: { startDate: params.startDate, endDate: params.endDate },
     currency: currency(searchResults[0]),
     freshness: { searchDataAsOf: freshness(searchResults[0]), coverageDataAsOf: freshness(sourceResults[0]) },

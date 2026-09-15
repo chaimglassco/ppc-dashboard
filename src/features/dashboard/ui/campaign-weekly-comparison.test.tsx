@@ -107,4 +107,29 @@ describe("CampaignWeeklyComparison CSV import", () => {
     expect(await screen.findByRole("button", { name: "Replace CSVs" })).toBeVisible();
     expect(screen.queryByLabelText("Previous week campaign CSV")).not.toBeInTheDocument();
   });
+
+  it("reuses the prior imported current week for the next comparison", async () => {
+    const first = render(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
+    fireEvent.change(await screen.findByLabelText("Previous week campaign CSV"), { target: { files: [csvFile("Aug 26 - Sept 1.csv", "SP Manual,Campaign,1,10,2,111")] } });
+    fireEvent.change(screen.getByLabelText("Current week campaign CSV"), { target: { files: [csvFile("Sept 2 - 8.csv", "SP Manual,Campaign,2,20,3,111")] } });
+    fireEvent.click(screen.getByRole("button", { name: "Import comparison" }));
+    await screen.findByRole("button", { name: "Replace CSVs" });
+    first.unmount();
+
+    render(<CampaignWeeklyComparison asin="B012345678" weekStart="2026-09-09" refreshVersion={0} />);
+    const reused = await screen.findByLabelText("Reused previous week campaign CSV");
+    expect(reused).toHaveTextContent("Sep 2, 2026 – Sep 8, 2026");
+    expect(reused).toHaveTextContent("Sept 2 - 8.csv");
+    expect(screen.queryByLabelText("Previous week campaign CSV")).not.toBeInTheDocument();
+    const importButton = screen.getByRole("button", { name: "Import comparison" });
+    expect(importButton).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Current week campaign CSV"), { target: { files: [csvFile("Sept 9 - 15.csv", "SP Manual,Campaign,3,30,4,111")] } });
+    expect(importButton).toBeEnabled();
+    fireEvent.click(importButton);
+
+    expect((await screen.findAllByText("Campaign")).length).toBeGreaterThan(0);
+    const stored = JSON.parse(window.localStorage.getItem(PPC_CAMPAIGN_CSV_CACHE_KEY) || "{}");
+    expect(stored.entries["US:B012345678:2026-09-09"].previousFileName).toBe("Sept 2 - 8.csv");
+    expect(stored.entries["US:B012345678:2026-09-09"].comparison.campaigns[0]).toMatchObject({ previous: { spend: 3, sales: 20, orders: 2 }, current: { spend: 4, sales: 30, orders: 3 } });
+  });
 });
