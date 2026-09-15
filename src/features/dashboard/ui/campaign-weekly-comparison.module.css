@@ -52,6 +52,14 @@
 .opportunityTotals small { color: #71717a; font: 8px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .04em; }
 .opportunityTotals strong { font: 600 10px/1.4 var(--mono); }
 .localFilterNotice { white-space: nowrap; }
+.bulkCampaignBar { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--border); background: #f8fafc; color: #52525b; font: 10px/1.4 var(--mono); }
+.bulkCampaignBar > span { margin-right: auto; }
+.bulkCampaignBar > span strong { color: #18181b; font: 700 11px/1.4 var(--font-workspace-sans), sans-serif; }
+.bulkCampaignButton { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid #047857; border-radius: 4px; background: #047857; color: white; font: 600 11px/1.4 var(--font-workspace-sans), sans-serif; text-decoration: none; cursor: pointer; }
+.bulkCampaignButton:hover { border-color: #065f46; background: #065f46; }
+.bulkCampaignButton:focus-visible { outline: 2px solid #09090b; outline-offset: 2px; }
+.bulkCampaignButton:disabled { border-color: #d4d4d8; background: #e4e4e7; color: #71717a; cursor: not-allowed; }
+.bulkCampaignButton svg { width: 14px; height: 14px; }
 .accordionList { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .outcomeGroup { display: grid; gap: 10px; }
 .outcomeGroupHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 7px; border-bottom: 1px solid var(--border); }
@@ -93,6 +101,12 @@
 .sortButton:focus-visible { outline: 2px solid #09090b; outline-offset: 1px; }
 .sortButton svg { width: 12px; height: 12px; }
 .tableScroll thead th:first-child { width: 31%; }
+.tableScroll .opportunityTable { min-width: 1220px; }
+.tableScroll .opportunityTable thead th:first-child { width: 42px; padding-right: 0; text-align: center; }
+.tableScroll .opportunityTable thead th:nth-child(2) { width: 31%; }
+.selectionCell { width: 42px; padding-right: 0 !important; text-align: center; }
+.selectionCell input { width: 14px; height: 14px; margin: 0; accent-color: #047857; cursor: pointer; }
+.selectionCell input:disabled { cursor: not-allowed; }
 .tableScroll tbody th { max-width: 320px; }
 .tableScroll tbody th a { display: inline-flex; align-items: flex-start; gap: 6px; color: #18181b; font-size: 11px; line-height: 1.4; text-decoration: none; }
 .tableScroll tbody th a:hover span { text-decoration: underline; }

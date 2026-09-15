@@ -29,7 +29,7 @@ describe("UntargetedSalesOpportunities", () => {
     expect(within(region).getByText(/loads with Refresh Data/i)).toBeVisible();
     view.rerender(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={1} />);
     const table = await within(region).findByRole("table", { name: "Untargeted sales opportunities" });
-    expect(within(table).getAllByRole("columnheader").map(header => header.textContent)).toEqual(["Search Term", "Impressions", "Clicks", "Spend", "Sales", "Orders", "ACOS", "Status"]);
+    expect(within(table).getAllByRole("columnheader").map(header => header.textContent)).toEqual(["", "Search Term", "Impressions", "Clicks", "Spend", "Sales", "Orders", "ACOS", "Status"]);
     expect(within(table).getByRole("columnheader", { name: /Sales/ })).toHaveAttribute("aria-sort", "descending");
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(within(table).getAllByRole("row")).toHaveLength(11);
@@ -46,6 +46,20 @@ describe("UntargetedSalesOpportunities", () => {
     );
     const createLink = within(table).getByRole("link", { name: "Create SKC campaign in Scale Insights for search term 1" });
     expect(createLink).toHaveAttribute("href", "https://portal.scaleinsights.com/MassCampaigns/KeywordCampaigns/Customize?asin=B012345678&keyword=search+term+1");
+    expect(within(region).getByRole("button", { name: "Create Bulk Campaigns" })).toBeDisabled();
+    fireEvent.click(within(table).getByRole("checkbox", { name: "Select search term search term 1" }));
+    fireEvent.click(within(table).getByRole("checkbox", { name: "Select search term search term 3" }));
+    expect(within(region).getByRole("status", { name: "2 search terms selected" })).toBeVisible();
+    expect(within(region).getByRole("link", { name: "Create bulk campaigns for 2 selected search terms" })).toHaveAttribute(
+      "href",
+      "https://portal.scaleinsights.com/MassCampaigns/KeywordCampaigns/Customize?asin=B012345678&keyword=search+term+1%0Asearch+term+3",
+    );
+    fireEvent.click(within(table).getByRole("checkbox", { name: "Select all visible search terms" }));
+    expect(within(region).getByRole("status", { name: "9 search terms selected" })).toBeVisible();
+    expect(within(table).getByRole("checkbox", { name: "Select all visible search terms" })).toBeChecked();
+    fireEvent.click(within(table).getByRole("checkbox", { name: "Select all visible search terms" }));
+    expect(within(region).getByRole("status", { name: "0 search terms selected" })).toBeVisible();
+    expect(within(region).getByRole("button", { name: "Create Bulk Campaigns" })).toBeDisabled();
     fireEvent.click(sourceLink);
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("search term 1"));
     vi.useFakeTimers();

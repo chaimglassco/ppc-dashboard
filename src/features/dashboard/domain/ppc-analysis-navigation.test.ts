@@ -43,6 +43,9 @@ describe("PPC analysis navigation", () => {
     expect(getScaleInsightsKeywordCampaignCreationHref("b012345678", " hobby came for stained glass ")).toBe(
       "https://portal.scaleinsights.com/MassCampaigns/KeywordCampaigns/Customize?asin=B012345678&keyword=hobby+came+for+stained+glass",
     );
+    expect(getScaleInsightsKeywordCampaignCreationHref("b012345678", ["hobby came", "lead came", "hobby came"])).toBe(
+      "https://portal.scaleinsights.com/MassCampaigns/KeywordCampaigns/Customize?asin=B012345678&keyword=hobby+came%0Alead+came",
+    );
     expect(getScaleInsightsKeywordCampaignCreationHref("invalid", "hobby came")).toBe("https://portal.scaleinsights.com/MassCampaigns/KeywordCampaigns");
   });
 });
