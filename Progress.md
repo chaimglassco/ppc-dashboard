@@ -318,3 +318,4 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 - Campaign comparison situation dropdowns now use one full-width row each across Good, Bad, and Neutral groups, keeping labels, campaign counts, and explanations readable before expansion.
 - Added a Bad “Spend but No Sales” situation for wasted Spend in the previous week, current week, or both. This rule has first precedence so overlapping campaigns appear once; the existing Lost Sales and new-spend high-ACOS rules retain their non-overlapping cases.
+- Added independent sorting to every dropdown's Previous Spend, Current Spend, Spend Change, Previous Sales, Current Sales, Sales Change, Orders, and Current ACOS headers. First click sorts highest-to-lowest and the next click reverses it.

@@ -34,6 +34,8 @@ The selected dashboard Wednesday defines the current seven-day slot and the prev
 
 Pure domain rules classify every joined campaign exactly once. Spend without Sales in the previous week, current week, or both runs first. Lost current-week Sales then captures campaigns with prior Sales and no current Spend, followed by newly inefficient Spend where previous Spend was zero and current ACOS is at least 15%. The remaining strict Spend/Sales increases and decreases populate four Good/Bad categories; unchanged or unmatched movement goes to Neutral. Current ACOS derives from current Spend divided by current Sales. Category rows sort by absolute Sales change, then Spend change and campaign name.
 
+Each outcome dropdown owns transient client-side sort state. Previous/current Spend, signed Spend change, previous/current Sales, signed Sales change, current Orders, and current ACOS toggle descending/ascending independently; null ACOS values remain last. Sorting does not mutate or persist the imported comparison.
+
 Validated imports persist as `{ version: 1, entries }` under `glassco.ppcCampaignCsvComparison.v1`. Entry keys are `<COUNTRY>:<ASIN>:<CURRENT-WEDNESDAY>` and values contain the validated comparison, both filenames, and import timestamp. Hydration reconstructs the key from validated scope and drops malformed entries. This browser-only cache is capped at 50 entries and does not change weekly reports, performance snapshots, Pipeline data, or the Scale Insights account. The legacy authenticated campaign comparison route and provider adapter remain present but the dashboard no longer calls them.
 
 ## Product performance AI boundary

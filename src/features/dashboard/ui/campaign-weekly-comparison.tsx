@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BarChart3, CheckCircle2, ChevronDown, ExternalLink, FileUp, RefreshCw, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, BarChart3, CheckCircle2, ChevronDown, ExternalLink, FileUp, RefreshCw, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { addDaysIso } from "../domain/ppc-dashboard-state";
 import {
@@ -9,7 +9,9 @@ import {
   getCampaignOutcomes,
   getScaleInsightsCampaignTrendHref,
   HIGH_ACOS_THRESHOLD,
+  type CampaignComparisonRow,
   type CampaignOutcomeGroup,
+  type CampaignOutcomeCategoryId,
   type CampaignWeeklyComparison,
 } from "../domain/campaign-weekly-comparison";
 import {
@@ -60,15 +62,70 @@ function periodMismatch(file: File, expected: { startDate: string; endDate: stri
   return `${file.name} appears to cover ${formatPeriod(inferred.startDate, inferred.endDate)}, but this slot requires ${formatPeriod(expected.startDate, expected.endDate)}.`;
 }
 
+type CampaignSortMetric = "previousSpend" | "currentSpend" | "spendChange" | "previousSales" | "currentSales" | "salesChange" | "orders" | "currentAcos";
+type CampaignSortDirection = "asc" | "desc";
+type CampaignSort = { metric: CampaignSortMetric; direction: CampaignSortDirection };
+
+const CAMPAIGN_SORT_LABELS: Record<CampaignSortMetric, string> = {
+  previousSpend: "Previous Spend",
+  currentSpend: "Current Spend",
+  spendChange: "Spend Change",
+  previousSales: "Previous Sales",
+  currentSales: "Current Sales",
+  salesChange: "Sales Change",
+  orders: "Current Orders",
+  currentAcos: "Current ACOS",
+};
+
+function campaignSortValue(campaign: CampaignComparisonRow, metric: CampaignSortMetric) {
+  if (metric === "previousSpend") return campaign.previous.spend;
+  if (metric === "currentSpend") return campaign.current.spend;
+  if (metric === "spendChange") return campaign.delta.spend.absolute;
+  if (metric === "previousSales") return campaign.previous.sales;
+  if (metric === "currentSales") return campaign.current.sales;
+  if (metric === "salesChange") return campaign.delta.sales.absolute;
+  if (metric === "orders") return campaign.current.orders;
+  return getCampaignAcos(campaign.current);
+}
+
+function sortCampaignRows(rows: CampaignComparisonRow[], sort: CampaignSort | undefined) {
+  if (!sort) return rows;
+  return rows.toSorted((first, second) => {
+    const firstValue = campaignSortValue(first, sort.metric);
+    const secondValue = campaignSortValue(second, sort.metric);
+    if (firstValue == null && secondValue == null) return first.campaignName.localeCompare(second.campaignName);
+    if (firstValue == null) return 1;
+    if (secondValue == null) return -1;
+    const difference = sort.direction === "desc" ? secondValue - firstValue : firstValue - secondValue;
+    return difference || first.campaignName.localeCompare(second.campaignName);
+  });
+}
+
+function SortableCampaignHeader({ metric, sort, onSort, children }: { metric: CampaignSortMetric; sort: CampaignSort | undefined; onSort: (metric: CampaignSortMetric) => void; children?: string }) {
+  const active = sort?.metric === metric;
+  const nextDirection = active && sort.direction === "desc" ? "lowest to highest" : "highest to lowest";
+  const Icon = active ? (sort.direction === "desc" ? ArrowDown : ArrowUp) : ArrowUpDown;
+  return <th scope="col" aria-sort={active ? (sort.direction === "desc" ? "descending" : "ascending") : "none"}>
+    <button type="button" className={styles.sortButton} aria-label={`Sort ${CAMPAIGN_SORT_LABELS[metric]} ${nextDirection}`} onClick={() => onSort(metric)}>{children ?? CAMPAIGN_SORT_LABELS[metric]}<Icon aria-hidden="true" /></button>
+  </th>;
+}
+
 function CampaignTable({ comparison, group }: { comparison: CampaignWeeklyComparison; group: CampaignOutcomeGroup }) {
   const categories = CAMPAIGN_OUTCOME_CATEGORIES.filter(category => category.group === group);
+  const [sorts, setSorts] = useState<Partial<Record<CampaignOutcomeCategoryId, CampaignSort>>>({});
+  const updateSort = (categoryId: CampaignOutcomeCategoryId, metric: CampaignSortMetric) => {
+    setSorts(current => {
+      const active = current[categoryId];
+      return { ...current, [categoryId]: { metric, direction: active?.metric === metric && active.direction === "desc" ? "asc" : "desc" } };
+    });
+  };
   return <section className={`${styles.outcomeGroup} ${styles[`outcome${group}`]}`} aria-labelledby={`campaign-${group.toLowerCase()}-heading`}>
     <header className={styles.outcomeGroupHeader}>
       <h4 id={`campaign-${group.toLowerCase()}-heading`}>{group === "Good" ? <CheckCircle2 aria-hidden="true" /> : group === "Bad" ? <TriangleAlert aria-hidden="true" /> : <BarChart3 aria-hidden="true" />}{group}</h4>
       <span>{categories.reduce((total, category) => total + getCampaignOutcomes(comparison.campaigns, category).length, 0)} campaigns</span>
     </header>
     <div className={styles.accordionList}>{categories.map(category => {
-      const rows = getCampaignOutcomes(comparison.campaigns, category);
+      const rows = sortCampaignRows(getCampaignOutcomes(comparison.campaigns, category), sorts[category.id]);
       return <details className={`${styles.moverAccordion} ${styles[`group${group}`]}`} key={category.id}>
         <summary>
           <span className={styles.categoryIcon}>{group === "Good" ? <CheckCircle2 aria-hidden="true" /> : group === "Bad" ? <TriangleAlert aria-hidden="true" /> : <BarChart3 aria-hidden="true" />}</span>
@@ -78,7 +135,7 @@ function CampaignTable({ comparison, group }: { comparison: CampaignWeeklyCompar
         </summary>
         <div className={styles.accordionContent}>{rows.length ? <div className={styles.tableScroll}>
           <table aria-label={`${category.label} campaigns`}>
-            <thead><tr><th>Campaign</th><th>Previous Spend</th><th>Current Spend</th><th>Spend Change</th><th>Previous Sales</th><th>Current Sales</th><th>Sales Change</th><th>Orders</th><th>Current ACOS</th></tr></thead>
+            <thead><tr><th>Campaign</th><SortableCampaignHeader metric="previousSpend" sort={sorts[category.id]} onSort={metric => updateSort(category.id, metric)} /><SortableCampaignHeader metric="currentSpend" sort={sorts[category.id]} onSort={metric => updateSort(category.id, metric)} /><SortableCampaignHeader metric="spendChange" sort={sorts[category.id]} onSort={metric => updateSort(category.id, metric)} /><SortableCampaignHeader metric="previousSales" sort={sorts[category.id]} onSort={metric => updateSort(category.id, metric)} /><SortableCampaignHeader metric="currentSales" sort={sorts[category.id]} onSort={metric => updateSort(category.id, metric)} /><SortableCampaignHeader metric="salesChange" sort={sorts[category.id]} onSort={metric => updateSort(category.id, metric)} /><SortableCampaignHeader metric="orders" sort={sorts[category.id]} onSort={metric => updateSort(category.id, metric)}>Orders</SortableCampaignHeader><SortableCampaignHeader metric="currentAcos" sort={sorts[category.id]} onSort={metric => updateSort(category.id, metric)} /></tr></thead>
             <tbody>{rows.map(campaign => {
               const currentAcos = getCampaignAcos(campaign.current);
               return <tr key={`${campaign.sponsoredType}:${campaign.campaignId}`}>
