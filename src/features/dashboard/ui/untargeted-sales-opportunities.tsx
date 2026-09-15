@@ -28,6 +28,7 @@ type LoadState = {
 };
 
 const INITIAL_ROW_COUNT = 10;
+const COPY_FEEDBACK_MS = 2_000;
 type SortMetric = "impressions" | "clicks" | "spend" | "sales" | "orders" | "acos";
 type SortDirection = "asc" | "desc";
 
@@ -69,13 +70,22 @@ function SortableMetricHeader({ metric, activeMetric, direction, onSort }: { met
 
 function CopyTermButton({ term }: { term: string }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const resetTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (resetTimer.current != null) window.clearTimeout(resetTimer.current);
+  }, []);
   const copyTerm = async () => {
+    if (resetTimer.current != null) window.clearTimeout(resetTimer.current);
     try {
       await navigator.clipboard.writeText(term);
       setCopyState("copied");
     } catch {
       setCopyState("error");
     }
+    resetTimer.current = window.setTimeout(() => {
+      setCopyState("idle");
+      resetTimer.current = null;
+    }, COPY_FEEDBACK_MS);
   };
   const label = copyState === "copied" ? `Copied search term ${term}` : copyState === "error" ? `Copy search term ${term} failed` : `Copy search term ${term}`;
   return <button type="button" className={styles.copyTermButton} aria-label={label} title={copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy search term"} onClick={copyTerm}>

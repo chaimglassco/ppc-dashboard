@@ -49,6 +49,7 @@ describe("UntargetedSalesOpportunities", () => {
     fireEvent.click(within(table).getByRole("button", { name: "Copy search term search term 1" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
     expect(within(table).getByRole("button", { name: "Copied search term search term 1" })).toBeVisible();
+    await waitFor(() => expect(within(table).getByRole("button", { name: "Copy search term search term 1" })).toBeVisible(), { timeout: 3_000 });
     fireEvent.click(within(table).getByRole("button", { name: "Sort Impressions highest to lowest" }));
     expect(within(table).getByRole("columnheader", { name: /Impressions/ })).toHaveAttribute("aria-sort", "descending");
     fireEvent.click(within(table).getByRole("button", { name: "Sort Impressions lowest to highest" }));

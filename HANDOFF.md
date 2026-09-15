@@ -7,6 +7,7 @@ Last updated: September 15, 2026
 - Campaign comparison situation dropdowns now render one per row at every viewport size instead of sharing two columns on desktop.
 - Narrowed the Bad rule to “Spend but No Sales This Week”: only current-week Spend greater than zero with zero current-week Sales qualifies. Removed the redundant Lost Current-Week Sales dropdown; stopped-Spend losses now fall under Spend Down/Sales Down.
 - Every numeric campaign-table header now toggles descending/ascending sorting inside its own situation dropdown. Orders uses current-week Orders, null ACOS stays last, and sorting another dropdown does not replace the first dropdown's selection.
+- Search-term copy feedback now resets from the success checkmark to the copy icon after two seconds; repeated clicks restart the timer and cleanup prevents an update after unmount.
 
 ## September 15, 2026 — CSV campaign week-over-week comparison
 
