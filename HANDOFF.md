@@ -2,6 +2,10 @@
 
 Last updated: September 15, 2026
 
+## September 15, 2026 — full-width campaign outcome rows
+
+- Campaign comparison situation dropdowns now render one per row at every viewport size instead of sharing two columns on desktop.
+
 ## September 15, 2026 — CSV campaign week-over-week comparison
 
 - Replaced the unavailable ASIN-scoped MCP campaign table with two local Scale Insights Campaign CSV slots for the exact preceding/current Wednesday–Tuesday periods. CSVs join by CampaignId, validate name/type/numeric metrics, aggregate compatible duplicate IDs, and zero-fill campaigns absent from one week.

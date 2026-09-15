@@ -314,3 +314,6 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Kept an explicit Fetch Again action visible after successful loads so empty criteria results can be re-fetched without changing product or week.
 - Corrected blank criteria to include zero-sales and zero-order terms, added Impressions to the table, and matched the live Scale Insights exact-coverage `query_list` contract discovered from the authenticated production request.
 - Added domain, adapter, API, and component regression coverage. Full repository gates and authenticated production data reconciliation are recorded during release verification.
+# September 15, 2026 — full-width campaign outcome rows
+
+- Campaign comparison situation dropdowns now use one full-width row each across Good, Bad, and Neutral groups, keeping labels, campaign counts, and explanations readable before expansion.
