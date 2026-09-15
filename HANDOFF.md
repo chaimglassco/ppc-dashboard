@@ -2,6 +2,12 @@
 
 Last updated: September 15, 2026
 
+## September 15, 2026 — compact Dashboard disclosures and ASIN filter
+
+- All seven Dashboard data sections are independent native disclosures and start closed for a compact account overview.
+- A single transient search beside Audit Window matches ASIN, SKU, or product name. Its filtered product set drives the 7/14/30-day cards, ASIN ranking, product/update telemetry, coverage summary, and detail-table scope messages; clearing it restores the account view.
+- No persistence schema changed. Lint, typecheck, all 347 tests across 57 files (6 skipped), the production build, and `git diff --check` pass. Local browser verification reached the expected Pipeline sign-in boundary with content, no framework overlay, and no console errors; authenticated disclosure/filter behavior is covered by component tests.
+
 ## September 15, 2026 — Dashboard/Products switch and overview scaffold
 
 - Added a route-level Dashboard/Products tablist. Products is initially active; Dashboard replaces the three-panel editor with the new full-width overview and switching back restores the existing workspace state.

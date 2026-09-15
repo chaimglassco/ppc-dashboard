@@ -6,7 +6,7 @@ Weekly performance, `glassco.ppcPerformanceCache.v1`, and `glassco.ppcPerformanc
 
 Copy feedback, whole-number Target ACOS formatting, goal-header placement, and active-count removal are derived UI behavior and add no persisted fields.
 
-Dashboard/Products view selection is transient. The initial Dashboard overview reads existing validated `WeeklyPpcReport` records and adds no storage key or field. Unsupported daily and detailed-ledger values are represented as unavailable UI state rather than persisted placeholder data.
+Dashboard/Products view selection, Dashboard disclosure state, and the ASIN/SKU/product-name filter are transient. The Dashboard overview reads existing validated `WeeklyPpcReport` records and adds no storage key or field. Unsupported daily and detailed-ledger values are represented as unavailable UI state rather than persisted placeholder data.
 
 New reports use `actions: []`, and normalization preserves an explicitly empty list. The untouched historical seeded task is removed by its exact ID, title, priority, empty due date, and incomplete state; any edited or user-created action remains intact. The report `status` field remains readable for version-1 compatibility, but visible period status is derived from cached `startDate`/`endDate` coverage and is no longer changed by a manual Save action.
 

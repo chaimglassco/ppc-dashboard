@@ -1,5 +1,11 @@
 # Project Progress
 
+## September 15, 2026 — compact Dashboard disclosures and ASIN filter
+
+- Converted all seven Dashboard data sections into independently expandable disclosures that are closed by default.
+- Added a shared ASIN performance search beside the audit window. Matching is case-insensitive across ASIN, SKU, and product name, and the filtered product set drives all temporal cards, rankings, update metadata, coverage summaries, and detailed-table scope messages.
+- Added clear-filter behavior, filtered/total product telemetry, responsive controls, and regression coverage for default collapsed state and recalculated metrics.
+
 ## September 15, 2026 — Account dashboard scaffold and Total Sales trend placement
 
 - Added Dashboard and Products switch tabs above the PPC workspace. Products remains the initial view and preserves the existing product, reporting-period, and weekly documentation flow.

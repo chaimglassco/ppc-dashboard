@@ -1,5 +1,12 @@
 # QA Checklist
 
+## September 15 Dashboard disclosure and filter checks
+
+- [ ] Confirm all seven Dashboard data sections are closed by default and expand/collapse independently from their full summary rows.
+- [ ] Filter by a full or partial ASIN, SKU, and product name; confirm 7/14/30-day cards, ASIN rows, coverage values, product count, latest update, and detail scope all use the same matched products.
+- [ ] Clear the filter and confirm the account-wide totals and rows return.
+- [ ] Confirm search controls and disclosure summaries remain usable at mobile widths.
+
 ## September 15 dashboard-view checks
 
 - [ ] Confirm Products is initially selected and Dashboard/Products tabs expose correct `aria-selected` state while switching without losing the selected product or reporting week.
