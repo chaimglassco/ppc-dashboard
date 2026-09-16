@@ -356,7 +356,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(dashboardTab).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("heading", { name: "Performance Overview" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Today" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: /ASIN Velocity/ })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "ASIN Velocity & Performance Ranking" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Products" })).not.toBeInTheDocument();
 
     fireEvent.click(productsTab);

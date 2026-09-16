@@ -16,10 +16,10 @@ type OverviewLoadState =
 
 const EMPTY_SUMMARY: LedgerSummary = { reports: 0, totalSales: 0, ppcSales: 0, spend: 0, totalOrders: 0, ppcOrders: 0, clicks: 0 };
 const DETAIL_SECTIONS: ReadonlyArray<{ key: PerformanceOverviewSectionKey; title: string; description: string }> = [
-  { key: "keywords", title: "Keyword Targeting Performance // Top Keyword Movers & Efficiency", description: "Granular bid-level telemetry across active Sponsored Products and Sponsored Brands keyword clusters." },
-  { key: "campaigns", title: "Campaign Level Movers & Efficiency // Sponsored Ads Campaign Clusters", description: "Campaign movement, efficiency, and budget actions across the account." },
-  { key: "productTargets", title: "Product & ASIN Targeting // Competitor Conquesting & Defense Matrix", description: "Product-target performance grouped by target ASIN and campaign context." },
-  { key: "searchTerms", title: "Search Terms Report // Customer Search Query Intelligence & Harvesting", description: "Customer queries and attributed outcomes from the selected reporting period." },
+  { key: "keywords", title: "Keyword Targeting", description: "Granular bid-level telemetry across active Sponsored Products and Sponsored Brands keyword clusters." },
+  { key: "campaigns", title: "Campaign Movers and Anchors", description: "Campaign movement, efficiency, and budget actions across the account." },
+  { key: "productTargets", title: "ASIN Targeting", description: "Product-target performance grouped by target ASIN and campaign context." },
+  { key: "searchTerms", title: "Search Terms", description: "Customer queries and attributed outcomes from the selected reporting period." },
 ];
 const DETAIL_COLUMNS: Record<PerformanceOverviewSectionKey, string[]> = {
   keywords: ["#", "Keyword Target & Match Type", "Campaign / ASIN", "Impressions / CTR", "Clicks / CPC", "Spend", "Sales", "Orders / CVR", "ACOS", "ROAS"],
@@ -174,7 +174,7 @@ export function PerformanceOverviewDashboard({ products, reports, currentWeekSta
         </div>
       </section>
       <details className={styles.ledgerSection}>
-        <summary><div><span aria-hidden="true" /><div><h2>ASIN Velocity &amp; Performance Ranking // Net Sales Contribution Matrix</h2><p>Product-level results from saved reports for {displayRange(currentWeekStart, currentWeekEnd)}.</p></div></div><span className={styles.disclosureMeta}><strong>{currentRows.length} active row{currentRows.length === 1 ? "" : "s"}</strong><ChevronDown aria-hidden="true" /></span></summary>
+        <summary><div><span aria-hidden="true" /><div><h2>ASIN Velocity &amp; Performance Ranking</h2><p>Product-level results from saved reports for {displayRange(currentWeekStart, currentWeekEnd)}.</p></div></div><span className={styles.disclosureMeta}><strong>{currentRows.length} active row{currentRows.length === 1 ? "" : "s"}</strong><ChevronDown aria-hidden="true" /></span></summary>
         <div className={styles.tableScroll}><table><thead><tr><th>Rank &amp; Velocity</th><th>ASIN / SKU Details</th><th>Sales</th><th>Spend</th><th>Orders</th><th>ACOS</th><th>TACOS</th><th className={styles.spendShare}>Spend Share</th><th className={styles.salesShare}>Sales Share</th><th>WoW Momentum</th></tr></thead><tbody>{currentRows.length ? currentRows.map(({ product, current, momentum }, index) => <tr key={product.id}><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td><td><strong>{product.name}</strong><small>ASIN: {product.asin || "N/A"} · SKU: {product.sku || "N/A"}</small></td><td>{currency(current.totalSales)}</td><td>{currency(current.spend)}</td><td>{Math.round(current.totalOrders)}</td><td>{displayPercent(percentage(current.spend, current.ppcSales))}</td><td>{displayPercent(percentage(current.spend, current.totalSales))}</td><td className={styles.spendShare}>{displayPercent(percentage(current.spend, currentTotalSpend))}</td><td className={styles.salesShare}>{displayPercent(percentage(current.totalSales, currentTotalSales))}</td><td className={momentum == null ? styles.neutral : momentum >= 0 ? styles.positive : styles.negative}>{momentum == null ? "New / unavailable" : `${momentum >= 0 ? "↗" : "↘"} ${Math.abs(momentum)}%`}</td></tr>) : <tr><td colSpan={10}><div className={styles.emptyLedger}><PackageSearch aria-hidden="true" /><strong>No saved reports for this week</strong><span>Open Products, select an ASIN, and refresh its weekly data to populate this ranking.</span></div></td></tr>}</tbody></table></div>
       </details>
       {DETAIL_SECTIONS.map(meta => <DetailPerformance key={meta.key} meta={meta} section={live?.sections[meta.key]} loadStatus={displayedLoadStatus} scopeLabel={scopeLabel} periodLabel={periodLabel} />)}

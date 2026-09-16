@@ -47,7 +47,7 @@ describe("PerformanceOverviewDashboard", () => {
     expect(within(yesterday).getByText("20%")).toBeVisible();
     expect(within(yesterday).getByText("10%")).toBeVisible();
 
-    fireEvent.click(screen.getByText(/ASIN Velocity & Performance Ranking/i).closest("summary")!);
+    fireEvent.click(screen.getByText("ASIN Velocity & Performance Ranking").closest("summary")!);
     expect(screen.getByText("Round U Lead Came")).toBeVisible();
     expect(screen.getByText("↗ 14.3%")).toBeVisible();
     for (const heading of DETAIL_SECTIONS_FOR_TEST) fireEvent.click(screen.getByText(heading).closest("summary")!);
@@ -79,4 +79,4 @@ describe("PerformanceOverviewDashboard", () => {
   });
 });
 
-const DETAIL_SECTIONS_FOR_TEST = [/Keyword Targeting Performance/i, /Campaign Level Movers & Efficiency/i, /Product & ASIN Targeting/i, /Search Terms Report/i];
+const DETAIL_SECTIONS_FOR_TEST = ["Keyword Targeting", "Campaign Movers and Anchors", "ASIN Targeting", "Search Terms"];

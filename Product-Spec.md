@@ -240,3 +240,5 @@ Every displayed result shows Search Term, Impressions, Clicks, Spend, Sales, Ord
 The Dashboard tab keeps the five-card temporal ledger visible at all times. Today remains explicitly unavailable because incomplete-day data is excluded; Yesterday, 7 Days, 14 Days, and the operator-selected range use completed Scale Insights data when available and show local weekly-report totals as a temporary fallback. Every card lists TACOS directly below ACOS.
 
 The audit controls accept an inclusive custom date range of up to 90 days and apply it to Scale Insights totals plus Keyword Targeting, Campaign, Product/ASIN Targeting, and Search Terms tables. Those four tables and the ASIN ranking remain collapsed by default. The obsolete Overview Source Coverage section is removed. ASIN filtering scopes both live requests and local product rows. Spend Share cells use a centered light-red treatment, while Sales Share cells use centered light green.
+
+The five compact disclosure labels are ASIN Velocity & Performance Ranking, Keyword Targeting, Campaign Movers and Anchors, ASIN Targeting, and Search Terms.
