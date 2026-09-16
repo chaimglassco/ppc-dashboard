@@ -33,6 +33,23 @@ export type PerformanceOverviewSection = {
   rows: PerformanceOverviewRow[];
 };
 
+export type PerformanceOverviewAsinRow = {
+  asin: string;
+  spend: number;
+  ppcSales: number;
+  ppcOrders: number;
+  clicks: number;
+  totalSales: number;
+  totalOrders: number;
+  previousTotalSales: number | null;
+};
+
+export type PerformanceOverviewAsinRanking = {
+  status: "ready" | "unavailable";
+  message: string;
+  rows: PerformanceOverviewAsinRow[];
+};
+
 export type PerformanceOverviewData = {
   asins: string[];
   country: string;
@@ -41,6 +58,7 @@ export type PerformanceOverviewData = {
   actualPeriod: { startDate: string; endDate: string };
   freshness: string;
   periods: Record<PerformanceOverviewPeriodKey, PerformanceOverviewMetrics | null>;
+  asinRanking: PerformanceOverviewAsinRanking;
   sections: Record<PerformanceOverviewSectionKey, PerformanceOverviewSection>;
   warnings: string[];
 };
@@ -102,6 +120,20 @@ function parseRow(value: unknown): PerformanceOverviewRow | null {
   };
 }
 
+function parseAsinRow(value: unknown): PerformanceOverviewAsinRow | null {
+  if (!isRecord(value)) return null;
+  const asin = stringValue(value.asin).toUpperCase();
+  const spend = finiteNonNegative(value.spend);
+  const ppcSales = finiteNonNegative(value.ppcSales);
+  const ppcOrders = finiteNonNegative(value.ppcOrders);
+  const clicks = finiteNonNegative(value.clicks);
+  const totalSales = finiteNonNegative(value.totalSales);
+  const totalOrders = finiteNonNegative(value.totalOrders);
+  const previousTotalSales = value.previousTotalSales === null ? null : finiteNonNegative(value.previousTotalSales);
+  if (!/^[A-Z0-9]{10}$/.test(asin) || [spend, ppcSales, ppcOrders, clicks, totalSales, totalOrders].some(metric => metric == null) || previousTotalSales === null && value.previousTotalSales !== null) return null;
+  return { asin, spend: spend!, ppcSales: ppcSales!, ppcOrders: ppcOrders!, clicks: clicks!, totalSales: totalSales!, totalOrders: totalOrders!, previousTotalSales };
+}
+
 function parsePeriod(value: unknown) {
   if (!isRecord(value)) return null;
   const startDate = stringValue(value.startDate);
@@ -110,7 +142,7 @@ function parsePeriod(value: unknown) {
 }
 
 export function parsePerformanceOverviewData(value: unknown): PerformanceOverviewData | null {
-  if (!isRecord(value) || !Array.isArray(value.asins) || !isRecord(value.periods) || !isRecord(value.sections) || !Array.isArray(value.warnings)) return null;
+  if (!isRecord(value) || !Array.isArray(value.asins) || !isRecord(value.periods) || !isRecord(value.asinRanking) || !isRecord(value.sections) || !Array.isArray(value.warnings)) return null;
   const asins = value.asins.every(asin => typeof asin === "string" && /^[A-Z0-9]{10}$/.test(asin)) ? value.asins as string[] : null;
   const country = stringValue(value.country).toUpperCase();
   const currency = stringValue(value.currency).toUpperCase();
@@ -126,6 +158,11 @@ export function parsePerformanceOverviewData(value: unknown): PerformanceOvervie
     periods[key] = parsed;
   }
 
+  if ((value.asinRanking.status !== "ready" && value.asinRanking.status !== "unavailable") || typeof value.asinRanking.message !== "string" || !Array.isArray(value.asinRanking.rows)) return null;
+  const asinRows = value.asinRanking.rows.map(parseAsinRow);
+  if (asinRows.some(row => !row)) return null;
+  const asinRanking: PerformanceOverviewAsinRanking = { status: value.asinRanking.status, message: value.asinRanking.message, rows: asinRows as PerformanceOverviewAsinRow[] };
+
   const sections = {} as PerformanceOverviewData["sections"];
   for (const key of ["keywords", "campaigns", "productTargets", "searchTerms"] as const) {
     const candidate = value.sections[key];
@@ -136,5 +173,5 @@ export function parsePerformanceOverviewData(value: unknown): PerformanceOvervie
   }
 
   if (!value.warnings.every(warning => typeof warning === "string")) return null;
-  return { asins, country, currency, requestedPeriod, actualPeriod, freshness: stringValue(value.freshness), periods, sections, warnings: value.warnings as string[] };
+  return { asins, country, currency, requestedPeriod, actualPeriod, freshness: stringValue(value.freshness), periods, asinRanking, sections, warnings: value.warnings as string[] };
 }

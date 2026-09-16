@@ -378,5 +378,6 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] Apply a valid custom range and reconcile Yesterday, 7-Day, 14-Day, and selected-range totals with Scale Insights; confirm Today remains unavailable and an end date of today is capped at yesterday.
 - [ ] Open Keyword, Campaign, Product/ASIN Target, and Search Term sections and reconcile row metrics with the same ASIN and selected period in Scale Insights.
 - [ ] Filter by ASIN, SKU, and product name; confirm the live requests, cards, ranking rows, and detailed tables follow the filtered ASIN scope.
+- [ ] Reconcile every ASIN ranking row with Scale Insights for the applied range: Total Sales, Spend, Total Orders, Spend/PPC Sales ACOS, Spend/Total Sales TACOS, scoped Spend/Sales shares, and Total Sales momentum against the immediately preceding equal-length range.
 - [ ] Confirm Spend Share has a centered light-red background and Sales Share has a centered light-green background at desktop and mobile widths.
 - [ ] Confirm authorization, unsupported multi-ASIN capability, empty period, malformed response, provider error, and local fallback states are explicit and reveal no credentials.

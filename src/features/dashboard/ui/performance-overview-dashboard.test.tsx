@@ -13,6 +13,7 @@ function overview(startDate = "2026-07-29", endDate = "2026-08-28"): Performance
   return {
     asins: [product.asin], country: "US", currency: "USD", requestedPeriod: { startDate, endDate }, actualPeriod: { startDate, endDate: endDate === "2026-08-28" ? "2026-08-27" : endDate }, freshness: "2026-08-28",
     periods: { yesterday: metrics, sevenDays: metrics, fourteenDays: metrics, selectedRange: metrics },
+    asinRanking: { status: "ready", message: "1 ASIN row from Scale Insights.", rows: [{ asin: product.asin, spend: 100, ppcSales: 500, ppcOrders: 20, clicks: 50, totalSales: 1000, totalOrders: 40, previousTotalSales: 800 }] },
     sections: {
       keywords: { status: "ready", message: "1 row from Scale Insights.", rows: [row] },
       campaigns: { status: "ready", message: "1 row from Scale Insights.", rows: [{ ...row, id: "campaign-1", name: "Exact Campaign", targetType: "manual" }] },
@@ -49,7 +50,7 @@ describe("PerformanceOverviewDashboard", () => {
 
     fireEvent.click(screen.getByText("ASIN Velocity & Performance Ranking").closest("summary")!);
     expect(screen.getByText("Round U Lead Came")).toBeVisible();
-    expect(screen.getByText("↗ 14.3%")).toBeVisible();
+    expect(screen.getByText("↗ 25%")).toBeVisible();
     for (const heading of DETAIL_SECTIONS_FOR_TEST) fireEvent.click(screen.getByText(heading).closest("summary")!);
     expect(screen.getByText("stained glass came")).toBeVisible();
     expect(screen.getAllByText("Exact Campaign").length).toBeGreaterThan(0);

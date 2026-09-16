@@ -3,6 +3,7 @@ import { unwrapScaleInsightsPayload, type ScaleInsightsToolCaller } from "./scal
 import { getScaleInsightsCampaignToolCapabilities } from "./scale-insights-campaign-comparison";
 import type {
   PerformanceOverviewData,
+  PerformanceOverviewAsinRow,
   PerformanceOverviewMetrics,
   PerformanceOverviewRow,
   PerformanceOverviewSection,
@@ -18,6 +19,8 @@ export type PerformanceOverviewParams = {
   yesterday: string;
   sevenDayStart: string;
   fourteenDayStart: string;
+  previousStartDate: string;
+  previousEndDate: string;
 };
 
 const NAME_KEYS = ["search_term", "searchTerm", "SearchTerm", "customer_search_term", "searchQuery", "keyword", "Keyword", "keyword_text", "target", "Target", "target_asin", "TargetASIN", "entity", "Entity", "campaign_name", "campaignName", "CampaignName", "campaign", "Campaign", "name", "Name"];
@@ -161,6 +164,31 @@ function toolProperties(tool: Tool) {
   return isRecord(tool.inputSchema) && isRecord(tool.inputSchema.properties) ? tool.inputSchema.properties : {};
 }
 
+function schemaEnumStrings(value: unknown): string[] {
+  if (!isRecord(value)) return [];
+  const variants = [...(Array.isArray(value.oneOf) ? value.oneOf : []), ...(Array.isArray(value.anyOf) ? value.anyOf : [])];
+  return [
+    ...(Array.isArray(value.enum) ? value.enum.filter((candidate): candidate is string => typeof candidate === "string") : []),
+    ...(typeof value.const === "string" ? [value.const] : []),
+    ...variants.flatMap(variant => isRecord(variant) ? schemaEnumStrings(variant) : []),
+  ];
+}
+
+function groupingArgument(tool: Tool, grouping: string) {
+  if (grouping === "campaign" && tool.name === "get_ads_performance") return getScaleInsightsCampaignToolCapabilities(tool.inputSchema).grouping;
+  const properties = toolProperties(tool);
+  const keys = ["group_by", "groupBy", "dimension", "entity_type", "entityType", "level", "breakdown", "grouping", "view", "aggregate_by", "aggregateBy", "granularity"];
+  const desired = grouping === "product"
+    ? ["product", "products", "asin", "asins", "advertised_asin", "advertisedasin"]
+    : ["total", "summary", "account"];
+  const key = keys.find(candidate => Object.prototype.hasOwnProperty.call(properties, candidate))
+    ?? Object.entries(properties).find(([, property]) => schemaEnumStrings(property).some(candidate => desired.includes(normalizedKey(candidate))))?.[0];
+  if (!key) return undefined;
+  const choices = schemaEnumStrings(properties[key]);
+  const value = choices.find(candidate => desired.includes(normalizedKey(candidate))) ?? (choices.length ? "" : grouping);
+  return value ? { key, value } : undefined;
+}
+
 function buildArgs(tool: Tool, asins: string[], country: string, startDate: string, endDate: string, grouping?: string) {
   const properties = toolProperties(tool);
   const args: Record<string, unknown> = {};
@@ -183,11 +211,72 @@ function buildArgs(tool: Tool, asins: string[], country: string, startDate: stri
   set(["sort_direction", "sortDirection"], "desc");
   set(["count", "limit", "page_size", "pageSize"], PAGE_SIZE);
   set(["page", "page_number", "pageNumber"], 1);
-  if (grouping === "campaign" && tool.name === "get_ads_performance") {
-    const capability = getScaleInsightsCampaignToolCapabilities(tool.inputSchema);
-    if (capability.grouping) args[capability.grouping.key] = capability.grouping.value;
+  if (grouping) {
+    const group = groupingArgument(tool, grouping);
+    if (group) args[group.key] = group.value;
   }
   return args;
+}
+
+type AsinMetrics = Omit<PerformanceOverviewAsinRow, "previousTotalSales">;
+
+function metricsFromAsinRecord(record: Record<string, unknown>, kind: "ads" | "sales"): AsinMetrics | null {
+  const asin = textValue(directValue(record, ASIN_KEYS)).toUpperCase();
+  if (!/^[A-Z0-9]{10}$/.test(asin)) return null;
+  const number = (keys: string[]) => numberValue(nestedValue(record, keys)) ?? 0;
+  if (kind === "ads") return { asin, spend: number(SPEND_KEYS), ppcSales: number(SALES_KEYS), ppcOrders: number(ORDER_KEYS), clicks: number(CLICK_KEYS), totalSales: 0, totalOrders: 0 };
+  return { asin, spend: 0, ppcSales: 0, ppcOrders: 0, clicks: 0, totalSales: number(TOTAL_SALES_KEYS), totalOrders: number(TOTAL_ORDER_KEYS) };
+}
+
+function collectAsinMetrics(value: unknown, kind: "ads" | "sales", depth = 0): AsinMetrics[] {
+  if (depth > 6) return [];
+  if (Array.isArray(value)) return value.flatMap(item => collectAsinMetrics(item, kind, depth + 1));
+  if (!isRecord(value)) return [];
+  const row = metricsFromAsinRecord(value, kind);
+  return row ? [row] : Object.values(value).flatMap(item => collectAsinMetrics(item, kind, depth + 1));
+}
+
+function aggregateAsinMetrics(result: unknown, kind: "ads" | "sales") {
+  const candidates = resultPayloads(result).map(payload => {
+    const rows = collectAsinMetrics(payload, kind);
+    const grouped = new Map<string, AsinMetrics>();
+    for (const row of rows) {
+      const current = grouped.get(row.asin) ?? { asin: row.asin, spend: 0, ppcSales: 0, ppcOrders: 0, clicks: 0, totalSales: 0, totalOrders: 0 };
+      grouped.set(row.asin, {
+        asin: row.asin,
+        spend: current.spend + row.spend,
+        ppcSales: current.ppcSales + row.ppcSales,
+        ppcOrders: current.ppcOrders + row.ppcOrders,
+        clicks: current.clicks + row.clicks,
+        totalSales: current.totalSales + row.totalSales,
+        totalOrders: current.totalOrders + row.totalOrders,
+      });
+    }
+    return grouped;
+  });
+  return candidates.toSorted((first, second) => second.size - first.size)[0] ?? new Map<string, AsinMetrics>();
+}
+
+function mergeAsinRanking(currentAds: unknown, currentSales: unknown, previousSales: unknown): PerformanceOverviewAsinRow[] {
+  const ads = aggregateAsinMetrics(currentAds, "ads");
+  const sales = aggregateAsinMetrics(currentSales, "sales");
+  const previous = aggregateAsinMetrics(previousSales, "sales");
+  const asins = new Set([...ads.keys(), ...sales.keys()]);
+  return [...asins].map(asin => {
+    const ad = ads.get(asin);
+    const sale = sales.get(asin);
+    return {
+      asin,
+      spend: ad?.spend ?? 0,
+      ppcSales: ad?.ppcSales ?? 0,
+      ppcOrders: ad?.ppcOrders ?? 0,
+      clicks: ad?.clicks ?? 0,
+      totalSales: sale?.totalSales ?? 0,
+      totalOrders: sale?.totalOrders ?? 0,
+      previousTotalSales: previous.has(asin) ? previous.get(asin)!.totalSales : null,
+    };
+  }).filter(row => row.spend > 0 || row.ppcSales > 0 || row.totalSales > 0 || row.totalOrders > 0)
+    .toSorted((first, second) => second.totalSales - first.totalSales || second.spend - first.spend || first.asin.localeCompare(second.asin));
 }
 
 function metadata(result: unknown) {
@@ -246,6 +335,9 @@ export async function loadScaleInsightsPerformanceOverview(
   };
 
   const selectedAdsArgs = adsTool && buildArgs(adsTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "campaign");
+  const selectedAsinAdsArgs = adsTool && buildArgs(adsTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "product");
+  const selectedAsinSalesArgs = salesTool && buildArgs(salesTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "product");
+  const previousAsinSalesArgs = salesTool && buildArgs(salesTool, params.asins, params.country, params.previousStartDate, params.previousEndDate, "product");
   const targetArgs = targetTool && buildArgs(targetTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end);
   const searchArgs = searchTool && buildArgs(searchTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end);
   const periodEntries = await Promise.all(Object.entries(ranges).map(async ([key, range]) => {
@@ -256,9 +348,12 @@ export async function loadScaleInsightsPerformanceOverview(
     return [key, extractSummary(adsResult, salesResult), adsResult, salesResult] as const;
   }));
   const selectedAdsResult = periodEntries.find(([key]) => key === "selectedRange")?.[2];
-  const [targetResult, searchResult] = await Promise.all([
+  const [targetResult, searchResult, selectedAsinAdsResult, selectedAsinSalesResult, previousAsinSalesResult] = await Promise.all([
     targetTool && targetArgs ? callTool(targetTool.name, targetArgs) : Promise.resolve(null),
     searchTool && searchArgs ? callTool(searchTool.name, searchArgs) : Promise.resolve(null),
+    adsTool && selectedAsinAdsArgs ? callTool(adsTool.name, selectedAsinAdsArgs) : Promise.resolve(null),
+    salesTool && selectedAsinSalesArgs ? callTool(salesTool.name, selectedAsinSalesArgs) : Promise.resolve(null),
+    salesTool && previousAsinSalesArgs ? callTool(salesTool.name, previousAsinSalesArgs) : Promise.resolve(null),
   ]);
 
   const campaignRows = selectedAdsResult ? uniqueRows(selectedAdsResult, "campaign") : [];
@@ -266,6 +361,9 @@ export async function loadScaleInsightsPerformanceOverview(
   const keywordRows = targetRows.filter(row => row.targetType.toLowerCase() !== "product" && !/^[A-Z0-9]{10}$/i.test(row.name));
   const productTargetRows = targetRows.filter(row => row.targetType.toLowerCase() === "product" || /^[A-Z0-9]{10}$/i.test(row.name));
   const searchRows = searchResult ? uniqueRows(searchResult, "search") : [];
+  const asinRows = selectedAsinAdsResult && selectedAsinSalesResult
+    ? mergeAsinRanking(selectedAsinAdsResult, selectedAsinSalesResult, previousAsinSalesResult)
+    : [];
   const scalarScopeMessage = params.asins.length > 1 ? "This Scale Insights tool accepts one ASIN at a time. Filter the dashboard to one ASIN." : "The connected Scale Insights integration does not expose this report.";
   const periods = Object.fromEntries(periodEntries.map(([key, metrics]) => [key, metrics])) as PerformanceOverviewData["periods"];
   const results = [selectedAdsResult, targetResult, searchResult].filter(Boolean);
@@ -277,6 +375,7 @@ export async function loadScaleInsightsPerformanceOverview(
     actualPeriod: { startDate: params.actualStartDate, endDate: params.actualEndDate },
     freshness: results.map(freshness).filter(Boolean).toSorted().at(-1) || "",
     periods,
+    asinRanking: sectionAsinRanking(asinRows, Boolean(adsTool && salesTool && selectedAsinAdsArgs && selectedAsinSalesArgs), scalarScopeMessage),
     sections: {
       keywords: section(keywordRows, Boolean(targetTool && targetArgs), scalarScopeMessage),
       campaigns: section(campaignRows, Boolean(adsTool && selectedAdsArgs), scalarScopeMessage),
@@ -285,4 +384,10 @@ export async function loadScaleInsightsPerformanceOverview(
     },
     warnings: params.requestedEndDate !== params.actualEndDate ? [`Scale Insights excludes today and future dates. Actual data ends ${params.actualEndDate}.`] : [],
   };
+}
+
+function sectionAsinRanking(rows: PerformanceOverviewAsinRow[], available: boolean, unavailableMessage: string) {
+  return available
+    ? { status: "ready" as const, message: rows.length ? `${rows.length} ASIN rows from Scale Insights.` : "Scale Insights returned no ASIN-level rows for this scope.", rows }
+    : { status: "unavailable" as const, message: unavailableMessage, rows: [] };
 }

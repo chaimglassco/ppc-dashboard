@@ -8,6 +8,8 @@ Copy feedback, whole-number Target ACOS formatting, goal-header placement, and a
 
 Dashboard/Products view selection, Dashboard disclosure state, and the ASIN/SKU/product-name filter are transient. The Dashboard overview reads existing validated `WeeklyPpcReport` records and adds no storage key or field. Unsupported daily and detailed-ledger values are represented as unavailable UI state rather than persisted placeholder data.
 
+The no-store performance-overview response includes `asinRanking: { status, message, rows }`. Each validated row contains a ten-character `asin`, nonnegative current-period `spend`, `ppcSales`, `ppcOrders`, `clicks`, `totalSales`, and `totalOrders`, plus nullable `previousTotalSales` from the immediately preceding equal-length range. This DTO is transient and does not change `glassco.ppcPerformanceNotes.v1` or any other browser-storage schema.
+
 New reports use `actions: []`, and normalization preserves an explicitly empty list. The untouched historical seeded task is removed by its exact ID, title, priority, empty due date, and incomplete state; any edited or user-created action remains intact. The report `status` field remains readable for version-1 compatibility, but visible period status is derived from cached `startDate`/`endDate` coverage and is no longer changed by a manual Save action.
 
 ## September 11 custom-goal compatibility

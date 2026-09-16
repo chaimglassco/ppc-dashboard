@@ -135,20 +135,18 @@ export function PerformanceOverviewDashboard({ products, reports, currentWeekSta
   const localSevenDay = summarize(filteredProducts, reports, weekStarts.slice(0, 1));
   const localFourteenDay = summarize(filteredProducts, reports, weekStarts.slice(0, 2));
   const localSelected = summarize(filteredProducts, reports, weekStarts);
-  const currentRows = filteredProducts.flatMap(product => {
-    const current = reports[reportKey(product.id, currentWeekStart)];
-    if (!hasPerformance(current)) return [];
-    const previous = reports[reportKey(product.id, addDaysIso(currentWeekStart, -7))];
-    const momentum = previous?.totalSales ? Math.round(((current.totalSales - previous.totalSales) / previous.totalSales) * 1000) / 10 : null;
-    return [{ product, current, momentum }];
-  }).toSorted((first, second) => second.current.totalSales - first.current.totalSales);
-  const currentTotalSpend = currentRows.reduce((total, row) => total + row.current.spend, 0);
-  const currentTotalSales = currentRows.reduce((total, row) => total + row.current.totalSales, 0);
+  const live = asinKey ? overviewState.data : null;
+  const productsByAsin = new Map(filteredProducts.flatMap(product => product.asin ? [[product.asin.trim().toUpperCase(), product] as const] : []));
+  const asinRows = (live?.asinRanking.rows ?? []).map(row => {
+    const previousSales = row.previousTotalSales;
+    const momentum = previousSales && previousSales > 0 ? Math.round(((row.totalSales - previousSales) / previousSales) * 1000) / 10 : null;
+    return { row, product: productsByAsin.get(row.asin), momentum };
+  });
+  const currentTotalSpend = asinRows.reduce((total, item) => total + item.row.spend, 0);
+  const currentTotalSales = asinRows.reduce((total, item) => total + item.row.totalSales, 0);
   const filteredIds = new Set(filteredProducts.map(product => product.id));
   const latestUpdate = Object.values(reports).filter(report => filteredIds.has(report.productId)).map(report => report.updatedAt).filter(Boolean).toSorted().at(-1);
-  const currentWeekEnd = addDaysIso(currentWeekStart, 6);
   const scopeLabel = normalizedFilter ? filteredProducts.length === 1 ? `Filtered to ${filteredProducts[0].asin || filteredProducts[0].sku || filteredProducts[0].name}` : `Filtered to ${filteredProducts.length} matching products` : "Showing all ASINs";
-  const live = asinKey ? overviewState.data : null;
   const displayedLoadStatus: OverviewLoadState["status"] = asinKey ? overviewState.status : "idle";
   const periodLabel = displayRange(selectedRange.startDate, selectedRange.endDate);
   const customLabel = inclusiveDays(selectedRange.startDate, selectedRange.endDate) === 30 ? "30 Days" : "Custom Range";
@@ -174,8 +172,8 @@ export function PerformanceOverviewDashboard({ products, reports, currentWeekSta
         </div>
       </section>
       <details className={styles.ledgerSection}>
-        <summary><div><span aria-hidden="true" /><div><h2>ASIN Velocity &amp; Performance Ranking</h2><p>Product-level results from saved reports for {displayRange(currentWeekStart, currentWeekEnd)}.</p></div></div><span className={styles.disclosureMeta}><strong>{currentRows.length} active row{currentRows.length === 1 ? "" : "s"}</strong><ChevronDown aria-hidden="true" /></span></summary>
-        <div className={styles.tableScroll}><table><thead><tr><th>Rank &amp; Velocity</th><th>ASIN / SKU Details</th><th>Sales</th><th>Spend</th><th>Orders</th><th>ACOS</th><th>TACOS</th><th className={styles.spendShare}>Spend Share</th><th className={styles.salesShare}>Sales Share</th><th>WoW Momentum</th></tr></thead><tbody>{currentRows.length ? currentRows.map(({ product, current, momentum }, index) => <tr key={product.id}><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td><td><strong>{product.name}</strong><small>ASIN: {product.asin || "N/A"} · SKU: {product.sku || "N/A"}</small></td><td>{currency(current.totalSales)}</td><td>{currency(current.spend)}</td><td>{Math.round(current.totalOrders)}</td><td>{displayPercent(percentage(current.spend, current.ppcSales))}</td><td>{displayPercent(percentage(current.spend, current.totalSales))}</td><td className={styles.spendShare}>{displayPercent(percentage(current.spend, currentTotalSpend))}</td><td className={styles.salesShare}>{displayPercent(percentage(current.totalSales, currentTotalSales))}</td><td className={momentum == null ? styles.neutral : momentum >= 0 ? styles.positive : styles.negative}>{momentum == null ? "New / unavailable" : `${momentum >= 0 ? "↗" : "↘"} ${Math.abs(momentum)}%`}</td></tr>) : <tr><td colSpan={10}><div className={styles.emptyLedger}><PackageSearch aria-hidden="true" /><strong>No saved reports for this week</strong><span>Open Products, select an ASIN, and refresh its weekly data to populate this ranking.</span></div></td></tr>}</tbody></table></div>
+        <summary><div><span aria-hidden="true" /><div><h2>ASIN Velocity &amp; Performance Ranking</h2><p>Product-level Scale Insights results for {live ? displayRange(live.actualPeriod.startDate, live.actualPeriod.endDate) : periodLabel}.</p></div></div><span className={styles.disclosureMeta}><strong>{asinRows.length} active row{asinRows.length === 1 ? "" : "s"}</strong><ChevronDown aria-hidden="true" /></span></summary>
+        <div className={styles.tableScroll}><table><thead><tr><th>Rank &amp; Velocity</th><th>ASIN / SKU Details</th><th>Sales</th><th>Spend</th><th>Orders</th><th>ACOS</th><th>TACOS</th><th className={styles.spendShare}>Spend Share</th><th className={styles.salesShare}>Sales Share</th><th>WoW Momentum</th></tr></thead><tbody>{asinRows.length ? asinRows.map(({ product, row, momentum }, index) => <tr key={row.asin}><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td><td><strong>{product?.name || row.asin}</strong><small>ASIN: {row.asin} · SKU: {product?.sku || "N/A"}</small></td><td>{currency(row.totalSales)}</td><td>{currency(row.spend)}</td><td>{Math.round(row.totalOrders)}</td><td>{displayPercent(percentage(row.spend, row.ppcSales))}</td><td>{displayPercent(percentage(row.spend, row.totalSales))}</td><td className={styles.spendShare}>{displayPercent(percentage(row.spend, currentTotalSpend))}</td><td className={styles.salesShare}>{displayPercent(percentage(row.totalSales, currentTotalSales))}</td><td className={momentum == null ? styles.neutral : momentum >= 0 ? styles.positive : styles.negative}>{momentum == null ? "New / unavailable" : `${momentum >= 0 ? "↗" : "↘"} ${Math.abs(momentum)}%`}</td></tr>) : <tr><td colSpan={10}><div className={styles.emptyLedger}><PackageSearch aria-hidden="true" /><strong>{overviewState.status === "loading" ? "Loading ASIN performance" : live?.asinRanking.status === "ready" ? "No ASIN performance in this period" : "ASIN performance unavailable"}</strong><span>{live?.asinRanking.message || "Apply a valid date range to retrieve ASIN-level Scale Insights data."}</span></div></td></tr>}</tbody></table></div>
       </details>
       {DETAIL_SECTIONS.map(meta => <DetailPerformance key={meta.key} meta={meta} section={live?.sections[meta.key]} loadStatus={displayedLoadStatus} scopeLabel={scopeLabel} periodLabel={periodLabel} />)}
     </div>

@@ -38,6 +38,7 @@ describe("performance overview API", () => {
     await expect(response.json()).resolves.toEqual({ overview });
     expect(getScaleInsightsPerformanceOverview).toHaveBeenCalledWith(expect.objectContaining({
       asins: ["B012345678", "B087654321"], requestedStartDate: "2026-08-01", requestedEndDate: "2026-09-15", actualStartDate: "2026-08-01", actualEndDate: "2026-09-14", yesterday: "2026-09-14", sevenDayStart: "2026-09-08", fourteenDayStart: "2026-09-01",
+      previousStartDate: "2026-06-17", previousEndDate: "2026-07-31",
     }), { userId: "pipeline-user-1", issuer: "https://glasscopipeline.vercel.app", callbackUrl: "http://localhost/ppc/dashboard" });
   });
 

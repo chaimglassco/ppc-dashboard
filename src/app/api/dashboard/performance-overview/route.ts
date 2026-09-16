@@ -51,6 +51,9 @@ export async function GET(request: Request) {
   const yesterday = yesterdayDate.toISOString().slice(0, 10);
   if (query.startDate > yesterday) return errorResponse("Scale Insights has no completed data in the selected range yet.", 404);
   const actualEndDate = query.endDate > yesterday ? yesterday : query.endDate;
+  const actualDays = Math.round((Date.parse(`${actualEndDate}T00:00:00.000Z`) - Date.parse(`${query.startDate}T00:00:00.000Z`)) / 86_400_000) + 1;
+  const previousEndDate = addDaysIso(query.startDate, -1);
+  const previousStartDate = addDaysIso(previousEndDate, -(actualDays - 1));
 
   try {
     const overview = await getScaleInsightsPerformanceOverview({
@@ -63,6 +66,8 @@ export async function GET(request: Request) {
       yesterday,
       sevenDayStart: addDaysIso(yesterday, -6),
       fourteenDayStart: addDaysIso(yesterday, -13),
+      previousStartDate,
+      previousEndDate,
     }, {
       userId: verified.user.id,
       issuer: getPipelineOrigin(),
