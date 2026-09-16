@@ -379,5 +379,6 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] Open Keyword, Campaign, Product/ASIN Target, and Search Term sections and reconcile row metrics with the same ASIN and selected period in Scale Insights.
 - [ ] Filter by ASIN, SKU, and product name; confirm the live requests, cards, ranking rows, and detailed tables follow the filtered ASIN scope.
 - [ ] Reconcile every ASIN ranking row with Scale Insights for the applied range: Total Sales, Spend, Total Orders, Spend/PPC Sales ACOS, Spend/Total Sales TACOS, scoped Spend/Sales shares, and Total Sales momentum against the immediately preceding equal-length range.
+- [ ] Click Refresh All and confirm one new overview request uses the unchanged applied dates and ASIN scope, then refreshes every temporal card and disclosure table without duplicating rows.
 - [ ] Confirm Spend Share has a centered light-red background and Sales Share has a centered light-green background at desktop and mobile widths.
 - [ ] Confirm authorization, unsupported multi-ASIN capability, empty period, malformed response, provider error, and local fallback states are explicit and reveal no credentials.

@@ -97,6 +97,7 @@ export function PerformanceOverviewDashboard({ products, reports, currentWeekSta
   const [draftStartDate, setDraftStartDate] = useState(defaultStart);
   const [draftEndDate, setDraftEndDate] = useState(todayIso);
   const [selectedRange, setSelectedRange] = useState({ startDate: defaultStart, endDate: todayIso });
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [overviewState, setOverviewState] = useState<OverviewLoadState>({ status: "idle", data: null, message: "Select a valid ASIN range." });
   const normalizedFilter = asinFilter.trim().toLowerCase();
   const filteredProducts = normalizedFilter ? products.filter(product => [product.asin, product.sku, product.name].some(value => value?.toLowerCase().includes(normalizedFilter))) : products;
@@ -129,7 +130,7 @@ export function PerformanceOverviewDashboard({ products, reports, currentWeekSta
         setOverviewState(current => ({ status: "error", data: current.data, message: candidate.message || "Scale Insights dashboard data is unavailable.", authorizationUrl: candidate.authorizationUrl }));
       });
     return () => controller.abort();
-  }, [asinKey, selectedRange]);
+  }, [asinKey, selectedRange, refreshVersion]);
 
   const weekStarts = Array.from({ length: 5 }, (_, index) => addDaysIso(currentWeekStart, index * -7));
   const localSevenDay = summarize(filteredProducts, reports, weekStarts.slice(0, 1));
@@ -157,7 +158,7 @@ export function PerformanceOverviewDashboard({ products, reports, currentWeekSta
     <div className={styles.canvas}>
       <header className={styles.overviewHeader}><div><span>Week {getIsoWeekNumber(currentWeekStart)} · Multi-Timeframe Performance Ledger</span><h1>Performance Overview</h1><p>Account and ASIN performance from Scale Insights, scoped by the selected date range.</p></div><div className={styles.headerControls}>
         <label className={styles.asinFilter}><Search aria-hidden="true" /><span className={styles.srOnly}>Filter dashboard by ASIN, SKU, or product name</span><input type="search" value={asinFilter} onChange={event => setAsinFilter(event.target.value)} placeholder="Filter ASIN performance" aria-label="Filter dashboard by ASIN, SKU, or product name" />{asinFilter ? <button type="button" onClick={() => setAsinFilter("")} aria-label="Clear ASIN performance filter"><X aria-hidden="true" /></button> : null}</label>
-        <div className={styles.auditWindow}><CalendarDays aria-hidden="true" /><label><span>Start date</span><input type="date" value={draftStartDate} max={draftEndDate} onChange={event => setDraftStartDate(event.target.value)} aria-label="Dashboard start date" /></label><label><span>End date</span><input type="date" value={draftEndDate} min={draftStartDate} onChange={event => setDraftEndDate(event.target.value)} aria-label="Dashboard end date" /></label><button type="button" onClick={() => !dateError && setSelectedRange({ startDate: draftStartDate, endDate: draftEndDate })} disabled={Boolean(dateError) || overviewState.status === "loading"}><RefreshCw aria-hidden="true" />Apply</button></div>
+        <div className={styles.auditWindow}><CalendarDays aria-hidden="true" /><label><span>Start date</span><input type="date" value={draftStartDate} max={draftEndDate} onChange={event => setDraftStartDate(event.target.value)} aria-label="Dashboard start date" /></label><label><span>End date</span><input type="date" value={draftEndDate} min={draftStartDate} onChange={event => setDraftEndDate(event.target.value)} aria-label="Dashboard end date" /></label><button type="button" onClick={() => !dateError && setSelectedRange({ startDate: draftStartDate, endDate: draftEndDate })} disabled={Boolean(dateError) || overviewState.status === "loading"}><RefreshCw aria-hidden="true" />Apply</button><button className={styles.refreshAll} type="button" onClick={() => setRefreshVersion(version => version + 1)} disabled={!asinKey || overviewState.status === "loading"} aria-label="Refresh all dashboard data"><RefreshCw aria-hidden="true" />Refresh All</button></div>
         <small className={styles.scopeStatus} aria-live="polite">{dateError || `${scopeLabel} · ${periodLabel}`}</small>
       </div></header>
       {!asinKey || overviewState.status === "error" || overviewState.status === "loading" ? <div className={overviewState.status === "error" ? styles.dataError : styles.dataNotice} role="status"><span>{asinKey ? overviewState.message : "No valid ASIN matches the current filter."}</span>{overviewState.authorizationUrl ? <a href={overviewState.authorizationUrl}>Connect Scale Insights</a> : null}</div> : null}

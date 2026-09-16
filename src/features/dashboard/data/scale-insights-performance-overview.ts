@@ -25,14 +25,14 @@ export type PerformanceOverviewParams = {
 
 const NAME_KEYS = ["search_term", "searchTerm", "SearchTerm", "customer_search_term", "searchQuery", "keyword", "Keyword", "keyword_text", "target", "Target", "target_asin", "TargetASIN", "entity", "Entity", "campaign_name", "campaignName", "CampaignName", "campaign", "Campaign", "name", "Name"];
 const CAMPAIGN_KEYS = ["campaign_name", "campaignName", "CampaignName", "campaign", "Campaign"];
-const ASIN_KEYS = ["advertised_asin", "advertisedAsin", "AdvertisedASIN", "product_asin", "productAsin", "ProductASIN", "asin", "ASIN"];
+const ASIN_KEYS = ["advertised_asin", "advertisedAsin", "AdvertisedASIN", "product_asin", "productAsin", "ProductASIN", "asin", "ASIN", "entity", "Entity"];
 const MATCH_KEYS = ["match_type", "matchType", "MatchType", "keyword_match_type", "KeywordMatchType"];
 const TARGET_TYPE_KEYS = ["target_type", "targetType", "TargetType", "targeting_type", "TargetingType"];
 const ID_KEYS = ["campaign_id", "campaignId", "CampaignId", "keyword_id", "keywordId", "KeywordId", "target_id", "targetId", "TargetId", "search_term_id", "searchTermId", "id", "Id"];
 const IMPRESSION_KEYS = ["impressions", "Impressions", "total_impressions", "totalImpressions", "PPCImpressions"];
 const CLICK_KEYS = ["clicks", "Clicks", "total_clicks", "totalClicks", "PPCClicks"];
 const SPEND_KEYS = ["spend", "Spend", "total_spend", "totalSpend", "PPCSpend", "PPCCost", "cost", "Cost"];
-const SALES_KEYS = ["sales", "Sales", "total_sales", "totalSales", "PPCSales", "attributed_sales", "attributedSales"];
+const SALES_KEYS = ["sales", "Sales", "total_sales", "totalSales", "PPCSales", "total_ad_sales", "totalAdSales", "TotalAdSales", "attributed_sales", "attributedSales"];
 const ORDER_KEYS = ["orders", "Orders", "total_orders", "totalOrders", "PPCOrders", "attributed_orders", "attributedOrders"];
 const TOTAL_SALES_KEYS = ["total_revenue", "totalRevenue", "TotalRevenue", "total_sales", "totalSales", "TotalSales", "sales", "Sales"];
 const TOTAL_ORDER_KEYS = ["total_orders", "totalOrders", "TotalOrders", "orders", "Orders"];
@@ -189,7 +189,7 @@ function groupingArgument(tool: Tool, grouping: string) {
   return value ? { key, value } : undefined;
 }
 
-function buildArgs(tool: Tool, asins: string[], country: string, startDate: string, endDate: string, grouping?: string) {
+function buildArgs(tool: Tool, asins: string[], country: string, startDate: string, endDate: string, grouping?: string, requestedPageSize = PAGE_SIZE) {
   const properties = toolProperties(tool);
   const args: Record<string, unknown> = {};
   const set = (keys: string[], value: unknown) => {
@@ -209,7 +209,7 @@ function buildArgs(tool: Tool, asins: string[], country: string, startDate: stri
   set(["waste_only", "wasteOnly"], false);
   set(["sort_by", "sortBy"], "sales");
   set(["sort_direction", "sortDirection"], "desc");
-  set(["count", "limit", "page_size", "pageSize"], PAGE_SIZE);
+  set(["count", "limit", "page_size", "pageSize"], tool.name === "get_sales_data" ? Math.min(requestedPageSize, 100) : requestedPageSize);
   set(["page", "page_number", "pageNumber"], 1);
   if (grouping) {
     const group = groupingArgument(tool, grouping);
@@ -335,9 +335,9 @@ export async function loadScaleInsightsPerformanceOverview(
   };
 
   const selectedAdsArgs = adsTool && buildArgs(adsTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "campaign");
-  const selectedAsinAdsArgs = adsTool && buildArgs(adsTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "product");
-  const selectedAsinSalesArgs = salesTool && buildArgs(salesTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "product");
-  const previousAsinSalesArgs = salesTool && buildArgs(salesTool, params.asins, params.country, params.previousStartDate, params.previousEndDate, "product");
+  const selectedAsinAdsArgs = adsTool && buildArgs(adsTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "product", 100);
+  const selectedAsinSalesArgs = salesTool && buildArgs(salesTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "total", 100);
+  const previousAsinSalesArgs = salesTool && buildArgs(salesTool, params.asins, params.country, params.previousStartDate, params.previousEndDate, "total", 100);
   const targetArgs = targetTool && buildArgs(targetTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end);
   const searchArgs = searchTool && buildArgs(searchTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end);
   const periodEntries = await Promise.all(Object.entries(ranges).map(async ([key, range]) => {

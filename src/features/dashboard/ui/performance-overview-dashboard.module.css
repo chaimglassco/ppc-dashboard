@@ -58,6 +58,8 @@
 .auditWindow button { display: flex; align-items: center; gap: 5px; min-height: 31px; padding: 0 10px; border: 1px solid #1b1b1e; background: #1b1b1e; color: #fff; font: 700 9px var(--font-workspace-mono), Consolas, monospace; text-transform: uppercase; cursor: pointer; }
 .auditWindow button:disabled { opacity: .45; cursor: not-allowed; }
 .auditWindow button svg { width: 13px; }
+.auditWindow .refreshAll { border-color: #c8c5ca; background: #fff; color: #1b1b1e; white-space: nowrap; }
+.auditWindow .refreshAll:hover:not(:disabled) { border-color: #1b1b1e; }
 .scopeStatus { grid-column: 1 / -1; color: #5d5e66; font: 600 9px var(--font-workspace-mono), Consolas, monospace; text-align: right; text-transform: uppercase; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 

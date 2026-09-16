@@ -20,14 +20,15 @@ describe("Scale Insights performance overview adapter", () => {
     ];
     const callTool = vi.fn(async (name: string, args: Record<string, unknown>) => {
       if (name === "get_sales_data") {
-        if (args.group_by === "product") return { rows: [{ ASIN: "B012345678", TotalSales: args.start_date === params.previousStartDate ? 800 : 1000, TotalOrders: 40 }] };
-        return { Summary: { TotalSales: 1000, TotalOrders: 40 } };
+        const totalSales = args.start_date === params.previousStartDate ? 800 : 1000;
+        return { Summary: { TotalSales: totalSales, TotalOrders: 40 }, ASINs: [{ ASIN: "B012345678", TotalSales: totalSales, TotalOrders: 40 }] };
       }
       if (name === "get_ads_performance") return {
         agg: { Currency: "USD" }, oppMeta: { data_as_of: "2026-09-15", totals: { total_spend: 100, total_sales: 500, total_orders: 20, total_clicks: 50 } },
         rows: args.group_by === "product"
-          ? [{ ASIN: "B012345678", Clicks: 50, Spend: 100, Sales: 500, Orders: 20 }]
+          ? undefined
           : [{ CampaignId: "campaign-1", CampaignName: "Exact Campaign", AdvertisedASIN: "B012345678", TargetingType: "manual", Impressions: 1000, Clicks: 50, Spend: 100, Sales: 500, Orders: 20 }],
+        opps: args.group_by === "product" ? [{ entity: "B012345678", entityType: "ASIN", metrics: { TotalSpend: 100, TotalAdSales: 500, TotalOrders: 20 } }] : undefined,
       };
       if (name === "get_target_performance") return { rows: [
         { TargetId: "keyword-1", Target: "stained glass came", CampaignName: "Exact Campaign", AdvertisedASIN: "B012345678", TargetType: "keyword", MatchType: "exact", Impressions: 800, Clicks: 40, Spend: 50, Sales: 300, Orders: 12 },
@@ -39,13 +40,14 @@ describe("Scale Insights performance overview adapter", () => {
 
     const result = await loadScaleInsightsPerformanceOverview(params, definitions, callTool);
     expect(result.periods.yesterday).toEqual({ totalSales: 1000, ppcSales: 500, spend: 100, totalOrders: 40, ppcOrders: 20, clicks: 50 });
-    expect(result.asinRanking.rows[0]).toEqual({ asin: "B012345678", spend: 100, ppcSales: 500, ppcOrders: 20, clicks: 50, totalSales: 1000, totalOrders: 40, previousTotalSales: 800 });
+    expect(result.asinRanking.rows[0]).toEqual({ asin: "B012345678", spend: 100, ppcSales: 500, ppcOrders: 20, clicks: 0, totalSales: 1000, totalOrders: 40, previousTotalSales: 800 });
     expect(result.sections.campaigns.rows[0]).toMatchObject({ id: "campaign-1", name: "Exact Campaign", acos: 20, roas: 5, conversionRate: 40 });
     expect(result.sections.keywords.rows[0]).toMatchObject({ name: "stained glass came", matchType: "exact" });
     expect(result.sections.productTargets.rows[0]).toMatchObject({ name: "B099999999", targetType: "product" });
     expect(result.sections.searchTerms.rows[0]).toMatchObject({ name: "round u lead came", conversionRate: 33.33333333333333 });
     expect(result.warnings).toEqual(["Scale Insights excludes today and future dates. Actual data ends 2026-09-14."]);
     expect(callTool).toHaveBeenCalledTimes(13);
+    expect(callTool).toHaveBeenCalledWith("get_sales_data", expect.objectContaining({ group_by: "total", count: 100, summary_only: false }));
   });
 
   it("reports an unavailable account scope when a provider tool only accepts one ASIN", async () => {

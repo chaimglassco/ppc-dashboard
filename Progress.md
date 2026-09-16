@@ -347,3 +347,4 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Centered and color-separated Spend Share and Sales Share columns.
 - Added adapter, API, and component regression coverage while preserving local weekly-report fallback behavior.
 - Connected ASIN Velocity & Performance Ranking to product-level Scale Insights advertising and sales data for the applied range. Added provider-derived ACOS, TACOS, account shares, and Sales momentum against the prior equal-length period, while joining local names and SKUs by ASIN.
+- Corrected the live ASIN adapter to match Scale Insights' actual `entity`/`TotalAdSales` advertising fields and `group_by=total` sales contract. Added Refresh All to repeat the complete dashboard request for the active filter and dates.

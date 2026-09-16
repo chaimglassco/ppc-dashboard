@@ -75,6 +75,12 @@ describe("PerformanceOverviewDashboard", () => {
       expect(request.searchParams.get("endDate")).toBe("2026-08-15");
     });
     expect(screen.getByRole("heading", { name: "Custom Range" })).toBeVisible();
+    const requestCount = vi.mocked(fetch).mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Refresh all dashboard data" }));
+    await waitFor(() => expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(requestCount));
+    const refreshed = new URL(String(vi.mocked(fetch).mock.calls.at(-1)?.[0]), "http://localhost");
+    expect(refreshed.searchParams.get("startDate")).toBe("2026-08-01");
+    expect(refreshed.searchParams.get("endDate")).toBe("2026-08-15");
     fireEvent.click(screen.getByRole("button", { name: "Clear ASIN performance filter" }));
     await waitFor(() => expect(String(vi.mocked(fetch).mock.calls.at(-1)?.[0])).toContain("B087654321"));
   });
