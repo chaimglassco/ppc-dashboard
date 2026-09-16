@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronDown, Database, PackageSearch, RefreshCw, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, ChevronDown, Database, PackageSearch, RefreshCw, Search, X } from "lucide-react";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { addDaysIso, currency, getIsoWeekNumber, reportKey, type WeeklyPpcReport } from "../domain/ppc-dashboard-state";
@@ -23,7 +23,7 @@ const DETAIL_SECTIONS: ReadonlyArray<{ key: PerformanceOverviewSectionKey; title
 ];
 const DETAIL_COLUMNS: Record<PerformanceOverviewSectionKey, string[]> = {
   keywords: ["#", "Keyword Target & Match Type", "Campaign / ASIN", "Impressions / CTR", "Clicks / CPC", "Spend", "Sales", "Orders / CVR", "ACOS", "ROAS"],
-  campaigns: ["#", "Campaign & Targeting Type", "ASIN", "Impressions", "Clicks", "Spend", "Sales", "Orders", "ACOS", "ROAS"],
+  campaigns: ["#", "Campaign & Ad Type", "Status", "Spend", "Sales", "Orders", "ACOS", "ROAS", "CPC", "CTR", "CVR", "Daily Budget"],
   productTargets: ["#", "Target ASIN / Category", "Campaign / Advertised ASIN", "Clicks", "Spend", "Sales", "Orders", "Conversion Rate", "ACOS", "ROAS"],
   searchTerms: ["#", "Customer Search Query", "Campaign / Advertised ASIN", "Clicks", "Spend", "Sales", "Orders", "Conversion Rate", "ACOS", "ROAS"],
 };
@@ -73,21 +73,43 @@ function TemporalCard({ index, label, range, summary, source, unavailableReason 
 }
 
 function metricPair(first: string, second: string) { return <><strong>{first}</strong><small>{second}</small></> }
+type CampaignSortKey = "spend" | "sales" | "orders" | "acos" | "roas" | "cpc" | "ctr" | "conversionRate" | "dailyBudget";
+const CAMPAIGN_SORT_COLUMNS: Partial<Record<string, CampaignSortKey>> = { Spend: "spend", Sales: "sales", Orders: "orders", ACOS: "acos", ROAS: "roas", CPC: "cpc", CTR: "ctr", CVR: "conversionRate", "Daily Budget": "dailyBudget" };
+function campaignMetric(row: PerformanceOverviewRow, key: CampaignSortKey) {
+  return row[key] ?? null;
+}
 function DetailRow({ row, index, sectionKey }: { row: PerformanceOverviewRow; index: number; sectionKey: PerformanceOverviewSectionKey }) {
   const ctr = percentage(row.clicks, row.impressions);
   const cpc = row.clicks > 0 ? row.spend / row.clicks : null;
-  const identity = <td>{metricPair(row.name, [row.matchType, row.targetType].filter(Boolean).join(" · ") || "Reported row")}</td>;
+  const identity = <td>{metricPair(row.name, sectionKey === "campaigns" ? row.targetType || "Reported campaign" : [row.matchType, row.targetType].filter(Boolean).join(" · ") || "Reported row")}</td>;
   if (sectionKey === "keywords") return <tr><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td>{identity}<td>{metricPair(row.campaign || "—", row.asin || "No ASIN returned")}</td><td>{metricPair(displayNumber(row.impressions), `CTR ${displayPercent(ctr)}`)}</td><td>{metricPair(displayNumber(row.clicks), `CPC ${cpc == null ? "—" : displayMoney(cpc)}`)}</td><td>{displayMoney(row.spend)}</td><td>{displayMoney(row.sales)}</td><td>{metricPair(displayNumber(row.orders), `CVR ${displayPercent(row.conversionRate)}`)}</td><td>{displayPercent(row.acos)}</td><td>{row.roas == null ? "—" : row.roas.toFixed(2)}</td></tr>;
-  if (sectionKey === "campaigns") return <tr><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td>{identity}<td>{row.asin || "—"}</td><td>{displayNumber(row.impressions)}</td><td>{displayNumber(row.clicks)}</td><td>{displayMoney(row.spend)}</td><td>{displayMoney(row.sales)}</td><td>{displayNumber(row.orders)}</td><td>{displayPercent(row.acos)}</td><td>{row.roas == null ? "—" : row.roas.toFixed(2)}</td></tr>;
+  if (sectionKey === "campaigns") return <tr><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td>{identity}<td>{row.state || row.matchType || "—"}</td><td>{displayMoney(row.spend)}</td><td>{displayMoney(row.sales)}</td><td>{displayNumber(row.orders)}</td><td>{displayPercent(row.acos)}</td><td>{row.roas == null ? "—" : row.roas.toFixed(2)}</td><td>{row.cpc == null ? "—" : displayMoney(row.cpc)}</td><td>{displayPercent(row.ctr ?? null)}</td><td>{displayPercent(row.conversionRate)}</td><td>{row.dailyBudget == null ? "—" : displayMoney(row.dailyBudget)}</td></tr>;
   return <tr><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td>{identity}<td>{metricPair(row.campaign || "—", row.asin || "No advertised ASIN returned")}</td><td>{displayNumber(row.clicks)}</td><td>{displayMoney(row.spend)}</td><td>{displayMoney(row.sales)}</td><td>{displayNumber(row.orders)}</td><td>{displayPercent(row.conversionRate)}</td><td>{displayPercent(row.acos)}</td><td>{row.roas == null ? "—" : row.roas.toFixed(2)}</td></tr>;
 }
 
 function DetailPerformance({ meta, section, loadStatus, scopeLabel, periodLabel }: { meta: (typeof DETAIL_SECTIONS)[number]; section?: PerformanceOverviewSection; loadStatus: OverviewLoadState["status"]; scopeLabel: string; periodLabel: string }) {
   const columns = DETAIL_COLUMNS[meta.key];
+  const [campaignSort, setCampaignSort] = useState<{ key: CampaignSortKey; direction: "asc" | "desc" } | null>(null);
+  const rows = (() => {
+    if (meta.key !== "campaigns" || !campaignSort || !section?.rows.length) return section?.rows ?? [];
+    return section.rows.map((row, index) => ({ row, index })).toSorted((first, second) => {
+      const firstValue = campaignMetric(first.row, campaignSort.key);
+      const secondValue = campaignMetric(second.row, campaignSort.key);
+      if (firstValue == null && secondValue == null) return first.index - second.index;
+      if (firstValue == null) return 1;
+      if (secondValue == null) return -1;
+      const difference = campaignSort.direction === "desc" ? secondValue - firstValue : firstValue - secondValue;
+      return difference || first.index - second.index;
+    }).map(item => item.row);
+  })();
   const badge = loadStatus === "loading" ? "Loading" : section?.status === "ready" ? `${section.rows.length} row${section.rows.length === 1 ? "" : "s"}` : "Unavailable";
   return <details className={styles.ledgerSection}>
-    <summary><div><span aria-hidden="true" /><div><h2>{meta.title}</h2><p>{meta.description} Selected period: {periodLabel}.</p></div></div><span className={styles.disclosureMeta}><strong>{badge}</strong><ChevronDown aria-hidden="true" /></span></summary>
-    <div className={styles.tableScroll}><table><thead><tr>{columns.map(column => <th key={column}>{column}</th>)}</tr></thead><tbody>{section?.rows.length ? section.rows.map((row, index) => <DetailRow key={row.id} row={row} index={index} sectionKey={meta.key} />) : <tr><td colSpan={columns.length}><div className={styles.emptyLedger}><Database aria-hidden="true" /><strong>{loadStatus === "loading" ? "Loading Scale Insights data" : section?.status === "ready" ? "No rows in this period" : "Performance data unavailable"}</strong><span>{section?.message || `${scopeLabel}. Apply a valid range to retrieve this report.`}</span></div></td></tr>}</tbody></table></div>
+    <summary><div><span aria-hidden="true" /><div><h2>{meta.title}</h2><p>{meta.description} Selected period: {periodLabel}.{meta.key === "campaigns" ? " Campaigns cover all ASINs in the connected account." : ""}</p></div></div><span className={styles.disclosureMeta}><strong>{badge}</strong><ChevronDown aria-hidden="true" /></span></summary>
+    <div className={styles.tableScroll}><table><thead><tr>{columns.map(column => {
+      const sortKey = meta.key === "campaigns" ? CAMPAIGN_SORT_COLUMNS[column] : undefined;
+      const active = sortKey && campaignSort?.key === sortKey;
+      return <th key={column} aria-sort={active ? campaignSort.direction === "asc" ? "ascending" : "descending" : undefined}>{sortKey ? <button type="button" className={styles.sortButton} onClick={() => setCampaignSort(current => current?.key === sortKey ? { key: sortKey, direction: current.direction === "desc" ? "asc" : "desc" } : { key: sortKey, direction: "desc" })} aria-label={`Sort campaigns by ${column} ${active && campaignSort.direction === "desc" ? "ascending" : "descending"}`}>{column}{active ? campaignSort.direction === "desc" ? <ArrowDown aria-hidden="true" /> : <ArrowUp aria-hidden="true" /> : <ArrowUpDown aria-hidden="true" />}</button> : column}</th>;
+    })}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <DetailRow key={row.id} row={row} index={index} sectionKey={meta.key} />) : <tr><td colSpan={columns.length}><div className={styles.emptyLedger}><Database aria-hidden="true" /><strong>{loadStatus === "loading" ? "Loading Scale Insights data" : section?.status === "ready" ? "No rows in this period" : "Performance data unavailable"}</strong><span>{section?.message || `${scopeLabel}. Apply a valid range to retrieve this report.`}</span></div></td></tr>}</tbody></table></div>
   </details>;
 }
 

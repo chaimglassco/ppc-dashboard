@@ -25,6 +25,10 @@ export type PerformanceOverviewRow = {
   acos: number | null;
   roas: number | null;
   conversionRate: number | null;
+  state?: string;
+  cpc?: number | null;
+  ctr?: number | null;
+  dailyBudget?: number | null;
 };
 
 export type PerformanceOverviewSection = {
@@ -101,7 +105,12 @@ function parseRow(value: unknown): PerformanceOverviewRow | null {
   const acos = nullableMetric(value.acos);
   const roas = nullableMetric(value.roas);
   const conversionRate = nullableMetric(value.conversionRate);
-  if (!id || !name || [impressions, clicks, spend, sales, orders].some(metric => metric == null) || acos === undefined || roas === undefined || conversionRate === undefined) return null;
+  const optionalMetric = (candidate: unknown) => candidate === undefined ? undefined : nullableMetric(candidate);
+  const cpc = optionalMetric(value.cpc);
+  const ctr = optionalMetric(value.ctr);
+  const dailyBudget = optionalMetric(value.dailyBudget);
+  const invalidOptionalMetric = ["cpc", "ctr", "dailyBudget"].some(key => value[key] != null && finiteNonNegative(value[key]) == null);
+  if (!id || !name || [impressions, clicks, spend, sales, orders].some(metric => metric == null) || acos === undefined || roas === undefined || conversionRate === undefined || invalidOptionalMetric) return null;
   return {
     id,
     name,
@@ -117,6 +126,10 @@ function parseRow(value: unknown): PerformanceOverviewRow | null {
     acos,
     roas,
     conversionRate,
+    state: stringValue(value.state) || undefined,
+    cpc,
+    ctr,
+    dailyBudget,
   };
 }
 

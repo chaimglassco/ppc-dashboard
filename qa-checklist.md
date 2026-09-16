@@ -376,8 +376,10 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 
 - [ ] Confirm the temporal ledger is visible without opening a disclosure, every card places TACOS below ACOS, and Overview Source Coverage is absent.
 - [ ] Apply a valid custom range and reconcile Yesterday, 7-Day, 14-Day, and selected-range totals with Scale Insights; confirm Today remains unavailable and an end date of today is capped at yesterday.
-- [ ] Open Keyword, Campaign, Product/ASIN Target, and Search Term sections and reconcile row metrics with the same ASIN and selected period in Scale Insights.
-- [ ] Filter by ASIN, SKU, and product name; confirm the live requests, cards, ranking rows, and detailed tables follow the filtered ASIN scope.
+- [ ] Open Keyword, Product/ASIN Target, and Search Term sections and reconcile row metrics with the same ASIN and selected period in Scale Insights.
+- [ ] Reconcile Campaign Movers and Anchors against the dedicated campaign report for the applied range, including all provider pages, status, Spend, Sales, Orders, ACOS, ROAS, CPC, CTR, CVR, and Daily Budget. Confirm its account-wide scope is visible and no ASIN/traffic figures are invented.
+- [ ] Click each campaign metric header twice; confirm descending then ascending order, missing values last, updated `aria-sort`, and no new provider request.
+- [ ] Filter by ASIN, SKU, and product name; confirm the ASIN-capable live requests, cards, ranking rows, and detailed tables follow the filtered ASIN scope. Campaigns remain explicitly account-wide because the provider supplies no ASIN mapping.
 - [ ] Reconcile every ASIN ranking row with Scale Insights for the applied range: Total Sales, Spend, Total Orders, Spend/PPC Sales ACOS, Spend/Total Sales TACOS, scoped Spend/Sales shares, and Total Sales momentum against the immediately preceding equal-length range.
 - [ ] Click Refresh All and confirm one new overview request uses the unchanged applied dates and ASIN scope, then refreshes every temporal card and disclosure table without duplicating rows.
 - [ ] Confirm Spend Share has a centered light-red background and Sales Share has a centered light-green background at desktop and mobile widths.

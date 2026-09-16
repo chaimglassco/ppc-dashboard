@@ -9,6 +9,7 @@ import { withPpcBasePath } from "@/lib/glassco-apps";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
 const SUPPORTED_MARKETPLACES = new Set(["US", "CA", "MX", "UK", "DE", "FR", "IT", "ES", "NL", "JP", "SG", "AU"]);

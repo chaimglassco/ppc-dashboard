@@ -16,7 +16,10 @@ function overview(startDate = "2026-07-29", endDate = "2026-08-28"): Performance
     asinRanking: { status: "ready", message: "1 ASIN row from Scale Insights.", rows: [{ asin: product.asin, spend: 100, ppcSales: 500, ppcOrders: 20, clicks: 50, totalSales: 1000, totalOrders: 40, previousTotalSales: 800 }] },
     sections: {
       keywords: { status: "ready", message: "1 row from Scale Insights.", rows: [row] },
-      campaigns: { status: "ready", message: "1 row from Scale Insights.", rows: [{ ...row, id: "campaign-1", name: "Exact Campaign", targetType: "manual" }] },
+      campaigns: { status: "ready", message: "2 rows from Scale Insights.", rows: [
+        { ...row, id: "campaign-1", name: "Exact Campaign", targetType: "SP", matchType: "enabled", state: "enabled", cpc: 0.5, ctr: 5, dailyBudget: 50 },
+        { ...row, id: "campaign-2", name: "Auto Campaign", targetType: "SP", matchType: "enabled", state: "enabled", spend: 75, sales: 100, orders: 4, acos: 75, roas: 1.33, conversionRate: 8, cpc: 1.5, ctr: 2, dailyBudget: 100 },
+      ] },
       productTargets: { status: "ready", message: "1 row from Scale Insights.", rows: [{ ...row, id: "target-1", name: "B099999999", targetType: "product" }] },
       searchTerms: { status: "ready", message: "1 row from Scale Insights.", rows: [{ ...row, id: "search-1", name: "round u lead came" }] },
     }, warnings: [],
@@ -83,6 +86,27 @@ describe("PerformanceOverviewDashboard", () => {
     expect(refreshed.searchParams.get("endDate")).toBe("2026-08-15");
     fireEvent.click(screen.getByRole("button", { name: "Clear ASIN performance filter" }));
     await waitFor(() => expect(String(vi.mocked(fetch).mock.calls.at(-1)?.[0])).toContain("B087654321"));
+  });
+
+  it("sorts campaign metrics in both directions while keeping the table ranks in display order", async () => {
+    render(<PerformanceOverviewDashboard products={[product]} reports={{}} currentWeekStart="2026-08-26" todayIso="2026-08-28" />);
+    await waitFor(() => expect(screen.getByText("Campaign Movers and Anchors")).toBeVisible());
+    const campaignDetails = screen.getByText("Campaign Movers and Anchors").closest("details")!;
+    fireEvent.click(within(campaignDetails).getByText("Campaign Movers and Anchors").closest("summary")!);
+    const table = within(campaignDetails).getByRole("table");
+
+    const descendingFirst: Record<string, string> = { Spend: "Auto Campaign", Sales: "Exact Campaign", Orders: "Exact Campaign", ACOS: "Auto Campaign", ROAS: "Exact Campaign", CPC: "Auto Campaign", CTR: "Exact Campaign", CVR: "Exact Campaign", "Daily Budget": "Auto Campaign" };
+    for (const [metric, expectedFirst] of Object.entries(descendingFirst)) {
+      fireEvent.click(within(table).getByRole("button", { name: `Sort campaigns by ${metric} descending` }));
+      let rows = within(table).getAllByRole("row").slice(1);
+      expect(rows[0]).toHaveTextContent(expectedFirst);
+      expect(within(table).getByText(metric).closest("th")).toHaveAttribute("aria-sort", "descending");
+
+      fireEvent.click(within(table).getByRole("button", { name: `Sort campaigns by ${metric} ascending` }));
+      rows = within(table).getAllByRole("row").slice(1);
+      expect(rows[1]).toHaveTextContent(expectedFirst);
+      expect(within(table).getByText(metric).closest("th")).toHaveAttribute("aria-sort", "ascending");
+    }
   });
 });
 
