@@ -371,3 +371,12 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] Open a report with a saved previous week and confirm every Weekly Performance card shows a compact current value, an upper-right percentage badge only when current data is available, and a separate `Prev. Week` footer; verify favorable/unfavorable colors follow the metric-specific rules.
 - [ ] Open the earliest available report and confirm the Previous column displays a neutral unavailable marker without changing the current value color.
 - [ ] Verify three-digit currency and percentage comparisons remain inside their Current and Previous columns, with the Current `%` directly adjacent to its number, and confirm the Scale Insights links read Daily Performance, Weekly Performance, and Monthly Performance.
+
+## Account performance overview checks
+
+- [ ] Confirm the temporal ledger is visible without opening a disclosure, every card places TACOS below ACOS, and Overview Source Coverage is absent.
+- [ ] Apply a valid custom range and reconcile Yesterday, 7-Day, 14-Day, and selected-range totals with Scale Insights; confirm Today remains unavailable and an end date of today is capped at yesterday.
+- [ ] Open Keyword, Campaign, Product/ASIN Target, and Search Term sections and reconcile row metrics with the same ASIN and selected period in Scale Insights.
+- [ ] Filter by ASIN, SKU, and product name; confirm the live requests, cards, ranking rows, and detailed tables follow the filtered ASIN scope.
+- [ ] Confirm Spend Share has a centered light-red background and Sales Share has a centered light-green background at desktop and mobile widths.
+- [ ] Confirm authorization, unsupported multi-ASIN capability, empty period, malformed response, provider error, and local fallback states are explicit and reveal no credentials.

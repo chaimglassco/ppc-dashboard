@@ -338,3 +338,11 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Rounded Budget Burn Rate Progress Spend and weekly limit to whole dollars, matching the Spend card.
 - Added a safe PPC Clicks fallback from a complete ASIN-and-week Search Term Performance result, allowing PPC Conversion Rate to populate when Scale Insights advertising totals omit clicks without adding another provider request.
 - Campaign comparison now carries a validated current-week import into the next week's previous slot for the same marketplace and ASIN. The operator uploads only the new current-week CSV when that exact prior period is available.
+
+## September 15, 2026 — live account performance overview
+
+- Made the temporal ledger permanently visible, moved TACOS below ACOS, and removed Overview Source Coverage.
+- Added an applied custom date range with a 90-day cap and completed-day cutoff.
+- Added authenticated Scale Insights summaries and normalized Keyword, Campaign, Product Target, and Search Term tables for the selected range.
+- Centered and color-separated Spend Share and Sales Share columns.
+- Added adapter, API, and component regression coverage while preserving local weekly-report fallback behavior.

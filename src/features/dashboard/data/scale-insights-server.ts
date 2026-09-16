@@ -35,6 +35,8 @@ import {
   type UntargetedOpportunityParams,
 } from "./scale-insights-untargeted-opportunities";
 import type { UntargetedSalesOpportunities } from "../domain/untargeted-sales-opportunities";
+import { loadScaleInsightsPerformanceOverview, type PerformanceOverviewParams } from "./scale-insights-performance-overview";
+import type { PerformanceOverviewData } from "../domain/performance-overview";
 
 const DEFAULT_SCALE_INSIGHTS_MCP_URL = "https://mcp.scaleinsights.com/mcp";
 const DEFAULT_SCALE_INSIGHTS_CONNECTOR = "mcp.scaleinsights.com/glassco-scale-insights";
@@ -158,6 +160,13 @@ export async function getScaleInsightsWeeklyPerformance(
   identity: ScaleInsightsRequestIdentity,
 ): Promise<ScaleInsightsWeeklyPerformance> {
   return withScaleInsightsClient(identity, callTool => loadScaleInsightsWeeklyPerformance(params, callTool));
+}
+
+export async function getScaleInsightsPerformanceOverview(
+  params: PerformanceOverviewParams,
+  identity: ScaleInsightsRequestIdentity,
+): Promise<PerformanceOverviewData> {
+  return withScaleInsightsToolSession(identity, ({ definitions, callTool }) => loadScaleInsightsPerformanceOverview(params, definitions, callTool));
 }
 
 export async function getScaleInsightsCampaignComparison(

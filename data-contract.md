@@ -418,3 +418,9 @@ Current-versus-previous direction, display color, compact typography, and column
 Navigation column membership, Timeline PPC-only labels, percentage suffix spacing, and the five-row Budget History page are presentation rules only. Pagination does not truncate or rewrite the validated `budgetHistory` array, which retains its existing newest-first order and 100-entry cap.
 
 `previousWeekResult` remains the existing string field. New weekly reports initialize it from the immediately preceding report when available; older blank reports may display that preceding value as a UI fallback. A non-empty value stored on the selected report always takes priority, and no new persistence field or version is introduced.
+
+## Performance overview response
+
+`GET /ppc/api/dashboard/performance-overview?asins=<comma-separated>&country=<code>&startDate=<ISO>&endDate=<ISO>` returns `{ overview }` with no-store headers. `overview` contains the normalized ASIN list, country, currency, requested and actual periods, freshness, warnings, four nullable summary periods (`yesterday`, `sevenDays`, `fourteenDays`, `selectedRange`), and four report sections (`keywords`, `campaigns`, `productTargets`, `searchTerms`).
+
+Each available period contains non-negative `totalSales`, `ppcSales`, `spend`, `totalOrders`, `ppcOrders`, and `clicks`. Each section has `ready` or `unavailable` status, an explanatory message, and normalized rows containing stable provider/fallback ID, name, campaign, advertised ASIN, match/target types, impressions, clicks, spend, sales, orders, and nullable ACOS, ROAS, and conversion rate. The browser validates every field and rejects the whole response when its scope or values are malformed. This DTO is read-only and is never persisted.

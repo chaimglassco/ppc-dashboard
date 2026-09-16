@@ -355,7 +355,6 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.click(dashboardTab);
     expect(dashboardTab).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("heading", { name: "Performance Overview" })).toBeVisible();
-    fireEvent.click(screen.getByText(/Temporal Ledger Matrix/i).closest("summary")!);
     expect(screen.getByRole("heading", { name: "Today" })).toBeVisible();
     expect(screen.getByRole("heading", { name: /ASIN Velocity/ })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Products" })).not.toBeInTheDocument();

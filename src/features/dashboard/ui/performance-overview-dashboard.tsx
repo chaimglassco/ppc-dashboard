@@ -1,49 +1,32 @@
-import { useState } from "react";
-import { BarChart3, CalendarDays, ChevronDown, Database, Gauge, PackageSearch, Search, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { CalendarDays, ChevronDown, Database, PackageSearch, RefreshCw, Search, X } from "lucide-react";
+import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
+import { withPpcBasePath } from "@/lib/glassco-apps";
 import { addDaysIso, currency, getIsoWeekNumber, reportKey, type WeeklyPpcReport } from "../domain/ppc-dashboard-state";
 import type { ManagedDashboardProduct } from "../domain/ppc-dashboard-catalog";
+import { parsePerformanceOverviewData, type PerformanceOverviewData, type PerformanceOverviewMetrics, type PerformanceOverviewRow, type PerformanceOverviewSection, type PerformanceOverviewSectionKey } from "../domain/performance-overview";
 import styles from "./performance-overview-dashboard.module.css";
 
-type Props = {
-  products: ManagedDashboardProduct[];
-  reports: Record<string, WeeklyPpcReport>;
-  currentWeekStart: string;
-  todayIso: string;
+type Props = { products: ManagedDashboardProduct[]; reports: Record<string, WeeklyPpcReport>; currentWeekStart: string; todayIso: string };
+type LedgerSummary = PerformanceOverviewMetrics & { reports?: number };
+type OverviewLoadState =
+  | { status: "idle" | "loading"; data: PerformanceOverviewData | null; message: string; authorizationUrl?: undefined }
+  | { status: "ready"; data: PerformanceOverviewData; message: string; authorizationUrl?: undefined }
+  | { status: "error"; data: PerformanceOverviewData | null; message: string; authorizationUrl?: string };
+
+const EMPTY_SUMMARY: LedgerSummary = { reports: 0, totalSales: 0, ppcSales: 0, spend: 0, totalOrders: 0, ppcOrders: 0, clicks: 0 };
+const DETAIL_SECTIONS: ReadonlyArray<{ key: PerformanceOverviewSectionKey; title: string; description: string }> = [
+  { key: "keywords", title: "Keyword Targeting Performance // Top Keyword Movers & Efficiency", description: "Granular bid-level telemetry across active Sponsored Products and Sponsored Brands keyword clusters." },
+  { key: "campaigns", title: "Campaign Level Movers & Efficiency // Sponsored Ads Campaign Clusters", description: "Campaign movement, efficiency, and budget actions across the account." },
+  { key: "productTargets", title: "Product & ASIN Targeting // Competitor Conquesting & Defense Matrix", description: "Product-target performance grouped by target ASIN and campaign context." },
+  { key: "searchTerms", title: "Search Terms Report // Customer Search Query Intelligence & Harvesting", description: "Customer queries and attributed outcomes from the selected reporting period." },
+];
+const DETAIL_COLUMNS: Record<PerformanceOverviewSectionKey, string[]> = {
+  keywords: ["#", "Keyword Target & Match Type", "Campaign / ASIN", "Impressions / CTR", "Clicks / CPC", "Spend", "Sales", "Orders / CVR", "ACOS", "ROAS"],
+  campaigns: ["#", "Campaign & Targeting Type", "ASIN", "Impressions", "Clicks", "Spend", "Sales", "Orders", "ACOS", "ROAS"],
+  productTargets: ["#", "Target ASIN / Category", "Campaign / Advertised ASIN", "Clicks", "Spend", "Sales", "Orders", "Conversion Rate", "ACOS", "ROAS"],
+  searchTerms: ["#", "Customer Search Query", "Campaign / Advertised ASIN", "Clicks", "Spend", "Sales", "Orders", "Conversion Rate", "ACOS", "ROAS"],
 };
-
-type LedgerSummary = {
-  reports: number;
-  totalSales: number;
-  ppcSales: number;
-  spend: number;
-  totalOrders: number;
-  ppcOrders: number;
-};
-
-const EMPTY_SUMMARY: LedgerSummary = { reports: 0, totalSales: 0, ppcSales: 0, spend: 0, totalOrders: 0, ppcOrders: 0 };
-
-const DETAIL_SECTIONS = [
-  {
-    title: "Keyword Targeting Performance // Top Keyword Movers & Efficiency",
-    description: "Granular bid-level telemetry across active Sponsored Products and Sponsored Brands keyword clusters.",
-    columns: ["# & Status", "Keyword Target & Match Type", "Campaign / ASIN", "Impr. / CTR", "Clicks / CPC", "Spend", "Sales", "Orders / CVR", "ACOS", "ROAS"],
-  },
-  {
-    title: "Campaign Level Movers & Efficiency // Sponsored Ads Campaign Clusters",
-    description: "Campaign movement, efficiency, and budget actions across the account.",
-    columns: ["# & Status", "Campaign & Targeting Type", "Spend", "Sales", "Orders", "ACOS", "ROAS", "Spend Share", "Sales Share", "Momentum / Action"],
-  },
-  {
-    title: "Product & ASIN Targeting // Competitor Conquesting & Defense Matrix",
-    description: "Product-target performance grouped by target ASIN and campaign context.",
-    columns: ["# & Status", "Target ASIN / Category", "Product Context", "Target Type", "Spend", "Sales", "Orders", "ACOS", "Conversion Rate", "Diagnosis"],
-  },
-  {
-    title: "Search Terms Report // Customer Search Query Intelligence & Harvesting",
-    description: "Customer queries, attributed outcomes, and keyword-harvest recommendations.",
-    columns: ["# & Recommendation", "Customer Search Query", "Targeted Keyword / Campaign", "Match Type", "Clicks", "Spend", "Sales", "Orders", "ACOS", "Directive"],
-  },
-] as const;
 
 function hasPerformance(report: WeeklyPpcReport | undefined) {
   return Boolean(report && (report.spend || report.ppcSales || report.totalSales || report.ppcOrders || report.totalOrders || report.updatedAt));
@@ -53,66 +36,105 @@ function summarize(products: ManagedDashboardProduct[], reports: Record<string, 
   return products.reduce<LedgerSummary>((summary, product) => weekStarts.reduce<LedgerSummary>((next, weekStart) => {
     const report = reports[reportKey(product.id, weekStart)];
     if (!hasPerformance(report)) return next;
-    return {
-      reports: next.reports + 1,
-      totalSales: next.totalSales + report.totalSales,
-      ppcSales: next.ppcSales + report.ppcSales,
-      spend: next.spend + report.spend,
-      totalOrders: next.totalOrders + report.totalOrders,
-      ppcOrders: next.ppcOrders + report.ppcOrders,
-    };
+    return { reports: (next.reports || 0) + 1, totalSales: next.totalSales + report.totalSales, ppcSales: next.ppcSales + report.ppcSales, spend: next.spend + report.spend, totalOrders: next.totalOrders + report.totalOrders, ppcOrders: next.ppcOrders + report.ppcOrders, clicks: next.clicks + (report.ppcClicks || 0) };
   }, summary), { ...EMPTY_SUMMARY });
 }
 
-function percentage(numerator: number, denominator: number) {
-  return denominator > 0 ? Math.round((numerator / denominator) * 1000) / 10 : null;
-}
-
-function displayPercent(value: number | null) {
-  return value == null ? "—" : `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value)}%`;
-}
-
-function displayDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`));
-}
-
+function percentage(numerator: number, denominator: number) { return denominator > 0 ? Math.round((numerator / denominator) * 1000) / 10 : null }
+function displayPercent(value: number | null) { return value == null ? "—" : `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value)}%` }
+function displayNumber(value: number) { return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value) }
+function displayMoney(value: number) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(value) }
+function displayDate(value: string) { return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`)) }
 function displayRange(start: string, end: string) {
   const formatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   return `${formatter.format(new Date(`${start}T12:00:00Z`))} — ${formatter.format(new Date(`${end}T12:00:00Z`))}`;
 }
+function inclusiveDays(start: string, end: string) { return Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000) + 1 }
+function trustedAuthorizationUrl(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  try { const url = new URL(value); return url.protocol === "https:" && (url.hostname === "vercel.com" || url.hostname.endsWith(".vercel.com")) ? url.toString() : undefined } catch { return undefined }
+}
 
-function TemporalCard({ index, label, range, summary, unavailableReason }: { index: number; label: string; range: string; summary?: LedgerSummary; unavailableReason?: string }) {
-  const available = Boolean(summary?.reports);
-  const acos = available ? percentage(summary!.spend, summary!.ppcSales) : null;
-  const tacos = available ? percentage(summary!.spend, summary!.totalSales) : null;
+function TemporalCard({ index, label, range, summary, source, unavailableReason }: { index: number; label: string; range: string; summary?: LedgerSummary | null; source: string; unavailableReason?: string }) {
+  const available = summary != null;
+  const coverage = summary?.reports;
   return <article className={styles.temporalCard}>
-    <header><div><small>Index {String(index).padStart(2, "0")}</small><h2>{label}</h2><span>{range}</span></div><div><small>Net Sales</small><strong>{available ? currency(summary!.totalSales) : "—"}</strong></div></header>
-    <div className={styles.cardAudit}><span><small>Coverage</small><strong>{available ? `${summary!.reports} saved report${summary!.reports === 1 ? "" : "s"}` : "Unavailable"}</strong></span><span><small>Data Source</small><strong>{available ? "Local weekly reports" : "Daily source pending"}</strong></span></div>
+    <header><div><small>Index {String(index).padStart(2, "0")}</small><h2>{label}</h2><span>{range}</span></div><div><small>Net Sales</small><strong>{available ? currency(summary.totalSales) : "—"}</strong></div></header>
+    <div className={styles.cardAudit}><span><small>Coverage</small><strong>{available ? coverage ? `${coverage} saved report${coverage === 1 ? "" : "s"}` : "Completed range" : "Unavailable"}</strong></span><span><small>Data Source</small><strong>{available ? source : "Daily source pending"}</strong></span></div>
     <dl>
-      <div><dt>Orders / PPC Orders</dt><dd>{available ? `${Math.round(summary!.totalOrders)} / ${Math.round(summary!.ppcOrders)}` : "—"}</dd></div>
-      <div><dt>PPC Sales</dt><dd>{available ? currency(summary!.ppcSales) : "—"}</dd></div>
-      <div><dt>Advertising Cost</dt><dd>{available ? currency(summary!.spend) : "—"}</dd></div>
-      <div><dt>ACOS Actual</dt><dd>{displayPercent(acos)}</dd></div>
+      <div><dt>Orders / PPC Orders</dt><dd>{available ? `${displayNumber(summary.totalOrders)} / ${displayNumber(summary.ppcOrders)}` : "—"}</dd></div>
+      <div><dt>PPC Sales</dt><dd>{available ? currency(summary.ppcSales) : "—"}</dd></div>
+      <div><dt>Advertising Cost</dt><dd>{available ? currency(summary.spend) : "—"}</dd></div>
+      <div><dt>ACOS Actual</dt><dd>{displayPercent(available ? percentage(summary.spend, summary.ppcSales) : null)}</dd></div>
+      <div><dt>TACOS</dt><dd>{displayPercent(available ? percentage(summary.spend, summary.totalSales) : null)}</dd></div>
     </dl>
-    <footer><span><small>Status</small><strong>{available ? "Saved data" : unavailableReason || "Awaiting data"}</strong></span><span><small>TACOS</small><strong>{displayPercent(tacos)}</strong></span></footer>
+    <footer><span><small>Status</small><strong>{available ? "Actual data" : unavailableReason || "Awaiting data"}</strong></span></footer>
   </article>;
 }
 
-function DetailPlaceholder({ section, scopeLabel }: { section: (typeof DETAIL_SECTIONS)[number]; scopeLabel: string }) {
+function metricPair(first: string, second: string) { return <><strong>{first}</strong><small>{second}</small></> }
+function DetailRow({ row, index, sectionKey }: { row: PerformanceOverviewRow; index: number; sectionKey: PerformanceOverviewSectionKey }) {
+  const ctr = percentage(row.clicks, row.impressions);
+  const cpc = row.clicks > 0 ? row.spend / row.clicks : null;
+  const identity = <td>{metricPair(row.name, [row.matchType, row.targetType].filter(Boolean).join(" · ") || "Reported row")}</td>;
+  if (sectionKey === "keywords") return <tr><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td>{identity}<td>{metricPair(row.campaign || "—", row.asin || "No ASIN returned")}</td><td>{metricPair(displayNumber(row.impressions), `CTR ${displayPercent(ctr)}`)}</td><td>{metricPair(displayNumber(row.clicks), `CPC ${cpc == null ? "—" : displayMoney(cpc)}`)}</td><td>{displayMoney(row.spend)}</td><td>{displayMoney(row.sales)}</td><td>{metricPair(displayNumber(row.orders), `CVR ${displayPercent(row.conversionRate)}`)}</td><td>{displayPercent(row.acos)}</td><td>{row.roas == null ? "—" : row.roas.toFixed(2)}</td></tr>;
+  if (sectionKey === "campaigns") return <tr><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td>{identity}<td>{row.asin || "—"}</td><td>{displayNumber(row.impressions)}</td><td>{displayNumber(row.clicks)}</td><td>{displayMoney(row.spend)}</td><td>{displayMoney(row.sales)}</td><td>{displayNumber(row.orders)}</td><td>{displayPercent(row.acos)}</td><td>{row.roas == null ? "—" : row.roas.toFixed(2)}</td></tr>;
+  return <tr><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td>{identity}<td>{metricPair(row.campaign || "—", row.asin || "No advertised ASIN returned")}</td><td>{displayNumber(row.clicks)}</td><td>{displayMoney(row.spend)}</td><td>{displayMoney(row.sales)}</td><td>{displayNumber(row.orders)}</td><td>{displayPercent(row.conversionRate)}</td><td>{displayPercent(row.acos)}</td><td>{row.roas == null ? "—" : row.roas.toFixed(2)}</td></tr>;
+}
+
+function DetailPerformance({ meta, section, loadStatus, scopeLabel, periodLabel }: { meta: (typeof DETAIL_SECTIONS)[number]; section?: PerformanceOverviewSection; loadStatus: OverviewLoadState["status"]; scopeLabel: string; periodLabel: string }) {
+  const columns = DETAIL_COLUMNS[meta.key];
+  const badge = loadStatus === "loading" ? "Loading" : section?.status === "ready" ? `${section.rows.length} row${section.rows.length === 1 ? "" : "s"}` : "Unavailable";
   return <details className={styles.ledgerSection}>
-    <summary><div><span aria-hidden="true" /><div><h2>{section.title}</h2><p>{section.description}</p></div></div><span className={styles.disclosureMeta}><strong>Source pending</strong><ChevronDown aria-hidden="true" /></span></summary>
-    <div className={styles.tableScroll}><table><thead><tr>{section.columns.map(column => <th key={column}>{column}</th>)}</tr></thead><tbody><tr><td colSpan={section.columns.length}><div className={styles.emptyLedger}><Database aria-hidden="true" /><strong>No connected dataset yet</strong><span>{scopeLabel}. This table is ready for a campaign-level Scale Insights or CSV source in a later refinement.</span></div></td></tr></tbody></table></div>
+    <summary><div><span aria-hidden="true" /><div><h2>{meta.title}</h2><p>{meta.description} Selected period: {periodLabel}.</p></div></div><span className={styles.disclosureMeta}><strong>{badge}</strong><ChevronDown aria-hidden="true" /></span></summary>
+    <div className={styles.tableScroll}><table><thead><tr>{columns.map(column => <th key={column}>{column}</th>)}</tr></thead><tbody>{section?.rows.length ? section.rows.map((row, index) => <DetailRow key={row.id} row={row} index={index} sectionKey={meta.key} />) : <tr><td colSpan={columns.length}><div className={styles.emptyLedger}><Database aria-hidden="true" /><strong>{loadStatus === "loading" ? "Loading Scale Insights data" : section?.status === "ready" ? "No rows in this period" : "Performance data unavailable"}</strong><span>{section?.message || `${scopeLabel}. Apply a valid range to retrieve this report.`}</span></div></td></tr>}</tbody></table></div>
   </details>;
 }
 
 export function PerformanceOverviewDashboard({ products, reports, currentWeekStart, todayIso }: Props) {
+  const defaultStart = addDaysIso(currentWeekStart, -28);
   const [asinFilter, setAsinFilter] = useState("");
+  const [draftStartDate, setDraftStartDate] = useState(defaultStart);
+  const [draftEndDate, setDraftEndDate] = useState(todayIso);
+  const [selectedRange, setSelectedRange] = useState({ startDate: defaultStart, endDate: todayIso });
+  const [overviewState, setOverviewState] = useState<OverviewLoadState>({ status: "idle", data: null, message: "Select a valid ASIN range." });
   const normalizedFilter = asinFilter.trim().toLowerCase();
   const filteredProducts = normalizedFilter ? products.filter(product => [product.asin, product.sku, product.name].some(value => value?.toLowerCase().includes(normalizedFilter))) : products;
+  const filteredAsins = useMemo(() => [...new Set(filteredProducts.map(product => product.asin?.trim().toUpperCase()).filter((asin): asin is string => Boolean(asin && /^[A-Z0-9]{10}$/.test(asin))))], [filteredProducts]);
+  const asinKey = filteredAsins.join(",");
+
+  useEffect(() => {
+    if (!asinKey) return;
+    const controller = new AbortController();
+    const query = new URLSearchParams({ asins: asinKey, country: "US", startDate: selectedRange.startDate, endDate: selectedRange.endDate });
+    void Promise.resolve().then(() => {
+      if (controller.signal.aborted) return;
+      setOverviewState({ status: "loading", data: null, message: "Loading Scale Insights performance…" });
+      return fetch(`${withPpcBasePath("/api/dashboard/performance-overview")}?${query}`, { headers: getPipelineAuthorizationHeader(), cache: "no-store", signal: controller.signal });
+    })
+      .then(async response => {
+        if (!response) return;
+        const value: unknown = await response.json().catch(() => null);
+        if (!response.ok) {
+          const candidate = value && typeof value === "object" ? value as Record<string, unknown> : {};
+          throw Object.assign(new Error(typeof candidate.error === "string" ? candidate.error : "Scale Insights dashboard data is unavailable."), { authorizationUrl: trustedAuthorizationUrl(candidate.authorizationUrl) });
+        }
+        const candidate = value && typeof value === "object" ? parsePerformanceOverviewData((value as Record<string, unknown>).overview) : null;
+        if (!candidate) throw new Error("Scale Insights returned an invalid dashboard response.");
+        setOverviewState({ status: "ready", data: candidate, message: candidate.warnings.join(" ") || "Scale Insights data loaded." });
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        const candidate = error as Error & { authorizationUrl?: string };
+        setOverviewState(current => ({ status: "error", data: current.data, message: candidate.message || "Scale Insights dashboard data is unavailable.", authorizationUrl: candidate.authorizationUrl }));
+      });
+    return () => controller.abort();
+  }, [asinKey, selectedRange]);
+
   const weekStarts = Array.from({ length: 5 }, (_, index) => addDaysIso(currentWeekStart, index * -7));
-  const currentSummary = summarize(filteredProducts, reports, weekStarts.slice(0, 1));
-  const fourteenDaySummary = summarize(filteredProducts, reports, weekStarts.slice(0, 2));
-  const thirtyDaySummary = summarize(filteredProducts, reports, weekStarts);
+  const localSevenDay = summarize(filteredProducts, reports, weekStarts.slice(0, 1));
+  const localFourteenDay = summarize(filteredProducts, reports, weekStarts.slice(0, 2));
+  const localSelected = summarize(filteredProducts, reports, weekStarts);
   const currentRows = filteredProducts.flatMap(product => {
     const current = reports[reportKey(product.id, currentWeekStart)];
     if (!hasPerformance(current)) return [];
@@ -120,41 +142,42 @@ export function PerformanceOverviewDashboard({ products, reports, currentWeekSta
     const momentum = previous?.totalSales ? Math.round(((current.totalSales - previous.totalSales) / previous.totalSales) * 1000) / 10 : null;
     return [{ product, current, momentum }];
   }).toSorted((first, second) => second.current.totalSales - first.current.totalSales);
+  const currentTotalSpend = currentRows.reduce((total, row) => total + row.current.spend, 0);
+  const currentTotalSales = currentRows.reduce((total, row) => total + row.current.totalSales, 0);
   const filteredIds = new Set(filteredProducts.map(product => product.id));
   const latestUpdate = Object.values(reports).filter(report => filteredIds.has(report.productId)).map(report => report.updatedAt).filter(Boolean).toSorted().at(-1);
   const currentWeekEnd = addDaysIso(currentWeekStart, 6);
   const scopeLabel = normalizedFilter ? filteredProducts.length === 1 ? `Filtered to ${filteredProducts[0].asin || filteredProducts[0].sku || filteredProducts[0].name}` : `Filtered to ${filteredProducts.length} matching products` : "Showing all ASINs";
+  const live = asinKey ? overviewState.data : null;
+  const displayedLoadStatus: OverviewLoadState["status"] = asinKey ? overviewState.status : "idle";
+  const periodLabel = displayRange(selectedRange.startDate, selectedRange.endDate);
+  const customLabel = inclusiveDays(selectedRange.startDate, selectedRange.endDate) === 30 ? "30 Days" : "Custom Range";
+  const dateError = draftStartDate > draftEndDate ? "Start date must be before the end date." : inclusiveDays(draftStartDate, draftEndDate) > 90 ? "Choose a range of 90 days or less." : "";
 
   return <main className={styles.overview} aria-label="Account performance dashboard">
-    <section className={styles.telemetry} aria-label="Dashboard data status">
-      <span><i aria-hidden="true" /><small>Data Source</small><strong>Browser-local weekly reports</strong></span>
-      <span><small>Products</small><strong>{normalizedFilter ? `${filteredProducts.length} / ${products.length}` : products.length}</strong></span>
-      <span><small>Latest Update</small><strong>{latestUpdate ? new Date(latestUpdate).toLocaleString() : "Awaiting saved data"}</strong></span>
-      <span className={styles.prototypeBadge}>Initial dashboard</span>
-    </section>
-
+    <section className={styles.telemetry} aria-label="Dashboard data status"><span><i aria-hidden="true" /><small>Data Source</small><strong>{live ? "Scale Insights + local reports" : "Browser-local weekly reports"}</strong></span><span><small>Products</small><strong>{normalizedFilter ? `${filteredProducts.length} / ${products.length}` : products.length}</strong></span><span><small>Latest Update</small><strong>{live?.freshness || (latestUpdate ? new Date(latestUpdate).toLocaleString() : "Awaiting saved data")}</strong></span><span className={styles.prototypeBadge}>Performance dashboard</span></section>
     <div className={styles.canvas}>
-      <header className={styles.overviewHeader}><div><span>Week {getIsoWeekNumber(currentWeekStart)} · Multi-Timeframe Performance Ledger</span><h1>Performance Overview</h1><p>Monochrome account overview modeled from the supplied reference. Weekly cards and ASIN ranking use available local reports.</p></div><div className={styles.headerControls}><label className={styles.asinFilter}><Search aria-hidden="true" /><span className={styles.srOnly}>Filter dashboard by ASIN, SKU, or product name</span><input type="search" value={asinFilter} onChange={event => setAsinFilter(event.target.value)} placeholder="Filter ASIN performance" aria-label="Filter dashboard by ASIN, SKU, or product name" />{asinFilter ? <button type="button" onClick={() => setAsinFilter("")} aria-label="Clear ASIN performance filter"><X aria-hidden="true" /></button> : null}</label><div className={styles.auditWindow}><CalendarDays aria-hidden="true" /><span><small>Audit Window</small><strong>{displayRange(addDaysIso(currentWeekStart, -28), currentWeekEnd)}</strong></span></div><small className={styles.scopeStatus} aria-live="polite">{scopeLabel}</small></div></header>
-
-      <details className={styles.temporalSection}>
-        <summary className={styles.sectionKicker}><span><i aria-hidden="true" />Temporal Ledger Matrix // Continuous Historical Benchmarks</span><span className={styles.disclosureMeta}><small>Currency: USD ($)</small><ChevronDown aria-hidden="true" /></span></summary>
+      <header className={styles.overviewHeader}><div><span>Week {getIsoWeekNumber(currentWeekStart)} · Multi-Timeframe Performance Ledger</span><h1>Performance Overview</h1><p>Account and ASIN performance from Scale Insights, scoped by the selected date range.</p></div><div className={styles.headerControls}>
+        <label className={styles.asinFilter}><Search aria-hidden="true" /><span className={styles.srOnly}>Filter dashboard by ASIN, SKU, or product name</span><input type="search" value={asinFilter} onChange={event => setAsinFilter(event.target.value)} placeholder="Filter ASIN performance" aria-label="Filter dashboard by ASIN, SKU, or product name" />{asinFilter ? <button type="button" onClick={() => setAsinFilter("")} aria-label="Clear ASIN performance filter"><X aria-hidden="true" /></button> : null}</label>
+        <div className={styles.auditWindow}><CalendarDays aria-hidden="true" /><label><span>Start date</span><input type="date" value={draftStartDate} max={draftEndDate} onChange={event => setDraftStartDate(event.target.value)} aria-label="Dashboard start date" /></label><label><span>End date</span><input type="date" value={draftEndDate} min={draftStartDate} onChange={event => setDraftEndDate(event.target.value)} aria-label="Dashboard end date" /></label><button type="button" onClick={() => !dateError && setSelectedRange({ startDate: draftStartDate, endDate: draftEndDate })} disabled={Boolean(dateError) || overviewState.status === "loading"}><RefreshCw aria-hidden="true" />Apply</button></div>
+        <small className={styles.scopeStatus} aria-live="polite">{dateError || `${scopeLabel} · ${periodLabel}`}</small>
+      </div></header>
+      {!asinKey || overviewState.status === "error" || overviewState.status === "loading" ? <div className={overviewState.status === "error" ? styles.dataError : styles.dataNotice} role="status"><span>{asinKey ? overviewState.message : "No valid ASIN matches the current filter."}</span>{overviewState.authorizationUrl ? <a href={overviewState.authorizationUrl}>Connect Scale Insights</a> : null}</div> : null}
+      <section className={styles.temporalSection} aria-labelledby="temporal-ledger-heading">
+        <div className={styles.sectionKicker}><span id="temporal-ledger-heading"><i aria-hidden="true" />Temporal Ledger Matrix // Continuous Historical Benchmarks</span><small>Currency: {live?.currency || "USD"} ($)</small></div>
         <div className={styles.temporalGrid}>
-          <TemporalCard index={1} label="Today" range={displayDate(todayIso)} unavailableReason="Daily source pending" />
-          <TemporalCard index={2} label="Yesterday" range={displayDate(addDaysIso(todayIso, -1))} unavailableReason="Daily source pending" />
-          <TemporalCard index={3} label="7 Days" range={displayRange(currentWeekStart, currentWeekEnd)} summary={currentSummary} />
-          <TemporalCard index={4} label="14 Days" range={displayRange(addDaysIso(currentWeekStart, -7), currentWeekEnd)} summary={fourteenDaySummary} />
-          <TemporalCard index={5} label="30 Days" range={displayRange(addDaysIso(currentWeekStart, -28), currentWeekEnd)} summary={thirtyDaySummary} />
+          <TemporalCard index={1} label="Today" range={displayDate(todayIso)} source="Scale Insights" unavailableReason="Incomplete day excluded" />
+          <TemporalCard index={2} label="Yesterday" range={displayDate(addDaysIso(todayIso, -1))} summary={live?.periods.yesterday} source="Scale Insights" unavailableReason="Daily source pending" />
+          <TemporalCard index={3} label="7 Days" range={displayRange(addDaysIso(todayIso, -7), addDaysIso(todayIso, -1))} summary={live?.periods.sevenDays || (localSevenDay.reports ? localSevenDay : null)} source={live?.periods.sevenDays ? "Scale Insights" : "Local weekly reports"} />
+          <TemporalCard index={4} label="14 Days" range={displayRange(addDaysIso(todayIso, -14), addDaysIso(todayIso, -1))} summary={live?.periods.fourteenDays || (localFourteenDay.reports ? localFourteenDay : null)} source={live?.periods.fourteenDays ? "Scale Insights" : "Local weekly reports"} />
+          <TemporalCard index={5} label={customLabel} range={periodLabel} summary={live?.periods.selectedRange || (localSelected.reports ? localSelected : null)} source={live?.periods.selectedRange ? "Scale Insights" : "Local weekly reports"} />
         </div>
-      </details>
-
+      </section>
       <details className={styles.ledgerSection}>
         <summary><div><span aria-hidden="true" /><div><h2>ASIN Velocity &amp; Performance Ranking // Net Sales Contribution Matrix</h2><p>Product-level results from saved reports for {displayRange(currentWeekStart, currentWeekEnd)}.</p></div></div><span className={styles.disclosureMeta}><strong>{currentRows.length} active row{currentRows.length === 1 ? "" : "s"}</strong><ChevronDown aria-hidden="true" /></span></summary>
-        <div className={styles.tableScroll}><table><thead><tr><th>Rank &amp; Velocity</th><th>ASIN / SKU Details</th><th>Sales</th><th>Spend</th><th>Orders</th><th>ACOS</th><th>TACOS</th><th>Spend Share</th><th>Sales Share</th><th>WoW Momentum</th></tr></thead><tbody>{currentRows.length ? currentRows.map(({ product, current, momentum }, index) => <tr key={product.id}><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td><td><strong>{product.name}</strong><small>ASIN: {product.asin || "N/A"} · SKU: {product.sku || "N/A"}</small></td><td>{currency(current.totalSales)}</td><td>{currency(current.spend)}</td><td>{Math.round(current.totalOrders)}</td><td>{displayPercent(percentage(current.spend, current.ppcSales))}</td><td>{displayPercent(percentage(current.spend, current.totalSales))}</td><td>{displayPercent(percentage(current.spend, currentSummary.spend))}</td><td>{displayPercent(percentage(current.totalSales, currentSummary.totalSales))}</td><td className={momentum == null ? styles.neutral : momentum >= 0 ? styles.positive : styles.negative}>{momentum == null ? "New / unavailable" : `${momentum >= 0 ? "↗" : "↘"} ${Math.abs(momentum)}%`}</td></tr>) : <tr><td colSpan={10}><div className={styles.emptyLedger}><PackageSearch aria-hidden="true" /><strong>No saved reports for this week</strong><span>Open Products, select an ASIN, and refresh its weekly data to populate this ranking.</span></div></td></tr>}</tbody></table></div>
+        <div className={styles.tableScroll}><table><thead><tr><th>Rank &amp; Velocity</th><th>ASIN / SKU Details</th><th>Sales</th><th>Spend</th><th>Orders</th><th>ACOS</th><th>TACOS</th><th className={styles.spendShare}>Spend Share</th><th className={styles.salesShare}>Sales Share</th><th>WoW Momentum</th></tr></thead><tbody>{currentRows.length ? currentRows.map(({ product, current, momentum }, index) => <tr key={product.id}><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td><td><strong>{product.name}</strong><small>ASIN: {product.asin || "N/A"} · SKU: {product.sku || "N/A"}</small></td><td>{currency(current.totalSales)}</td><td>{currency(current.spend)}</td><td>{Math.round(current.totalOrders)}</td><td>{displayPercent(percentage(current.spend, current.ppcSales))}</td><td>{displayPercent(percentage(current.spend, current.totalSales))}</td><td className={styles.spendShare}>{displayPercent(percentage(current.spend, currentTotalSpend))}</td><td className={styles.salesShare}>{displayPercent(percentage(current.totalSales, currentTotalSales))}</td><td className={momentum == null ? styles.neutral : momentum >= 0 ? styles.positive : styles.negative}>{momentum == null ? "New / unavailable" : `${momentum >= 0 ? "↗" : "↘"} ${Math.abs(momentum)}%`}</td></tr>) : <tr><td colSpan={10}><div className={styles.emptyLedger}><PackageSearch aria-hidden="true" /><strong>No saved reports for this week</strong><span>Open Products, select an ASIN, and refresh its weekly data to populate this ranking.</span></div></td></tr>}</tbody></table></div>
       </details>
-
-      <details className={styles.coverageSection}><summary><span><i aria-hidden="true" />Overview Source Coverage</span><span className={styles.disclosureMeta}><small>{thirtyDaySummary.reports} saved rows</small><ChevronDown aria-hidden="true" /></span></summary><section className={styles.summaryStrip} aria-label="Overview source coverage"><span><BarChart3 aria-hidden="true" /><small>Saved weekly rows</small><strong>{thirtyDaySummary.reports}</strong></span><span><Gauge aria-hidden="true" /><small>30-day PPC ACOS</small><strong>{displayPercent(percentage(thirtyDaySummary.spend, thirtyDaySummary.ppcSales))}</strong></span><span><PackageSearch aria-hidden="true" /><small>Ranked products</small><strong>{currentRows.length}</strong></span></section></details>
-
-      {DETAIL_SECTIONS.map(section => <DetailPlaceholder key={section.title} section={section} scopeLabel={scopeLabel} />)}
+      {DETAIL_SECTIONS.map(meta => <DetailPerformance key={meta.key} meta={meta} section={live?.sections[meta.key]} loadStatus={displayedLoadStatus} scopeLabel={scopeLabel} periodLabel={periodLabel} />)}
     </div>
   </main>;
 }
