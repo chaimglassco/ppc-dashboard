@@ -246,6 +246,8 @@ If the connector does not advertise the two required search-term tools, the card
 
 ## Account performance overview rollout
 
+The ASIN Targeting rollout separates `get_keyword_performance` and `get_target_performance`, maps nested target types, and follows target pagination with a 60-second per-call timeout. After promotion, refresh the applied dashboard scope and reconcile product/category rows and all metric sort directions. Missing campaign attribution stays unavailable. No environment or storage migration is required.
+
 No environment variable or storage migration is required; the new route reuses the existing Scale Insights connector and verified Pipeline identity. After deployment, open Dashboard, apply a custom range, and verify `/ppc/api/dashboard/performance-overview` returns no-store data capped at yesterday. Reconcile all four timeframe summaries and at least one row in each available detailed table against Scale Insights. Test both an all-ASIN scope and one filtered ASIN; if the connected tool advertises only scalar ASIN input, the UI must request one ASIN or explain the capability limit. Confirm no provider token or raw tool response reaches the client.
 
 The ASIN ranking now requests product-level advertising and sales rows for the applied range plus sales for the immediately preceding equal-length range. After promotion, reconcile at least two ASIN rows, their shares, ACOS/TACOS, and momentum with Scale Insights. No persistence or environment migration is required.

@@ -20,7 +20,7 @@ describe("Scale Insights performance overview adapter", () => {
   it("loads timeframe totals and normalizes campaign, keyword, product-target, and search-term rows", async () => {
     const definitions = [
       tool("get_ads_performance", { group_by: { type: "string", enum: ["product"] } }), accountTool("get_campaign_performance"),
-      tool("get_sales_data", { group_by: { type: "string", enum: ["total", "product"] } }), tool("get_target_performance"), tool("get_search_term_performance"),
+      tool("get_sales_data", { group_by: { type: "string", enum: ["total", "product"] } }), tool("get_keyword_performance"), tool("get_target_performance"), tool("get_search_term_performance"),
     ];
     const callTool = vi.fn(async (name: string, args: Record<string, unknown>) => {
       if (name === "get_sales_data") {
@@ -34,9 +34,16 @@ describe("Scale Insights performance overview adapter", () => {
       if (name === "get_campaign_performance") return args.page === 2
         ? { oppMeta: { total_count: 2, total_pages: 2 }, opps: [{ entity: "Auto Campaign", entityType: "Campaign", metrics: { AdType: "SP", State: "enabled", Spend: "$20.00", Sales: "$50.00", Orders: "3", ACOS: "40%", ROAS: "2.5", CPC: "$1.00", CTR: "2%", CVR: "15%", DailyBudget: "$25.00" } }] }
         : { oppMeta: { total_count: 2, total_pages: 2 }, opps: [{ entity: "Exact Campaign", entityType: "Campaign", metrics: { AdType: "SP", State: "enabled", Spend: "$100.00", Sales: "$500.00", Orders: "20", ACOS: "20%", ROAS: "5", CPC: "$2.00", CTR: "5%", CVR: "40%", DailyBudget: "$75.00" } }] };
-      if (name === "get_target_performance") return { rows: [
+      if (name === "get_keyword_performance") return { rows: [
         { TargetId: "keyword-1", Target: "stained glass came", CampaignName: "Exact Campaign", AdvertisedASIN: "B012345678", TargetType: "keyword", MatchType: "exact", Impressions: 800, Clicks: 40, Spend: 50, Sales: 300, Orders: 12 },
-        { TargetId: "product-1", Target: "B099999999", CampaignName: "Product Campaign", AdvertisedASIN: "B012345678", TargetType: "product", Impressions: 200, Clicks: 10, Spend: 20, Sales: 80, Orders: 4 },
+      ] };
+      if (name === "get_target_performance") return args.page === 2 ? { oppMeta: { total_pages: 2 }, opps: [
+        { entity: "B099999999 (product)", metrics: { TargetType: "product", Clicks: "5", Spend: "$10", Sales: "$40", Orders: "2", CVR: "40%" } },
+        { entity: "category: stained glass (category)", metrics: { TargetType: "category", Clicks: "2", Spend: "$4", Sales: "$20", Orders: "1" } },
+      ] } : { oppMeta: { total_pages: 2 }, opps: [
+        { entity: "B099999999 (product)", metrics: { TargetType: "product", Clicks: "10", Spend: "$20", Sales: "$80", Orders: "4", CVR: "40%" } },
+        { entity: "loose-match (auto)", metrics: { TargetType: "auto", Clicks: "20", Spend: "$5", Sales: "$100", Orders: "5" } },
+        { entity: "Views (other)", metrics: { TargetType: "other", Clicks: "1", Spend: "$1", Sales: "$0", Orders: "0" } },
       ] };
       expect(args.start_date).toBe("2026-08-01");
       return { rows: [{ SearchTermId: "search-1", SearchTerm: "round u lead came", CampaignName: "Exact Campaign", AdvertisedASIN: "B012345678", MatchType: "exact", Impressions: 600, Clicks: 30, Spend: 25, Sales: 200, Orders: 10 }] };
@@ -48,10 +55,15 @@ describe("Scale Insights performance overview adapter", () => {
     expect(result.sections.campaigns.rows[0]).toMatchObject({ name: "Exact Campaign", targetType: "SP", state: "enabled", spend: 100, sales: 500, orders: 20, acos: 20, roas: 5, cpc: 2, ctr: 5, conversionRate: 40, dailyBudget: 75 });
     expect(result.sections.campaigns.rows[1]).toMatchObject({ name: "Auto Campaign", spend: 20, sales: 50 });
     expect(result.sections.keywords.rows[0]).toMatchObject({ name: "stained glass came", matchType: "exact" });
-    expect(result.sections.productTargets.rows[0]).toMatchObject({ name: "B099999999", targetType: "product" });
+    expect(result.sections.productTargets.rows).toHaveLength(3);
+    expect(result.sections.productTargets.rows[0]).toMatchObject({ name: "B099999999", targetType: "product", asin: params.asins[0], clicks: 10, spend: 20, sales: 80, conversionRate: 40 });
+    expect(result.sections.productTargets.rows[1]).toMatchObject({ name: "B099999999", sales: 40 });
+    expect(result.sections.productTargets.rows[2]).toMatchObject({ name: "category: stained glass", targetType: "category" });
+    expect(new Set(result.sections.productTargets.rows.map(row => row.id)).size).toBe(3);
     expect(result.sections.searchTerms.rows[0]).toMatchObject({ name: "round u lead came", conversionRate: 33.33333333333333 });
     expect(result.warnings).toEqual(["Scale Insights excludes today and future dates. Actual data ends 2026-09-14."]);
-    expect(callTool).toHaveBeenCalledTimes(15);
+    expect(callTool).toHaveBeenCalledTimes(17);
+    expect(callTool).toHaveBeenCalledWith("get_target_performance", expect.objectContaining({ asin_list: params.asins, start_date: params.actualStartDate, end_date: params.actualEndDate, page: 2 }));
     expect(callTool).toHaveBeenCalledWith("get_campaign_performance", expect.objectContaining({ mode: "raw", count: 500, page: 1, sort_by: "sales", sort_direction: "desc" }));
     expect(callTool).toHaveBeenCalledWith("get_sales_data", expect.objectContaining({ group_by: "total", count: 100, summary_only: false }));
   });

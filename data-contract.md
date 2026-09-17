@@ -423,6 +423,8 @@ Navigation column membership, Timeline PPC-only labels, percentage suffix spacin
 
 ## Performance overview response
 
+Product-target rows retain the existing DTO. Names normalize product/category suffixes and target type comes from the provider metrics. Missing provider IDs receive transient page/row identities so repeated target names remain distinct. `asin` denotes the advertised scope and never the target entity; absent attribution remains blank except when one verified request ASIN establishes the scope. No persistence key or version changes.
+
 `GET /ppc/api/dashboard/performance-overview?asins=<comma-separated>&country=<code>&startDate=<ISO>&endDate=<ISO>` returns `{ overview }` with no-store headers. `overview` contains the normalized ASIN list, country, currency, requested and actual periods, freshness, warnings, four nullable summary periods (`yesterday`, `sevenDays`, `fourteenDays`, `selectedRange`), and four report sections (`keywords`, `campaigns`, `productTargets`, `searchTerms`).
 
 Each available period contains non-negative `totalSales`, `ppcSales`, `spend`, `totalOrders`, `ppcOrders`, and `clicks`. Each section has `ready` or `unavailable` status, an explanatory message, and normalized rows containing stable provider/fallback ID, name, campaign, advertised ASIN, match/target types, impressions, clicks, spend, sales, orders, and nullable ACOS, ROAS, and conversion rate. The browser validates every field and rejects the whole response when its scope or values are malformed. This DTO is read-only and is never persisted.

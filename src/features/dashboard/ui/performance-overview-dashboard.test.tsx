@@ -20,7 +20,10 @@ function overview(startDate = "2026-07-29", endDate = "2026-08-28"): Performance
         { ...row, id: "campaign-1", name: "Exact Campaign", targetType: "SP", matchType: "enabled", state: "enabled", cpc: 0.5, ctr: 5, dailyBudget: 50 },
         { ...row, id: "campaign-2", name: "Auto Campaign", targetType: "SP", matchType: "enabled", state: "enabled", spend: 75, sales: 100, orders: 4, acos: 75, roas: 1.33, conversionRate: 8, cpc: 1.5, ctr: 2, dailyBudget: 100 },
       ] },
-      productTargets: { status: "ready", message: "1 row from Scale Insights.", rows: [{ ...row, id: "target-1", name: "B099999999", targetType: "product" }] },
+      productTargets: { status: "ready", message: "2 rows from Scale Insights.", rows: [
+        { ...row, id: "target-1", name: "B099999999", targetType: "product" },
+        { ...row, id: "target-2", name: "B088888888", targetType: "product", clicks: 75, spend: 50, sales: 100, orders: 4, conversionRate: 5.3, acos: 50, roas: 2 },
+      ] },
       searchTerms: { status: "ready", message: "1 row from Scale Insights.", rows: [{ ...row, id: "search-1", name: "round u lead came" }] },
     }, warnings: [],
   };
@@ -107,6 +110,24 @@ describe("PerformanceOverviewDashboard", () => {
       expect(rows[1]).toHaveTextContent(expectedFirst);
       expect(within(table).getByText(metric).closest("th")).toHaveAttribute("aria-sort", "ascending");
     }
+  });
+
+  it("sorts every ASIN target metric independently without requesting new data", async () => {
+    render(<PerformanceOverviewDashboard products={[product]} reports={{}} currentWeekStart="2026-08-26" todayIso="2026-08-28" />);
+    await waitFor(() => expect(screen.getByText("ASIN Targeting").closest("details")).toHaveTextContent("2 rows"));
+    const details = screen.getByText("ASIN Targeting").closest("details")!;
+    fireEvent.click(screen.getByText("ASIN Targeting").closest("summary")!);
+    const table = within(details).getByRole("table");
+    const requestCount = vi.mocked(fetch).mock.calls.length;
+    const descendingFirst: Record<string, string> = { Clicks: "B088888888", Spend: "B088888888", Sales: "B099999999", Orders: "B099999999", "Conversion Rate": "B099999999", ACOS: "B088888888", ROAS: "B099999999" };
+    for (const [metric, expectedFirst] of Object.entries(descendingFirst)) {
+      fireEvent.click(within(table).getByRole("button", { name: `Sort ASIN targets by ${metric} descending` }));
+      expect(within(table).getAllByRole("row")[1]).toHaveTextContent(expectedFirst);
+      fireEvent.click(within(table).getByRole("button", { name: `Sort ASIN targets by ${metric} ascending` }));
+      expect(within(table).getAllByRole("row")[2]).toHaveTextContent(expectedFirst);
+      expect(within(table).getByText(metric).closest("th")).toHaveAttribute("aria-sort", "ascending");
+    }
+    expect(vi.mocked(fetch).mock.calls.length).toBe(requestCount);
   });
 });
 

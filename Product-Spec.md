@@ -243,4 +243,6 @@ The audit controls accept an inclusive custom date range of up to 90 days and ap
 
 The five compact disclosure labels are ASIN Velocity & Performance Ranking, Keyword Targeting, Campaign Movers and Anchors, ASIN Targeting, and Search Terms.
 
+ASIN Targeting uses the dedicated `get_target_performance` report for the filtered advertised ASINs and applied completed dates. It follows every provider page, shows product/category targets, and excludes automatic and audience rows. Every metric header sorts descending or ascending locally. Repeated target ASINs remain separate provider rows; unavailable campaign context is left unavailable. A single advertised ASIN may be taken from the verified request scope, never from the target ASIN itself. Keywords use their separate keyword-performance endpoint.
+
 Campaign Movers and Anchors uses Scale Insights' dedicated campaign-performance report for the applied completed date range and follows every provider page. The campaign view covers the connected account because this endpoint supplies no campaign-to-ASIN mapping. It displays campaign name/ad type, status, Spend, Sales, Orders, ACOS, ROAS, CPC, CTR, CVR, and Daily Budget. Each numeric metric header toggles descending and ascending sorting locally, with missing values last. Unsupported campaign ASIN, raw Clicks, and Impressions are not fabricated.

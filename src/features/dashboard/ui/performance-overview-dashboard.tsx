@@ -73,8 +73,9 @@ function TemporalCard({ index, label, range, summary, source, unavailableReason 
 }
 
 function metricPair(first: string, second: string) { return <><strong>{first}</strong><small>{second}</small></> }
-type CampaignSortKey = "spend" | "sales" | "orders" | "acos" | "roas" | "cpc" | "ctr" | "conversionRate" | "dailyBudget";
+type CampaignSortKey = "clicks" | "spend" | "sales" | "orders" | "acos" | "roas" | "cpc" | "ctr" | "conversionRate" | "dailyBudget";
 const CAMPAIGN_SORT_COLUMNS: Partial<Record<string, CampaignSortKey>> = { Spend: "spend", Sales: "sales", Orders: "orders", ACOS: "acos", ROAS: "roas", CPC: "cpc", CTR: "ctr", CVR: "conversionRate", "Daily Budget": "dailyBudget" };
+const TARGET_SORT_COLUMNS: Partial<Record<string, CampaignSortKey>> = { Clicks: "clicks", Spend: "spend", Sales: "sales", Orders: "orders", "Conversion Rate": "conversionRate", ACOS: "acos", ROAS: "roas" };
 function campaignMetric(row: PerformanceOverviewRow, key: CampaignSortKey) {
   return row[key] ?? null;
 }
@@ -89,9 +90,11 @@ function DetailRow({ row, index, sectionKey }: { row: PerformanceOverviewRow; in
 
 function DetailPerformance({ meta, section, loadStatus, scopeLabel, periodLabel }: { meta: (typeof DETAIL_SECTIONS)[number]; section?: PerformanceOverviewSection; loadStatus: OverviewLoadState["status"]; scopeLabel: string; periodLabel: string }) {
   const columns = DETAIL_COLUMNS[meta.key];
+  const sortColumns = meta.key === "campaigns" ? CAMPAIGN_SORT_COLUMNS : meta.key === "productTargets" ? TARGET_SORT_COLUMNS : undefined;
+  const sortLabel = meta.key === "productTargets" ? "ASIN targets" : "campaigns";
   const [campaignSort, setCampaignSort] = useState<{ key: CampaignSortKey; direction: "asc" | "desc" } | null>(null);
   const rows = (() => {
-    if (meta.key !== "campaigns" || !campaignSort || !section?.rows.length) return section?.rows ?? [];
+    if (!sortColumns || !campaignSort || !section?.rows.length) return section?.rows ?? [];
     return section.rows.map((row, index) => ({ row, index })).toSorted((first, second) => {
       const firstValue = campaignMetric(first.row, campaignSort.key);
       const secondValue = campaignMetric(second.row, campaignSort.key);
@@ -106,9 +109,9 @@ function DetailPerformance({ meta, section, loadStatus, scopeLabel, periodLabel 
   return <details className={styles.ledgerSection}>
     <summary><div><span aria-hidden="true" /><div><h2>{meta.title}</h2><p>{meta.description} Selected period: {periodLabel}.{meta.key === "campaigns" ? " Campaigns cover all ASINs in the connected account." : ""}</p></div></div><span className={styles.disclosureMeta}><strong>{badge}</strong><ChevronDown aria-hidden="true" /></span></summary>
     <div className={styles.tableScroll}><table><thead><tr>{columns.map(column => {
-      const sortKey = meta.key === "campaigns" ? CAMPAIGN_SORT_COLUMNS[column] : undefined;
+      const sortKey = sortColumns?.[column];
       const active = sortKey && campaignSort?.key === sortKey;
-      return <th key={column} aria-sort={active ? campaignSort.direction === "asc" ? "ascending" : "descending" : undefined}>{sortKey ? <button type="button" className={styles.sortButton} onClick={() => setCampaignSort(current => current?.key === sortKey ? { key: sortKey, direction: current.direction === "desc" ? "asc" : "desc" } : { key: sortKey, direction: "desc" })} aria-label={`Sort campaigns by ${column} ${active && campaignSort.direction === "desc" ? "ascending" : "descending"}`}>{column}{active ? campaignSort.direction === "desc" ? <ArrowDown aria-hidden="true" /> : <ArrowUp aria-hidden="true" /> : <ArrowUpDown aria-hidden="true" />}</button> : column}</th>;
+      return <th key={column} aria-sort={active ? campaignSort.direction === "asc" ? "ascending" : "descending" : undefined}>{sortKey ? <button type="button" className={styles.sortButton} onClick={() => setCampaignSort(current => current?.key === sortKey ? { key: sortKey, direction: current.direction === "desc" ? "asc" : "desc" } : { key: sortKey, direction: "desc" })} aria-label={`Sort ${sortLabel} by ${column} ${active && campaignSort.direction === "desc" ? "ascending" : "descending"}`}>{column}{active ? campaignSort.direction === "desc" ? <ArrowDown aria-hidden="true" /> : <ArrowUp aria-hidden="true" /> : <ArrowUpDown aria-hidden="true" />}</button> : column}</th>;
     })}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <DetailRow key={row.id} row={row} index={index} sectionKey={meta.key} />) : <tr><td colSpan={columns.length}><div className={styles.emptyLedger}><Database aria-hidden="true" /><strong>{loadStatus === "loading" ? "Loading Scale Insights data" : section?.status === "ready" ? "No rows in this period" : "Performance data unavailable"}</strong><span>{section?.message || `${scopeLabel}. Apply a valid range to retrieve this report.`}</span></div></td></tr>}</tbody></table></div>
   </details>;
 }

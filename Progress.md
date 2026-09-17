@@ -341,6 +341,8 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 
 ## September 15, 2026 — live account performance overview
 
+- Connected ASIN Targeting to the exact product-target endpoint, separated keyword calls, mapped nested target types and metrics, and followed all target pages. Preserved repeated target rows, excluded auto/audience rows, and added two-way sorting for all seven ASIN target metrics.
+
 - Made the temporal ledger permanently visible, moved TACOS below ACOS, and removed Overview Source Coverage.
 - Added an applied custom date range with a 90-day cap and completed-day cutoff.
 - Added authenticated Scale Insights summaries and normalized Keyword, Campaign, Product Target, and Search Term tables for the selected range.

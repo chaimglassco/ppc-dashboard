@@ -238,7 +238,7 @@ async function withConnectedScaleInsightsClient<T>(
 function createToolCaller(client: Client): ScaleInsightsToolCaller {
   return async (name, args) => client.callTool(
     { name, arguments: args },
-    { signal: AbortSignal.timeout(name === "get_campaign_performance" ? 60_000 : SCALE_INSIGHTS_REQUEST_TIMEOUT_MS) },
+    { signal: AbortSignal.timeout(name === "get_campaign_performance" || name === "get_target_performance" ? 60_000 : SCALE_INSIGHTS_REQUEST_TIMEOUT_MS) },
   );
 }
 

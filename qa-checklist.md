@@ -374,6 +374,9 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 
 ## Account performance overview checks
 
+- [ ] Reconcile ASIN Targeting with Product Target Performance for the applied dates and ASIN filter, including every provider page. Confirm nested product/category rows display, auto/audience rows are absent, repeated target ASINs remain separate, and the targeted ASIN is never displayed as the advertised ASIN.
+- [ ] Sort Clicks, Spend, Sales, Orders, Conversion Rate, ACOS, and ROAS in both directions; verify missing values stay last and sorting makes no provider request. Verify the keyword endpoint cannot populate ASIN Targeting even when it appears first in the tool catalog.
+
 - [ ] Confirm the temporal ledger is visible without opening a disclosure, every card places TACOS below ACOS, and Overview Source Coverage is absent.
 - [ ] Apply a valid custom range and reconcile Yesterday, 7-Day, 14-Day, and selected-range totals with Scale Insights; confirm Today remains unavailable and an end date of today is capped at yesterday.
 - [ ] Open Keyword, Product/ASIN Target, and Search Term sections and reconcile row metrics with the same ASIN and selected period in Scale Insights.

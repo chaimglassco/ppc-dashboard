@@ -111,10 +111,11 @@ function resultPayloads(result: unknown): unknown[] {
 
 function rowFromRecord(record: Record<string, unknown>, kind: "campaign" | "target" | "search"): PerformanceOverviewRow | null {
   const campaign = textValue(directValue(record, kind === "campaign" ? [...CAMPAIGN_KEYS, "entity", "Entity"] : CAMPAIGN_KEYS));
-  const targetType = textValue(directValue(record, TARGET_TYPE_KEYS)) || (kind === "campaign" ? textValue(nestedValue(record, AD_TYPE_KEYS)) : "");
+  const targetType = textValue(nestedValue(record, TARGET_TYPE_KEYS)) || (kind === "campaign" ? textValue(nestedValue(record, AD_TYPE_KEYS)) : "");
   const state = kind === "campaign" ? textValue(nestedValue(record, STATE_KEYS)) : "";
-  const matchType = textValue(directValue(record, MATCH_KEYS)) || state;
-  const name = kind === "campaign" ? campaign : textValue(directValue(record, NAME_KEYS));
+  const matchType = textValue(nestedValue(record, MATCH_KEYS)) || state;
+  const rawName = kind === "campaign" ? campaign : textValue(directValue(record, NAME_KEYS));
+  const name = kind === "target" && /^(product|category)$/i.test(targetType) ? rawName.replace(/\s+\((?:product|category)\)$/i, "") : rawName;
   if (!name) return null;
   const values = {
     impressions: numberValue(nestedValue(record, IMPRESSION_KEYS)),
@@ -130,7 +131,7 @@ function rowFromRecord(record: Record<string, unknown>, kind: "campaign" | "targ
   const sales = values.sales ?? 0;
   const orders = values.orders ?? 0;
   const providerId = textValue(directValue(record, ID_KEYS));
-  const asinCandidate = textValue(directValue(record, ASIN_KEYS)).toUpperCase();
+  const asinCandidate = textValue(directValue(record, kind === "target" ? ASIN_KEYS.filter(key => !/^entity$/i.test(key)) : ASIN_KEYS)).toUpperCase();
   const asin = /^[A-Z0-9]{10}$/.test(asinCandidate) ? asinCandidate : "";
   const reportedAcos = numberValue(nestedValue(record, ACOS_KEYS));
   const reportedRoas = numberValue(nestedValue(record, ROAS_KEYS));
@@ -170,6 +171,16 @@ function collectRows(value: unknown, kind: "campaign" | "target" | "search", dep
 }
 
 function uniqueRows(result: unknown, kind: "campaign" | "target" | "search") {
+  if (kind === "target") {
+    // Compact targets lack IDs and can repeat across campaigns. Preserve each source
+    // row, choosing one payload representation so text/structured mirrors do not duplicate it.
+    const pages = Array.isArray(result) ? result : [result];
+    return pages.flatMap((page, pageIndex) => {
+      const candidates = resultPayloads(page).map(payload => collectRows(isRecord(payload) ? payload.opps ?? payload.rows ?? payload : payload, kind));
+      const sourceRows = candidates.toSorted((first, second) => second.length - first.length)[0] ?? [];
+      return sourceRows.map((row, rowIndex) => ({ ...row, id: `${row.id}:page${pageIndex}:row${rowIndex}` }));
+    }).toSorted((first, second) => second.sales - first.sales || second.spend - first.spend || first.name.localeCompare(second.name));
+  }
   const rows = new Map<string, PerformanceOverviewRow>();
   for (const payload of resultPayloads(result)) {
     for (const row of collectRows(payload, kind)) {
@@ -357,7 +368,8 @@ export async function loadScaleInsightsPerformanceOverview(
   const adsTool = definitions.find(tool => tool.name === "get_ads_performance");
   const campaignTool = definitions.find(tool => tool.name === "get_campaign_performance");
   const salesTool = definitions.find(tool => tool.name === "get_sales_data");
-  const targetTool = definitions.find(tool => tool.name === "get_target_performance" || tool.name === "get_keyword_performance");
+  const keywordTool = definitions.find(tool => tool.name === "get_keyword_performance");
+  const targetTool = definitions.find(tool => tool.name === "get_target_performance");
   const searchTool = definitions.find(tool => tool.name === "get_search_term_performance");
   const ranges = {
     yesterday: { start: params.yesterday, end: params.yesterday },
@@ -372,6 +384,7 @@ export async function loadScaleInsightsPerformanceOverview(
   const selectedAsinSalesArgs = salesTool && buildArgs(salesTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "total", 100);
   const previousAsinSalesArgs = salesTool && buildArgs(salesTool, params.asins, params.country, params.previousStartDate, params.previousEndDate, "total", 100);
   const targetArgs = targetTool && buildArgs(targetTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end);
+  const keywordArgs = keywordTool && buildArgs(keywordTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end);
   const searchArgs = searchTool && buildArgs(searchTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end);
   const periodEntries = await Promise.all(Object.entries(ranges).map(async ([key, range]) => {
     const adsArgs = key === "selectedRange" ? selectedAdsArgs : adsTool && buildArgs(adsTool, params.asins, params.country, range.start, range.end, "total");
@@ -381,9 +394,10 @@ export async function loadScaleInsightsPerformanceOverview(
     return [key, extractSummary(adsResult, salesResult), adsResult, salesResult] as const;
   }));
   const selectedAdsResult = periodEntries.find(([key]) => key === "selectedRange")?.[2];
-  const [campaignResult, targetResult, searchResult, selectedAsinAdsResult, selectedAsinSalesResult, previousAsinSalesResult] = await Promise.all([
+  const [campaignResult, keywordResult, targetResult, searchResult, selectedAsinAdsResult, selectedAsinSalesResult, previousAsinSalesResult] = await Promise.all([
     campaignTool && campaignArgs ? callPaginated(campaignTool, campaignArgs, callTool) : Promise.resolve(null),
-    targetTool && targetArgs ? callTool(targetTool.name, targetArgs) : Promise.resolve(null),
+    keywordTool && keywordArgs ? callTool(keywordTool.name, keywordArgs) : Promise.resolve(null),
+    targetTool && targetArgs ? callPaginated(targetTool, targetArgs, callTool) : Promise.resolve(null),
     searchTool && searchArgs ? callTool(searchTool.name, searchArgs) : Promise.resolve(null),
     adsTool && selectedAsinAdsArgs ? callTool(adsTool.name, selectedAsinAdsArgs) : Promise.resolve(null),
     salesTool && selectedAsinSalesArgs ? callTool(salesTool.name, selectedAsinSalesArgs) : Promise.resolve(null),
@@ -392,15 +406,16 @@ export async function loadScaleInsightsPerformanceOverview(
 
   const campaignRows = campaignResult ? uniqueRows(campaignResult, "campaign") : [];
   const targetRows = targetResult ? uniqueRows(targetResult, "target") : [];
-  const keywordRows = targetRows.filter(row => row.targetType.toLowerCase() !== "product" && !/^[A-Z0-9]{10}$/i.test(row.name));
-  const productTargetRows = targetRows.filter(row => row.targetType.toLowerCase() === "product" || /^[A-Z0-9]{10}$/i.test(row.name));
+  const keywordRows = keywordResult ? uniqueRows(keywordResult, "target") : [];
+  const productTargetRows = targetRows.filter(row => /^(product|category)$/i.test(row.targetType) || /^[A-Z0-9]{10}$/i.test(row.name))
+    .map(row => ({ ...row, asin: row.asin || (params.asins.length === 1 ? params.asins[0] : "") }));
   const searchRows = searchResult ? uniqueRows(searchResult, "search") : [];
   const asinRows = selectedAsinAdsResult && selectedAsinSalesResult
     ? mergeAsinRanking(selectedAsinAdsResult, selectedAsinSalesResult, previousAsinSalesResult)
     : [];
   const scalarScopeMessage = params.asins.length > 1 ? "This Scale Insights tool accepts one ASIN at a time. Filter the dashboard to one ASIN." : "The connected Scale Insights integration does not expose this report.";
   const periods = Object.fromEntries(periodEntries.map(([key, metrics]) => [key, metrics])) as PerformanceOverviewData["periods"];
-  const results = [selectedAdsResult, campaignResult, targetResult, searchResult].filter(Boolean);
+  const results = [selectedAdsResult, campaignResult, keywordResult, targetResult, searchResult].filter(Boolean);
   return {
     asins: params.asins,
     country: params.country,
@@ -411,7 +426,7 @@ export async function loadScaleInsightsPerformanceOverview(
     periods,
     asinRanking: sectionAsinRanking(asinRows, Boolean(adsTool && salesTool && selectedAsinAdsArgs && selectedAsinSalesArgs), scalarScopeMessage),
     sections: {
-      keywords: section(keywordRows, Boolean(targetTool && targetArgs), scalarScopeMessage),
+      keywords: section(keywordRows, Boolean(keywordTool && keywordArgs), scalarScopeMessage),
       campaigns: section(campaignRows, Boolean(campaignTool && campaignArgs), "The connected Scale Insights integration does not expose campaign performance."),
       productTargets: section(productTargetRows, Boolean(targetTool && targetArgs), scalarScopeMessage),
       searchTerms: section(searchRows, Boolean(searchTool && searchArgs), scalarScopeMessage),
