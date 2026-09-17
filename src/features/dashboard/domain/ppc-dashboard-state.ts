@@ -129,7 +129,7 @@ export function formatWeeklyGoalTarget(goal: WeeklyGoal) {
   const value = Number(raw.replace(/[^0-9.-]/g, ""));
   if (!Number.isFinite(value) || value < 0) return raw;
   const unit = goal.metric ? weeklyGoalUnit(goal.metric, goal.unit) : goal.unit;
-  if (unit === "currency") return `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`;
+  if (unit === "currency") return formatWeeklyGoalValue(goal, value);
   if (unit === "percentage") {
     if (goal.metric === "acos") return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(value))}%`;
     return `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}%`;

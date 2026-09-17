@@ -97,7 +97,7 @@ describe("PPC dashboard state", () => {
     expect(formatWeeklyGoalValue(report.goals[1], weeklyGoalActualValue(report.goals[1], report))).toBe("$500");
     expect(formatWeeklyGoalValue(organicGoal, weeklyGoalActualValue(organicGoal, report))).toBe("60%");
     expect(weeklyGoalUnit("organicOrders", "number")).toBe("number");
-    expect(formatWeeklyGoalTarget({ ...report.goals[1], target: "2000" })).toBe("$2,000.00");
+    expect(formatWeeklyGoalTarget({ ...report.goals[1], target: "2000" })).toBe("$2,000");
     expect(formatWeeklyGoalTarget({ ...report.goals[0], target: "25" })).toBe("25%");
     expect(formatWeeklyGoalTarget({ ...report.goals[0], target: "24.6" })).toBe("25%");
     expect(formatWeeklyGoalTarget({ id: "legacy", title: "Legacy", target: "$500", actual: "", status: "On Track" })).toBe("$500");

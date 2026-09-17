@@ -255,3 +255,5 @@ The ASIN ranking now requests product-level advertising and sales rows for the a
 The provider contract uses advertising `entity` plus nested `TotalAdSales` fields and sales `group_by=total`; do not substitute a synthetic `product` grouping. Verify Refresh All repeats the same no-store request and repopulates the ranking together with the rest of the dashboard.
 
 Campaign Movers and Anchors now uses `get_campaign_performance` and follows all raw pages before local sorting. Campaign MCP calls allow 60 seconds, and the overview route allows 120 seconds to complete pagination. Reconcile campaign count and supported metrics against the same applied date range in Scale Insights. Verify every metric sorts both ways without a new request and that the campaign section states its account-wide scope. This endpoint does not provide ASIN mappings or raw per-campaign Clicks/Impressions. No storage or environment migration is required.
+
+Whole-dollar goal target formatting requires no configuration or storage migration.

@@ -485,13 +485,13 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.focus(ppcSalesTarget);
     fireEvent.change(ppcSalesTarget, { target: { value: "2000" } });
     fireEvent.blur(ppcSalesTarget);
-    expect(ppcSalesTarget).toHaveValue("$2,000.00");
+    expect(ppcSalesTarget).toHaveValue("$2,000");
     fireEvent.click(screen.getByRole("button", { name: "Mark PPC Sales missed" }));
     fireEvent.click(screen.getByRole("button", { name: "Goal History" }));
     const goalHistory = screen.getByRole("dialog", { name: "Goal History" });
     expect(within(goalHistory).getByText("ACOS")).toBeVisible();
     expect(within(goalHistory).getByText("PPC Sales")).toBeVisible();
-    expect(within(goalHistory).getByText(/Target \$2,000\.00/)).toBeVisible();
+    expect(within(goalHistory).getByText(/Target \$2,000 ·/)).toBeVisible();
     expect(within(goalHistory).getByText("Achieved")).toBeVisible();
     expect(within(goalHistory).getByText("Missed")).toBeVisible();
     fireEvent.click(within(goalHistory).getByRole("button", { name: "Close goal history" }));

@@ -387,3 +387,5 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] Click Refresh All and confirm one new overview request uses the unchanged applied dates and ASIN scope, then refreshes every temporal card and disclosure table without duplicating rows.
 - [ ] Confirm Spend Share has a centered light-red background and Sales Share has a centered light-green background at desktop and mobile widths.
 - [ ] Confirm authorization, unsupported multi-ASIN capability, empty period, malformed response, provider error, and local fallback states are explicit and reveal no credentials.
+
+Verify currency goal targets show $70 rather than $70.00 after blur and in history, while editing preserves entered precision.
