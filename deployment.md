@@ -259,3 +259,5 @@ Campaign Movers and Anchors now uses `get_campaign_performance` and follows all 
 Whole-dollar goal target formatting requires no configuration or storage migration.
 
 Summary topics require no environment changes or manual migration. Existing version-1 reports without summaryTopics keep legacy notes; topic arrays are saved only on edits through current browser autosave. Authenticated dashboard visual verification requires a signed-in Pipeline session.
+
+Opportunity table layout changes require no environment or persistence migration.

@@ -62,12 +62,12 @@ function numericFilter(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function SortableMetricHeader({ metric, activeMetric, direction, onSort }: { metric: SortMetric; activeMetric: SortMetric; direction: SortDirection; onSort: (metric: SortMetric) => void }) {
+function SortableMetricHeader({ metric, total, activeMetric, direction, onSort }: { metric: SortMetric; total: string; activeMetric: SortMetric; direction: SortDirection; onSort: (metric: SortMetric) => void }) {
   const active = metric === activeMetric;
   const nextDirection = active && direction === "desc" ? "lowest to highest" : "highest to lowest";
   const Icon = active ? (direction === "desc" ? ArrowDown : ArrowUp) : ChevronsUpDown;
   return <th scope="col" aria-sort={active ? (direction === "desc" ? "descending" : "ascending") : "none"}>
-    <button type="button" className={styles.sortButton} aria-label={`Sort ${SORT_LABELS[metric]} ${nextDirection}`} onClick={() => onSort(metric)}>{SORT_LABELS[metric]}<Icon aria-hidden="true" /></button>
+    <span className={styles.metricColumnHeader}><strong className={styles.metricColumnTotal} aria-label={`Total ${SORT_LABELS[metric]}`}>{total}</strong><button type="button" className={styles.sortButton} aria-label={`Sort ${SORT_LABELS[metric]} ${nextDirection}`} onClick={() => onSort(metric)}>{SORT_LABELS[metric]}<Icon aria-hidden="true" /></button></span>
   </th>;
 }
 
@@ -206,12 +206,22 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
   }), [filteredRows, sort]);
   const totals = useMemo(() => {
     const values = filteredRows.reduce((current, row) => ({
+      impressions: current.impressions + row.impressions,
+      clicks: current.clicks + row.clicks,
       spend: current.spend + row.spend,
       sales: current.sales + row.sales,
       orders: current.orders + row.orders,
-    }), { spend: 0, sales: 0, orders: 0 });
+    }), { impressions: 0, clicks: 0, spend: 0, sales: 0, orders: 0 });
     return { ...values, acos: values.sales > 0 ? (values.spend / values.sales) * 100 : null };
   }, [filteredRows]);
+  const metricTotals: Record<SortMetric, string> = {
+    impressions: new Intl.NumberFormat("en-US").format(totals.impressions),
+    clicks: new Intl.NumberFormat("en-US").format(totals.clicks),
+    spend: formatCurrency(totals.spend, report?.currency || "USD"),
+    sales: formatCurrency(totals.sales, report?.currency || "USD"),
+    orders: new Intl.NumberFormat("en-US").format(totals.orders),
+    acos: totals.acos == null ? "—" : `${Math.round(totals.acos)}%`,
+  };
   const visibleRows = showAll ? sortedRows : sortedRows.slice(0, INITIAL_ROW_COUNT);
   const visibleSearchTerms = visibleRows.filter(row => row.type === "Search term").map(row => row.term);
   const allVisibleSearchTermsSelected = visibleSearchTerms.length > 0 && visibleSearchTerms.every(term => selectedTerms.has(term));
@@ -267,9 +277,9 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
         <label><span>Maximum ACOS</span><span className={styles.percentFilter}><input aria-label="Maximum ACOS" type="number" min="0" step="1" placeholder="Any" value={maximumAcos} onChange={event => setMaximumAcos(event.target.value)} /><i>%</i></span></label>
       </div>
       {filteredRows.length ? <div className={styles.baselineTable}>
-        <div className={styles.baselineSummary}><strong>{filteredRows.length} match{filteredRows.length === 1 ? "" : "es"}</strong><div className={styles.opportunityTotals} aria-label="Filtered opportunity totals"><span><small>Spend</small><strong>{formatCurrency(totals.spend, report.currency)}</strong></span><span><small>Sales</small><strong>{formatCurrency(totals.sales, report.currency)}</strong></span><span><small>Orders</small><strong>{totals.orders}</strong></span><span><small>ACOS</small><strong>{totals.acos == null ? "—" : `${Math.round(totals.acos)}%`}</strong></span></div><span className={styles.localFilterNotice}>Filtered locally — no additional MCP usage</span></div>
-        {filteredRows.some(row => row.type === "Search term") ? <div className={styles.bulkCampaignBar}><span role="status" aria-live="polite" aria-label={`${selectedTerms.size} search term${selectedTerms.size === 1 ? "" : "s"} selected`}><strong>{selectedTerms.size}</strong> search term{selectedTerms.size === 1 ? "" : "s"} selected</span>{selectedTerms.size ? <a className={styles.bulkCampaignButton} href={bulkCampaignHref} target="_blank" rel="noopener noreferrer" aria-label={`Create bulk campaigns for ${selectedTerms.size} selected search ${selectedTerms.size === 1 ? "term" : "terms"}`}><SquarePlus aria-hidden="true" />Create Bulk Campaigns</a> : <button type="button" className={styles.bulkCampaignButton} disabled><SquarePlus aria-hidden="true" />Create Bulk Campaigns</button>}</div> : null}
-        <div className={styles.tableScroll}><table className={styles.opportunityTable} aria-label="Untargeted sales opportunities"><thead><tr><th className={styles.selectionCell}><input ref={selectAllRef} type="checkbox" aria-label="Select all visible search terms" checked={allVisibleSearchTermsSelected} disabled={!visibleSearchTerms.length} onChange={toggleVisibleSearchTerms} /></th><th>Search Term</th><SortableMetricHeader metric="impressions" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="clicks" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="spend" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="sales" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="orders" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><SortableMetricHeader metric="acos" activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} /><th>Status</th></tr></thead><tbody>{visibleRows.map(row => <tr key={`${row.type}:${row.term}`}>
+        <div className={styles.baselineSummary}><strong>{filteredRows.length} match{filteredRows.length === 1 ? "" : "es"}</strong>
+        {filteredRows.some(row => row.type === "Search term") ? <div className={styles.bulkCampaignBar}><span role="status" aria-live="polite" aria-label={`${selectedTerms.size} search term${selectedTerms.size === 1 ? "" : "s"} selected`}><strong>{selectedTerms.size}</strong> search term{selectedTerms.size === 1 ? "" : "s"} selected</span>{selectedTerms.size ? <a className={styles.bulkCampaignButton} href={bulkCampaignHref} target="_blank" rel="noopener noreferrer" aria-label={`Create bulk campaigns for ${selectedTerms.size} selected search ${selectedTerms.size === 1 ? "term" : "terms"}`}><SquarePlus aria-hidden="true" />Create Bulk Campaigns</a> : <button type="button" className={styles.bulkCampaignButton} disabled><SquarePlus aria-hidden="true" />Create Bulk Campaigns</button>}</div> : null}</div>
+        <div className={styles.tableScroll}><table className={styles.opportunityTable} aria-label="Untargeted sales opportunities"><thead><tr><th className={styles.selectionCell}><input ref={selectAllRef} type="checkbox" aria-label="Select all visible search terms" checked={allVisibleSearchTermsSelected} disabled={!visibleSearchTerms.length} onChange={toggleVisibleSearchTerms} /></th><th>Search Term</th>{(Object.keys(SORT_LABELS) as SortMetric[]).map(metric => <SortableMetricHeader key={metric} metric={metric} total={metricTotals[metric]} activeMetric={sort.metric} direction={sort.direction} onSort={updateSort} />)}<th>Status</th></tr></thead><tbody>{visibleRows.map(row => <tr key={`${row.type}:${row.term}`}>
           <td className={styles.selectionCell}>{row.type === "Search term" ? <input type="checkbox" aria-label={`Select search term ${row.term}`} checked={selectedTerms.has(row.term)} onChange={() => toggleTerm(row.term)} /> : null}</td>
           <th scope="row"><span className={styles.opportunityTerm}>{row.type === "Product ASIN" ? <a className={styles.productAsinLink} href={`https://www.amazon.com/dp/${encodeURIComponent(row.term)}`} target="_blank" rel="noopener noreferrer"><span>{row.term}</span></a> : <span className={styles.campaignName}>{row.term}</span>}<CopyTermButton term={row.term} /><a className={styles.sourceLink} href={getScaleInsightsSearchTermHref(asin, report.period.startDate, report.period.endDate)} target="_blank" rel="noopener noreferrer" aria-label={`Open Scale Insights Search terms for ${row.term}`} title="Open Scale Insights Search terms and copy this value for Instant Search" onClick={() => copyTermForScaleInsights(row.term)}><ExternalLink aria-hidden="true" /></a></span></th>
           <td>{new Intl.NumberFormat("en-US").format(row.impressions)}</td><td>{new Intl.NumberFormat("en-US").format(row.clicks)}</td><td>{formatCurrency(row.spend, report.currency)}</td><td><strong>{formatCurrency(row.sales, report.currency)}</strong></td><td>{row.orders}</td><td>{row.acos == null ? "—" : `${Math.round(row.acos)}%`}</td><td><span className={styles.untargetedBadge}>Not targeted</span></td>

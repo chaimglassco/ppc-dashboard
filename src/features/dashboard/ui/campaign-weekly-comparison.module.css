@@ -50,12 +50,7 @@
 .baselineTable { overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: white; }
 .baselineSummary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); background: #fafafa; color: #52525b; font: 10px/1.4 var(--mono); }
 .baselineSummary strong { color: #18181b; font-family: var(--font-workspace-sans), sans-serif; font-size: 11px; }
-.opportunityTotals { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin-left: auto; }
-.opportunityTotals > span { display: inline-flex; align-items: baseline; gap: 4px; padding: 4px 7px; border: 1px solid var(--border); border-radius: 4px; background: white; }
-.opportunityTotals small { color: #71717a; font: 8px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .04em; }
-.opportunityTotals strong { font: 600 10px/1.4 var(--mono); }
-.localFilterNotice { white-space: nowrap; }
-.bulkCampaignBar { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--border); background: #f8fafc; color: #52525b; font: 10px/1.4 var(--mono); }
+.bulkCampaignBar { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-left: auto; color: #52525b; font: 10px/1.4 var(--mono); }
 .bulkCampaignBar > span { margin-right: auto; }
 .bulkCampaignBar > span strong { color: #18181b; font: 700 11px/1.4 var(--font-workspace-sans), sans-serif; }
 .bulkCampaignButton { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid #047857; border-radius: 4px; background: #047857; color: white; font: 600 11px/1.4 var(--font-workspace-sans), sans-serif; text-decoration: none; cursor: pointer; }
@@ -103,8 +98,11 @@
 .sortButton:hover { background: #e4e4e7; color: #18181b; }
 .sortButton:focus-visible { outline: 2px solid #09090b; outline-offset: 1px; }
 .sortButton svg { width: 12px; height: 12px; }
+.metricColumnHeader { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 7px; }
+.metricColumnTotal { color: #18181b; font: 700 12px/1.4 var(--mono); letter-spacing: normal; white-space: nowrap; }
 .tableScroll thead th:first-child { width: 31%; }
 .tableScroll .opportunityTable { min-width: 1220px; }
+.tableScroll .opportunityTable thead th { vertical-align: bottom; }
 .tableScroll .opportunityTable thead th:first-child { width: 42px; padding-right: 0; text-align: center; }
 .tableScroll .opportunityTable thead th:nth-child(2) { width: 31%; }
 .selectionCell { width: 42px; padding-right: 0 !important; text-align: center; }
@@ -170,6 +168,5 @@
   .chevron { grid-column: 3; grid-row: 1 / span 2; }
   .opportunityMeta > small { width: 100%; margin-left: 0; }
   .opportunityFilters { grid-template-columns: 1fr 1fr; }
-  .opportunityTotals { width: 100%; margin-left: 0; justify-content: flex-start; }
-  .localFilterNotice { width: 100%; white-space: normal; }
+  .bulkCampaignBar { width: 100%; margin-left: 0; }
 }

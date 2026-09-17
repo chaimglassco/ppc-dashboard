@@ -393,3 +393,5 @@ Verify currency goal targets show $70 rather than $70.00 after blur and in histo
 Verify summary defaults, icon-only +, active-topic formatting, inline title rename, deletion, and both reorder directions. Reload and switch product/week to verify scoped content and order. Restore legacy notes intact; reject malformed/duplicate topic IDs, preserve an explicit empty topic list, and confirm previous summaries/chat show the derived ordered notes.
 
 Summary topic validation: lint, typecheck, production build, and 356 tests passed (6 skipped). Local /ppc/library and /ppc/dashboard reached the Pipeline sign-in gate without console warnings/errors; authenticated visual verification remains unavailable in the test browser.
+
+Verify every opportunity metric shows its filtered total above the sortable label, including Impressions/Clicks and weighted ACOS. Confirm totals include collapsed rows and update with criteria. Confirm the MCP-usage notice is absent and bulk creation remains in the match summary toolbar with selection and disabled states intact.

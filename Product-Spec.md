@@ -250,3 +250,5 @@ Campaign Movers and Anchors uses Scale Insights' dedicated campaign-performance 
 Weekly monetary goal targets display whole dollars, matching Actual, while decimal values remain editable.
 
 Current Week Summary uses editable topic cards. Blank reports start with Impression, Conversion Rate, and Spend & ACOS Efficiency; legacy notes open intact in General Summary. An icon-only + in the formatting toolbar adds topics; titles can be renamed inline, topics removed, and arrow controls change their order. Formatting applies to the active topic and changes use existing autosave.
+
+Untargeted opportunity totals appear above their metric column headings. Create Bulk Campaigns shares the match-count toolbar; the local-filter implementation notice is removed.

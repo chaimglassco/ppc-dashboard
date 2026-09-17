@@ -32,16 +32,19 @@ describe("UntargetedSalesOpportunities", () => {
     view.rerender(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={1} onPpcClicksLoaded={onPpcClicksLoaded} />);
     const table = await within(region).findByRole("table", { name: "Untargeted sales opportunities" });
     await waitFor(() => expect(onPpcClicksLoaded).toHaveBeenCalledWith({ asin: "B012345678", country: "US", weekStart: "2026-09-02", ppcClicks: 55 }));
-    expect(within(table).getAllByRole("columnheader").map(header => header.textContent)).toEqual(["", "Search Term", "Impressions", "Clicks", "Spend", "Sales", "Orders", "ACOS", "Status"]);
+    expect(within(table).getAllByRole("columnheader").map(header => header.querySelector("button")?.textContent ?? header.textContent)).toEqual(["", "Search Term", "Impressions", "Clicks", "Spend", "Sales", "Orders", "ACOS", "Status"]);
     expect(within(table).getByRole("columnheader", { name: /Sales/ })).toHaveAttribute("aria-sort", "descending");
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(within(table).getAllByRole("row")).toHaveLength(11);
     expect(within(table).getAllByText("Not targeted")).toHaveLength(10);
-    const totals = within(region).getByLabelText("Filtered opportunity totals");
-    expect(within(totals).getByText("$110.00")).toBeVisible();
-    expect(within(totals).getByText("$660.00")).toBeVisible();
-    expect(within(totals).getByText("66")).toBeVisible();
-    expect(within(totals).getByText("17%")).toBeVisible();
+    expect(within(table).getByLabelText("Total Impressions")).toHaveTextContent("10,945");
+    expect(within(table).getByLabelText("Total Clicks")).toHaveTextContent("55");
+    expect(within(table).getByLabelText("Total Spend")).toHaveTextContent("$110.00");
+    expect(within(table).getByLabelText("Total Sales")).toHaveTextContent("$660.00");
+    expect(within(table).getByLabelText("Total Orders")).toHaveTextContent("66");
+    expect(within(table).getByLabelText("Total ACOS")).toHaveTextContent("17%");
+    expect(within(region).queryByText(/Filtered locally/)).not.toBeInTheDocument();
+    expect(within(region).getByRole("button", { name: "Create Bulk Campaigns" }).closest("div")?.parentElement).toHaveTextContent("11 matches");
     const sourceLink = within(table).getByRole("link", { name: "Open Scale Insights Search terms for search term 1" });
     expect(sourceLink).toHaveAttribute(
       "href",
@@ -86,6 +89,12 @@ describe("UntargetedSalesOpportunities", () => {
     expect(within(table).getByText("990")).toBeVisible();
     fireEvent.change(within(region).getByLabelText("Opportunity type"), { target: { value: "Product ASIN" } });
     expect(within(table).getAllByRole("row")).toHaveLength(2);
+    expect(within(table).getByLabelText("Total Impressions")).toHaveTextContent("999");
+    expect(within(table).getByLabelText("Total Clicks")).toHaveTextContent("5");
+    expect(within(table).getByLabelText("Total Spend")).toHaveTextContent("$10.00");
+    expect(within(table).getByLabelText("Total Sales")).toHaveTextContent("$100.00");
+    expect(within(table).getByLabelText("Total Orders")).toHaveTextContent("2");
+    expect(within(table).getByLabelText("Total ACOS")).toHaveTextContent("10%");
     expect(within(table).getByRole("link", { name: "B0ABCDEF12" })).toHaveAttribute("href", "https://www.amazon.com/dp/B0ABCDEF12");
     expect(within(table).queryByRole("link", { name: /Create .* campaign in Scale Insights for B0ABCDEF12/ })).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
