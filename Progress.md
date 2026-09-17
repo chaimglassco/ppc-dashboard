@@ -353,3 +353,5 @@ The Glassco Back Office Library is buildable with Pipeline-authenticated, Postgr
 - Connected Campaign Movers and Anchors to the dedicated `get_campaign_performance` endpoint and its complete raw pagination. Replaced unavailable campaign ASIN/traffic columns with provider status, CPC, CTR, CVR, and Daily Budget, and added two-way sorting for every campaign metric. The campaign source is labeled account-wide because it exposes no ASIN mapping.
 
 Removed decimal places from weekly monetary goal targets and their history display.
+
+Added segmented Current Week Summary topics with icon-only add, inline rename, remove, and up/down reorder controls. Preserved legacy notes, existing formatting/list continuation, and autosave; added persistence and interaction regression coverage.

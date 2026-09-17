@@ -389,3 +389,7 @@ Verify entering a valid ASIN previews its listing image, saving retains the imag
 - [ ] Confirm authorization, unsupported multi-ASIN capability, empty period, malformed response, provider error, and local fallback states are explicit and reveal no credentials.
 
 Verify currency goal targets show $70 rather than $70.00 after blur and in history, while editing preserves entered precision.
+
+Verify summary defaults, icon-only +, active-topic formatting, inline title rename, deletion, and both reorder directions. Reload and switch product/week to verify scoped content and order. Restore legacy notes intact; reject malformed/duplicate topic IDs, preserve an explicit empty topic list, and confirm previous summaries/chat show the derived ordered notes.
+
+Summary topic validation: lint, typecheck, production build, and 356 tests passed (6 skipped). Local /ppc/library and /ppc/dashboard reached the Pipeline sign-in gate without console warnings/errors; authenticated visual verification remains unavailable in the test browser.

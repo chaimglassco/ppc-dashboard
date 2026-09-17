@@ -29,6 +29,39 @@ describe("PpcPerformanceDashboard", () => {
     vi.unstubAllGlobals();
   });
 
+  it("adds, renames, reorders, formats, and removes summary topics and restores them after reload", async () => {
+    const view = render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    const summary = await screen.findByRole("region", { name: "Current Week Summary" });
+    const add = within(summary).getByRole("button", { name: "Add summary topic" });
+    expect(add).toHaveTextContent("");
+    expect(within(summary).getAllByRole("textbox", { name: /Topic title/ }).map(input => (input as HTMLInputElement).value)).toEqual(["Impression", "Conversion Rate", "Spend & ACOS Efficiency"]);
+    fireEvent.click(add);
+    fireEvent.change(within(summary).getByRole("textbox", { name: "Topic title 4" }), { target: { value: "Next Week" } });
+    const notes = within(summary).getByRole("textbox", { name: "Next Week documentation" });
+    fireEvent.focus(notes);
+    fireEvent.change(notes, { target: { value: "Raise bids carefully" } });
+    (notes as HTMLTextAreaElement).setSelectionRange(0, 5);
+    fireEvent.click(within(summary).getByRole("button", { name: "Bold Performance documentation" }));
+    expect(notes).toHaveValue("**Raise** bids carefully");
+    fireEvent.click(within(summary).getByRole("button", { name: "Move Next Week up" }));
+    fireEvent.click(within(summary).getByRole("button", { name: "Remove topic Impression" }));
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY)!);
+      expect(stored.reports["product-1:2026-08-26"].summaryTopics.map((topic: { title: string }) => topic.title)).toEqual(["Conversion Rate", "Next Week", "Spend & ACOS Efficiency"]);
+      expect(stored.reports["product-1:2026-08-26"].notes).toBe("## Next Week\n**Raise** bids carefully");
+    }, { timeout: 3000 });
+    view.unmount();
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    expect(await screen.findByRole("textbox", { name: "Next Week documentation" })).toHaveValue("**Raise** bids carefully");
+    expect(screen.getByRole("textbox", { name: "Topic title 2" })).toHaveValue("Next Week");
+    expect(screen.queryByRole("textbox", { name: "Impression documentation" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /August 19 to August 25/ }));
+    expect(await screen.findByRole("textbox", { name: "Impression documentation" })).toHaveValue("");
+    expect(screen.queryByRole("textbox", { name: "Next Week documentation" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /August 26 to September 1/ }));
+    expect(await screen.findByRole("textbox", { name: "Next Week documentation" })).toHaveValue("**Raise** bids carefully");
+  }, 10_000);
+
   it("automatically backfills visible weeks, restores them after reload, and updates only the active week on Refresh", async () => {
     let spend = 81.75;
     let fail = false;
@@ -169,7 +202,7 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "350" } });
     expect(screen.getByText((_, element) => element?.tagName === "SMALL" && element.textContent === "$1,150 remaining")).toBeVisible();
     expect(screen.getByLabelText("23% of weekly budget used")).toBeVisible();
-    fireEvent.change(screen.getByRole("textbox", { name: "Performance documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Impression documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
     expect(within(screen.getByRole("region", { name: "Current Week Summary" })).getByText("Saving changes…")).toBeVisible();
     await waitFor(() => expect(screen.getByText("Changes saved automatically")).toBeVisible(), { timeout: 3_000 });
@@ -184,7 +217,7 @@ describe("PpcPerformanceDashboard", () => {
       dailyBudget: 214.29,
       budgetHistory: [expect.objectContaining({ from: 0, to: 1500 })],
       spend: 350,
-      notes: "Scale the best converting exact-match campaign.",
+      notes: "## Impression\nScale the best converting exact-match campaign.",
       status: "Draft",
     });
   }, 10_000);
@@ -499,7 +532,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.queryByText(/Previous week:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/No saved report exists/i)).not.toBeInTheDocument();
 
-    const documentation = screen.getByRole("textbox", { name: "Performance documentation" }) as HTMLTextAreaElement;
+    const documentation = screen.getByRole("textbox", { name: "Impression documentation" }) as HTMLTextAreaElement;
     const formattingToolbar = screen.getByRole("toolbar", { name: "Performance documentation formatting" });
     expect(formattingToolbar.parentElement).toHaveTextContent("Performance documentation");
     expect(screen.queryByRole("textbox", { name: "Carry-forward result and lessons" })).not.toBeInTheDocument();

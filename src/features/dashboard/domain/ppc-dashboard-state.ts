@@ -11,6 +11,7 @@ export type WeeklyGoal = { id: string; title: string; target: string; actual: st
 export type GoalHistoryEntry = WeeklyGoal & { status: GoalOutcome; resolvedAt: string; dataState?: GoalDataState };
 export type ActionItem = { id: string; title: string; priority: "High" | "Medium" | "Low"; dueDate: string; done: boolean };
 export type BudgetChange = { id: string; changedAt: string; from: number; to: number };
+export type SummaryTopic = { id: string; title: string; body: string };
 export type WeeklyPpcReport = {
   productId: string; weekStart: string; status: ReportStatus; weeklyBudget: number; dailyBudget: number;
   budgetHistory: BudgetChange[];
@@ -18,6 +19,7 @@ export type WeeklyPpcReport = {
   ppcOrders: number; organicOrders: number; totalOrders: number; targetAcos: number; acos: number; tacos: number;
   totalSessions?: number; ppcClicks?: number; conversionRate?: number;
   goals: WeeklyGoal[]; goalHistory: GoalHistoryEntry[]; previousWeekResult: string; notes: string; actions: ActionItem[]; updatedAt: string | null;
+  summaryTopics?: SummaryTopic[];
 };
 export type WeeklyPerformanceSourceMetrics = {
   spend: number;
@@ -57,6 +59,29 @@ const REPORTING_WEEK_START_DAY = 3;
 const LEGACY_REPORTING_WEEK_START_DAY = 1;
 
 export function reportKey(productId: string, weekStart: string) { return `${productId}:${weekStart}`; }
+
+export function getSummaryTopics(report: WeeklyPpcReport): SummaryTopic[] {
+  if (report.summaryTopics) return report.summaryTopics;
+  if (report.notes) return [{ id: "summary-legacy", title: "General Summary", body: report.notes }];
+  return ["Impression", "Conversion Rate", "Spend & ACOS Efficiency"].map((title, index) => ({ id: `summary-default-${index}`, title, body: "" }));
+}
+
+export function summaryTopicsNotes(topics: SummaryTopic[]) {
+  return topics.filter(topic => topic.body.trim()).map(topic => `## ${topic.title || "Untitled Topic"}\n${topic.body}`).join("\n\n");
+}
+
+function normalizeSummaryTopics(value: unknown): SummaryTopic[] | undefined {
+  if (!Array.isArray(value) || value.length > 100) return undefined;
+  const ids = new Set<string>();
+  const topics: SummaryTopic[] = [];
+  for (const topic of value) {
+    if (!isRecord(topic) || typeof topic.id !== "string" || !topic.id.trim() || topic.id.length > 100 || ids.has(topic.id)
+      || typeof topic.title !== "string" || topic.title.length > 200 || typeof topic.body !== "string") return undefined;
+    ids.add(topic.id);
+    topics.push({ id: topic.id, title: topic.title, body: topic.body });
+  }
+  return topics;
+}
 
 export function createWeeklyPpcReport(productId: string, weekStart: string, previousReport?: WeeklyPpcReport | null): WeeklyPpcReport {
   const carriedGoals = previousReport
@@ -244,6 +269,7 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
   const organicOrders = finiteNumber(value.organicOrders);
   const totalSessions = value.totalSessions == null ? undefined : finiteNumber(value.totalSessions);
   const ppcClicks = optionalNonNegativeInteger(value.ppcClicks);
+  const summaryTopics = normalizeSummaryTopics(value.summaryTopics);
   return withCalculatedPerformance({
     productId, weekStart, status: statuses.includes(value.status as ReportStatus) ? value.status as ReportStatus : "Draft",
     weeklyBudget: finiteNumber(value.weeklyBudget), dailyBudget: finiteNumber(value.dailyBudget), budgetHistory, spend: finiteNumber(value.spend),
@@ -251,8 +277,9 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
     ppcOrders, organicOrders, totalOrders: value.totalOrders == null ? ppcOrders + organicOrders : finiteNumber(value.totalOrders),
     ...(totalSessions == null ? {} : { totalSessions }),
     ...(ppcClicks == null ? {} : { ppcClicks }),
+    ...(summaryTopics == null ? {} : { summaryTopics }),
     targetAcos: finiteNumber(value.targetAcos), acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
-    goals: Array.isArray(value.goals) ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), goalHistory, previousWeekResult: String(value.previousWeekResult ?? ""), notes: String(value.notes ?? ""),
+    goals: Array.isArray(value.goals) ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), goalHistory, previousWeekResult: String(value.previousWeekResult ?? ""), notes: summaryTopics == null ? String(value.notes ?? "") : summaryTopicsNotes(summaryTopics),
     actions: Array.isArray(value.actions) ? actions : [], updatedAt,
   });
 }

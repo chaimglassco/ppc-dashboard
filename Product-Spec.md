@@ -248,3 +248,5 @@ ASIN Targeting uses the dedicated `get_target_performance` report for the filter
 Campaign Movers and Anchors uses Scale Insights' dedicated campaign-performance report for the applied completed date range and follows every provider page. The campaign view covers the connected account because this endpoint supplies no campaign-to-ASIN mapping. It displays campaign name/ad type, status, Spend, Sales, Orders, ACOS, ROAS, CPC, CTR, CVR, and Daily Budget. Each numeric metric header toggles descending and ascending sorting locally, with missing values last. Unsupported campaign ASIN, raw Clicks, and Impressions are not fabricated.
 
 Weekly monetary goal targets display whole dollars, matching Actual, while decimal values remain editable.
+
+Current Week Summary uses editable topic cards. Blank reports start with Impression, Conversion Rate, and Spend & ACOS Efficiency; legacy notes open intact in General Summary. An icon-only + in the formatting toolbar adds topics; titles can be renamed inline, topics removed, and arrow controls change their order. Formatting applies to the active topic and changes use existing autosave.

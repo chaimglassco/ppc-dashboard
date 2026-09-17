@@ -432,3 +432,5 @@ Each available period contains non-negative `totalSales`, `ppcSales`, `spend`, `
 Overview rows also accept optional `state: string` and nullable nonnegative `cpc`, `ctr`, and `dailyBudget`. Older responses remain readable without these fields. Dedicated campaign rows use provider AdType/State and reported rates, leave absent ASIN/traffic values unavailable in the UI, and represent the connected account because the campaign endpoint exposes no ASIN mapping. Campaign metric sorting is transient client state and does not alter any browser-storage schema.
 
 Goal target storage retains its original value; whole-dollar currency formatting is display-only.
+
+WeeklyPpcReport has optional summaryTopics: Array<{ id: string; title: string; body: string }>. Topic IDs are unique, nonblank strings up to 100 characters; titles are strings up to 200 characters; bodies are strings; at most 100 topics are accepted. Invalid arrays fall back to legacy notes; [] explicitly means no topics. Valid arrays project into notes as ordered ## title/body sections for nonempty bodies. Storage key and version remain unchanged.

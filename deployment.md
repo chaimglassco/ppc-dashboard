@@ -257,3 +257,5 @@ The provider contract uses advertising `entity` plus nested `TotalAdSales` field
 Campaign Movers and Anchors now uses `get_campaign_performance` and follows all raw pages before local sorting. Campaign MCP calls allow 60 seconds, and the overview route allows 120 seconds to complete pagination. Reconcile campaign count and supported metrics against the same applied date range in Scale Insights. Verify every metric sorts both ways without a new request and that the campaign section states its account-wide scope. This endpoint does not provide ASIN mappings or raw per-campaign Clicks/Impressions. No storage or environment migration is required.
 
 Whole-dollar goal target formatting requires no configuration or storage migration.
+
+Summary topics require no environment changes or manual migration. Existing version-1 reports without summaryTopics keep legacy notes; topic arrays are saved only on edits through current browser autosave. Authenticated dashboard visual verification requires a signed-in Pipeline session.

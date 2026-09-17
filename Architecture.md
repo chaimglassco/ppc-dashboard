@@ -264,3 +264,5 @@ The client validates the response before rendering it. Campaign, keyword target,
 Campaign rows come from `get_campaign_performance`, not campaign grouping on the per-ASIN advertising endpoint. The adapter requests raw 500-row pages and follows `oppMeta.total_pages`, merging and deduplicating all campaign pages before rendering. The campaign source is explicitly account-wide because its schema has no ASIN argument or mapping. Optional validated state, CPC, CTR, and Daily Budget fields retain backward compatibility with older overview rows. Per-table campaign sort state remains in React memory; accessible metric-header buttons sort the complete loaded campaign set without another provider request.
 
 Currency goal targets reuse the Actual value formatter for consistent whole-dollar display.
+
+SummaryTopicComposer edits topic arrays within the active product/week report. Stable topic IDs preserve identity during reorder. summaryTopicsNotes derives the plain-text notes projection for previous summaries and chat. Active textarea selection is held in refs and reset when the product/week key changes.

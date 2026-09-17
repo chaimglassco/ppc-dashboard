@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatReportingMonthRange, formatWeekRange, formatWeeklyGoalTarget, formatWeeklyGoalValue, getMonthWeekStarts, getSelectedMonthWeekStarts, parsePpcDashboardStore, reportKey, startOfWeekIso, weeklyGoalActualValue, weeklyGoalUnit, withCalculatedPerformance } from "./ppc-dashboard-state";
+import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatReportingMonthRange, formatWeekRange, formatWeeklyGoalTarget, formatWeeklyGoalValue, getMonthWeekStarts, getSelectedMonthWeekStarts, getSummaryTopics, summaryTopicsNotes, parsePpcDashboardStore, reportKey, startOfWeekIso, weeklyGoalActualValue, weeklyGoalUnit, withCalculatedPerformance } from "./ppc-dashboard-state";
 
 describe("PPC dashboard state", () => {
+  it("restores summary topics, preserves legacy notes, and rejects malformed topic storage", () => {
+    const report = createWeeklyPpcReport("product-1", "2026-08-26");
+    const topics = [{ id: "topic-1", title: "Conversion Rate", body: "Keep the best campaign." }, { id: "topic-2", title: "Spend", body: "Reduce bids." }];
+    const parse = (summaryTopics: unknown) => parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { saved: { ...report, notes: "Legacy notes", summaryTopics } } })).reports[reportKey(report.productId, report.weekStart)];
+    expect(parse(topics).summaryTopics).toEqual(topics);
+    expect(parse(topics).notes).toBe(summaryTopicsNotes(topics));
+    expect(parse([]).summaryTopics).toEqual([]);
+    expect(getSummaryTopics(parse([]))).toEqual([]);
+    expect(parse([]).notes).toBe("");
+    expect(parse([{ ...topics[0], body: 123 }]).summaryTopics).toBeUndefined();
+    expect(parse([topics[0], topics[0]]).summaryTopics).toBeUndefined();
+    expect(parse(null).notes).toBe("Legacy notes");
+    expect(getSummaryTopics(parse(null))).toEqual([{ id: "summary-legacy", title: "General Summary", body: "Legacy notes" }]);
+  });
   it("creates stable product/week report keys for Wednesday through Tuesday periods", () => {
     expect(startOfWeekIso("2026-08-26")).toBe("2026-08-26");
     expect(startOfWeekIso("2026-09-01")).toBe("2026-08-26");

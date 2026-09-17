@@ -179,6 +179,17 @@
 .summaryCard .textAreaLabel { flex: 1; }
 .summaryCard .textAreaHeader > span:first-child { font-weight: 700; text-transform: uppercase; }
 .summaryCard .notesArea { min-height: 100px; flex: 1; }
+.summaryTopics { display: flex; flex-direction: column; gap: 12px; }
+.summaryTopic { padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: #fafafa; }
+.summaryTopic:focus-within { border-color: #27272a; background: white; }
+.summaryTopicHeader { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+.summaryTopicHeader > input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; color: #18181b; font: 600 11px/1.5 var(--mono); text-transform: uppercase; }
+.summaryTopicActions { display: flex; flex: none; gap: 2px; }
+.summaryTopicActions button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #71717a; }
+.summaryTopicActions button:hover { background: #e4e4e7; color: #18181b; }
+.summaryTopicActions button:disabled, .formatToolbar button:disabled { opacity: .35; cursor: default; }
+.summaryTopicActions svg { width: 14px; height: 14px; }
+.summaryCard .summaryTopic .notesArea { display: block; min-height: 64px; }
 .summaryFooter { display: flex; justify-content: space-between; gap: 12px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border); color: var(--muted); font: 11px/1.5 var(--mono); }
 .summaryFooter > span:last-child { text-align: right; }
 .autoSaved { color: #047857; }

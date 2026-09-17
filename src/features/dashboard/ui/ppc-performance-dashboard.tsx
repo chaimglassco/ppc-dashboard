@@ -10,9 +10,9 @@ import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
   PPC_DASHBOARD_STORAGE_KEY, addDaysIso, addMonthsIso, calculateWeeklyPerformance, createWeeklyPpcReport, currency,
-  formatReportingMonthRange, formatWeekRange, formatWeeklyGoalTarget, formatWeeklyGoalValue, getIsoWeekNumber, getSelectedMonthWeekStarts, parsePpcDashboardStore, percentage, reportKey,
+  formatReportingMonthRange, formatWeekRange, formatWeeklyGoalTarget, formatWeeklyGoalValue, getIsoWeekNumber, getSelectedMonthWeekStarts, getSummaryTopics, summaryTopicsNotes, parsePpcDashboardStore, percentage, reportKey,
   startOfWeekIso, withCalculatedPerformance, type ActionItem, type DashboardProduct, type GoalOutcome, type GoalStatus,
-  WEEKLY_GOAL_OPTIONS, weeklyGoalActualValue, weeklyGoalLabel, weeklyGoalUnit, type GoalDataState, type WeeklyGoal, type WeeklyGoalMetric, type WeeklyPpcReport,
+  WEEKLY_GOAL_OPTIONS, weeklyGoalActualValue, weeklyGoalLabel, weeklyGoalUnit, type GoalDataState, type SummaryTopic, type WeeklyGoal, type WeeklyGoalMetric, type WeeklyPpcReport,
 } from "../domain/ppc-dashboard-state";
 import {
   PPC_DASHBOARD_CATALOG_STORAGE_KEY, createDashboardTagId, emptyDashboardCatalog, mergeDashboardProducts, orderDashboardProductsByTag,
@@ -216,11 +216,22 @@ function WeeklyGoalRow({ goal, report, dataState, onUpdate, onResolve, onRemove 
   </div>;
 }
 
-function FormattedTextarea({ label, value, placeholder, onChange }: { label: string; value: string; placeholder: string; onChange: (value: string) => void }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+function SummaryTopicComposer({ topics, onChange }: { topics: SummaryTopic[]; onChange: (topics: SummaryTopic[]) => void }) {
+  const label = "Performance documentation";
+  const textareaRefs = useRef(new Map<string, HTMLTextAreaElement>());
+  const activeTopicRef = useRef<string | null>(null);
+  const updateTopic = (id: string, patch: Partial<SummaryTopic>) => onChange(topics.map(topic => topic.id === id ? { ...topic, ...patch } : topic));
+  const moveTopic = (index: number, offset: number) => {
+    const next = [...topics];
+    [next[index], next[index + offset]] = [next[index + offset], next[index]];
+    onChange(next);
+  };
   const applyFormat = (format: "bold" | "italic" | "underline" | "bullet" | "numbered") => {
-    const textarea = textareaRef.current;
+    const topic = topics.find(topic => topic.id === activeTopicRef.current) ?? topics[0];
+    if (!topic) return;
+    const textarea = textareaRefs.current.get(topic.id);
     if (!textarea) return;
+    const value = topic.body;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selected = value.slice(start, end);
@@ -244,16 +255,17 @@ function FormattedTextarea({ label, value, placeholder, onChange }: { label: str
       selectionEnd = start + replacement.length;
     }
 
-    onChange(`${value.slice(0, start)}${replacement}${value.slice(end)}`);
+    updateTopic(topic.id, { body: `${value.slice(0, start)}${replacement}${value.slice(end)}` });
     window.requestAnimationFrame(() => {
       textarea.focus();
       textarea.setSelectionRange(selectionStart, selectionEnd);
     });
   };
 
-  const continueList = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+  const continueList = (event: ReactKeyboardEvent<HTMLTextAreaElement>, topic: SummaryTopic) => {
     if (event.key !== "Enter" || !event.shiftKey) return;
     const textarea = event.currentTarget;
+    const value = topic.body;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const lineStart = value.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
@@ -265,20 +277,32 @@ function FormattedTextarea({ label, value, placeholder, onChange }: { label: str
     event.preventDefault();
     const continuation = bullet ? `\n${bullet[1]}• ` : `\n${numbered?.[1] ?? ""}${Number(numbered?.[2] ?? 0) + 1}. `;
     const nextCursor = start + continuation.length;
-    onChange(`${value.slice(0, start)}${continuation}${value.slice(end)}`);
+    updateTopic(topic.id, { body: `${value.slice(0, start)}${continuation}${value.slice(end)}` });
     window.requestAnimationFrame(() => {
       textarea.focus();
       textarea.setSelectionRange(nextCursor, nextCursor);
     });
   };
 
-  return <div className={ws.textAreaLabel}><span className={ws.textAreaHeader}><span>{label}</span><span className={ws.formatToolbar} role="toolbar" aria-label={`${label} formatting`}>
+  return <div className={ws.textAreaLabel}><span className={ws.textAreaHeader}><span>{label}</span><span className={ws.formatToolbar} role="toolbar" aria-label={`${label} formatting`} onMouseDown={event => event.preventDefault()}>
     <button type="button" aria-label={`Bold ${label}`} onClick={() => applyFormat("bold")}><Bold aria-hidden="true" /></button>
     <button type="button" aria-label={`Italic ${label}`} onClick={() => applyFormat("italic")}><Italic aria-hidden="true" /></button>
     <button type="button" aria-label={`Underline ${label}`} onClick={() => applyFormat("underline")}><Underline aria-hidden="true" /></button>
     <button type="button" aria-label={`Bulleted list ${label}`} onClick={() => applyFormat("bullet")}><List aria-hidden="true" /></button>
     <button type="button" aria-label={`Numbered list ${label}`} onClick={() => applyFormat("numbered")}><ListOrdered aria-hidden="true" /></button>
-  </span></span><textarea ref={textareaRef} className={ws.notesArea} aria-label={label} value={value} onChange={event => onChange(event.target.value)} onKeyDown={continueList} placeholder={placeholder} /></div>;
+    <button type="button" aria-label="Add summary topic" disabled={topics.length >= 100} onClick={() => {
+      const id = crypto.randomUUID();
+      onChange([...topics, { id, title: "New Topic", body: "" }]);
+      activeTopicRef.current = id;
+      window.requestAnimationFrame(() => textareaRefs.current.get(id)?.focus());
+    }}><Plus aria-hidden="true" /></button>
+  </span></span><div className={ws.summaryTopics}>{topics.map((topic, index) => <section key={topic.id} className={ws.summaryTopic} aria-label={`Summary topic ${topic.title || "Untitled Topic"}`}>
+    <div className={ws.summaryTopicHeader}><input aria-label={`Topic title ${index + 1}`} maxLength={200} value={topic.title} placeholder="Topic title" onChange={event => updateTopic(topic.id, { title: event.target.value })} /><div className={ws.summaryTopicActions}>
+      <button type="button" aria-label={`Move ${topic.title || "Untitled Topic"} up`} disabled={index === 0} onClick={() => moveTopic(index, -1)}><ArrowUp aria-hidden="true" /></button>
+      <button type="button" aria-label={`Move ${topic.title || "Untitled Topic"} down`} disabled={index === topics.length - 1} onClick={() => moveTopic(index, 1)}><ArrowDown aria-hidden="true" /></button>
+      <button type="button" aria-label={`Remove topic ${topic.title || "Untitled Topic"}`} onClick={() => onChange(topics.filter(candidate => candidate.id !== topic.id))}><X aria-hidden="true" /></button>
+    </div></div><textarea ref={element => { if (element) textareaRefs.current.set(topic.id, element); else textareaRefs.current.delete(topic.id); }} className={ws.notesArea} aria-label={`${topic.title || "Untitled Topic"} documentation`} value={topic.body} onFocus={() => { activeTopicRef.current = topic.id; }} onChange={event => updateTopic(topic.id, { body: event.target.value })} onKeyDown={event => continueList(event, topic)} placeholder="Add discussion notes…" />
+  </section>)}{!topics.length ? <p>No topics yet. Use + to add a topic.</p> : null}</div></div>;
 }
 
 function statusTone(status: string) {
@@ -781,7 +805,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
 
           <div className={ws.twoColumn}>
             <section className={`${ws.card} ${ws.summaryCard}`} aria-labelledby="previous-heading"><div className={ws.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Summary</h3></div><label className={ws.readOnlySummary}><span>Performance Documentation</span><textarea aria-label="Previous week performance documentation" readOnly value={previousSummaryText} /></label></section>
-            <section className={`${ws.card} ${ws.summaryCard} ${ws.currentSummaryCard}`} aria-labelledby="notes-heading"><div className={ws.cardTitle}><h3 id="notes-heading"><FileText />Current Week Summary</h3></div><FormattedTextarea label="Performance documentation" value={report.notes} onChange={notes => patchReport({ notes })} placeholder="Executive summary, wins, underperformance, bid changes, negative keywords, learnings, and priorities for next week..." /><footer className={ws.summaryFooter}><span className={dirty ? ws.unsaved : ws.autoSaved}>{dirty ? saveNotice || "Saving…" : report.updatedAt ? "Saved locally" : "Not saved yet"}</span><span>Last edited: {report.updatedAt ? new Date(report.updatedAt).toLocaleString() : "—"}</span></footer></section>
+            <section className={`${ws.card} ${ws.summaryCard} ${ws.currentSummaryCard}`} aria-labelledby="notes-heading"><div className={ws.cardTitle}><h3 id="notes-heading"><FileText />Current Week Summary</h3></div><SummaryTopicComposer key={selectedKey} topics={getSummaryTopics(report)} onChange={summaryTopics => patchReport({ summaryTopics, notes: summaryTopicsNotes(summaryTopics) })} /><footer className={ws.summaryFooter}><span className={dirty ? ws.unsaved : ws.autoSaved}>{dirty ? saveNotice || "Saving…" : report.updatedAt ? "Saved locally" : "Not saved yet"}</span><span>Last edited: {report.updatedAt ? new Date(report.updatedAt).toLocaleString() : "—"}</span></footer></section>
           </div>
 
           <CampaignWeeklyComparison asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={performanceRefresh} />
