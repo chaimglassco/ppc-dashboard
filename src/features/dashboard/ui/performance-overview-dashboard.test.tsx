@@ -58,9 +58,15 @@ describe("PerformanceOverviewDashboard", () => {
     expect(within(yesterday).getByText("20%")).toBeVisible();
     expect(within(yesterday).getByText("10%")).toBeVisible();
     const chart = screen.getByRole("region", { name: "Daily Performance Quick Stats" });
-    const chartGraphic = within(chart).getByRole("img", { name: /Spend daily trend/ });
+    const chartGraphic = within(chart).getByRole("img", { name: /Daily performance trends/ });
     expect(chartGraphic).toBeVisible();
     expect(chartGraphic).toHaveAttribute("preserveAspectRatio", "none");
+    const metricLines = chart.querySelectorAll("[data-chart-metric]");
+    expect(metricLines).toHaveLength(5);
+    expect(new Set(Array.from(metricLines, line => line.getAttribute("stroke"))).size).toBe(5);
+    const chartDots = chart.querySelectorAll("[data-chart-dot]");
+    expect(chartDots).toHaveLength(10);
+    expect(chartDots[0].tagName).toBe("SPAN");
     fireEvent.mouseEnter(chart.querySelector('[data-chart-date="2026-07-29"]')!);
     const tooltip = within(chart).getByRole("tooltip");
     expect(tooltip).toHaveTextContent("Jul 29, 2026");
@@ -68,7 +74,7 @@ describe("PerformanceOverviewDashboard", () => {
     expect(tooltip).toHaveTextContent("$200.00");
     expect(tooltip).toHaveTextContent("$400.00");
     fireEvent.click(within(chart).getByRole("button", { name: /TACOS/ }));
-    expect(within(chart).getByRole("img", { name: /TACOS daily trend/ })).toBeVisible();
+    expect(within(chart).getByRole("img", { name: /Daily performance trends/ })).toBeVisible();
     expect(within(chart).getByRole("button", { name: /TACOS/ })).toHaveTextContent("10%");
 
     fireEvent.click(screen.getByText("ASIN Velocity & Performance Ranking").closest("summary")!);

@@ -366,3 +366,4 @@ Centered opportunity metric totals, labels, and values, and reduced header/row s
 - Reused the selected-range Scale Insights sales request with daily grouping, so the chart follows the applied date range and ASIN filter without an additional provider call.
 - Added accessible metric selectors, explicit loading/empty states, responsive chart styling, and adapter/component regression coverage.
 - Extended the plot to the panel edges and added a date-level hover box containing Spend, PPC Sales, Total Sales, ACOS, and TACOS for every completed day.
+- Plotted all five metrics simultaneously with distinct fixed colors, individual peak normalization, selectable emphasis, and tiny circular markers that stay round at responsive widths.

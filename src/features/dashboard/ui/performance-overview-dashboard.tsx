@@ -73,12 +73,12 @@ function TemporalCard({ index, label, range, summary, source, unavailableReason 
 }
 
 type DailyMetricKey = "spend" | "ppcSales" | "totalSales" | "acos" | "tacos";
-const DAILY_METRICS: ReadonlyArray<{ key: DailyMetricKey; label: string }> = [
-  { key: "spend", label: "Spend" },
-  { key: "ppcSales", label: "PPC Sales" },
-  { key: "totalSales", label: "Total Sales" },
-  { key: "acos", label: "ACOS" },
-  { key: "tacos", label: "TACOS" },
+const DAILY_METRICS: ReadonlyArray<{ key: DailyMetricKey; label: string; color: string }> = [
+  { key: "spend", label: "Spend", color: "#dc2626" },
+  { key: "ppcSales", label: "PPC Sales", color: "#2563eb" },
+  { key: "totalSales", label: "Total Sales", color: "#059669" },
+  { key: "acos", label: "ACOS", color: "#d97706" },
+  { key: "tacos", label: "TACOS", color: "#7c3aed" },
 ];
 
 function dailyMetricValue(point: PerformanceOverviewDailyPoint, metric: DailyMetricKey) {
@@ -111,46 +111,39 @@ function DailyPerformanceChart({ rows, summary, currencyCode, loading }: { rows:
   const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
   const aggregates = summary ?? rows.reduce<PerformanceOverviewMetrics>((total, row) => ({ ...total, totalSales: total.totalSales + row.totalSales, ppcSales: total.ppcSales + row.ppcSales, spend: total.spend + row.spend }), { ...EMPTY_SUMMARY });
   const quickValue = (key: DailyMetricKey) => key === "acos" ? percentage(aggregates.spend, aggregates.ppcSales) : key === "tacos" ? percentage(aggregates.spend, aggregates.totalSales) : aggregates[key];
-  const validRows = rows.map((row, index) => ({ row, index, value: dailyMetricValue(row, metric) })).filter((item): item is typeof item & { value: number } => item.value != null);
-  const values = validRows.map(item => item.value);
-  const maximum = Math.max(...values, 0);
-  const minimum = Math.min(...values, 0);
-  const range = maximum - minimum || 1;
   const chartLeft = 10;
   const chartRight = 990;
   const chartTop = 24;
   const chartBottom = 210;
-  const points = validRows.map(({ index, value }) => ({
-    x: rows.length === 1 ? (chartLeft + chartRight) / 2 : chartLeft + (index / Math.max(rows.length - 1, 1)) * (chartRight - chartLeft),
-    y: chartBottom - ((value - minimum) / range) * (chartBottom - chartTop),
-  }));
-  const linePath = smoothPath(points);
-  const areaPath = points.length > 1 ? `${linePath} L ${points.at(-1)!.x} ${chartBottom} L ${points[0].x} ${chartBottom} Z` : "";
-  const selectedLabel = DAILY_METRICS.find(item => item.key === metric)!.label;
-  const labelIndexes = rows.length ? [...new Set([0, Math.floor((rows.length - 1) / 2), rows.length - 1])] : [];
   const xForIndex = (index: number) => rows.length === 1 ? (chartLeft + chartRight) / 2 : chartLeft + (index / Math.max(rows.length - 1, 1)) * (chartRight - chartLeft);
+  const metricSeries = DAILY_METRICS.map(item => {
+    const validRows = rows.map((row, index) => ({ row, index, value: dailyMetricValue(row, item.key) })).filter((entry): entry is typeof entry & { value: number } => entry.value != null);
+    const maximum = Math.max(...validRows.map(entry => entry.value), 0);
+    const range = maximum || 1;
+    const points = validRows.map(entry => ({ ...entry, x: xForIndex(entry.index), y: chartBottom - (entry.value / range) * (chartBottom - chartTop) }));
+    return { ...item, maximum, points, linePath: smoothPath(points) };
+  });
+  const selectedSeries = metricSeries.find(item => item.key === metric)!;
+  const selectedLabel = selectedSeries.label;
+  const labelIndexes = rows.length ? [...new Set([0, Math.floor((rows.length - 1) / 2), rows.length - 1])] : [];
   const activeRow = activeDayIndex == null ? null : rows[activeDayIndex];
-  const activeValue = activeRow ? dailyMetricValue(activeRow, metric) : null;
   const activeX = activeDayIndex == null ? 0 : xForIndex(activeDayIndex);
-  const activeY = activeValue == null ? chartBottom : chartBottom - ((activeValue - minimum) / range) * (chartBottom - chartTop);
+  const activeY = activeDayIndex == null ? chartBottom : selectedSeries.points.find(point => point.index === activeDayIndex)?.y ?? chartBottom;
   const tooltipHorizontalClass = activeDayIndex === 0 ? styles.chartTooltipLeft : activeDayIndex === rows.length - 1 ? styles.chartTooltipRight : "";
   const tooltipVerticalClass = activeY < 120 ? styles.chartTooltipBelow : styles.chartTooltipAbove;
 
   return <section className={styles.dailyChart} aria-labelledby="daily-performance-heading">
-    <header><div><small>Selected Range Trend</small><h2 id="daily-performance-heading">Daily Performance Quick Stats</h2><p>Select a metric to inspect its completed daily values.</p></div><strong>{rows.length} completed day{rows.length === 1 ? "" : "s"}</strong></header>
+    <header><div><small>Selected Range Trend</small><h2 id="daily-performance-heading">Daily Performance Quick Stats</h2><p>All metrics are plotted together and scaled to their own daily peak. Select one to emphasize it.</p></div><strong>{rows.length} completed day{rows.length === 1 ? "" : "s"}</strong></header>
     <div className={styles.dailyMetricTabs} role="group" aria-label="Daily performance metric">
-      {DAILY_METRICS.map(item => <button key={item.key} type="button" aria-pressed={metric === item.key} onClick={() => setMetric(item.key)}><span>{item.label}</span><strong>{formatDailyMetric(quickValue(item.key), item.key, currencyCode)}</strong></button>)}
+      {DAILY_METRICS.map(item => <button key={item.key} type="button" aria-pressed={metric === item.key} onClick={() => setMetric(item.key)}><span><i aria-hidden="true" style={{ backgroundColor: item.color }} />{item.label}</span><strong>{formatDailyMetric(quickValue(item.key), item.key, currencyCode)}</strong></button>)}
     </div>
     {rows.length ? <div className={styles.chartCanvas}>
-      <div className={styles.chartCaption}><span>{selectedLabel} by day</span><strong>{formatDailyMetric(maximum, metric, currencyCode)} peak</strong></div>
+      <div className={styles.chartCaption}><span>{selectedLabel} emphasized</span><strong>{formatDailyMetric(selectedSeries.maximum, metric, currencyCode)} peak</strong></div>
       <div className={styles.chartPlot} onMouseLeave={() => setActiveDayIndex(null)}>
-        <svg viewBox="0 0 1000 250" preserveAspectRatio="none" role="img" aria-label={`${selectedLabel} daily trend from ${displayDate(rows[0].date)} to ${displayDate(rows.at(-1)!.date)}`}>
-          <defs><linearGradient id={`daily-area-${metric}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#111827" stopOpacity="0.18" /><stop offset="100%" stopColor="#111827" stopOpacity="0.02" /></linearGradient></defs>
+        <svg viewBox="0 0 1000 250" preserveAspectRatio="none" role="img" aria-label={`Daily performance trends from ${displayDate(rows[0].date)} to ${displayDate(rows.at(-1)!.date)}`}>
           {[0, 1, 2, 3].map(index => { const y = chartTop + index * ((chartBottom - chartTop) / 3); return <line key={index} x1={chartLeft} x2={chartRight} y1={y} y2={y} className={styles.chartGridLine} />; })}
-          {areaPath ? <path d={areaPath} fill={`url(#daily-area-${metric})`} /> : null}
-          <path d={linePath} className={styles.chartLine} />
+          {metricSeries.map(series => <path key={series.key} data-chart-metric={series.key} d={series.linePath} stroke={series.color} className={`${styles.chartLine} ${series.key === metric ? styles.chartLineActive : ""}`} />)}
           {activeDayIndex != null ? <line x1={activeX} x2={activeX} y1={chartTop} y2={chartBottom} className={styles.chartGuideLine} /> : null}
-          {points.map((point, index) => <circle key={validRows[index].row.date} cx={point.x} cy={point.y} r={activeDayIndex === validRows[index].index ? "5.5" : "4"} className={styles.chartPoint}><title>{displayDate(validRows[index].row.date)}: {formatDailyMetric(validRows[index].value, metric, currencyCode)}</title></circle>)}
           {labelIndexes.map(index => <text key={rows[index].date} x={xForIndex(index)} y="238" textAnchor={index === 0 ? "start" : index === rows.length - 1 ? "end" : "middle"} className={styles.chartAxisLabel}>{displayDate(rows[index].date).replace(/, \d{4}$/, "")}</text>)}
           {rows.map((row, index) => {
             const start = index === 0 ? 0 : (xForIndex(index - 1) + xForIndex(index)) / 2;
@@ -158,6 +151,7 @@ function DailyPerformanceChart({ rows, summary, currencyCode, loading }: { rows:
             return <rect key={row.date} data-chart-date={row.date} x={start} y="8" width={end - start} height="238" className={styles.chartHitArea} onMouseEnter={() => setActiveDayIndex(index)} aria-hidden="true" />;
           })}
         </svg>
+        {metricSeries.flatMap(series => series.points.map(point => <span key={`${series.key}:${point.row.date}`} data-chart-dot={`${series.key}:${point.row.date}`} className={`${styles.chartDot} ${series.key === metric ? styles.chartDotActive : ""}`} style={{ left: `${point.x / 10}%`, top: `${point.y / 2.5}%`, borderColor: series.color }} aria-hidden="true" />))}
         {activeRow ? <div className={`${styles.chartTooltip} ${tooltipHorizontalClass} ${tooltipVerticalClass}`} style={{ left: `${activeX / 10}%`, top: `${activeY / 2.5}%` }} role="tooltip">
           <strong>{displayDate(activeRow.date)}</strong>
           <dl>{DAILY_METRICS.map(item => <div key={item.key} className={item.key === metric ? styles.chartTooltipActive : undefined}><dt>{item.label}</dt><dd>{formatDailyMetric(dailyMetricValue(activeRow, item.key), item.key, currencyCode)}</dd></div>)}</dl>

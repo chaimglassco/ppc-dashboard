@@ -99,7 +99,8 @@
 .dailyMetricTabs button:last-child { border-right: 0; }
 .dailyMetricTabs button:hover { background: #fbf8fc; }
 .dailyMetricTabs button[aria-pressed="true"] { box-shadow: inset 0 -3px #111827; background: #f6f2f7; color: #111827; }
-.dailyMetricTabs span { overflow: hidden; font: 600 9px/1.2 var(--font-workspace-mono), Consolas, monospace; letter-spacing: .07em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.dailyMetricTabs span { display: flex; align-items: center; gap: 6px; overflow: hidden; font: 600 9px/1.2 var(--font-workspace-mono), Consolas, monospace; letter-spacing: .07em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.dailyMetricTabs span i { width: 7px; height: 7px; flex: none; border-radius: 50%; }
 .dailyMetricTabs strong { overflow: hidden; color: #111827; font: 700 17px/1.2 var(--font-workspace-mono), Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
 .chartCanvas { padding: 12px 0 8px; }
 .chartCaption { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; color: #5d5e66; font: 600 9px var(--font-workspace-mono), Consolas, monospace; letter-spacing: .05em; text-transform: uppercase; }
@@ -107,12 +108,14 @@
 .chartPlot { position: relative; }
 .chartCanvas svg { display: block; width: 100%; height: clamp(190px, 19vw, 270px); overflow: visible; }
 .chartGridLine { stroke: #e4e1e6; stroke-width: 1; vector-effect: non-scaling-stroke; }
-.chartLine { fill: none; stroke: #111827; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.chartLine { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: .68; vector-effect: non-scaling-stroke; }
+.chartLineActive { stroke-width: 3; opacity: 1; }
 .chartGuideLine { stroke: #8a8b92; stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
-.chartPoint { fill: #fff; stroke: #111827; stroke-width: 2.5; pointer-events: none; vector-effect: non-scaling-stroke; }
 .chartAxisLabel { fill: #5d5e66; font: 600 11px var(--font-workspace-mono), Consolas, monospace; }
 .chartHitArea { fill: transparent; cursor: crosshair; pointer-events: all; }
-.chartTooltip { --tooltip-x: -50%; --tooltip-y: calc(-100% - 10px); position: absolute; z-index: 2; width: 205px; padding: 10px; border: 1px solid #1b1b1e; background: #fff; box-shadow: 0 8px 24px rgb(17 24 39 / 14%); pointer-events: none; transform: translate(var(--tooltip-x), var(--tooltip-y)); }
+.chartDot { position: absolute; z-index: 1; width: 6px; height: 6px; border: 1.5px solid; border-radius: 50%; background: #fff; box-sizing: border-box; pointer-events: none; transform: translate(-50%, -50%); }
+.chartDotActive { z-index: 2; width: 7px; height: 7px; }
+.chartTooltip { --tooltip-x: -50%; --tooltip-y: calc(-100% - 10px); position: absolute; z-index: 3; width: 205px; padding: 10px; border: 1px solid #1b1b1e; background: #fff; box-shadow: 0 8px 24px rgb(17 24 39 / 14%); pointer-events: none; transform: translate(var(--tooltip-x), var(--tooltip-y)); }
 .chartTooltipLeft { --tooltip-x: 0%; }
 .chartTooltipRight { --tooltip-x: -100%; }
 .chartTooltipBelow { --tooltip-y: 10px; }
