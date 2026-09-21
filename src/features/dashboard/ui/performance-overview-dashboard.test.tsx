@@ -58,10 +58,18 @@ describe("PerformanceOverviewDashboard", () => {
     expect(within(yesterday).getByText("20%")).toBeVisible();
     expect(within(yesterday).getByText("10%")).toBeVisible();
     const chart = screen.getByRole("region", { name: "Daily Performance Quick Stats" });
-    expect(within(chart).getByRole("img", { name: /Spend daily trend/ })).toBeVisible();
+    const chartGraphic = within(chart).getByRole("img", { name: /Spend daily trend/ });
+    expect(chartGraphic).toBeVisible();
+    expect(chartGraphic).toHaveAttribute("preserveAspectRatio", "none");
+    fireEvent.mouseEnter(chart.querySelector('[data-chart-date="2026-07-29"]')!);
+    const tooltip = within(chart).getByRole("tooltip");
+    expect(tooltip).toHaveTextContent("Jul 29, 2026");
+    expect(tooltip).toHaveTextContent("$40.00");
+    expect(tooltip).toHaveTextContent("$200.00");
+    expect(tooltip).toHaveTextContent("$400.00");
     fireEvent.click(within(chart).getByRole("button", { name: /TACOS/ }));
     expect(within(chart).getByRole("img", { name: /TACOS daily trend/ })).toBeVisible();
-    expect(within(chart).getByText("10%")).toBeVisible();
+    expect(within(chart).getByRole("button", { name: /TACOS/ })).toHaveTextContent("10%");
 
     fireEvent.click(screen.getByText("ASIN Velocity & Performance Ranking").closest("summary")!);
     expect(screen.getByText("Round U Lead Came")).toBeVisible();
