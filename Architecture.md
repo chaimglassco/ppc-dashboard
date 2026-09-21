@@ -268,3 +268,5 @@ Currency goal targets reuse the Actual value formatter for consistent whole-doll
 SummaryTopicComposer edits topic arrays within the active product/week report. Stable topic IDs preserve identity during reorder. summaryTopicsNotes derives the plain-text notes projection for previous summaries and chat. Active textarea selection is held in refs and reset when the product/week key changes.
 
 Opportunity header totals aggregate all filtered matches, including rows beyond the current page, and derive ACOS from total Spend/Sales. The bulk selection action sits in the summary toolbar.
+
+Opportunity table density and metric alignment are presentation-only CSS rules scoped to opportunityTable; search-term identity layout is unchanged.

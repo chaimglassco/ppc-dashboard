@@ -357,3 +357,5 @@ Removed decimal places from weekly monetary goal targets and their history displ
 Added segmented Current Week Summary topics with icon-only add, inline rename, remove, and up/down reorder controls. Preserved legacy notes, existing formatting/list continuation, and autosave; added persistence and interaction regression coverage.
 
 Moved opportunity totals above metric labels, added Impressions/Clicks totals, removed the MCP-usage notice, and moved bulk campaign creation into the match summary row.
+
+Centered opportunity metric totals, labels, and values, and reduced header/row spacing and table width.

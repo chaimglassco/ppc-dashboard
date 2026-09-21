@@ -436,3 +436,5 @@ Goal target storage retains its original value; whole-dollar currency formatting
 WeeklyPpcReport has optional summaryTopics: Array<{ id: string; title: string; body: string }>. Topic IDs are unique, nonblank strings up to 100 characters; titles are strings up to 200 characters; bodies are strings; at most 100 topics are accepted. Invalid arrays fall back to legacy notes; [] explicitly means no topics. Valid arrays project into notes as ordered ## title/body sections for nonempty bodies. Storage key and version remain unchanged.
 
 Opportunity UI header totals are derived from the complete filtered opportunity set; ACOS is aggregate Spend divided by aggregate Sales. No stored schema changes.
+
+Opportunity table alignment and density do not change provider, API, or stored data contracts.

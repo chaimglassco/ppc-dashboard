@@ -395,3 +395,5 @@ Verify summary defaults, icon-only +, active-topic formatting, inline title rena
 Summary topic validation: lint, typecheck, production build, and 356 tests passed (6 skipped). Local /ppc/library and /ppc/dashboard reached the Pipeline sign-in gate without console warnings/errors; authenticated visual verification remains unavailable in the test browser.
 
 Verify every opportunity metric shows its filtered total above the sortable label, including Impressions/Clicks and weighted ACOS. Confirm totals include collapsed rows and update with criteria. Confirm the MCP-usage notice is absent and bulk creation remains in the match summary toolbar with selection and disabled states intact.
+
+Verify opportunity metric totals, sortable labels, row values, and Status are centered at desktop and narrow widths. Confirm Search Term remains left aligned, checkbox alignment is intact, and compact rows remain legible with horizontal scrolling.
