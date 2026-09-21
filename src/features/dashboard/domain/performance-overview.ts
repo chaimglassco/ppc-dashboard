@@ -54,6 +54,15 @@ export type PerformanceOverviewAsinRanking = {
   rows: PerformanceOverviewAsinRow[];
 };
 
+export type PerformanceOverviewDailyPoint = {
+  date: string;
+  spend: number;
+  ppcSales: number;
+  totalSales: number;
+  acos: number | null;
+  tacos: number | null;
+};
+
 export type PerformanceOverviewData = {
   asins: string[];
   country: string;
@@ -62,6 +71,7 @@ export type PerformanceOverviewData = {
   actualPeriod: { startDate: string; endDate: string };
   freshness: string;
   periods: Record<PerformanceOverviewPeriodKey, PerformanceOverviewMetrics | null>;
+  dailyPerformance: PerformanceOverviewDailyPoint[];
   asinRanking: PerformanceOverviewAsinRanking;
   sections: Record<PerformanceOverviewSectionKey, PerformanceOverviewSection>;
   warnings: string[];
@@ -154,8 +164,21 @@ function parsePeriod(value: unknown) {
   return /^\d{4}-\d{2}-\d{2}$/.test(startDate) && /^\d{4}-\d{2}-\d{2}$/.test(endDate) && startDate <= endDate ? { startDate, endDate } : null;
 }
 
+function parseDailyPoint(value: unknown): PerformanceOverviewDailyPoint | null {
+  if (!isRecord(value)) return null;
+  const date = stringValue(value.date);
+  const spend = finiteNonNegative(value.spend);
+  const ppcSales = finiteNonNegative(value.ppcSales);
+  const totalSales = finiteNonNegative(value.totalSales);
+  const nullableMetric = (candidate: unknown) => candidate === null ? null : finiteNonNegative(candidate);
+  const acos = nullableMetric(value.acos);
+  const tacos = nullableMetric(value.tacos);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || spend == null || ppcSales == null || totalSales == null || acos === undefined || tacos === undefined) return null;
+  return { date, spend, ppcSales, totalSales, acos, tacos };
+}
+
 export function parsePerformanceOverviewData(value: unknown): PerformanceOverviewData | null {
-  if (!isRecord(value) || !Array.isArray(value.asins) || !isRecord(value.periods) || !isRecord(value.asinRanking) || !isRecord(value.sections) || !Array.isArray(value.warnings)) return null;
+  if (!isRecord(value) || !Array.isArray(value.asins) || !isRecord(value.periods) || !Array.isArray(value.dailyPerformance) || !isRecord(value.asinRanking) || !isRecord(value.sections) || !Array.isArray(value.warnings)) return null;
   const asins = value.asins.every(asin => typeof asin === "string" && /^[A-Z0-9]{10}$/.test(asin)) ? value.asins as string[] : null;
   const country = stringValue(value.country).toUpperCase();
   const currency = stringValue(value.currency).toUpperCase();
@@ -170,6 +193,11 @@ export function parsePerformanceOverviewData(value: unknown): PerformanceOvervie
     if (candidate !== null && !parsed) return null;
     periods[key] = parsed;
   }
+
+  const dailyPerformance = value.dailyPerformance.map(parseDailyPoint);
+  if (dailyPerformance.some(point => !point)) return null;
+  const dailyDates = (dailyPerformance as PerformanceOverviewDailyPoint[]).map(point => point.date);
+  if (dailyDates.some((date, index) => date < actualPeriod.startDate || date > actualPeriod.endDate || (index > 0 && date <= dailyDates[index - 1]))) return null;
 
   if ((value.asinRanking.status !== "ready" && value.asinRanking.status !== "unavailable") || typeof value.asinRanking.message !== "string" || !Array.isArray(value.asinRanking.rows)) return null;
   const asinRows = value.asinRanking.rows.map(parseAsinRow);
@@ -186,5 +214,5 @@ export function parsePerformanceOverviewData(value: unknown): PerformanceOvervie
   }
 
   if (!value.warnings.every(warning => typeof warning === "string")) return null;
-  return { asins, country, currency, requestedPeriod, actualPeriod, freshness: stringValue(value.freshness), periods, asinRanking, sections, warnings: value.warnings as string[] };
+  return { asins, country, currency, requestedPeriod, actualPeriod, freshness: stringValue(value.freshness), periods, dailyPerformance: dailyPerformance as PerformanceOverviewDailyPoint[], asinRanking, sections, warnings: value.warnings as string[] };
 }

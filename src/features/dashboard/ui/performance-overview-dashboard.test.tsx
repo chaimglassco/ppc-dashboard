@@ -13,6 +13,10 @@ function overview(startDate = "2026-07-29", endDate = "2026-08-28"): Performance
   return {
     asins: [product.asin], country: "US", currency: "USD", requestedPeriod: { startDate, endDate }, actualPeriod: { startDate, endDate: endDate === "2026-08-28" ? "2026-08-27" : endDate }, freshness: "2026-08-28",
     periods: { yesterday: metrics, sevenDays: metrics, fourteenDays: metrics, selectedRange: metrics },
+    dailyPerformance: [
+      { date: startDate, spend: 40, ppcSales: 200, totalSales: 400, acos: 20, tacos: 10 },
+      { date: endDate === "2026-08-28" ? "2026-08-27" : endDate, spend: 60, ppcSales: 300, totalSales: 600, acos: 20, tacos: 10 },
+    ],
     asinRanking: { status: "ready", message: "1 ASIN row from Scale Insights.", rows: [{ asin: product.asin, spend: 100, ppcSales: 500, ppcOrders: 20, clicks: 50, totalSales: 1000, totalOrders: 40, previousTotalSales: 800 }] },
     sections: {
       keywords: { status: "ready", message: "1 row from Scale Insights.", rows: [row] },
@@ -53,6 +57,11 @@ describe("PerformanceOverviewDashboard", () => {
     await waitFor(() => expect(within(yesterday).getByText("$1,000")).toBeVisible());
     expect(within(yesterday).getByText("20%")).toBeVisible();
     expect(within(yesterday).getByText("10%")).toBeVisible();
+    const chart = screen.getByRole("region", { name: "Daily Performance Quick Stats" });
+    expect(within(chart).getByRole("img", { name: /Spend daily trend/ })).toBeVisible();
+    fireEvent.click(within(chart).getByRole("button", { name: /TACOS/ }));
+    expect(within(chart).getByRole("img", { name: /TACOS daily trend/ })).toBeVisible();
+    expect(within(chart).getByText("10%")).toBeVisible();
 
     fireEvent.click(screen.getByText("ASIN Velocity & Performance Ranking").closest("summary")!);
     expect(screen.getByText("Round U Lead Came")).toBeVisible();

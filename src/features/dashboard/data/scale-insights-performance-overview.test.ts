@@ -20,12 +20,19 @@ describe("Scale Insights performance overview adapter", () => {
   it("loads timeframe totals and normalizes campaign, keyword, product-target, and search-term rows", async () => {
     const definitions = [
       tool("get_ads_performance", { group_by: { type: "string", enum: ["product"] } }), accountTool("get_campaign_performance"),
-      tool("get_sales_data", { group_by: { type: "string", enum: ["total", "product"] } }), tool("get_keyword_performance"), tool("get_target_performance"), tool("get_search_term_performance"),
+      tool("get_sales_data", { group_by: { type: "string", enum: ["total", "product", "day"] } }), tool("get_keyword_performance"), tool("get_target_performance"), tool("get_search_term_performance"),
     ];
     const callTool = vi.fn(async (name: string, args: Record<string, unknown>) => {
       if (name === "get_sales_data") {
         const totalSales = args.start_date === params.previousStartDate ? 800 : 1000;
-        return { Summary: { TotalSales: totalSales, TotalOrders: 40 }, ASINs: [{ ASIN: "B012345678", TotalSales: totalSales, TotalOrders: 40 }] };
+        return {
+          Summary: { TotalSales: totalSales, TotalOrders: 40 },
+          ASINs: [{ ASIN: "B012345678", TotalSales: totalSales, TotalOrders: 40 }],
+          Daily: args.group_by === "day" ? [
+            { Date: "2026-08-01", Sales: 400, PPCCost: 40, PPCSales: 200 },
+            { Date: "2026-08-02", Sales: 600, PPCCost: 60, PPCSales: 300 },
+          ] : undefined,
+        };
       }
       if (name === "get_ads_performance") return {
         agg: { Currency: "USD" }, oppMeta: { data_as_of: "2026-09-15", totals: { total_spend: 100, total_sales: 500, total_orders: 20, total_clicks: 50 } },
@@ -51,6 +58,10 @@ describe("Scale Insights performance overview adapter", () => {
 
     const result = await loadScaleInsightsPerformanceOverview(params, definitions, callTool);
     expect(result.periods.yesterday).toEqual({ totalSales: 1000, ppcSales: 500, spend: 100, totalOrders: 40, ppcOrders: 20, clicks: 50 });
+    expect(result.dailyPerformance).toEqual([
+      { date: "2026-08-01", spend: 40, ppcSales: 200, totalSales: 400, acos: 20, tacos: 10 },
+      { date: "2026-08-02", spend: 60, ppcSales: 300, totalSales: 600, acos: 20, tacos: 10 },
+    ]);
     expect(result.asinRanking.rows[0]).toEqual({ asin: "B012345678", spend: 100, ppcSales: 500, ppcOrders: 20, clicks: 0, totalSales: 1000, totalOrders: 40, previousTotalSales: 800 });
     expect(result.sections.campaigns.rows[0]).toMatchObject({ name: "Exact Campaign", targetType: "SP", state: "enabled", spend: 100, sales: 500, orders: 20, acos: 20, roas: 5, cpc: 2, ctr: 5, conversionRate: 40, dailyBudget: 75 });
     expect(result.sections.campaigns.rows[1]).toMatchObject({ name: "Auto Campaign", spend: 20, sales: 50 });
@@ -66,12 +77,14 @@ describe("Scale Insights performance overview adapter", () => {
     expect(callTool).toHaveBeenCalledWith("get_target_performance", expect.objectContaining({ asin_list: params.asins, start_date: params.actualStartDate, end_date: params.actualEndDate, page: 2 }));
     expect(callTool).toHaveBeenCalledWith("get_campaign_performance", expect.objectContaining({ mode: "raw", count: 500, page: 1, sort_by: "sales", sort_direction: "desc" }));
     expect(callTool).toHaveBeenCalledWith("get_sales_data", expect.objectContaining({ group_by: "total", count: 100, summary_only: false }));
+    expect(callTool).toHaveBeenCalledWith("get_sales_data", expect.objectContaining({ group_by: "day", count: 100, summary_only: false }));
   });
 
   it("reports an unavailable account scope when a provider tool only accepts one ASIN", async () => {
     const scalarTool = (name: string): Tool => ({ name, description: name, inputSchema: { type: "object", properties: { asin: { type: "string" }, country: { type: "string" }, start_date: { type: "string" }, end_date: { type: "string" } } } });
     const result = await loadScaleInsightsPerformanceOverview({ ...params, asins: ["B012345678", "B087654321"] }, [scalarTool("get_ads_performance"), scalarTool("get_sales_data")], vi.fn());
     expect(result.periods.selectedRange).toBeNull();
+    expect(result.dailyPerformance).toEqual([]);
     expect(result.asinRanking).toMatchObject({ status: "unavailable", rows: [] });
     expect(result.sections.campaigns).toMatchObject({ status: "unavailable", rows: [], message: expect.stringContaining("campaign performance") });
   });

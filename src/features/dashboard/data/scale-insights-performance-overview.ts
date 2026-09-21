@@ -4,6 +4,7 @@ import { getScaleInsightsCampaignToolCapabilities } from "./scale-insights-campa
 import type {
   PerformanceOverviewData,
   PerformanceOverviewAsinRow,
+  PerformanceOverviewDailyPoint,
   PerformanceOverviewMetrics,
   PerformanceOverviewRow,
   PerformanceOverviewSection,
@@ -212,7 +213,9 @@ function groupingArgument(tool: Tool, grouping: string) {
   const keys = ["group_by", "groupBy", "dimension", "entity_type", "entityType", "level", "breakdown", "grouping", "view", "aggregate_by", "aggregateBy", "granularity"];
   const desired = grouping === "product"
     ? ["product", "products", "asin", "asins", "advertised_asin", "advertisedasin"]
-    : ["total", "summary", "account"];
+    : grouping === "day"
+      ? ["day", "daily", "date"]
+      : ["total", "summary", "account"];
   const key = keys.find(candidate => Object.prototype.hasOwnProperty.call(properties, candidate))
     ?? Object.entries(properties).find(([, property]) => schemaEnumStrings(property).some(candidate => desired.includes(normalizedKey(candidate))))?.[0];
   if (!key) return undefined;
@@ -354,6 +357,29 @@ function extractSummary(adsResult: unknown, salesResult: unknown): PerformanceOv
   };
 }
 
+function extractDailyPerformance(salesResult: unknown): PerformanceOverviewDailyPoint[] {
+  const candidates = resultPayloads(salesResult).map(payload => {
+    if (!isRecord(payload) || !Array.isArray(payload.Daily)) return [];
+    return payload.Daily.flatMap(item => {
+      if (!isRecord(item)) return [];
+      const date = textValue(directValue(item, ["date", "Date"]));
+      const spend = numberValue(directValue(item, ["ppc_cost", "ppcCost", "PPCCost", "spend", "Spend"]));
+      const ppcSales = numberValue(directValue(item, ["ppc_sales", "ppcSales", "PPCSales"]));
+      const totalSales = numberValue(directValue(item, ["sales", "Sales", "total_sales", "totalSales", "TotalSales"]));
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || spend == null || ppcSales == null || totalSales == null) return [];
+      return [{
+        date,
+        spend,
+        ppcSales,
+        totalSales,
+        acos: ppcSales > 0 ? (spend / ppcSales) * 100 : null,
+        tacos: totalSales > 0 ? (spend / totalSales) * 100 : null,
+      }];
+    });
+  });
+  return (candidates.toSorted((first, second) => second.length - first.length)[0] ?? []).toSorted((first, second) => first.date.localeCompare(second.date));
+}
+
 function section(rows: PerformanceOverviewRow[], available: boolean, unavailableMessage: string): PerformanceOverviewSection {
   return available
     ? { status: "ready", message: rows.length ? `${rows.length} rows from Scale Insights.` : "Scale Insights returned no rows for this scope.", rows }
@@ -381,7 +407,7 @@ export async function loadScaleInsightsPerformanceOverview(
   const selectedAdsArgs = adsTool && buildArgs(adsTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end);
   const campaignArgs = campaignTool && buildArgs(campaignTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, undefined, PAGE_SIZE, true);
   const selectedAsinAdsArgs = adsTool && buildArgs(adsTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "product", 100);
-  const selectedAsinSalesArgs = salesTool && buildArgs(salesTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "total", 100);
+  const selectedAsinSalesArgs = salesTool && buildArgs(salesTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end, "day", 100);
   const previousAsinSalesArgs = salesTool && buildArgs(salesTool, params.asins, params.country, params.previousStartDate, params.previousEndDate, "total", 100);
   const targetArgs = targetTool && buildArgs(targetTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end);
   const keywordArgs = keywordTool && buildArgs(keywordTool, params.asins, params.country, ranges.selectedRange.start, ranges.selectedRange.end);
@@ -424,6 +450,7 @@ export async function loadScaleInsightsPerformanceOverview(
     actualPeriod: { startDate: params.actualStartDate, endDate: params.actualEndDate },
     freshness: results.map(freshness).filter(Boolean).toSorted().at(-1) || "",
     periods,
+    dailyPerformance: selectedAsinSalesResult ? extractDailyPerformance(selectedAsinSalesResult) : [],
     asinRanking: sectionAsinRanking(asinRows, Boolean(adsTool && salesTool && selectedAsinAdsArgs && selectedAsinSalesArgs), scalarScopeMessage),
     sections: {
       keywords: section(keywordRows, Boolean(keywordTool && keywordArgs), scalarScopeMessage),

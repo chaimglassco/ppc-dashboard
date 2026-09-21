@@ -359,3 +359,9 @@ Added segmented Current Week Summary topics with icon-only add, inline rename, r
 Moved opportunity totals above metric labels, added Impressions/Clicks totals, removed the MCP-usage notice, and moved bulk campaign creation into the match summary row.
 
 Centered opportunity metric totals, labels, and values, and reduced header/row spacing and table width.
+
+## September 21, 2026 — daily performance quick stats
+
+- Added a compact smooth daily chart below the temporal cards for Spend, PPC Sales, Total Sales, ACOS, and TACOS.
+- Reused the selected-range Scale Insights sales request with daily grouping, so the chart follows the applied date range and ASIN filter without an additional provider call.
+- Added accessible metric selectors, explicit loading/empty states, responsive chart styling, and adapter/component regression coverage.

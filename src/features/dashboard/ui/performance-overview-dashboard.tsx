@@ -4,7 +4,7 @@ import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { addDaysIso, currency, getIsoWeekNumber, reportKey, type WeeklyPpcReport } from "../domain/ppc-dashboard-state";
 import type { ManagedDashboardProduct } from "../domain/ppc-dashboard-catalog";
-import { parsePerformanceOverviewData, type PerformanceOverviewData, type PerformanceOverviewMetrics, type PerformanceOverviewRow, type PerformanceOverviewSection, type PerformanceOverviewSectionKey } from "../domain/performance-overview";
+import { parsePerformanceOverviewData, type PerformanceOverviewDailyPoint, type PerformanceOverviewData, type PerformanceOverviewMetrics, type PerformanceOverviewRow, type PerformanceOverviewSection, type PerformanceOverviewSectionKey } from "../domain/performance-overview";
 import styles from "./performance-overview-dashboard.module.css";
 
 type Props = { products: ManagedDashboardProduct[]; reports: Record<string, WeeklyPpcReport>; currentWeekStart: string; todayIso: string };
@@ -70,6 +70,81 @@ function TemporalCard({ index, label, range, summary, source, unavailableReason 
     </dl>
     <footer><span><small>Status</small><strong>{available ? "Actual data" : unavailableReason || "Awaiting data"}</strong></span></footer>
   </article>;
+}
+
+type DailyMetricKey = "spend" | "ppcSales" | "totalSales" | "acos" | "tacos";
+const DAILY_METRICS: ReadonlyArray<{ key: DailyMetricKey; label: string }> = [
+  { key: "spend", label: "Spend" },
+  { key: "ppcSales", label: "PPC Sales" },
+  { key: "totalSales", label: "Total Sales" },
+  { key: "acos", label: "ACOS" },
+  { key: "tacos", label: "TACOS" },
+];
+
+function dailyMetricValue(point: PerformanceOverviewDailyPoint, metric: DailyMetricKey) {
+  return point[metric];
+}
+
+function formatDailyMetric(value: number | null, metric: DailyMetricKey, currencyCode: string) {
+  if (value == null) return "—";
+  if (metric === "acos" || metric === "tacos") return displayPercent(value);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: currencyCode, maximumFractionDigits: 2 }).format(value);
+}
+
+function smoothPath(points: Array<{ x: number; y: number }>) {
+  if (!points.length) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+  return points.slice(0, -1).reduce((path, point, index) => {
+    const previous = points[index - 1] ?? point;
+    const next = points[index + 1];
+    const afterNext = points[index + 2] ?? next;
+    const firstControlX = point.x + (next.x - previous.x) / 6;
+    const firstControlY = point.y + (next.y - previous.y) / 6;
+    const secondControlX = next.x - (afterNext.x - point.x) / 6;
+    const secondControlY = next.y - (afterNext.y - point.y) / 6;
+    return `${path} C ${firstControlX} ${firstControlY}, ${secondControlX} ${secondControlY}, ${next.x} ${next.y}`;
+  }, `M ${points[0].x} ${points[0].y}`);
+}
+
+function DailyPerformanceChart({ rows, summary, currencyCode, loading }: { rows: PerformanceOverviewDailyPoint[]; summary?: PerformanceOverviewMetrics | null; currencyCode: string; loading: boolean }) {
+  const [metric, setMetric] = useState<DailyMetricKey>("spend");
+  const aggregates = summary ?? rows.reduce<PerformanceOverviewMetrics>((total, row) => ({ ...total, totalSales: total.totalSales + row.totalSales, ppcSales: total.ppcSales + row.ppcSales, spend: total.spend + row.spend }), { ...EMPTY_SUMMARY });
+  const quickValue = (key: DailyMetricKey) => key === "acos" ? percentage(aggregates.spend, aggregates.ppcSales) : key === "tacos" ? percentage(aggregates.spend, aggregates.totalSales) : aggregates[key];
+  const validRows = rows.map((row, index) => ({ row, index, value: dailyMetricValue(row, metric) })).filter((item): item is typeof item & { value: number } => item.value != null);
+  const values = validRows.map(item => item.value);
+  const maximum = Math.max(...values, 0);
+  const minimum = Math.min(...values, 0);
+  const range = maximum - minimum || 1;
+  const chartLeft = 54;
+  const chartRight = 982;
+  const chartTop = 24;
+  const chartBottom = 210;
+  const points = validRows.map(({ index, value }) => ({
+    x: rows.length === 1 ? (chartLeft + chartRight) / 2 : chartLeft + (index / Math.max(rows.length - 1, 1)) * (chartRight - chartLeft),
+    y: chartBottom - ((value - minimum) / range) * (chartBottom - chartTop),
+  }));
+  const linePath = smoothPath(points);
+  const areaPath = points.length > 1 ? `${linePath} L ${points.at(-1)!.x} ${chartBottom} L ${points[0].x} ${chartBottom} Z` : "";
+  const selectedLabel = DAILY_METRICS.find(item => item.key === metric)!.label;
+  const labelIndexes = rows.length ? [...new Set([0, Math.floor((rows.length - 1) / 2), rows.length - 1])] : [];
+
+  return <section className={styles.dailyChart} aria-labelledby="daily-performance-heading">
+    <header><div><small>Selected Range Trend</small><h2 id="daily-performance-heading">Daily Performance Quick Stats</h2><p>Select a metric to inspect its completed daily values.</p></div><strong>{rows.length} completed day{rows.length === 1 ? "" : "s"}</strong></header>
+    <div className={styles.dailyMetricTabs} role="group" aria-label="Daily performance metric">
+      {DAILY_METRICS.map(item => <button key={item.key} type="button" aria-pressed={metric === item.key} onClick={() => setMetric(item.key)}><span>{item.label}</span><strong>{formatDailyMetric(quickValue(item.key), item.key, currencyCode)}</strong></button>)}
+    </div>
+    {rows.length ? <div className={styles.chartCanvas}>
+      <div className={styles.chartCaption}><span>{selectedLabel} by day</span><strong>{formatDailyMetric(maximum, metric, currencyCode)} peak</strong></div>
+      <svg viewBox="0 0 1000 250" role="img" aria-label={`${selectedLabel} daily trend from ${displayDate(rows[0].date)} to ${displayDate(rows.at(-1)!.date)}`}>
+        <defs><linearGradient id={`daily-area-${metric}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#111827" stopOpacity="0.18" /><stop offset="100%" stopColor="#111827" stopOpacity="0.02" /></linearGradient></defs>
+        {[0, 1, 2, 3].map(index => { const y = chartTop + index * ((chartBottom - chartTop) / 3); return <line key={index} x1={chartLeft} x2={chartRight} y1={y} y2={y} className={styles.chartGridLine} />; })}
+        {areaPath ? <path d={areaPath} fill={`url(#daily-area-${metric})`} /> : null}
+        <path d={linePath} className={styles.chartLine} />
+        {points.map((point, index) => <circle key={validRows[index].row.date} cx={point.x} cy={point.y} r="4" className={styles.chartPoint}><title>{displayDate(validRows[index].row.date)}: {formatDailyMetric(validRows[index].value, metric, currencyCode)}</title></circle>)}
+        {labelIndexes.map(index => <text key={rows[index].date} x={rows.length === 1 ? 500 : chartLeft + (index / Math.max(rows.length - 1, 1)) * (chartRight - chartLeft)} y="238" textAnchor={index === 0 ? "start" : index === rows.length - 1 ? "end" : "middle"} className={styles.chartAxisLabel}>{displayDate(rows[index].date).replace(/, \d{4}$/, "")}</text>)}
+      </svg>
+    </div> : <div className={styles.chartEmpty} role="status"><Database aria-hidden="true" /><strong>{loading ? "Loading daily performance" : "No daily performance in this period"}</strong><span>{loading ? "Retrieving completed daily values from Scale Insights." : "Choose a completed date range with Scale Insights sales data."}</span></div>}
+  </section>;
 }
 
 function metricPair(first: string, second: string) { return <><strong>{first}</strong><small>{second}</small></> }
@@ -197,6 +272,7 @@ export function PerformanceOverviewDashboard({ products, reports, currentWeekSta
           <TemporalCard index={5} label={customLabel} range={periodLabel} summary={live?.periods.selectedRange || (localSelected.reports ? localSelected : null)} source={live?.periods.selectedRange ? "Scale Insights" : "Local weekly reports"} />
         </div>
       </section>
+      <DailyPerformanceChart rows={live?.dailyPerformance ?? []} summary={live?.periods.selectedRange} currencyCode={live?.currency || "USD"} loading={overviewState.status === "loading"} />
       <details className={styles.ledgerSection}>
         <summary><div><span aria-hidden="true" /><div><h2>ASIN Velocity &amp; Performance Ranking</h2><p>Product-level Scale Insights results for {live ? displayRange(live.actualPeriod.startDate, live.actualPeriod.endDate) : periodLabel}.</p></div></div><span className={styles.disclosureMeta}><strong>{asinRows.length} active row{asinRows.length === 1 ? "" : "s"}</strong><ChevronDown aria-hidden="true" /></span></summary>
         <div className={styles.tableScroll}><table><thead><tr><th>Rank &amp; Velocity</th><th>ASIN / SKU Details</th><th>Sales</th><th>Spend</th><th>Orders</th><th>ACOS</th><th>TACOS</th><th className={styles.spendShare}>Spend Share</th><th className={styles.salesShare}>Sales Share</th><th>WoW Momentum</th></tr></thead><tbody>{asinRows.length ? asinRows.map(({ product, row, momentum }, index) => <tr key={row.asin}><td><span className={styles.rank}>{String(index + 1).padStart(2, "0")}</span></td><td><strong>{product?.name || row.asin}</strong><small>ASIN: {row.asin} · SKU: {product?.sku || "N/A"}</small></td><td>{currency(row.totalSales)}</td><td>{currency(row.spend)}</td><td>{Math.round(row.totalOrders)}</td><td>{displayPercent(percentage(row.spend, row.ppcSales))}</td><td>{displayPercent(percentage(row.spend, row.totalSales))}</td><td className={styles.spendShare}>{displayPercent(percentage(row.spend, currentTotalSpend))}</td><td className={styles.salesShare}>{displayPercent(percentage(row.totalSales, currentTotalSales))}</td><td className={momentum == null ? styles.neutral : momentum >= 0 ? styles.positive : styles.negative}>{momentum == null ? "New / unavailable" : `${momentum >= 0 ? "↗" : "↘"} ${Math.abs(momentum)}%`}</td></tr>) : <tr><td colSpan={10}><div className={styles.emptyLedger}><PackageSearch aria-hidden="true" /><strong>{overviewState.status === "loading" ? "Loading ASIN performance" : live?.asinRanking.status === "ready" ? "No ASIN performance in this period" : "ASIN performance unavailable"}</strong><span>{live?.asinRanking.message || "Apply a valid date range to retrieve ASIN-level Scale Insights data."}</span></div></td></tr>}</tbody></table></div>
