@@ -367,3 +367,4 @@ Centered opportunity metric totals, labels, and values, and reduced header/row s
 - Added accessible metric selectors, explicit loading/empty states, responsive chart styling, and adapter/component regression coverage.
 - Extended the plot to the panel edges and added a date-level hover box containing Spend, PPC Sales, Total Sales, ACOS, and TACOS for every completed day.
 - Plotted all five metrics simultaneously with distinct fixed colors, individual peak normalization, selectable emphasis, and tiny circular markers that stay round at responsive widths.
+- Simplified the chart to two series: red Spend and green PPC Sales. Total Sales, ACOS, and TACOS remain available in the aggregate cards and daily hover details.

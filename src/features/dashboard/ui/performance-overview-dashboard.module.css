@@ -95,8 +95,9 @@
 .dailyChart > header p { margin: 0; color: #5d5e66; font-size: 12px; }
 .dailyChart > header > strong { flex: none; padding: 5px 8px; border: 1px solid #c8c5ca; background: #fff; font: 600 9px var(--font-workspace-mono), Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; }
 .dailyMetricTabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom: 1px solid #c8c5ca; }
-.dailyMetricTabs button { display: grid; gap: 5px; min-width: 0; padding: 12px 14px; border: 0; border-right: 1px solid #e4e1e6; background: #fff; color: #5d5e66; text-align: left; cursor: pointer; }
-.dailyMetricTabs button:last-child { border-right: 0; }
+.dailyMetricTabs > button, .dailyMetricTabs > div { display: grid; gap: 5px; min-width: 0; padding: 12px 14px; border: 0; border-right: 1px solid #e4e1e6; background: #fff; color: #5d5e66; text-align: left; }
+.dailyMetricTabs > button { cursor: pointer; }
+.dailyMetricTabs > :last-child { border-right: 0; }
 .dailyMetricTabs button:hover { background: #fbf8fc; }
 .dailyMetricTabs button[aria-pressed="true"] { box-shadow: inset 0 -3px #111827; background: #f6f2f7; color: #111827; }
 .dailyMetricTabs span { display: flex; align-items: center; gap: 6px; overflow: hidden; font: 600 9px/1.2 var(--font-workspace-mono), Consolas, monospace; letter-spacing: .07em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
@@ -177,8 +178,8 @@
   .overviewHeader { align-items: flex-start; flex-direction: column; }
   .temporalGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dailyMetricTabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .dailyMetricTabs button:nth-child(3) { border-right: 0; }
-  .dailyMetricTabs button:nth-child(-n + 3) { border-bottom: 1px solid #e4e1e6; }
+  .dailyMetricTabs > :nth-child(3) { border-right: 0; }
+  .dailyMetricTabs > :nth-child(-n + 3) { border-bottom: 1px solid #e4e1e6; }
   .auditWindow { flex-wrap: wrap; }
   .ledgerSection > summary { align-items: flex-start; }
   .disclosureMeta { margin-top: 2px; }
@@ -189,9 +190,9 @@
   .sectionKicker, .ledgerSection > summary { padding: 12px; }
   .dailyChart > header { align-items: flex-start; flex-direction: column; }
   .dailyMetricTabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dailyMetricTabs button:nth-child(3) { border-right: 1px solid #e4e1e6; }
-  .dailyMetricTabs button:nth-child(even) { border-right: 0; }
-  .dailyMetricTabs button:nth-child(-n + 4) { border-bottom: 1px solid #e4e1e6; }
+  .dailyMetricTabs > :nth-child(3) { border-right: 1px solid #e4e1e6; }
+  .dailyMetricTabs > :nth-child(even) { border-right: 0; }
+  .dailyMetricTabs > :nth-child(-n + 4) { border-bottom: 1px solid #e4e1e6; }
   .ledgerSection > summary { gap: 8px; }
   .ledgerSection h2 { font-size: 13px; }
   .disclosureMeta strong { display: none; }

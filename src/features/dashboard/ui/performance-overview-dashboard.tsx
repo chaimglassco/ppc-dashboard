@@ -73,13 +73,15 @@ function TemporalCard({ index, label, range, summary, source, unavailableReason 
 }
 
 type DailyMetricKey = "spend" | "ppcSales" | "totalSales" | "acos" | "tacos";
-const DAILY_METRICS: ReadonlyArray<{ key: DailyMetricKey; label: string; color: string }> = [
+type DailyMetricDefinition = { key: DailyMetricKey; label: string; color?: string };
+const DAILY_METRICS: ReadonlyArray<DailyMetricDefinition> = [
   { key: "spend", label: "Spend", color: "#dc2626" },
-  { key: "ppcSales", label: "PPC Sales", color: "#2563eb" },
-  { key: "totalSales", label: "Total Sales", color: "#059669" },
-  { key: "acos", label: "ACOS", color: "#d97706" },
-  { key: "tacos", label: "TACOS", color: "#7c3aed" },
+  { key: "ppcSales", label: "PPC Sales", color: "#059669" },
+  { key: "totalSales", label: "Total Sales" },
+  { key: "acos", label: "ACOS" },
+  { key: "tacos", label: "TACOS" },
 ];
+const PLOTTED_DAILY_METRICS = DAILY_METRICS.filter((item): item is DailyMetricDefinition & { color: string } => Boolean(item.color));
 
 function dailyMetricValue(point: PerformanceOverviewDailyPoint, metric: DailyMetricKey) {
   return point[metric];
@@ -116,7 +118,7 @@ function DailyPerformanceChart({ rows, summary, currencyCode, loading }: { rows:
   const chartTop = 24;
   const chartBottom = 210;
   const xForIndex = (index: number) => rows.length === 1 ? (chartLeft + chartRight) / 2 : chartLeft + (index / Math.max(rows.length - 1, 1)) * (chartRight - chartLeft);
-  const metricSeries = DAILY_METRICS.map(item => {
+  const metricSeries = PLOTTED_DAILY_METRICS.map(item => {
     const validRows = rows.map((row, index) => ({ row, index, value: dailyMetricValue(row, item.key) })).filter((entry): entry is typeof entry & { value: number } => entry.value != null);
     const maximum = Math.max(...validRows.map(entry => entry.value), 0);
     const range = maximum || 1;
@@ -133,9 +135,12 @@ function DailyPerformanceChart({ rows, summary, currencyCode, loading }: { rows:
   const tooltipVerticalClass = activeY < 120 ? styles.chartTooltipBelow : styles.chartTooltipAbove;
 
   return <section className={styles.dailyChart} aria-labelledby="daily-performance-heading">
-    <header><div><small>Selected Range Trend</small><h2 id="daily-performance-heading">Daily Performance Quick Stats</h2><p>All metrics are plotted together and scaled to their own daily peak. Select one to emphasize it.</p></div><strong>{rows.length} completed day{rows.length === 1 ? "" : "s"}</strong></header>
+    <header><div><small>Selected Range Trend</small><h2 id="daily-performance-heading">Daily Performance Quick Stats</h2><p>Spend and PPC Sales are plotted together and scaled to their own daily peak. Select either line to emphasize it.</p></div><strong>{rows.length} completed day{rows.length === 1 ? "" : "s"}</strong></header>
     <div className={styles.dailyMetricTabs} role="group" aria-label="Daily performance metric">
-      {DAILY_METRICS.map(item => <button key={item.key} type="button" aria-pressed={metric === item.key} onClick={() => setMetric(item.key)}><span><i aria-hidden="true" style={{ backgroundColor: item.color }} />{item.label}</span><strong>{formatDailyMetric(quickValue(item.key), item.key, currencyCode)}</strong></button>)}
+      {DAILY_METRICS.map(item => {
+        const content = <><span>{item.color ? <i aria-hidden="true" style={{ backgroundColor: item.color }} /> : null}{item.label}</span><strong>{formatDailyMetric(quickValue(item.key), item.key, currencyCode)}</strong></>;
+        return item.color ? <button key={item.key} type="button" aria-pressed={metric === item.key} onClick={() => setMetric(item.key)}>{content}</button> : <div key={item.key} className={styles.dailyMetricStat}>{content}</div>;
+      })}
     </div>
     {rows.length ? <div className={styles.chartCanvas}>
       <div className={styles.chartCaption}><span>{selectedLabel} emphasized</span><strong>{formatDailyMetric(selectedSeries.maximum, metric, currencyCode)} peak</strong></div>
