@@ -36,6 +36,10 @@ Pure domain rules classify every joined campaign exactly once. Current-week Spen
 
 Each outcome dropdown owns transient client-side sort state. Previous/current Spend, signed Spend change, previous/current Sales, signed Sales change, current Orders, and current ACOS toggle descending/ascending independently; null ACOS values remain last. Sorting does not mutate or persist the imported comparison.
 
+`AccountCampaignCompare` is a separate Client Component mounted by the top-level Compare tab. It uses the same validated Scale Insights CSV parser but creates account-wide period snapshots without an ASIN requirement. Day periods compare adjacent completed dates, weekly periods use Wednesday–Tuesday slots, and monthly periods use completed calendar months. The component reads and writes browser storage, labels both file slots because provider exports do not carry dates, validates recognizable filename ranges, and derives one Spend movement filter at a time from CampaignId-joined rows. Its Sales and Orders snapshot fields are retained for later phases but are not displayed as comparison metrics yet.
+
+Account comparison snapshots persist independently from `CampaignWeeklyComparison`, so changing the selected product or ASIN cannot expose or overwrite account-level data. The existing product-level comparison, provider route, and performance caches remain unchanged.
+
 Validated imports persist as `{ version: 1, entries }` under `glassco.ppcCampaignCsvComparison.v1`. Entry keys are `<COUNTRY>:<ASIN>:<CURRENT-WEDNESDAY>` and values contain the validated comparison, both filenames, and import timestamp. Hydration reconstructs the key from validated scope and drops malformed entries. A carried-forward import records the earlier entry's current filename as its previous filename; no raw CSV is added to storage. This browser-only cache is capped at 50 entries and does not change weekly reports, performance snapshots, Pipeline data, or the Scale Insights account. The legacy authenticated campaign comparison route and provider adapter remain present but the dashboard no longer calls them.
 
 ## Product performance AI boundary

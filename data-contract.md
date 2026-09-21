@@ -40,6 +40,14 @@ CSV parsing requires normalized headers Type, Campaign, Orders, Sales, Spent, an
 
 `GET /ppc/api/dashboard/campaign-comparison` and its staged MCP response contracts remain in the repository for compatibility but are no longer called by the dashboard campaign component.
 
+## Account campaign comparison
+
+Key: `glassco.ppcCampaignAccountSnapshots.v1`
+
+The record is `{ version: 1, entries: Record<string, AccountCampaignSnapshot> }`, keyed as `<COUNTRY>:<GRANULARITY>:<START-DATE>:<END-DATE>`. Each snapshot contains country, currency, granularity (`day`, `week`, or `month`), the assigned period, filename, ISO import time, and validated campaign rows with CampaignId, mapped sponsored type, campaign name, and `{ spend, sales, orders }`. Raw CSV text is never persisted; at most 100 snapshots are retained.
+
+Account exports require normalized Type, Campaign, Orders, Sales, Spent, and CampaignId headers. Values are finite and nonnegative, Orders are integers, Type maps to SP/SB/SD, duplicate IDs aggregate only when identity agrees, and cross-period name/type conflicts reject the comparison. A missing campaign receives zero metrics for that period. Stored entries are untrusted and must pass the snapshot parser and exact reconstructed-key check before use. The Compare UI derives mutually exclusive Spend movements from the two snapshots and does not persist the selected filter or sort.
+
 ## September 10 workspace presentation
 
 The workspace redesign consumes the existing version-1 report and performance cache. The second row uses the existing ACOS and TACOS calculated fields. The current-week summary underline control inserts literal <u> markers into the existing plain-text notes field, like the existing bold/list markers; notes are never rendered as arbitrary raw HTML.

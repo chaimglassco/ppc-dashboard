@@ -1,5 +1,16 @@
 # QA Checklist
 
+## September 21 account Campaign Compare checks
+
+- [ ] Confirm Dashboard, Products, and Compare tabs expose the correct active `aria-selected` state and the existing Products workflow remains intact.
+- [ ] Confirm Day compares adjacent completed dates, Weekly uses Wednesday–Tuesday periods, and Monthly uses completed calendar months.
+- [ ] Upload two whole-account Campaign CSVs, verify the period labels, reject a recognizable mismatched filename, reload, and confirm saved snapshots restore.
+- [ ] Confirm a next adjacent comparison reuses the saved previous snapshot and only requires the new current file; Replace CSVs can replace either slot.
+- [ ] Verify CampaignId joining, zero-filled missing campaigns, duplicate aggregation, identity-conflict rejection, and the Spend change calculation.
+- [ ] Select each single Spend Movement option and confirm only that result set appears; verify All is the default, the filtered count/combined change updates, and Show all reveals rows beyond ten.
+- [ ] Sort Previous Spend, Current Spend, Spend Change, and Change % in both directions and verify campaign links open the Scale Insights trend.
+- [ ] Confirm account comparison storage contains parsed snapshots without raw CSV text and remains independent of ASIN-specific comparison data.
+
 ## September 15 Dashboard disclosure and filter checks
 
 - [ ] Confirm all seven Dashboard data sections are closed by default and expand/collapse independently from their full summary rows.

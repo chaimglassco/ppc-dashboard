@@ -3,7 +3,7 @@
 import Image from "next/image";
 import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, Clock3, Copy, DollarSign,
-  FileText, Flag, Italic, LayoutDashboard, Underline, List, ListOrdered, Package, Plus, RefreshCw, Tag, SlidersHorizontal, Trash2, X,
+  FileText, Flag, GitCompareArrows, Italic, LayoutDashboard, Underline, List, ListOrdered, Package, Plus, RefreshCw, Tag, SlidersHorizontal, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
@@ -23,6 +23,7 @@ import { ProductPerformanceChat, type PerformanceChatPeriod } from "./product-pe
 import { CampaignWeeklyComparison } from "./campaign-weekly-comparison";
 import { UntargetedSalesOpportunities, type OpportunityPpcClickTotal } from "./untargeted-sales-opportunities";
 import { PerformanceOverviewDashboard } from "./performance-overview-dashboard";
+import { AccountCampaignCompare } from "./account-campaign-compare";
 import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, type PerformanceCache } from "../domain/ppc-performance-cache";
 import { getScaleInsightsAnalysisHref, PPC_ANALYSIS_COLUMNS } from "../domain/ppc-analysis-navigation";
@@ -329,7 +330,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const initialWeekStart = startOfWeekIso(initialToday);
   const initialMonthKey = initialToday.slice(0, 7);
   const [pipelineProducts, setPipelineProducts] = useState<DashboardProduct[]>([]);
-  const [activeView, setActiveView] = useState<"dashboard" | "products">("products");
+  const [activeView, setActiveView] = useState<"dashboard" | "products" | "compare">("products");
   const [catalog, setCatalog] = useState<DashboardCatalogStore>(emptyDashboardCatalog);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState("");
@@ -733,9 +734,10 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     <nav className={styles.viewTabs} aria-label="PPC workspace views" role="tablist">
       <button type="button" role="tab" aria-selected={activeView === "dashboard"} className={activeView === "dashboard" ? styles.activeViewTab : ""} onClick={() => setActiveView("dashboard")}><LayoutDashboard aria-hidden="true" />Dashboard</button>
       <button type="button" role="tab" aria-selected={activeView === "products"} className={activeView === "products" ? styles.activeViewTab : ""} onClick={() => setActiveView("products")}><Package aria-hidden="true" />Products<span>{products.length}</span></button>
+      <button type="button" role="tab" aria-selected={activeView === "compare"} className={activeView === "compare" ? styles.activeViewTab : ""} onClick={() => setActiveView("compare")}><GitCompareArrows aria-hidden="true" />Compare</button>
     </nav>
 
-    {activeView === "dashboard" ? <PerformanceOverviewDashboard products={products} reports={reports} currentWeekStart={currentWeekStart} todayIso={initialToday} /> : <>
+    {activeView === "dashboard" ? <PerformanceOverviewDashboard products={products} reports={reports} currentWeekStart={currentWeekStart} todayIso={initialToday} /> : activeView === "compare" ? <AccountCampaignCompare todayIso={initialToday} /> : <>
     <ProductPortfolioPanel products={products} tags={catalog.tags} loading={productsLoading} error={productsError} selectedProductId={selectedProductId} onSelectProduct={selectProduct} onRetry={() => void loadProducts()} onCreateTag={createTag} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} onReorderProducts={reorderProducts} />
 
     <aside className={periods.periodsPanel} aria-labelledby="periods-heading">

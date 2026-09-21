@@ -378,10 +378,11 @@ describe("PpcPerformanceDashboard", () => {
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("asin=B012345678&country=US&weekStart=2026-08-26"), expect.any(Object));
   }, 10_000);
 
-  it("switches between the Products workspace and the account Dashboard", async () => {
+  it("switches between the Products workspace, account Dashboard, and Compare", async () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     const productsTab = screen.getByRole("tab", { name: /Products/ });
     const dashboardTab = screen.getByRole("tab", { name: "Dashboard" });
+    const compareTab = screen.getByRole("tab", { name: "Compare" });
     expect(productsTab).toHaveAttribute("aria-selected", "true");
     expect(await screen.findByRole("heading", { name: "Products" })).toBeVisible();
 
@@ -391,6 +392,11 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.getByRole("heading", { name: "Today" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "ASIN Velocity & Performance Ranking" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Products" })).not.toBeInTheDocument();
+
+    fireEvent.click(compareTab);
+    expect(compareTab).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Campaign Spend Comparison" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Performance Overview" })).not.toBeInTheDocument();
 
     fireEvent.click(productsTab);
     expect(productsTab).toHaveAttribute("aria-selected", "true");

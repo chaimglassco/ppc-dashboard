@@ -1,5 +1,12 @@
 # Project Progress
 
+## September 21, 2026 — account-wide Campaign Compare tab
+
+- Added a Compare tab beside Dashboard and Products using whole-account Scale Insights Campaign CSV exports.
+- Added completed Day, Wednesday–Tuesday Weekly, and calendar Monthly period pairing with browser-local period snapshot reuse.
+- Added CampaignId joining, zero-fill behavior, Spend movement filters, sortable Spend columns, ten-row initial display, Show all, and Scale Insights campaign trend links.
+- Kept the existing ASIN-specific Campaign Week-over-Week comparison unchanged; Sales and Orders remain stored for a later comparison phase.
+
 ## September 15, 2026 — compact Dashboard disclosures and ASIN filter
 
 - Converted all seven Dashboard data sections into independently expandable disclosures that are closed by default.
