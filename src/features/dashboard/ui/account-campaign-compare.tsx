@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarDays, ExternalLink, FileUp, GitCompareArrows, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, BarChart3, CalendarDays, CheckCircle2, ExternalLink, FileUp, GitCompareArrows, RefreshCw, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { inferCsvPeriodFromFileName } from "../domain/campaign-comparison-csv";
 import { getScaleInsightsCampaignTrendHref } from "../domain/campaign-weekly-comparison";
@@ -16,23 +16,16 @@ import {
   parseAccountCampaignSnapshotCache,
   withAccountCampaignSnapshots,
   type AccountCampaignComparisonRow,
+  type AccountCampaignFilter,
   type AccountCampaignSnapshot,
   type AccountComparisonGranularity,
   type AccountComparisonPeriod,
-  type SpendMovement,
 } from "../domain/account-campaign-compare";
 import styles from "./account-campaign-compare.module.css";
 
-const MOVEMENT_OPTIONS: Array<{ value: SpendMovement; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "increased", label: "Spend Increased" },
-  { value: "new", label: "New Spend" },
-  { value: "decreased", label: "Spend Decreased" },
-  { value: "stopped", label: "Stopped Spending" },
-  { value: "unchanged", label: "Unchanged" },
-];
+import { CAMPAIGN_OUTCOME_CATEGORIES, type CampaignOutcomeGroup } from "../domain/campaign-weekly-comparison";
 
-type SortMetric = "previous" | "current" | "change" | "percentage";
+type SortMetric = "previousSpend" | "currentSpend" | "spendChange" | "previousSales" | "currentSales" | "salesChange" | "orders" | "currentAcos";
 type SortState = { metric: SortMetric; direction: "asc" | "desc" };
 
 function formatDate(value: string) {
@@ -61,15 +54,15 @@ function campaignType(value: number) {
   return value === 0 ? "Sponsored Products" : value === 1 ? "Sponsored Brands" : value === 2 ? "Sponsored Display" : "Unknown";
 }
 
-function movementLabel(value: AccountCampaignComparisonRow["movement"]) {
-  return MOVEMENT_OPTIONS.find(option => option.value === value)?.label ?? value;
-}
-
 function sortValue(row: AccountCampaignComparisonRow, metric: SortMetric) {
-  if (metric === "previous") return row.previous.spend;
-  if (metric === "current") return row.current.spend;
-  if (metric === "percentage") return row.spendChangePercentage;
-  return row.spendChange;
+  if (metric === "previousSpend") return row.previous.spend;
+  if (metric === "currentSpend") return row.current.spend;
+  if (metric === "spendChange") return row.spendChange;
+  if (metric === "previousSales") return row.previous.sales;
+  if (metric === "currentSales") return row.current.sales;
+  if (metric === "salesChange") return row.salesChange;
+  if (metric === "orders") return row.current.orders;
+  return row.currentAcos;
 }
 
 function SortHeader({ metric, label, sort, onSort }: { metric: SortMetric; label: string; sort: SortState; onSort: (metric: SortMetric) => void }) {
@@ -78,6 +71,21 @@ function SortHeader({ metric, label, sort, onSort }: { metric: SortMetric; label
   return <th scope="col" aria-sort={active ? (sort.direction === "desc" ? "descending" : "ascending") : "none"}>
     <button type="button" onClick={() => onSort(metric)} aria-label={`Sort ${label} ${active && sort.direction === "desc" ? "lowest to highest" : "highest to lowest"}`}>{label}<Icon aria-hidden="true" /></button>
   </th>;
+}
+
+const CATEGORY_GROUPS: CampaignOutcomeGroup[] = ["Good", "Bad", "Neutral"];
+
+function categoryIcon(group: CampaignOutcomeGroup) {
+  return group === "Good" ? <CheckCircle2 aria-hidden="true" /> : group === "Bad" ? <TriangleAlert aria-hidden="true" /> : <BarChart3 aria-hidden="true" />;
+}
+
+function OutcomeFilterCard({ filter, label, description, count, active, group, onSelect }: { filter: AccountCampaignFilter; label: string; description: string; count: number; active: boolean; group: CampaignOutcomeGroup | "All"; onSelect: (filter: AccountCampaignFilter) => void }) {
+  return <button type="button" className={`${styles.outcomeFilterCard} ${active ? styles.outcomeFilterActive : ""} ${group === "Good" ? styles.outcomeGood : group === "Bad" ? styles.outcomeBad : group === "Neutral" ? styles.outcomeNeutral : styles.outcomeAll}`} aria-pressed={active} onClick={() => onSelect(filter)}>
+    <span className={styles.outcomeFilterIcon}>{group === "All" ? <GitCompareArrows aria-hidden="true" /> : categoryIcon(group)}</span>
+    <span className={styles.outcomeFilterCopy}><strong>{label}</strong><small>{description}</small></span>
+    <span className={styles.outcomeFilterCount}>{count}</span>
+    <ArrowRight className={styles.outcomeFilterArrow} aria-hidden="true" />
+  </button>;
 }
 
 function UploadSlot({ label, period, snapshot, file, onFile }: { label: string; period: AccountComparisonPeriod; snapshot: AccountCampaignSnapshot | null; file: File | null; onFile: (file: File | null) => void }) {
@@ -101,8 +109,8 @@ export function AccountCampaignCompare({ todayIso }: { todayIso: string }) {
   const [showImporter, setShowImporter] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
-  const [movement, setMovement] = useState<SpendMovement>("all");
-  const [sort, setSort] = useState<SortState>({ metric: "change", direction: "desc" });
+  const [filter, setFilter] = useState<AccountCampaignFilter>("all");
+  const [sort, setSort] = useState<SortState>({ metric: "spendChange", direction: "desc" });
   const [showAll, setShowAll] = useState(false);
   const periods = useMemo(() => getAccountComparisonPeriods(granularity, currentEnd), [currentEnd, granularity]);
   const maximumEnd = defaultAccountComparisonEnd(granularity, todayIso);
@@ -118,8 +126,8 @@ export function AccountCampaignCompare({ todayIso }: { todayIso: string }) {
       setCurrentFile(null);
       setShowImporter(!(previous && current));
       setError("");
-      setMovement("all");
-      setSort({ metric: "change", direction: "desc" });
+      setFilter("all");
+      setSort({ metric: "spendChange", direction: "desc" });
       setShowAll(false);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -133,7 +141,7 @@ export function AccountCampaignCompare({ todayIso }: { todayIso: string }) {
       return { rows: [] as AccountCampaignComparisonRow[], error: comparisonError instanceof Error ? comparisonError.message : "The saved campaign exports could not be compared." };
     }
   }, [currentSnapshot, previousSnapshot]);
-  const filteredRows = useMemo(() => filterAccountCampaignRows(comparison.rows, movement), [comparison.rows, movement]);
+  const filteredRows = useMemo(() => filterAccountCampaignRows(comparison.rows, filter), [comparison.rows, filter]);
   const sortedRows = useMemo(() => filteredRows.toSorted((first, second) => {
     const firstValue = sortValue(first, sort.metric);
     const secondValue = sortValue(second, sort.metric);
@@ -179,8 +187,8 @@ export function AccountCampaignCompare({ todayIso }: { todayIso: string }) {
       setPreviousFile(null);
       setCurrentFile(null);
       setShowImporter(false);
-      setMovement("all");
-      setSort({ metric: "change", direction: "desc" });
+      setFilter("all");
+      setSort({ metric: "spendChange", direction: "desc" });
       setShowAll(false);
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : "The campaign CSV files could not be imported.");
@@ -216,24 +224,31 @@ export function AccountCampaignCompare({ todayIso }: { todayIso: string }) {
       {!showImporter && comparison.error ? <p className={styles.error} role="alert">{comparison.error}</p> : null}
       {!showImporter && previousSnapshot && currentSnapshot && !comparison.error ? <>
         <div className={styles.importMeta}><span>Previous: <strong>{previousSnapshot.fileName}</strong></span><span>Current: <strong>{currentSnapshot.fileName}</strong></span><small>Imported {new Date(Math.max(Date.parse(previousSnapshot.importedAt), Date.parse(currentSnapshot.importedAt))).toLocaleString()}</small></div>
-        <div className={styles.resultToolbar}>
-          <label><span>Spend Movement</span><select aria-label="Spend Movement" value={movement} onChange={event => { setMovement(event.target.value as SpendMovement); setShowAll(false); }}>{MOVEMENT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-          <div aria-live="polite"><strong>{filteredRows.length}</strong><span>campaign{filteredRows.length === 1 ? "" : "s"}</span><i /><strong className={combinedChange > 0 ? styles.increase : combinedChange < 0 ? styles.decrease : ""}>{formatSignedCurrency(combinedChange, currency)}</strong><span>combined Spend change</span></div>
+        <div className={styles.outcomeFilters} aria-label="Campaign comparison filters">
+          <OutcomeFilterCard filter="all" label="All campaigns" description="Show every account campaign in the selected comparison." count={comparison.rows.length} active={filter === "all"} group="All" onSelect={nextFilter => { setFilter(nextFilter); setShowAll(false); }} />
+          {CATEGORY_GROUPS.map(group => <section className={`${styles.outcomeGroup} ${group === "Good" ? styles.outcomeGoodGroup : group === "Bad" ? styles.outcomeBadGroup : styles.outcomeNeutralGroup}`} key={group} aria-labelledby={`account-outcome-${group.toLowerCase()}`}>
+            <h2 id={`account-outcome-${group.toLowerCase()}`}>{categoryIcon(group)}{group}</h2>
+            <div className={styles.outcomeFilterList}>{CAMPAIGN_OUTCOME_CATEGORIES.filter(category => category.group === group).map(category => <OutcomeFilterCard key={category.id} filter={category.id} label={category.label.replace(" This Week", "")} description={category.description.replaceAll("current-week", "current-period").replace("Previous-week", "Previous-period")} count={comparison.rows.filter(row => row.outcome === category.id).length} active={filter === category.id} group={group} onSelect={nextFilter => { setFilter(nextFilter); setShowAll(false); }} />)}</div>
+          </section>)}
         </div>
+        <div className={styles.resultToolbar}><div aria-live="polite"><strong>{filteredRows.length}</strong><span>campaign{filteredRows.length === 1 ? "" : "s"}</span><i /><strong className={combinedChange > 0 ? styles.increase : combinedChange < 0 ? styles.decrease : ""}>{formatSignedCurrency(combinedChange, currency)}</strong><span>combined Spend change</span></div></div>
         <div className={styles.tableScroll}>
           <table aria-label="Account campaign Spend comparison">
-            <thead><tr><th scope="col">Campaign</th><th scope="col">Type</th><th scope="col">Movement</th><SortHeader metric="previous" label="Previous Spend" sort={sort} onSort={updateSort} /><SortHeader metric="current" label="Current Spend" sort={sort} onSort={updateSort} /><SortHeader metric="change" label="Spend Change" sort={sort} onSort={updateSort} /><SortHeader metric="percentage" label="Change %" sort={sort} onSort={updateSort} /></tr></thead>
+            <thead><tr><th scope="col">Campaign</th><th scope="col">Type</th><SortHeader metric="previousSpend" label="Previous Spend" sort={sort} onSort={updateSort} /><SortHeader metric="currentSpend" label="Current Spend" sort={sort} onSort={updateSort} /><SortHeader metric="spendChange" label="Spend Change" sort={sort} onSort={updateSort} /><SortHeader metric="previousSales" label="Previous Sales" sort={sort} onSort={updateSort} /><SortHeader metric="currentSales" label="Current Sales" sort={sort} onSort={updateSort} /><SortHeader metric="salesChange" label="Sales Change" sort={sort} onSort={updateSort} /><SortHeader metric="orders" label="Orders" sort={sort} onSort={updateSort} /><SortHeader metric="currentAcos" label="Current ACOS" sort={sort} onSort={updateSort} /></tr></thead>
             <tbody>{visibleRows.map(row => <tr key={`${row.sponsoredType}:${row.campaignId}`}>
               <th scope="row"><a href={getScaleInsightsCampaignTrendHref(row, periods.previous.startDate, periods.current.endDate)} target="_blank" rel="noopener noreferrer"><span>{row.campaignName}</span><ExternalLink aria-hidden="true" /></a><small>{row.campaignId}</small></th>
               <td>{campaignType(row.sponsoredType)}</td>
-              <td><span className={`${styles.movement} ${styles[`movement_${row.movement}`]}`}>{movementLabel(row.movement)}</span></td>
               <td>{formatCurrency(row.previous.spend, currency)}</td>
               <td>{formatCurrency(row.current.spend, currency)}</td>
               <td className={row.spendChange > 0 ? styles.increase : row.spendChange < 0 ? styles.decrease : ""}>{formatSignedCurrency(row.spendChange, currency)}</td>
-              <td className={row.spendChange > 0 ? styles.increase : row.spendChange < 0 ? styles.decrease : ""}>{row.spendChangePercentage == null ? "New" : `${row.spendChangePercentage > 0 ? "+" : ""}${Math.round(row.spendChangePercentage)}%`}</td>
+              <td>{formatCurrency(row.previous.sales, currency)}</td>
+              <td>{formatCurrency(row.current.sales, currency)}</td>
+              <td className={row.salesChange > 0 ? styles.increase : row.salesChange < 0 ? styles.decrease : ""}>{formatSignedCurrency(row.salesChange, currency)}{row.salesChangePercentage == null ? " (New)" : ` (${row.salesChangePercentage > 0 ? "+" : ""}${Math.round(row.salesChangePercentage)}%)`}</td>
+              <td>{row.previous.orders} <ArrowRight aria-hidden="true" /> <strong>{row.current.orders}</strong></td>
+              <td>{row.currentAcos == null ? "—" : `${Math.round(row.currentAcos)}%`}</td>
             </tr>)}</tbody>
           </table>
-          {!visibleRows.length ? <p className={styles.empty}>No campaigns match this Spend movement.</p> : null}
+          {!visibleRows.length ? <p className={styles.empty}>No campaigns match this filter.</p> : null}
         </div>
         {sortedRows.length > 10 ? <button type="button" className={styles.showAll} onClick={() => setShowAll(value => !value)}>{showAll ? "Show first 10" : `Show all ${sortedRows.length}`}</button> : null}
       </> : null}

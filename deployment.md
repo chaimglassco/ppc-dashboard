@@ -4,6 +4,10 @@
 
 This client-only release adds the Compare tab and browser key `glassco.ppcCampaignAccountSnapshots.v1`. It requires no environment variable, API, database migration, connector request, or Pipeline deployment. After deployment, verify whole-account CSV imports for completed Day, Wednesday–Tuesday Weekly, and calendar Monthly periods, previous-period snapshot reuse, filename validation, mutually exclusive Spend Movement filters, sorting, Show all, and Scale Insights trend links. The existing ASIN-level Products comparison remains available. Rollback may leave harmless local snapshot entries; malformed entries are discarded by the parser.
 
+## September 22 account comparison outcome release
+
+This client-only refinement keeps the same account snapshot key and adds Good/Bad/Neutral outcome filter cards plus Sales, Orders, and Current ACOS table values. It requires no migration or new environment variable. Verify one active outcome card at a time, the existing ASIN comparison, and the expanded table after importing whole-account CSVs.
+
 ## September 11 automatic-save and PPC-conversion correction
 
 This release keeps optional `ppcClicks` in the existing weekly-performance DTO and version-1 browser records. It changes the existing advertising request to return one raw ASIN row (`summary_only: false`, `count: 1`, `page: 1`) so exact Clicks can be collected automatically without a third MCP call. It requires no environment variable, database change, storage-key change, or migration. After deployment, verify Refresh Data populates PPC Conversion Rate as a whole percentage with no manual click input; an exact-click omission must remain unavailable with a safe warning.

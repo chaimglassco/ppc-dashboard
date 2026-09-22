@@ -1,5 +1,10 @@
 # Project Progress
 
+## September 22, 2026 — account comparison outcome filters
+
+- Updated Compare from Spend-only movement options to the Good, Bad, and Neutral outcome filter cards used by the ASIN campaign comparison.
+- Kept one active filter at a time and expanded the account table with Sales, Orders, and Current ACOS columns using the already validated CSV metrics.
+
 ## September 21, 2026 — account-wide Campaign Compare tab
 
 - Added a Compare tab beside Dashboard and Products using whole-account Scale Insights Campaign CSV exports.

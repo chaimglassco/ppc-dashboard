@@ -11,6 +11,12 @@
 - [ ] Sort Previous Spend, Current Spend, Spend Change, and Change % in both directions and verify campaign links open the Scale Insights trend.
 - [ ] Confirm account comparison storage contains parsed snapshots without raw CSV text and remains independent of ASIN-specific comparison data.
 
+## September 22 account comparison outcome checks
+
+- [ ] Confirm Good, Bad, and Neutral filter groups match the existing campaign outcome rules and only one selected card controls the table.
+- [ ] Verify Spend Up/Sales Up, Spend Down/Sales Up, Spend Up/Sales Down, Spend Down/Sales Down, Spend but No Sales, New Spend/High ACOS, and Unchanged/Mixed classifications.
+- [ ] Confirm the selected table includes Previous/Current Spend, Spend Change, Previous/Current Sales, Sales Change, Orders, and Current ACOS.
+
 ## September 15 Dashboard disclosure and filter checks
 
 - [ ] Confirm all seven Dashboard data sections are closed by default and expand/collapse independently from their full summary rows.

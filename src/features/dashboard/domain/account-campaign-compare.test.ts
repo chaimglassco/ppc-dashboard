@@ -32,18 +32,21 @@ describe("account campaign comparison", () => {
       "SP Manual,Unchanged,1,10,7,4",
     ].join("\r\n"), "previous.csv");
     const current = snapshot({ startDate: "2026-09-20", endDate: "2026-09-20" }, [
-      "SP Manual,Increased,1,10,15,1",
+      "SP Manual,Increased,1,20,15,1",
       "SP Manual,New,1,10,4,5",
-      "SP Manual,Decreased,1,10,8,3",
+      "SP Manual,Decreased,1,5,8,3",
       "SP Manual,Unchanged,1,10,7,4",
     ].join("\r\n"), "current.csv");
     const rows = compareAccountCampaignSnapshots(previous, current);
     expect(rows.find(row => row.campaignId === "2")?.movement).toBe("stopped");
     expect(rows.find(row => row.campaignId === "5")?.movement).toBe("new");
     expect(rows.find(row => row.campaignId === "1")?.spendChange).toBe(5);
-    expect(filterAccountCampaignRows(rows, "increased").map(row => row.campaignId)).toEqual(["1"]);
-    expect(filterAccountCampaignRows(rows, "new").map(row => row.campaignId)).toEqual(["5"]);
-    expect(filterAccountCampaignRows(rows, "stopped").map(row => row.campaignId)).toEqual(["2"]);
+    expect(rows.find(row => row.campaignId === "1")?.outcome).toBe("good-spend-up-sales-up");
+    expect(rows.find(row => row.campaignId === "5")?.outcome).toBe("bad-new-spend-inefficient");
+    expect(rows.find(row => row.campaignId === "3")?.outcome).toBe("bad-spend-down-sales-down");
+    expect(filterAccountCampaignRows(rows, "good-spend-up-sales-up").map(row => row.campaignId)).toEqual(["1"]);
+    expect(filterAccountCampaignRows(rows, "bad-new-spend-inefficient").map(row => row.campaignId)).toEqual(["5"]);
+    expect(filterAccountCampaignRows(rows, "bad-spend-down-sales-down").map(row => row.campaignId).sort()).toEqual(["2", "3"]);
     expect(filterAccountCampaignRows(rows, "all")).toHaveLength(5);
   });
 

@@ -1,10 +1,12 @@
 import { parseScaleInsightsCampaignCsv } from "./campaign-comparison-csv";
+import { classifyCampaignOutcome, createCampaignComparisonRow, getCampaignAcos, type CampaignOutcomeCategoryId } from "./campaign-weekly-comparison";
 import { addDaysIso } from "./ppc-dashboard-state";
 
 export const ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY = "glassco.ppcCampaignAccountSnapshots.v1";
 
 export type AccountComparisonGranularity = "day" | "week" | "month";
 export type SpendMovement = "all" | "increased" | "new" | "decreased" | "stopped" | "unchanged";
+export type AccountCampaignFilter = "all" | CampaignOutcomeCategoryId;
 export type AccountComparisonPeriod = { startDate: string; endDate: string };
 export type AccountCampaignMetrics = { spend: number; sales: number; orders: number };
 export type AccountCampaignSnapshotRow = {
@@ -31,7 +33,12 @@ export type AccountCampaignComparisonRow = {
   current: AccountCampaignMetrics;
   spendChange: number;
   spendChangePercentage: number | null;
+  salesChange: number;
+  salesChangePercentage: number | null;
+  ordersChange: number;
+  currentAcos: number | null;
   movement: Exclude<SpendMovement, "all">;
+  outcome: CampaignOutcomeCategoryId;
 };
 
 function parseIsoDate(value: string) {
@@ -205,7 +212,16 @@ export function compareAccountCampaignSnapshots(previous: AccountCampaignSnapsho
     }
     const previousMetrics = before?.metrics ?? zero;
     const currentMetrics = after?.metrics ?? zero;
-    const spendChange = currentMetrics.spend - previousMetrics.spend;
+    const classifiedRow = createCampaignComparisonRow({
+      campaignId,
+      campaignName: identity.campaignName,
+      sponsoredType: identity.sponsoredType,
+      previousActive: Boolean(before),
+      currentActive: Boolean(after),
+      previous: previousMetrics,
+      current: currentMetrics,
+    });
+    const spendChange = classifiedRow.delta.spend.absolute;
     return {
       campaignId,
       campaignName: identity.campaignName,
@@ -213,12 +229,17 @@ export function compareAccountCampaignSnapshots(previous: AccountCampaignSnapsho
       previous: previousMetrics,
       current: currentMetrics,
       spendChange,
-      spendChangePercentage: previousMetrics.spend === 0 ? null : (spendChange / previousMetrics.spend) * 100,
+      spendChangePercentage: classifiedRow.delta.spend.percentage,
+      salesChange: classifiedRow.delta.sales.absolute,
+      salesChangePercentage: classifiedRow.delta.sales.percentage,
+      ordersChange: classifiedRow.delta.orders.absolute,
+      currentAcos: getCampaignAcos(currentMetrics),
       movement: movementFor(previousMetrics.spend, currentMetrics.spend),
+      outcome: classifyCampaignOutcome(classifiedRow),
     } satisfies AccountCampaignComparisonRow;
   });
 }
 
-export function filterAccountCampaignRows(rows: AccountCampaignComparisonRow[], movement: SpendMovement) {
-  return movement === "all" ? rows : rows.filter(row => row.movement === movement);
+export function filterAccountCampaignRows(rows: AccountCampaignComparisonRow[], filter: AccountCampaignFilter) {
+  return filter === "all" ? rows : rows.filter(row => row.outcome === filter);
 }
