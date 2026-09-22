@@ -1,5 +1,11 @@
 # QA Checklist
 
+## September 22 workspace recovery and chunked Products checks
+
+- [x] Confirm the Products route normalizes an inline Pipeline workspace and a chunked `binary-v2` manifest with versioned chunks.
+- [x] Read the authoritative Pipeline workspace after recovery and confirm 23 products, with `B0D1PHP7HQ` and `B0DYSBW3X5` present and no existing product removed.
+- [ ] After the next Library deployment, authenticate at `/ppc/dashboard`, confirm the Products count and both recovered ASIN searches, and verify the chunked response does not render as an empty catalog.
+
 ## September 21 account Campaign Compare checks
 
 - [ ] Confirm Dashboard, Products, and Compare tabs expose the correct active `aria-selected` state and the existing Products workflow remains intact.

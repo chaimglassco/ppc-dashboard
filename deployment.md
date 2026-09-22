@@ -1,5 +1,11 @@
 # Deployment Guide
 
+## September 22 workspace recovery and chunked Products transport
+
+This release makes the Products adapter compatible with Pipeline workspaces larger than the inline response limit. It requests the `binary-v2` workspace manifest and reassembles its versioned chunks server-side; no browser storage migration or new environment variable is required. The shared Pipeline workspace was repaired additively to 23 products, including recovered prior-laptop ASINs `B0D1PHP7HQ` and `B0DYSBW3X5`.
+
+After deployment, authenticate at `/ppc/dashboard`, confirm the Products count is 23, search for `B0D1PHP7HQ` and `B0DYSBW3X5`, and select each recovered product. Confirm the existing 19 products remain visible and that a temporary Pipeline 401 still shows the session-expired message. If the adapter cannot complete chunk assembly, it must show the bounded unavailable state rather than a false empty catalog.
+
 ## September 21 account Campaign Compare release
 
 This client-only release adds the Compare tab and browser key `glassco.ppcCampaignAccountSnapshots.v1`. It requires no environment variable, API, database migration, connector request, or Pipeline deployment. After deployment, verify whole-account CSV imports for completed Day, Wednesday–Tuesday Weekly, and calendar Monthly periods, previous-period snapshot reuse, filename validation, mutually exclusive Spend Movement filters, sorting, Show all, and Scale Insights trend links. The existing ASIN-level Products comparison remains available. Rollback may leave harmless local snapshot entries; malformed entries are discarded by the parser.

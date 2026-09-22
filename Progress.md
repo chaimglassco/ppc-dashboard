@@ -5,6 +5,12 @@
 - Updated Compare from Spend-only movement options to the Good, Bad, and Neutral outcome filter cards used by the ASIN campaign comparison.
 - Kept one active filter at a time and expanded the account table with Sales, Orders, and Current ACOS columns using the already validated CSV metrics.
 
+## September 22, 2026 — Pipeline workspace recovery and chunked catalog transport
+
+- Traced the blank PPC Products panel to Pipeline's oversized shared workspace response: `/api/workspace-state` now returns a `binary-v2` manifest with five JSON chunks instead of an inline `state` object.
+- Updated `/ppc/api/dashboard/products` to reassemble and validate chunked workspace state before normalizing products, while preserving session-expiry and no-store behavior. Focused route tests cover inline and chunked responses.
+- Recovered the prior-laptop catalog additively in Pipeline's authoritative workspace. The shared catalog now contains 23 products (the existing 19 plus four recovered records), including ASINs `B0D1PHP7HQ` (3/16 - Round H) and `B0DYSBW3X5` (3/16 Round U). No current product was deleted.
+
 ## September 21, 2026 — account-wide Campaign Compare tab
 
 - Added a Compare tab beside Dashboard and Products using whole-account Scale Insights Campaign CSV exports.
