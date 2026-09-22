@@ -274,3 +274,7 @@ SummaryTopicComposer edits topic arrays within the active product/week report. S
 Opportunity header totals aggregate all filtered matches, including rows beyond the current page, and derive ACOS from total Spend/Sales. The bulk selection action sits in the summary toolbar.
 
 Opportunity table density and metric alignment are presentation-only CSS rules scoped to opportunityTable; search-term identity layout is unchanged.
+
+## Six-week weekly performance table
+
+`PpcPerformanceDashboard` derives a six-week window from the active Wednesday week (`active - 35 days` through `active`) and loads uncached periods through the existing Scale Insights performance route with the current two-request concurrency limit. `WeeklyPerformanceTable` renders the stable metric row order and highlights the rightmost selected week. The provider adapter preserves optional PPC impressions, PPC units, and total units; the domain calculation derives CPC from Spend / PPC Clicks and Organic Units from Total Units - PPC Units when both inputs are present. Missing optional fields remain unavailable rather than estimated.

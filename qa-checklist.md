@@ -429,3 +429,11 @@ Summary topic validation: lint, typecheck, production build, and 356 tests passe
 Verify every opportunity metric shows its filtered total above the sortable label, including Impressions/Clicks and weighted ACOS. Confirm totals include collapsed rows and update with criteria. Confirm the MCP-usage notice is absent and bulk creation remains in the match summary toolbar with selection and disabled states intact.
 
 Verify opportunity metric totals, sortable labels, row values, and Status are centered at desktop and narrow widths. Confirm Search Term remains left aligned, checkbox alignment is intact, and compact rows remain legible with horizontal scrolling.
+
+## Six-week weekly performance table
+
+- [ ] Select a product and verify Weekly PPC Performance renders exactly six Wednesday–Tuesday columns, with the selected week highlighted at the far right and the five preceding weeks ordered left to right.
+- [ ] Confirm row order is Impressions, Clicks, CPC, Spend, PPC Sales, PPC Orders, PPC Units, Organic Sales, Organic Orders, Organic Units, ACOS, TACOS.
+- [ ] Reconcile imported Spend, PPC Sales, orders, clicks, impressions, and units with Scale Insights. Confirm CPC equals Spend / PPC Clicks and Organic Units equals Total Units - PPC Units when both are available.
+- [ ] Confirm imported cells are read-only, missing optional provider metrics display an em dash, and switching weeks reuses the saved cache without a new request.
+- [ ] Check the compact Analysis trend bars and verify there are no hydration or browser console errors.

@@ -260,3 +260,7 @@ Current Week Summary uses editable topic cards. Blank reports start with Impress
 Untargeted opportunity totals appear above their metric column headings. Create Bulk Campaigns shares the match-count toolbar; the local-filter implementation notice is removed.
 
 Untargeted opportunity metric headers, totals, and row values are centered. Reduced table padding and minimum width make the report more compact while the search-term column remains left aligned.
+
+## Six-week Scale Insights performance view
+
+The selected product's Weekly PPC Performance panel now uses a Scale Insights-style six-week table. It always shows the selected Wednesday–Tuesday week as the sixth column on the right and the five immediately preceding weeks to its left. Rows are ordered as Impressions, Clicks, CPC, Spend, PPC Sales, PPC Orders, PPC Units, Organic Sales, Organic Orders, Organic Units, ACOS, and TACOS. The Analysis column provides a compact six-week visual trend, while imported values remain read-only and unavailable provider fields are shown as an em dash.

@@ -9,7 +9,7 @@ function adsPayload(overrides: Record<string, unknown> = {}) {
     oppMeta: {
       total_count: 1,
       data_as_of: "synced 2026-09-03 21:34 UTC",
-      totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23, total_clicks: 48 },
+      totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23, total_clicks: 48, total_impressions: 1200, total_units: 31 },
       ...overrides,
     },
   };
@@ -21,7 +21,7 @@ function salesPayload(overrides: Record<string, unknown> = {}) {
     StartDate: "2026-08-26",
     EndDate: "2026-09-01",
     Meta: { total_count: 1, data_as_of: "synced 2026-09-04 00:26 UTC", data_through: "2026-09-01" },
-    Summary: { TotalSales: 1317.35, TotalOrders: 59, TotalSessions: 122, TotalPPCCost: 81.75, TotalPPCSales: 481.75 },
+    Summary: { TotalSales: 1317.35, TotalOrders: 59, TotalSessions: 122, TotalUnits: 59, TotalPPCCost: 81.75, TotalPPCSales: 481.75 },
     ...overrides,
   };
 }
@@ -42,11 +42,16 @@ describe("Scale Insights weekly performance", () => {
         ppcSales: 481.75,
         ppcOrders: 23,
         ppcClicks: 48,
+        ppcImpressions: 1200,
+        ppcUnits: 31,
+        totalUnits: 59,
         totalSales: 1317.35,
         totalOrders: 59,
         totalSessions: 122,
         organicSales: 835.6,
         organicOrders: 36,
+        organicUnits: 28,
+        cpc: 1.7,
         acos: 16.97,
         tacos: 6.21,
         conversionRate: 47.92,

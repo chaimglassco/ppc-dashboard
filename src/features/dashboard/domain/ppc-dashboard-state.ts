@@ -17,7 +17,7 @@ export type WeeklyPpcReport = {
   budgetHistory: BudgetChange[];
   spend: number; ppcSales: number; organicSales: number; totalSales: number;
   ppcOrders: number; organicOrders: number; totalOrders: number; targetAcos: number; acos: number; tacos: number;
-  totalSessions?: number; ppcClicks?: number; conversionRate?: number;
+  totalSessions?: number; ppcClicks?: number; ppcImpressions?: number; ppcUnits?: number; totalUnits?: number; organicUnits?: number; cpc?: number; conversionRate?: number;
   goals: WeeklyGoal[]; goalHistory: GoalHistoryEntry[]; previousWeekResult: string; notes: string; actions: ActionItem[]; updatedAt: string | null;
   summaryTopics?: SummaryTopic[];
 };
@@ -29,10 +29,15 @@ export type WeeklyPerformanceSourceMetrics = {
   totalOrders: number;
   totalSessions?: number;
   ppcClicks?: number;
+  ppcImpressions?: number;
+  ppcUnits?: number;
+  totalUnits?: number;
 };
 export type WeeklyPerformanceCalculatedMetrics = WeeklyPerformanceSourceMetrics & {
   organicSales: number;
   organicOrders: number;
+  organicUnits?: number;
+  cpc?: number;
   acos: number;
   tacos: number;
   conversionRate?: number;
@@ -104,6 +109,8 @@ export function calculateWeeklyPerformance(metrics: WeeklyPerformanceSourceMetri
     ...metrics,
     organicSales: roundMoney(Math.max(0, metrics.totalSales - metrics.ppcSales)),
     organicOrders: Math.max(0, metrics.totalOrders - metrics.ppcOrders),
+    ...(metrics.totalUnits == null || metrics.ppcUnits == null ? {} : { organicUnits: Math.max(0, metrics.totalUnits - metrics.ppcUnits) }),
+    ...(metrics.ppcClicks == null ? {} : { cpc: metrics.ppcClicks ? roundMoney(metrics.spend / metrics.ppcClicks) : 0 }),
     acos: metrics.ppcSales ? Math.round((metrics.spend / metrics.ppcSales) * 10000) / 100 : 0,
     tacos: metrics.totalSales ? Math.round((metrics.spend / metrics.totalSales) * 10000) / 100 : 0,
     conversionRate: metrics.ppcClicks == null ? undefined : metrics.ppcClicks ? Math.round((metrics.ppcOrders / metrics.ppcClicks) * 10000) / 100 : 0,
@@ -269,6 +276,9 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
   const organicOrders = finiteNumber(value.organicOrders);
   const totalSessions = value.totalSessions == null ? undefined : finiteNumber(value.totalSessions);
   const ppcClicks = optionalNonNegativeInteger(value.ppcClicks);
+  const ppcImpressions = optionalNonNegativeInteger(value.ppcImpressions);
+  const ppcUnits = optionalNonNegativeInteger(value.ppcUnits);
+  const totalUnits = optionalNonNegativeInteger(value.totalUnits);
   const summaryTopics = normalizeSummaryTopics(value.summaryTopics);
   return withCalculatedPerformance({
     productId, weekStart, status: statuses.includes(value.status as ReportStatus) ? value.status as ReportStatus : "Draft",
@@ -277,6 +287,9 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
     ppcOrders, organicOrders, totalOrders: value.totalOrders == null ? ppcOrders + organicOrders : finiteNumber(value.totalOrders),
     ...(totalSessions == null ? {} : { totalSessions }),
     ...(ppcClicks == null ? {} : { ppcClicks }),
+    ...(ppcImpressions == null ? {} : { ppcImpressions }),
+    ...(ppcUnits == null ? {} : { ppcUnits }),
+    ...(totalUnits == null ? {} : { totalUnits }),
     ...(summaryTopics == null ? {} : { summaryTopics }),
     targetAcos: finiteNumber(value.targetAcos), acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
     goals: Array.isArray(value.goals) ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), goalHistory, previousWeekResult: String(value.previousWeekResult ?? ""), notes: summaryTopics == null ? String(value.notes ?? "") : summaryTopicsNotes(summaryTopics),

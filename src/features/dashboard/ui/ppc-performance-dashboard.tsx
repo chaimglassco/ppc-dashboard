@@ -3,7 +3,7 @@
 import Image from "next/image";
 import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, Clock3, Copy, DollarSign,
-  FileText, Flag, GitCompareArrows, Italic, LayoutDashboard, Underline, List, ListOrdered, Package, Plus, RefreshCw, Tag, SlidersHorizontal, Trash2, X,
+  FileText, Flag, GitCompareArrows, Italic, LayoutDashboard, Underline, List, ListOrdered, Package, Plus, RefreshCw, Tag, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
@@ -24,6 +24,7 @@ import { CampaignWeeklyComparison } from "./campaign-weekly-comparison";
 import { UntargetedSalesOpportunities, type OpportunityPpcClickTotal } from "./untargeted-sales-opportunities";
 import { PerformanceOverviewDashboard } from "./performance-overview-dashboard";
 import { AccountCampaignCompare } from "./account-campaign-compare";
+import { WeeklyPerformanceTable, type WeeklyTableColumn } from "./weekly-performance-table";
 import { dashboardStorage } from "../state/shared-dashboard-client";
 import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, type PerformanceCache } from "../domain/ppc-performance-cache";
@@ -32,8 +33,6 @@ import styles from "./ppc-performance-dashboard.module.css";
 import periods from "./ppc-reporting-periods.module.css";
 import ws from "./ppc-performance-workspace.module.css";
 
-type MetricField = "spend" | "ppcSales" | "organicSales" | "totalSales" | "ppcOrders" | "organicOrders" | "totalOrders" | "acos" | "tacos";
-type MetricDefinition = { field: MetricField; label: string; prefix?: string; suffix?: string; calculated?: boolean; imported?: boolean };
 type PerformanceLoadState = {
   key: string;
   status: "idle" | "loading" | "authorization" | "ready" | "error";
@@ -48,18 +47,6 @@ const BUDGET_HISTORY_PAGE_SIZE = 5;
 const PERFORMANCE_BACKFILL_CONCURRENCY = 2;
 const MISSING_PPC_CLICKS_WARNING = "Scale Insights did not include PPC Clicks for this reporting period; PPC Conversion Rate is unavailable.";
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const METRIC_GROUPS: { title: string; displayTitle: string; metrics: MetricDefinition[] }[] = [
-  { title: "Sales", displayTitle: "Sales Metrics", metrics: [
-    { field: "spend", label: "Spend", prefix: "$", imported: true }, { field: "ppcSales", label: "PPC Sales", prefix: "$", imported: true },
-    { field: "organicSales", label: "Organic Sales", prefix: "$", calculated: true }, { field: "totalSales", label: "Total Sales", prefix: "$", imported: true },
-  ] },
-  { title: "Orders", displayTitle: "Order Volume", metrics: [
-    { field: "ppcOrders", label: "PPC Orders", imported: true }, { field: "organicOrders", label: "Organic Orders", calculated: true }, { field: "totalOrders", label: "Total Orders", imported: true },
-  ] },
-  { title: "Efficiency", displayTitle: "Efficiency & Targets", metrics: [
-    { field: "acos", label: "ACOS", suffix: "%", calculated: true }, { field: "tacos", label: "TACOS", suffix: "%", calculated: true },
-  ] },
-];
 
 function numericValue(value: string) {
   const parsed = Number(value.replace(/[^0-9.-]/g, ""));
@@ -95,20 +82,6 @@ function formatPeriodCardRange(weekStart: string) {
   return `${startMonth} ${startDay} – ${endMonth} ${endDay}, ${endYear}`;
 }
 
-function previousMetricValue(metric: MetricDefinition, value: number) {
-  const formatted = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(value || 0));
-  return `${metric.prefix ?? ""}${formatted}${metric.suffix ?? ""}`;
-}
-
-function metricDeltaPercentage(current: number, previous?: number) {
-  if (previous == null || previous === 0) return null;
-  return Math.round(Math.abs(((current - previous) / previous) * 100));
-}
-
-function lowerIsBetter(field: MetricField) {
-  return field === "spend" || field === "acos" || field === "tacos";
-}
-
 function dailyLimitFromWeekly(weeklyLimit: number) {
   return Math.round((weeklyLimit / 7) * 100) / 100;
 }
@@ -125,31 +98,6 @@ function RadialGauge({ value, label }: { value: number; label: string }) {
     <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" /><circle cx="18" cy="18" r="14" strokeDasharray={`${dash} ${circumference}`} /></svg>
     <strong>{label}</strong>
   </span>;
-}
-
-function MetricInput({ metric, report, previousValue, comparisonAvailable, importedLocked, warning, targetAcos, onChange }: { metric: MetricDefinition; report: WeeklyPpcReport; previousValue?: number; comparisonAvailable: boolean; importedLocked: boolean; warning?: boolean; targetAcos?: number; onChange: (field: MetricField, value: number) => void }) {
-  const readOnly = Boolean(metric.calculated || (metric.imported && importedLocked));
-  const displayValue = roundedMetricValue(report[metric.field]);
-  const comparison = previousValue == null ? 0 : report[metric.field] - previousValue;
-  const comparisonDirection = comparison > 0 ? "increased" : comparison < 0 ? "decreased" : "unchanged";
-  const deltaPercentage = metricDeltaPercentage(report[metric.field], previousValue);
-  const favorable = comparison !== 0 && (lowerIsBetter(metric.field) ? comparison < 0 : comparison > 0);
-  const trendTone = comparison === 0 ? ws.metricNeutral : favorable ? ws.metricIncrease : ws.metricDecrease;
-  const trendLabel = deltaPercentage == null ? "New" : `${deltaPercentage}%`;
-  const targetDifference = warning && targetAcos ? Math.round(Math.max(0, report.acos - targetAcos)) : 0;
-  const isEfficiency = metric.field === "acos" || metric.field === "tacos";
-  const showSalesTrend = metric.field === "totalSales" && comparisonAvailable && previousValue != null && previousValue > 0;
-  return <label className={`${ws.metricCard} ${isEfficiency ? ws.efficiencyMetric : ""}`} data-warning={warning || (isEfficiency && report.tacos >= 30) || undefined}>
-    <span className={ws.metricCardHeader}><span>{metric.field === "spend" ? "Total Spend" : metric.field === "organicOrders" ? "Org. Orders" : metric.label}</span>{metric.field !== "totalSales" && comparisonAvailable && previousValue != null && comparison !== 0 ? <span className={`${ws.metricDelta} ${trendTone}`} aria-label={`${metric.label} ${comparisonDirection} by ${trendLabel} from previous week`}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}{trendLabel}</span> : null}</span>
-    {showSalesTrend ? <span className={`${ws.salesCardTrend} ${trendTone}`} aria-label={`Sales ${comparisonDirection} by ${trendLabel} from previous week`}>{comparison >= 0 ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}Sales {comparison >= 0 ? "+" : "−"}{deltaPercentage}% WoW</span> : null}
-    {isEfficiency ? <RadialGauge value={report[metric.field]} label={`${displayValue}%`} /> : null}
-    <span className={ws.metricInputWrap}>{metric.prefix ? <i>{metric.prefix}</i> : null}<input aria-label={metric.label} aria-describedby={warning ? "acos-target-warning" : undefined} aria-readonly={readOnly || undefined} readOnly={readOnly} inputMode="numeric" size={Math.max(1, displayValue.length)} style={{ width: `${Math.max(1, displayValue.length)}ch` }} value={displayValue} placeholder="0" onChange={event => { if (!readOnly) onChange(metric.field, numericValue(event.target.value)); }} />{metric.suffix ? <i>{metric.suffix}</i> : null}</span>
-    {warning ? <span id="acos-target-warning" className={ws.metricCardHint}>Target: {new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(targetAcos || 0)}% · +{targetDifference}% over limit</span> : metric.field === "tacos" ? <span className={ws.metricCardHint}>{report.tacos < 30 ? "Healthy" : "Above target"} · Target &lt; 30%</span> : <span className={ws.metricCardHint} aria-hidden="true">&nbsp;</span>}
-    <span className={ws.metricPreviousRow} aria-label={previousValue == null ? `Previous ${metric.label}: unavailable` : comparisonAvailable ? `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}, ${comparisonDirection}` : `Previous ${metric.label}: ${previousMetricValue(metric, previousValue)}`}>
-      <small>Prev. Week</small>
-      <strong>{previousValue == null ? "—" : previousMetricValue(metric, previousValue)}</strong>
-    </span>
-  </label>;
 }
 
 function CopyAsinButton({ asin }: { asin: string }) {
@@ -170,21 +118,6 @@ function CopyAsinButton({ asin }: { asin: string }) {
   return <button type="button" className={ws.copyAsinButton} aria-label={label} title={copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy ASIN"} onClick={copyAsin}>
     {copyState === "copied" ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
   </button>;
-}
-
-function ConversionRateCard({ value, previousValue, comparisonAvailable }: { value?: number; previousValue?: number; comparisonAvailable: boolean }) {
-  const available = value != null;
-  const formattedValue = available ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(value)) : "—";
-  const comparison = available && previousValue != null ? value - previousValue : 0;
-  const comparisonDirection = comparison > 0 ? "increased" : comparison < 0 ? "decreased" : "unchanged";
-  const deltaPercentage = available ? metricDeltaPercentage(value, previousValue) : null;
-  const trendLabel = deltaPercentage == null ? "New" : `${deltaPercentage}%`;
-  return <div className={ws.metricCard} aria-label={available ? `PPC Conversion Rate ${formattedValue}%` : "PPC Conversion Rate unavailable"}>
-    <span className={ws.metricCardHeader}><span>PPC Conv. Rate</span>{comparisonAvailable && previousValue != null && comparison !== 0 ? <span className={`${ws.metricDelta} ${comparison > 0 ? ws.metricIncrease : ws.metricDecrease}`} aria-label={`PPC Conversion Rate ${comparisonDirection} by ${trendLabel} from previous week`}>{comparison > 0 ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}{trendLabel}</span> : null}</span>
-    <strong className={ws.metricDisplayValue}>{formattedValue}{available ? "%" : ""}</strong>
-    <span className={ws.metricCardHint}>{available ? "PPC orders ÷ PPC clicks" : "Waiting for Scale Insights clicks"}</span>
-    <span className={ws.metricPreviousRow} aria-label={previousValue == null ? "Previous PPC Conversion Rate: unavailable" : comparisonAvailable ? `Previous PPC Conversion Rate: ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(previousValue))}%, ${comparisonDirection}` : `Previous PPC Conversion Rate: ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(previousValue))}%`}><small>Prev. Week</small><strong>{previousValue == null ? "—" : `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(previousValue))}%`}</strong></span>
-  </div>;
 }
 
 function WeeklyGoalRow({ goal, report, dataState, onUpdate, onResolve, onRemove }: { goal: WeeklyGoal; report: WeeklyPpcReport; dataState: GoalDataState | null; onUpdate: (patch: Partial<WeeklyGoal>) => void; onResolve: (status: GoalOutcome) => void; onRemove: () => void }) {
@@ -453,6 +386,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
   const weekStarts = useMemo(() => getSelectedMonthWeekStarts(selectedMonths, currentWeekStart), [currentWeekStart, selectedMonths]);
   const reportingMonthLabel = useMemo(() => formatReportingMonthRange(weekStarts), [weekStarts]);
   const activeWeekStart = weekStarts.includes(selectedWeekStart) ? selectedWeekStart : weekStarts[0] ?? selectedWeekStart;
+  const performanceWeekStarts = useMemo(() => Array.from({ length: 6 }, (_, index) => addDaysIso(activeWeekStart, (index - 5) * 7)), [activeWeekStart]);
   const selectedProduct = products.find(product => product.id === selectedProductId) ?? null;
   const selectedProductTag = selectedProduct ? catalog.tags.find(tag => tag.id === selectedProduct.tagId) ?? null : null;
   const selectedKey = selectedProductId && activeWeekStart ? reportKey(selectedProductId, activeWeekStart) : "";
@@ -472,6 +406,17 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     : previousDraft;
   const savedReport = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, activeWeekStart, previousReport) : null;
   const report = savedReport && cachedPerformance ? withCalculatedPerformance({ ...savedReport, ...cachedPerformance.metrics, ppcClicks: cachedPerformance.metrics.ppcClicks }) : savedReport;
+  const performanceColumns: WeeklyTableColumn[] = performanceWeekStarts.map(weekStart => {
+    const cacheKey = performanceCacheKey(selectedAsin, weekStart);
+    const snapshot = withSearchTermPpcClicks(performanceCache[cacheKey], opportunityPpcClicks[cacheKey]);
+    const storedReport = selectedProductId ? reports[reportKey(selectedProductId, weekStart)] ?? null : null;
+    const columnReport = weekStart === activeWeekStart
+      ? report
+      : snapshot && selectedProductId
+        ? withCalculatedPerformance({ ...(storedReport ?? createWeeklyPpcReport(selectedProductId, weekStart)), ...snapshot.metrics, ppcClicks: snapshot.metrics.ppcClicks })
+        : storedReport;
+    return { weekStart, report: columnReport, dataState: snapshot ? snapshot.endDate >= addDaysIso(weekStart, 6) ? "Final" : "Partial" : null };
+  });
   const chatPeriods: PerformanceChatPeriod[] = [...new Set([activeWeekStart, previousWeekStart, ...weekStarts])].slice(0, 60).flatMap(weekStart => {
     if (weekStart === activeWeekStart && report) return [{ weekStart, dataState: goalDataState, report }];
     const storedReport = selectedProductId ? reports[reportKey(selectedProductId, weekStart)] : null;
@@ -502,11 +447,9 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     ? { ...basePerformanceLoad, warnings: basePerformanceLoad.warnings.filter(warning => warning !== MISSING_PPC_CLICKS_WARNING) }
     : basePerformanceLoad;
   const importedMetricsLocked = !!cachedPerformance || displayedPerformanceLoad.status === "ready";
-  const currentPerformanceAvailable = Boolean(report && (importedMetricsLocked || METRIC_GROUPS.some(group => group.metrics.some(metric => report[metric.field] > 0))));
   const budgetUsage = report ? percentage(report.spend, report.weeklyBudget) : 0;
   const budgetBalance = report ? report.weeklyBudget - report.spend : 0;
   const isOverspent = budgetBalance < 0;
-  const isAcosAboveTarget = Boolean(report && report.targetAcos > 0 && report.acos > report.targetAcos);
   const activeWeekDay = Math.min(7, Math.max(0, Math.floor((Date.parse(initialToday) - Date.parse(activeWeekStart)) / 86400000) + 1));
   const expectedBudgetUsage = Math.round((activeWeekDay / 7) * 100);
   const budgetPacingDelta = budgetUsage - expectedBudgetUsage;
@@ -525,7 +468,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
         setPerformanceLoad({ key: snapshotKey, status: "loading", message: "Retrieving Scale Insights performance…", warnings: [] });
       }
 
-      const orderedWeeks = [activeWeekStart, ...weekStarts.filter(weekStart => weekStart !== activeWeekStart)];
+      const orderedWeeks = [...new Set([activeWeekStart, ...performanceWeekStarts, ...weekStarts])];
       const pendingWeeks = orderedWeeks.filter(weekStart => {
         const key = performanceCacheKey(selectedAsin, weekStart);
         return (weekStart === activeWeekStart && forceActiveRefresh) || !cacheRef.current[key];
@@ -609,7 +552,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
       }
     }, 0);
     return () => { window.clearTimeout(requestTimer); controller.abort(); };
-  }, [activeWeekStart, cacheReady, performanceRefresh, selectedAsin, selectedKey, selectedProductId, snapshotKey, weekStarts]);
+  }, [activeWeekStart, cacheReady, performanceRefresh, performanceWeekStarts, selectedAsin, selectedKey, selectedProductId, snapshotKey, weekStarts]);
 
   const replaceReport = (nextReport: WeeklyPpcReport) => {
     if (!selectedKey) return;
@@ -795,15 +738,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
               <div className={ws.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? ws.performanceError : ""}><i />{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}</div>
             </div>
             {displayedPerformanceLoad.warnings.length ? <ul className={ws.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}
-            <section className={ws.metricGroup} aria-label="Sales metrics"><div className={ws.metricGroupHeading}><h4><DollarSign aria-hidden="true" />Sales &amp; Spend Metrics</h4><span>Total Revenue: <strong>{preciseCurrency(report.totalSales)}</strong></span></div><div className={ws.metricGroupGrid}>{METRIC_GROUPS[0].metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}<ConversionRateCard value={report.conversionRate} previousValue={previousReport?.conversionRate} comparisonAvailable={currentPerformanceAvailable} /></div></section>
-            <section className={ws.metricGroup} aria-label="Orders metrics">
-              <div className={ws.metricGroupHeading}><h4><SlidersHorizontal aria-hidden="true" />Order Volume &amp; Efficiency Targets</h4><div className={ws.efficiencySummary}><span>{roundedMetricValue(report.totalOrders)} Units Sold</span><label className={isAcosAboveTarget ? ws.acosWarning : ws.acosStatus} data-warning={isAcosAboveTarget || undefined}>ACOS <input aria-label="ACOS summary" aria-describedby={isAcosAboveTarget ? "acos-summary-warning" : undefined} readOnly value={roundedMetricValue(report.acos)} />%{isAcosAboveTarget ? " · Attention req." : ""}</label>{isAcosAboveTarget ? <span id="acos-summary-warning" className={ws.srOnly}>Target: {report.targetAcos}% · +{Math.round(report.acos - report.targetAcos)}% over limit</span> : null}</div></div>
-              <div className={ws.metricGroupGrid}>
-                {METRIC_GROUPS[1].metrics.map(metric => <MetricInput key={metric.field} metric={metric} report={report} previousValue={previousReport?.[metric.field]} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />)}
-                <MetricInput metric={METRIC_GROUPS[2].metrics[0]} report={report} previousValue={previousReport?.acos} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} warning={isAcosAboveTarget} targetAcos={report.targetAcos} onChange={(field, value) => patchReport({ [field]: value })} />
-                <MetricInput metric={METRIC_GROUPS[2].metrics[1]} report={report} previousValue={previousReport?.tacos} comparisonAvailable={currentPerformanceAvailable} importedLocked={importedMetricsLocked} onChange={(field, value) => patchReport({ [field]: value })} />
-              </div>
-            </section>
+            <WeeklyPerformanceTable columns={performanceColumns} selectedWeekStart={activeWeekStart} importedLocked={importedMetricsLocked} onChange={patchReport} />
           </section>
 
           <div className={ws.twoColumn}>

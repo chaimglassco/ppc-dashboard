@@ -393,3 +393,7 @@ Centered opportunity metric totals, labels, and values, and reduced header/row s
 - Extended the plot to the panel edges and added a date-level hover box containing Spend, PPC Sales, Total Sales, ACOS, and TACOS for every completed day.
 - Plotted all five metrics simultaneously with distinct fixed colors, individual peak normalization, selectable emphasis, and tiny circular markers that stay round at responsive widths.
 - Simplified the chart to two series: red Spend and green PPC Sales. Total Sales, ACOS, and TACOS remain available in the aggregate cards and daily hover details.
+
+## 2026-09-22 — Six-week Scale Insights weekly table
+
+Replaced the selected-product weekly metric card groups with a six-week Scale Insights-style table. The active week is the rightmost selected column, the five preceding Wednesday–Tuesday periods are shown beside it, and the requested paid, organic, and efficiency rows are rendered in a fixed order. Added optional impressions and unit fields to the provider adapter/cache, with derived CPC and Organic Units, read-only imported cells, compact trend bars, and regression coverage for the six-column layout.

@@ -450,3 +450,7 @@ WeeklyPpcReport has optional summaryTopics: Array<{ id: string; title: string; b
 Opportunity UI header totals are derived from the complete filtered opportunity set; ACOS is aggregate Spend divided by aggregate Sales. No stored schema changes.
 
 Opportunity table alignment and density do not change provider, API, or stored data contracts.
+
+## Weekly table metric extensions
+
+The existing version-1 weekly report and performance-cache records accept optional nonnegative integer `ppcImpressions`, `ppcUnits`, and `totalUnits`. The calculated view may include `cpc` and `organicUnits`; these are derived values and are recalculated when a snapshot is parsed. `cpc` is Spend divided by PPC Clicks when exact clicks are present, and `organicUnits` is Total Units minus PPC Units clamped at zero. Existing records without these optional fields remain valid and render unavailable cells.

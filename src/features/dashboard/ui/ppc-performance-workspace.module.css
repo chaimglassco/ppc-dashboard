@@ -127,6 +127,26 @@
 .performanceSync button, .performanceSync a { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--border); border-radius: 4px; padding: 6px 12px; background: white; color: black; font-size: 12px; text-decoration: none; }
 .performanceSync button:hover { background: #f4f4f5; }
 .performanceWarnings { margin: 0; padding: 10px 12px 10px 28px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; color: #92400e; font: 11px/1.5 var(--mono); }
+.weeklyTableWrap { width: 100%; overflow-x: auto; border: 1px solid var(--border); background: white; }
+.weeklyTable { width: 100%; min-width: 900px; border-collapse: collapse; table-layout: fixed; font: 11px/1.4 var(--mono); }
+.weeklyTable th, .weeklyTable td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+.weeklyTable thead th { height: 58px; color: #52525b; font-size: 10px; font-weight: 700; vertical-align: bottom; }
+.weeklyTable thead th:first-child, .weeklyTable tbody th { width: 132px; text-align: left; }
+.weeklyTable thead th:not(:first-child):not(:last-child) { background: #fafafa; }
+.weeklyTable thead th span { display: block; }
+.weeklyTable thead th small { display: block; margin-top: 3px; color: #047857; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+.weeklyTable tbody th { color: #27272a; font-size: 11px; font-weight: 700; }
+.weeklyTable tbody td { color: #18181b; font-weight: 600; }
+.weeklyTable tbody tr:last-child th, .weeklyTable tbody tr:last-child td { border-bottom: 0; }
+.weeklyTable tbody tr.weeklyGroupStart th, .weeklyTable tbody tr.weeklyGroupStart td { border-top: 2px solid #c8c5ca; }
+.weeklySelectedColumn { background: #fffde7 !important; }
+.weeklyTable td > input { width: 100%; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: right; }
+.weeklyTable td > input:read-only { cursor: default; }
+.weeklyUnavailable { color: #a1a1aa !important; font-weight: 500; }
+.weeklyTrend { width: 96px; display: table-cell; vertical-align: bottom; }
+.weeklyTrend i { display: inline-block; width: 9px; min-height: 2px; margin: 0 1px; background: #9fb2c7; vertical-align: bottom; }
+.weeklyTable tbody tr:nth-child(n+8) .weeklyTrend i { background: #8bc4aa; }
+.weeklyTable tbody tr:nth-child(n+11) .weeklyTrend i { background: #d7a27e; }
 .metricGroup { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .metricGroupHeading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .metricGroupHeading h4 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
