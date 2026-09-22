@@ -22,6 +22,7 @@ import {
   type AccountComparisonPeriod,
 } from "../domain/account-campaign-compare";
 import styles from "./account-campaign-compare.module.css";
+import { dashboardStorage } from "../state/shared-dashboard-client";
 
 import { CAMPAIGN_OUTCOME_CATEGORIES, type CampaignOutcomeGroup } from "../domain/campaign-weekly-comparison";
 
@@ -117,7 +118,7 @@ export function AccountCampaignCompare({ todayIso }: { todayIso: string }) {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const cache = parseAccountCampaignSnapshotCache(window.localStorage.getItem(ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY));
+      const cache = parseAccountCampaignSnapshotCache(dashboardStorage().getItem(ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY));
       const previous = cache[accountCampaignSnapshotKey(country, granularity, periods.previous)] ?? null;
       const current = cache[accountCampaignSnapshotKey(country, granularity, periods.current)] ?? null;
       setPreviousSnapshot(previous);
@@ -179,9 +180,9 @@ export function AccountCampaignCompare({ todayIso }: { todayIso: string }) {
       const nextPrevious = previousFile ? createAccountCampaignSnapshot({ country, granularity, period: periods.previous, csvText: await previousFile.text(), fileName: previousFile.name, importedAt }) : previousSnapshot!;
       const nextCurrent = currentFile ? createAccountCampaignSnapshot({ country, granularity, period: periods.current, csvText: await currentFile.text(), fileName: currentFile.name, importedAt }) : currentSnapshot!;
       compareAccountCampaignSnapshots(nextPrevious, nextCurrent);
-      const cache = parseAccountCampaignSnapshotCache(window.localStorage.getItem(ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY));
+      const cache = parseAccountCampaignSnapshotCache(dashboardStorage().getItem(ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY));
       const nextCache = withAccountCampaignSnapshots(cache, [nextPrevious, nextCurrent]);
-      window.localStorage.setItem(ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY, JSON.stringify({ version: 1, entries: nextCache }));
+      dashboardStorage().setItem(ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY, JSON.stringify({ version: 1, entries: nextCache }));
       setPreviousSnapshot(nextPrevious);
       setCurrentSnapshot(nextCurrent);
       setPreviousFile(null);

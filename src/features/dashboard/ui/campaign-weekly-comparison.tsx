@@ -26,6 +26,7 @@ import {
 } from "../domain/campaign-comparison-csv";
 import ws from "./ppc-performance-workspace.module.css";
 import styles from "./campaign-weekly-comparison.module.css";
+import { dashboardStorage } from "../state/shared-dashboard-client";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
@@ -171,7 +172,7 @@ export function CampaignWeeklyComparison({ asin, country = "US", weekStart }: { 
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const cache = parseCampaignCsvImportCache(window.localStorage.getItem(PPC_CAMPAIGN_CSV_CACHE_KEY));
+      const cache = parseCampaignCsvImportCache(dashboardStorage().getItem(PPC_CAMPAIGN_CSV_CACHE_KEY));
       const nextEntry = cache[comparisonKey] ?? null;
       const previousEntry = cache[campaignCsvCacheKey(country, asin, periods.previous.startDate)] ?? null;
       const reusablePreviousEntry = previousEntry
@@ -202,8 +203,8 @@ export function CampaignWeeklyComparison({ asin, country = "US", weekStart }: { 
         ? createCampaignComparisonFromCsv({ asin, country, previousText: await previousFile.text(), currentText, previousPeriod: periods.previous, currentPeriod: periods.current })
         : createCampaignComparisonFromPreviousComparison({ asin, country, previousComparison: carriedPreviousEntry!.comparison, currentText, previousPeriod: periods.previous, currentPeriod: periods.current });
       const nextEntry: CampaignCsvImport = { comparison, previousFileName: previousFile?.name ?? carriedPreviousEntry!.currentFileName, currentFileName: currentFile.name, importedAt: new Date().toISOString() };
-      const cache = parseCampaignCsvImportCache(window.localStorage.getItem(PPC_CAMPAIGN_CSV_CACHE_KEY));
-      window.localStorage.setItem(PPC_CAMPAIGN_CSV_CACHE_KEY, JSON.stringify({ version: 1, entries: withCampaignCsvImport(cache, nextEntry) }));
+      const cache = parseCampaignCsvImportCache(dashboardStorage().getItem(PPC_CAMPAIGN_CSV_CACHE_KEY));
+      dashboardStorage().setItem(PPC_CAMPAIGN_CSV_CACHE_KEY, JSON.stringify({ version: 1, entries: withCampaignCsvImport(cache, nextEntry) }));
       setEntry(nextEntry);
       setShowImporter(false);
     } catch (importError) {

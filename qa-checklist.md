@@ -23,6 +23,14 @@
 - [ ] Verify Spend Up/Sales Up, Spend Down/Sales Up, Spend Up/Sales Down, Spend Down/Sales Down, Spend but No Sales, New Spend/High ACOS, and Unchanged/Mixed classifications.
 - [ ] Confirm the selected table includes Previous/Current Spend, Spend Change, Previous/Current Sales, Sales Change, Orders, and Current ACOS.
 
+## September 22 shared dashboard persistence checks
+
+- [ ] Sign in as ADMIN at `/ppc/dashboard` with an empty shared store, confirm the migration prompt lists only local datasets absent online, download the local backup, and import them.
+- [ ] Sign in from a second browser/session and confirm the imported catalog, reports, performance cache, account comparison, and opportunity cache load without local browser state.
+- [ ] Edit a shared report and catalog value, reload from another session, and confirm the change persists; exercise Refresh team data and retry after a simulated conflict.
+- [ ] Confirm VIEWER can read shared dashboard state but cannot upload or mutate it, and malformed/oversized payloads return bounded errors without replacing the confirmed state.
+- [ ] Confirm the state route returns no-store responses, rejects missing/invalid Pipeline sessions, stores no raw CSV or credentials, and preserves a before-write history object.
+
 ## September 15 Dashboard disclosure and filter checks
 
 - [ ] Confirm all seven Dashboard data sections are closed by default and expand/collapse independently from their full summary rows.

@@ -24,6 +24,7 @@ import { CampaignWeeklyComparison } from "./campaign-weekly-comparison";
 import { UntargetedSalesOpportunities, type OpportunityPpcClickTotal } from "./untargeted-sales-opportunities";
 import { PerformanceOverviewDashboard } from "./performance-overview-dashboard";
 import { AccountCampaignCompare } from "./account-campaign-compare";
+import { dashboardStorage } from "../state/shared-dashboard-client";
 import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, type PerformanceCache } from "../domain/ppc-performance-cache";
 import { getScaleInsightsAnalysisHref, PPC_ANALYSIS_COLUMNS } from "../domain/ppc-analysis-navigation";
@@ -375,7 +376,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     } catch (error) {
       if ((error as Error).name !== "AbortError") setProductsError(error instanceof Error ? error.message : "Could not load Pipeline products.");
     } finally {
-      const storedCatalog = parseDashboardCatalogStore(window.localStorage.getItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY));
+      const storedCatalog = parseDashboardCatalogStore(dashboardStorage().getItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY));
       const orderedProducts = orderDashboardProductsByTag(mergeDashboardProducts(nextProducts, storedCatalog), storedCatalog.tags);
       setSelectedProductId(current => current || orderedProducts[0]?.id || "");
       setProductsLoading(false);
@@ -384,10 +385,10 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
 
   useEffect(() => {
     const storageTimer = window.setTimeout(() => {
-      const storedCatalog = parseDashboardCatalogStore(window.localStorage.getItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY));
-      setReports(parsePpcDashboardStore(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY)).reports);
+      const storedCatalog = parseDashboardCatalogStore(dashboardStorage().getItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY));
+      setReports(parsePpcDashboardStore(dashboardStorage().getItem(PPC_DASHBOARD_STORAGE_KEY)).reports);
       setCatalog(storedCatalog);
-      cacheRef.current = parsePerformanceCache(window.localStorage.getItem(PPC_PERFORMANCE_CACHE_KEY));
+      cacheRef.current = parsePerformanceCache(dashboardStorage().getItem(PPC_PERFORMANCE_CACHE_KEY));
       setPerformanceCache(cacheRef.current);
       setCacheReady(true);
     }, 0);
@@ -413,12 +414,12 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     const autoSaveTimer = window.setTimeout(() => {
       try {
         const savedAt = new Date().toISOString();
-        const storedReports = parsePpcDashboardStore(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY)).reports;
+        const storedReports = parsePpcDashboardStore(dashboardStorage().getItem(PPC_DASHBOARD_STORAGE_KEY)).reports;
         const savedReports = Object.fromEntries(
           Object.entries(pendingReports).map(([key, pendingReport]) => [key, { ...pendingReport, updatedAt: savedAt }]),
         ) as Record<string, WeeklyPpcReport>;
 
-        window.localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
+        dashboardStorage().setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
           version: 1,
           reports: { ...storedReports, ...savedReports },
         }));
@@ -587,7 +588,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
             setPerformanceCache(nextCache);
             let storageWarning = "";
             try {
-              window.localStorage.setItem(PPC_PERFORMANCE_CACHE_KEY, JSON.stringify({ version: 1, entries: nextCache }));
+              dashboardStorage().setItem(PPC_PERFORMANCE_CACHE_KEY, JSON.stringify({ version: 1, entries: nextCache }));
             } catch { storageWarning = "This browser could not save these metrics. They will be lost when you close or reload the page."; }
 
             if (isActiveWeek) {
@@ -662,7 +663,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
 
   const persistCatalog = (nextCatalog: DashboardCatalogStore) => {
     try {
-      window.localStorage.setItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY, JSON.stringify(nextCatalog));
+      dashboardStorage().setItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY, JSON.stringify(nextCatalog));
       setCatalog(nextCatalog);
       return "";
     } catch {

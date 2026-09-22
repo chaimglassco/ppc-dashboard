@@ -347,7 +347,7 @@ Schema version: `1`
 
 The record maps a stable `<productId>:<Wednesday ISO date>` key to one weekly report containing status, weekly/daily budgets, performance numbers, goals, prior-week result notes, weekly notes, action items, and `updatedAt`. Parsing is fail-closed per report; malformed records are discarded. Product names, ASINs, and SKUs are not duplicated into this store because `/ppc/api/dashboard/products` loads them from authoritative Pipeline workspace state. Validated Scale Insights metric values may be copied into the selected report, but credentials, tokens, and raw MCP payloads are never stored.
 
-This record is a browser-local draft contract for the initial dashboard UI. It is not shared team state and must never be uploaded through the Library document API. A future shared reporting API requires a separate versioned server contract and migration plan.
+This record is a validated shared dashboard document stored in private Vercel Blob through `/ppc/api/dashboard/state`; it is not part of the Library document API. The browser-local value is retained as a one-time migration source and downloadable backup only. The server rejects malformed or oversized payloads and guards writes with the previously returned ETag. A failed or conflicting write never discards the confirmed value.
 
 ### PPC dashboard catalog overlay
 
@@ -357,7 +357,11 @@ Schema version: `1`
 
 The record contains `tags`, `customProducts`, `productOverrides`, and optional `hiddenPipelineProductIds`. Tags have stable IDs and case-insensitively unique names. Dashboard-only products retain their stable ID, name, optional ASIN/SKU, optional tag ID, and optional validated image data URL. Overrides key the same display fields by an authoritative Pipeline product ID. `hiddenPipelineProductIds` is a deduplicated list of stable Pipeline IDs removed only from this browser's PPC Weekly Goals portfolio. Images are restricted to supported image data URLs and the UI limits selected files to 900 KB.
 
-Parsing is fail-closed: malformed records reset to an empty overlay; malformed and duplicate entries are discarded; missing tag references become untagged; unrecognized image values are removed. The overlay is browser-local, never mutates or deletes authoritative Pipeline products, and is not uploaded through either shared API. Removing any product from this portfolio does not delete its separately stored weekly reports; Pipeline-backed products remain intact in Product Pipeline.
+Parsing is fail-closed: malformed records reset to an empty overlay; malformed and duplicate entries are discarded; missing tag references become untagged; unrecognized image values are removed. The overlay is shared through `/ppc/api/dashboard/state`, never mutates or deletes authoritative Pipeline products, and remains separate from the Library document API. Removing any product from this portfolio does not delete its separately stored weekly reports; Pipeline-backed products remain intact in Product Pipeline.
+
+### Shared PPC dashboard stores
+
+The following browser version-1 keys are accepted by the dashboard state route and stored as validated JSON documents in private Vercel Blob: `glassco.ppcPerformanceCache.v1`, `glassco.ppcCampaignAccountSnapshots.v1`, `glassco.ppcCampaignCsvComparison.v1`, and `glassco.ppcUntargetedOpportunitiesCache.v1`. The server validates each key with its existing parser, caps every document at 3.5 MB, and stores no raw CSV, OAuth credential, Pipeline bearer, or MCP response. Each response includes an opaque ETag and `updatedAt`; a PUT must send the ETag it read (or `null` for an empty store) plus a client operation ID. An ETag mismatch returns `409` and the client must reload before retrying. Account and ASIN campaign snapshots retain validated Sales and Orders for later filters.
 
 ### Untargeted sales opportunity response
 

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PpcPerformanceDashboard } from "@/features/dashboard/ui/ppc-performance-dashboard";
+import { SharedDashboardWorkspace } from "@/features/dashboard/ui/shared-dashboard-workspace";
 
 export const metadata: Metadata = {
   title: "Weekly PPC Performance",
@@ -14,5 +14,5 @@ export default function PpcDashboardPage() {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-  return <PpcPerformanceDashboard initialToday={todayIso} />;
+  return <SharedDashboardWorkspace initialToday={todayIso} />;
 }

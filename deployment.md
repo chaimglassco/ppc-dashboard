@@ -91,6 +91,10 @@ npm run build
 
 Do not deploy if any command fails.
 
+## September 22 shared PPC dashboard state release
+
+This release moves versioned PPC dashboard datasets from browser-only persistence to authenticated private Vercel Blob state. It requires `BLOB_READ_WRITE_TOKEN` (or the linked Blob store ID) in Production, Preview, and Development; no database migration or new connector is required. The `/ppc/api/dashboard/state` route uses the Pipeline bearer session, validates each known store, and guards writes with the previous Blob ETag. The first ADMIN visit with local datasets downloads a JSON backup before offering to import datasets absent online. Existing online datasets are never replaced by that migration. Verify a second signed-in browser sees shared state, a viewer remains read-only, refresh/retry handles conflicts, and the private store contains validated JSON rather than raw CSV or credentials.
+
 ## Local production test
 
 ```bash
@@ -110,8 +114,8 @@ Also verify `/ppc/dashboard`, set a Target ACOS below the selected product's act
 4. Keep the detected framework as **Next.js**.
 5. Use the repository root as the root directory.
 6. Use `npm run build` as the build command.
-7. Connect a private Vercel Blob store to production, preview, and development. Vercel injects the Blob credentials automatically.
-8. Deploy and verify `/ppc/library`, `/ppc/api/library`, `/ppc/api/library/migration`, and at least one `/ppc/library/[slug]` page.
+7. Connect a private Vercel Blob store to production, preview, and development. Vercel injects the Blob credentials automatically. Confirm `BLOB_READ_WRITE_TOKEN` is present in all three environments.
+8. Deploy and verify `/ppc/library`, `/ppc/dashboard`, `/ppc/api/dashboard/state`, `/ppc/api/library`, `/ppc/api/library/migration`, and at least one `/ppc/library/[slug]` page.
 
 ## Files that must be committed
 

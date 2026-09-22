@@ -15,6 +15,7 @@ import {
   type UntargetedSalesOpportunities,
 } from "../domain/untargeted-sales-opportunities";
 import { getScaleInsightsKeywordCampaignCreationHref, getScaleInsightsSearchTermHref } from "../domain/ppc-analysis-navigation";
+import { dashboardStorage } from "../state/shared-dashboard-client";
 import ws from "./ppc-performance-workspace.module.css";
 import styles from "./campaign-weekly-comparison.module.css";
 
@@ -108,7 +109,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
   if (cacheRef.current === null) {
     cacheRef.current = typeof window === "undefined"
       ? {}
-      : parseUntargetedOpportunityCache(window.localStorage.getItem(PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY));
+      : parseUntargetedOpportunityCache(dashboardStorage().getItem(PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY));
   }
   const handledRefreshes = useRef(new Map<string, number>());
   const selectAllRef = useRef<HTMLInputElement>(null);
@@ -165,7 +166,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
       if (!report || report.asin !== asin.toUpperCase() || report.country !== country || report.period.startDate !== weekStart) throw new Error("Scale Insights returned invalid opportunity data.");
       cacheRef.current = withUntargetedOpportunityCacheEntry(cacheRef.current ?? {}, report);
       try {
-        window.localStorage.setItem(PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY, JSON.stringify({ version: 1, entries: cacheRef.current }));
+        dashboardStorage().setItem(PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY, JSON.stringify({ version: 1, entries: cacheRef.current }));
       } catch {
         // Keep the validated result in memory when browser storage is unavailable.
       }

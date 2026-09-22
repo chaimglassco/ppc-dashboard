@@ -1,5 +1,12 @@
 # Project Progress
 
+## September 22, 2026 — shared online PPC dashboard state
+
+- Added authenticated `/ppc/api/dashboard/state` reads and optimistic-concurrency writes backed by private Vercel Blob.
+- Moved dashboard catalog, weekly report drafts, performance caches, campaign comparisons, and untargeted-opportunity caches behind the shared adapter while preserving existing versioned parsers and UI contracts.
+- Added an ADMIN-only first-visit migration prompt that downloads a local backup before sharing datasets absent from the team store; existing online datasets are never overwritten. Added shared-data refresh, pending-save retry, and pending-change backup controls.
+- Verified typecheck, lint, focused dashboard tests, production build, and public `/ppc/dashboard`/`ppc/library` route responses against the Vercel deployment.
+
 ## September 22, 2026 — account comparison outcome filters
 
 - Updated Compare from Spend-only movement options to the Good, Bad, and Neutral outcome filter cards used by the ASIN campaign comparison.
