@@ -214,12 +214,12 @@
 .actionTitle .actionAddButton { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: white; color: #18181b; }
 .actionTitle .actionAddButton:hover { background: #f4f4f5; }
 .actionTitle .actionAddButton svg { width: 13px; height: 13px; }
-.actionList { display: flex; flex-direction: column; gap: 8px; }
-.actionRow { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: rgba(244,244,245,.4); }
+.actionList { display: flex; flex-direction: column; gap: 6px; }
+.actionRow { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: rgba(244,244,245,.4); }
 .actionRow:hover { background: #f4f4f5; }
 .actionRow > button { display: grid; place-items: center; flex: none; width: 18px; height: 18px; padding: 0; border: 1px solid #a1a1aa; border-radius: 4px; background: white; color: #71717a; }
 .actionRow > button:last-child { border: 0; background: transparent; }
-.actionRow > input { min-width: 0; flex: 1; padding: 0; background: transparent; border: 0; color: black; font-size: 12px; font-weight: 600; text-overflow: ellipsis; }
+.actionRow > input { min-width: 0; flex: 1; padding: 0; background: transparent; border: 0; color: black; font-size: 11px; font-weight: 400; line-height: 1.35; text-overflow: ellipsis; }
 .actionRow > button.actionDone { background: #52525b; color: white; border-color: #52525b; }
 .actionRow:has(.actionDone) > input { color: #a1a1aa; text-decoration: line-through; }
 .goalCard, .budgetCard, .actionCard { display: flex; flex-direction: column; }

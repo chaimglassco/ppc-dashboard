@@ -61,6 +61,35 @@ describe("SharedDashboardStorage", () => {
     expect(remoteChange).toHaveBeenCalledOnce();
   });
 
+  it("keeps both editors' Action Items after a remote conflict and reload", async () => {
+    const first = createWeeklyPpcReport("product-1", "2026-09-16");
+    const firstKey = reportKey(first.productId, first.weekStart);
+    const base = reportsValue({ [firstKey]: first });
+    let current = response(base, "etag-1");
+    let version = 1;
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method !== "PUT") return Response.json(current);
+      const body = JSON.parse(String(init.body));
+      if (body.expectedEtag !== current.etag) return Response.json({ error: "Someone else updated this dataset." }, { status: 409 });
+      current = response(body.value, `etag-${++version}`, body.operationId, `2026-09-23T01:0${version}:00.000Z`);
+      return Response.json(current);
+    }));
+    const editorA = new SharedDashboardStorage(new Map([[key, current]]), vi.fn());
+    const editorB = new SharedDashboardStorage(new Map([[key, current]]), vi.fn());
+    const action = (id: string) => ({ id, title: id, priority: "Medium", dueDate: "", done: false });
+
+    editorA.setItem(key, reportsValue({ [firstKey]: { ...first, actions: [action("from-editor-a")] } }));
+    await editorA.flush();
+    editorB.setItem(key, reportsValue({ [firstKey]: { ...first, actions: [action("from-editor-b")] } }));
+    await editorB.flush();
+
+    expect(JSON.parse(current.document!.value).reports[firstKey].actions.map((item: { id: string }) => item.id).sort())
+      .toEqual(["from-editor-a", "from-editor-b"]);
+    expect(editorB.hasPending()).toBe(false);
+    const reloaded = new SharedDashboardStorage(new Map([[key, current]]), vi.fn());
+    expect(JSON.parse(reloaded.getItem(key)!).reports[firstKey].actions).toHaveLength(2);
+  });
+
   it("restores an unsent weekly-report edit after refresh and uploads it automatically", async () => {
     vi.useFakeTimers();
     const first = createWeeklyPpcReport("product-1", "2026-09-16");

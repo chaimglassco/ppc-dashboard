@@ -457,5 +457,6 @@ Verify opportunity metric totals, sortable labels, row values, and Status are ce
 - [ ] Confirm Action Items has no description, its icon-only + sits directly beside the title, and the control retains the accessible name Add Action Item.
 - [ ] Add an unfinished Action Item, create the next Wednesday report, and confirm the item carries forward once with a new ID while completed items remain only in the prior week.
 - [ ] Interrupt a weekly-report save, edit an Action Item after the error appears, refresh, and confirm the latest text restores, merges with any colleague update, uploads automatically, and clears `glassco.ppcSharedReportOutbox.v1` only after server confirmation.
+- [ ] Add and rename an Action Item, refresh immediately without waiting for the network debounce, and confirm its title returns. Make separate additions in two editors and confirm both survive conflict reconciliation and reload; confirm the UI says Saved online only after the upload is confirmed.
 - [ ] Set a weekly budget, open the following week, and confirm the limit carries forward with a recalculated daily limit. Override the new week, navigate away and back, and confirm the override remains independent.
 - [ ] Confirm a blank Current Week Summary starts with light-green Good and light-red Bad sections and retains their content and order after reload.

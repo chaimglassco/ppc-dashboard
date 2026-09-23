@@ -25,7 +25,7 @@ import { UntargetedSalesOpportunities, type OpportunityPpcClickTotal } from "./u
 import { PerformanceOverviewDashboard } from "./performance-overview-dashboard";
 import { AccountCampaignCompare } from "./account-campaign-compare";
 import { WeeklyPerformanceTable, type WeeklyTableColumn } from "./weekly-performance-table";
-import { dashboardStorage } from "../state/shared-dashboard-client";
+import { dashboardStorage, type SharedSaveStatus } from "../state/shared-dashboard-client";
 import { ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY } from "../domain/account-campaign-compare";
 import { PPC_CAMPAIGN_CSV_CACHE_KEY } from "../domain/campaign-comparison-csv";
 import { PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY } from "../domain/untargeted-sales-opportunities";
@@ -44,7 +44,6 @@ type PerformanceLoadState = {
   authorizationUrl?: string;
 };
 
-const AUTO_SAVE_DELAY_MS = 500;
 const BUDGET_HISTORY_PAGE_SIZE = 5;
 const PERFORMANCE_BACKFILL_CONCURRENCY = 2;
 const MISSING_PPC_CLICKS_WARNING = "Scale Insights did not include PPC Clicks for this reporting period; PPC Conversion Rate is unavailable.";
@@ -239,7 +238,7 @@ function statusTone(status: string) {
   return styles.info;
 }
 
-export function PpcPerformanceDashboard({ initialToday, remoteSync }: { initialToday: string; remoteSync?: { version: number; keys: readonly string[] } }) {
+export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveStatus }: { initialToday: string; remoteSync?: { version: number; keys: readonly string[] }; sharedSaveStatus?: SharedSaveStatus }) {
   const initialWeekStart = startOfWeekIso(initialToday);
   const initialMonthKey = initialToday.slice(0, 7);
   const [pipelineProducts, setPipelineProducts] = useState<DashboardProduct[]>([]);
@@ -257,7 +256,6 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync }: { initialT
   const [monthPickerYear, setMonthPickerYear] = useState(Number(initialToday.slice(0, 4)));
   const currentWeekStart = initialWeekStart;
   const [reports, setReports] = useState<Record<string, WeeklyPpcReport>>({});
-  const [dirtyReportKeys, setDirtyReportKeys] = useState<Set<string>>(() => new Set());
   const [saveNotice, setSaveNotice] = useState("");
   const [performanceLoad, setPerformanceLoad] = useState<PerformanceLoadState>({ key: "", status: "idle", message: "", warnings: [] });
   const [performanceRefresh, setPerformanceRefresh] = useState(0);
@@ -329,47 +327,6 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync }: { initialT
   }, [pipelineProducts, remoteSync]);
 
   useEffect(() => {
-    if (dirtyReportKeys.size === 0) return;
-    const warnBeforeLeaving = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", warnBeforeLeaving);
-    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
-  }, [dirtyReportKeys.size]);
-
-  useEffect(() => {
-    if (dirtyReportKeys.size === 0) return;
-    const pendingKeys = [...dirtyReportKeys];
-    const pendingReports = Object.fromEntries(
-      pendingKeys.flatMap(key => reports[key] ? [[key, reports[key]]] : []),
-    ) as Record<string, WeeklyPpcReport>;
-
-    const autoSaveTimer = window.setTimeout(() => {
-      try {
-        const savedAt = new Date().toISOString();
-        const storedReports = parsePpcDashboardStore(dashboardStorage().getItem(PPC_DASHBOARD_STORAGE_KEY)).reports;
-        const savedReports = Object.fromEntries(
-          Object.entries(pendingReports).map(([key, pendingReport]) => [key, { ...pendingReport, updatedAt: savedAt }]),
-        ) as Record<string, WeeklyPpcReport>;
-
-        dashboardStorage().setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
-          version: 1,
-          reports: { ...storedReports, ...savedReports },
-        }));
-        setReports(current => ({ ...current, ...savedReports }));
-        setDirtyReportKeys(current => {
-          const next = new Set(current);
-          pendingKeys.forEach(key => next.delete(key));
-          return next;
-        });
-        setSaveNotice("Changes saved automatically");
-      } catch {
-        setSaveNotice("Auto-save failed — use Save");
-      }
-    }, AUTO_SAVE_DELAY_MS);
-
-    return () => window.clearTimeout(autoSaveTimer);
-  }, [dirtyReportKeys, reports]);
-
-  useEffect(() => {
     if (!monthPickerOpen && !goalHistoryOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -394,7 +351,6 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync }: { initialT
   const goalDataState: GoalDataState | null = cachedPerformance
     ? cachedPerformance.endDate >= addDaysIso(activeWeekStart, 6) ? "Final" : "Partial"
     : null;
-  const dirty = selectedKey ? dirtyReportKeys.has(selectedKey) : false;
   const previousWeekStart = addDaysIso(activeWeekStart, -7);
   const previousDraft = selectedProductId && activeWeekStart ? reports[reportKey(selectedProductId, previousWeekStart)] ?? null : null;
   const previousSnapshotKey = performanceCacheKey(selectedAsin, previousWeekStart);
@@ -404,6 +360,10 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync }: { initialT
     : previousDraft;
   const savedReport = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, activeWeekStart, previousReport) : null;
   const report = savedReport && cachedPerformance ? withCalculatedPerformance({ ...savedReport, ...cachedPerformance.metrics, ppcClicks: cachedPerformance.metrics.ppcClicks }) : savedReport;
+  const saveMessage = saveNotice.startsWith("Could not") ? saveNotice
+    : sharedSaveStatus?.error ? "Online save is retrying. Keep this tab open."
+    : sharedSaveStatus?.pending ? "Saving online…"
+    : report?.updatedAt ? sharedSaveStatus ? "Saved online" : "Saved locally" : "Changes save automatically";
   const performanceColumns: WeeklyTableColumn[] = performanceWeekStarts.map(weekStart => {
     const cacheKey = performanceCacheKey(selectedAsin, weekStart);
     const snapshot = withSearchTermPpcClicks(performanceCache[cacheKey], opportunityPpcClicks[cacheKey]);
@@ -553,9 +513,18 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync }: { initialT
 
   const replaceReport = (nextReport: WeeklyPpcReport) => {
     if (!selectedKey) return;
-    setReports(current => ({ ...current, [selectedKey]: nextReport }));
-    setDirtyReportKeys(current => new Set(current).add(selectedKey));
-    setSaveNotice("Saving changes…");
+    const savedReport = { ...nextReport, updatedAt: new Date().toISOString() };
+    try {
+      const storedReports = parsePpcDashboardStore(dashboardStorage().getItem(PPC_DASHBOARD_STORAGE_KEY)).reports;
+      dashboardStorage().setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
+        version: 1, reports: { ...storedReports, [selectedKey]: savedReport },
+      }));
+      setReports(current => ({ ...current, [selectedKey]: savedReport }));
+      setSaveNotice("");
+    } catch {
+      setReports(current => ({ ...current, [selectedKey]: savedReport }));
+      setSaveNotice("Could not queue this edit online. Keep this tab open and try again.");
+    }
   };
   const patchReport = (patch: Partial<WeeklyPpcReport>) => { if (report) replaceReport(withCalculatedPerformance({ ...report, ...patch })); };
   const selectProduct = (productId: string) => { setSelectedProductId(productId); setSaveNotice(""); };
@@ -667,7 +636,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync }: { initialT
   };
   const addAction = () => {
     if (!report) return;
-    patchReport({ actions: [...report.actions, { id: `action-${Date.now()}`, title: "New action item", priority: "Medium", dueDate: "", done: false }] });
+    patchReport({ actions: [...report.actions, { id: `action-${crypto.randomUUID()}`, title: "New action item", priority: "Medium", dueDate: "", done: false }] });
   };
   const removeAction = (actionId: string) => { if (report) patchReport({ actions: report.actions.filter(action => action.id !== actionId) }); };
 
@@ -708,7 +677,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync }: { initialT
         <header className={ws.workspaceHeader}>
           <div className={ws.workspaceProduct}>{selectedProduct.imageDataUrl ? <span className={ws.workspaceProductImage}><Image src={selectedProduct.imageDataUrl} alt={`${selectedProduct.name} product`} width={44} height={44} unoptimized /></span> : null}<div><span className={ws.eyebrow}>WEEKLY PPC PERFORMANCE</span><div className={ws.titleRow}><h2>{selectedProduct.name}</h2></div><p className={ws.productIdentifiers}><span className={ws.asinIdentifier}>ASIN: {selectedProduct.asin ? <><a href={`https://www.amazon.com/dp/${encodeURIComponent(selectedProduct.asin)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product ASIN ${selectedProduct.asin} on Amazon`}>{selectedProduct.asin}</a><CopyAsinButton key={selectedProduct.asin} asin={selectedProduct.asin} /></> : <strong>N/A</strong>}</span><span>SKU: {selectedProduct.sku ? <a href={`https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=${encodeURIComponent(selectedProduct.sku)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open selected product SKU ${selectedProduct.sku} in Seller Central`}>{selectedProduct.sku}</a> : <strong>N/A</strong>}</span></p></div></div>
           {selectedAsin ? <nav className={ws.asinNavigation} aria-label={`Scale Insights analysis for ASIN ${selectedAsin}`}>{PPC_ANALYSIS_COLUMNS.map(column => <div key={column.key} className={ws.asinNavigationColumn} role="group" aria-label={column.label}>{column.sections.map(section => <a key={section.slug} href={getScaleInsightsAnalysisHref(selectedAsin, section.slug, activeWeekStart, addDaysIso(activeWeekStart, 6))} target="_blank" rel="noopener noreferrer">{section.label}</a>)}</div>)}</nav> : null}
-          <div className={ws.saveArea}><button type="button" className={ws.secondaryButton} aria-label="Refresh Data" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => { refreshRequest.current = snapshotKey; setPerformanceRefresh(value => value + 1); setOpportunityRefresh(current => ({ key: snapshotKey, version: current.version + 1 })); }}><RefreshCw aria-hidden="true" />Refresh Data</button><small className={dirty ? ws.unsaved : ws.saved}>{dirty ? saveNotice || "Saving changes…" : saveNotice || (report.updatedAt ? `Saved ${new Date(report.updatedAt).toLocaleString()}` : "Changes save automatically")}</small></div>
+          <div className={ws.saveArea}><button type="button" className={ws.secondaryButton} aria-label="Refresh Data" disabled={displayedPerformanceLoad.status === "loading" || !selectedAsin} onClick={() => { refreshRequest.current = snapshotKey; setPerformanceRefresh(value => value + 1); setOpportunityRefresh(current => ({ key: snapshotKey, version: current.version + 1 })); }}><RefreshCw aria-hidden="true" />Refresh Data</button><small className={saveNotice.startsWith("Could not") || sharedSaveStatus?.error ? ws.unsaved : ws.saved}>{saveMessage}</small></div>
         </header>
 
         <div className={ws.workspaceScroll}><div className={ws.workspaceCanvas}>
@@ -741,7 +710,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync }: { initialT
 
           <div className={ws.twoColumn}>
             <section className={`${ws.card} ${ws.summaryCard}`} aria-labelledby="previous-heading"><div className={ws.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Summary</h3></div><label className={ws.readOnlySummary}><span>Performance Documentation</span><textarea aria-label="Previous week performance documentation" readOnly value={previousSummaryText} /></label></section>
-            <section className={`${ws.card} ${ws.summaryCard} ${ws.currentSummaryCard}`} aria-labelledby="notes-heading"><div className={ws.cardTitle}><h3 id="notes-heading"><FileText />Current Week Summary</h3></div><SummaryTopicComposer key={selectedKey} topics={getSummaryTopics(report)} onChange={summaryTopics => patchReport({ summaryTopics, notes: summaryTopicsNotes(summaryTopics) })} /><footer className={ws.summaryFooter}><span className={dirty ? ws.unsaved : ws.autoSaved}>{dirty ? saveNotice || "Saving…" : report.updatedAt ? "Saved locally" : "Not saved yet"}</span><span>Last edited: {report.updatedAt ? new Date(report.updatedAt).toLocaleString() : "—"}</span></footer></section>
+            <section className={`${ws.card} ${ws.summaryCard} ${ws.currentSummaryCard}`} aria-labelledby="notes-heading"><div className={ws.cardTitle}><h3 id="notes-heading"><FileText />Current Week Summary</h3></div><SummaryTopicComposer key={selectedKey} topics={getSummaryTopics(report)} onChange={summaryTopics => patchReport({ summaryTopics, notes: summaryTopicsNotes(summaryTopics) })} /><footer className={ws.summaryFooter}><span className={saveNotice.startsWith("Could not") || sharedSaveStatus?.error ? ws.unsaved : ws.autoSaved}>{saveMessage}</span><span>Last edited: {report.updatedAt ? new Date(report.updatedAt).toLocaleString() : "—"}</span></footer></section>
           </div>
 
           <CampaignWeeklyComparison key={`campaign-${remoteSync?.keys.includes(PPC_CAMPAIGN_CSV_CACHE_KEY) ? remoteSync.version : 0}`} asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={performanceRefresh} />

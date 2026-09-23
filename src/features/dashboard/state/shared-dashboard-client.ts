@@ -83,7 +83,7 @@ export class SharedDashboardStorage implements DashboardStorage {
       this.timer = setTimeout(() => { this.timer = undefined; this.notify(); void this.flush(); }, 0);
     } catch {
       // Invalid or unavailable recovery data never replaces the confirmed shared document.
-      try { window.localStorage.removeItem(PPC_SHARED_REPORT_OUTBOX_KEY); } catch { /* Browser storage is unavailable. */ }
+      // Keep the original outbox so it remains available for manual recovery.
     }
   }
   private persistReportOutbox() {
@@ -136,13 +136,16 @@ export class SharedDashboardStorage implements DashboardStorage {
         this.notify();
       }
     } catch (error) {
-      this.error = error instanceof Error ? error.message : "Online save failed.";
+      // A busy shared dataset can conflict repeatedly. Keep the edit queued and
+      // retry with a fresh ETag instead of surfacing an old conflict as a dead end.
+      const conflict = error instanceof DashboardRequestError && error.status === 409;
+      this.error = conflict ? "" : error instanceof Error ? error.message : "Online save failed.";
       if (this.pending.size && !this.timer) this.timer = setTimeout(() => {
         this.timer = undefined;
         this.error = "";
         this.notify();
         void this.flush();
-      }, 5_000);
+      }, conflict ? 750 : 5_000);
     }
     finally { this.running = false; this.notify(); }
   }

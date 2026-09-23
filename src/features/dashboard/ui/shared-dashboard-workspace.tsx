@@ -104,7 +104,7 @@ function SharedDashboardWorkspaceClient({ initialToday }: { initialToday: string
       </div>
     </section>
     {candidates.length ? <section className={styles.import} aria-label="Share existing dashboard data"><h2>Share this browser’s existing dashboard data</h2><p>The following datasets are not online yet. Importing creates shared copies for the team and downloads a backup. Your existing local data is kept. Datasets already online are never replaced by this import.</p><ul>{candidates.map(item => <li key={item.key}>{item.label}: {item.count} records</li>)}</ul><button type="button" disabled={busy} onClick={() => void migrate()}>{busy ? "Sharing…" : "Back up and share these datasets"}</button><button type="button" disabled={busy} onClick={() => { setCandidates([]); setProblem(""); }}>Use shared data without importing</button></section> : null}
-    {ready && !candidates.length ? <PpcPerformanceDashboard key={reload} initialToday={initialToday} remoteSync={remoteSync} /> : !candidates.length ? <p className={styles.wait}>{problem ? "Team data is unavailable. Retry with Refresh team data. Local records have not been changed." : "Connecting to the shared dashboard…"}</p> : null}
+    {ready && !candidates.length ? <PpcPerformanceDashboard key={reload} initialToday={initialToday} remoteSync={remoteSync} sharedSaveStatus={status} /> : !candidates.length ? <p className={styles.wait}>{problem ? "Team data is unavailable. Retry with Refresh team data. Local records have not been changed." : "Connecting to the shared dashboard…"}</p> : null}
   </>;
 }
 

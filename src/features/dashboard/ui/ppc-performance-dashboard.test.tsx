@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PPC_DASHBOARD_CATALOG_STORAGE_KEY } from "../domain/ppc-dashboard-catalog";
 import { PPC_DASHBOARD_STORAGE_KEY, addDaysIso, createWeeklyPpcReport } from "../domain/ppc-dashboard-state";
 import { PPC_PERFORMANCE_CACHE_KEY } from "../domain/ppc-performance-cache";
+import { attachDashboardStorage, PPC_SHARED_REPORT_OUTBOX_KEY, SharedDashboardStorage, type DashboardResponses } from "../state/shared-dashboard-client";
 import { PpcPerformanceDashboard } from "./ppc-performance-dashboard";
 
 describe("PpcPerformanceDashboard", () => {
@@ -177,8 +178,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.queryByText("Burn Rate Progress")).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("textbox", { name: "Good documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Current Week Summary" })).getByText("Saving changes…")).toBeVisible();
-    await waitFor(() => expect(screen.getByText("Changes saved automatically")).toBeVisible(), { timeout: 3_000 });
+    expect(within(screen.getByRole("region", { name: "Current Week Summary" })).getByText("Saved locally")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
 
     const stored = JSON.parse(window.localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY) || "{}");
@@ -394,6 +394,36 @@ describe("PpcPerformanceDashboard", () => {
     const summary = screen.getByRole("region", { name: "Current Week Summary" });
     expect(within(summary).getByRole("button", { name: "Add summary topic" })).toBeVisible();
     expect(actionCard).toBeVisible();
+  });
+
+  it("keeps an Action Item when the dashboard reloads immediately after editing", async () => {
+    const view = render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    const actionCard = await screen.findByRole("region", { name: "Action Items" });
+    fireEvent.click(within(actionCard).getByRole("button", { name: "Add Action Item" }));
+    fireEvent.change(within(actionCard).getByRole("textbox", { name: "Action item" }), { target: { value: "Review PPC bids" } });
+    expect(JSON.parse(localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY)!).reports["product-1:2026-08-26"].actions[0].title).toBe("Review PPC bids");
+    view.unmount();
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    expect(await screen.findByRole("textbox", { name: "Action item" })).toHaveValue("Review PPC bids");
+  });
+
+  it("restores a queued cloud Action Item when refreshed before the upload starts", async () => {
+    const remote: DashboardResponses = new Map([[PPC_DASHBOARD_STORAGE_KEY, { document: null, etag: null, canEdit: true }]]);
+    const firstStorage = new SharedDashboardStorage(remote, vi.fn());
+    const detachFirst = attachDashboardStorage(firstStorage);
+    const view = render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    const actionCard = await screen.findByRole("region", { name: "Action Items" });
+    fireEvent.click(within(actionCard).getByRole("button", { name: "Add Action Item" }));
+    fireEvent.change(within(actionCard).getByRole("textbox", { name: "Action item" }), { target: { value: "Protect unsent action" } });
+    expect(localStorage.getItem(PPC_SHARED_REPORT_OUTBOX_KEY)).toContain("Protect unsent action");
+
+    view.unmount();
+    detachFirst();
+    const restoredStorage = new SharedDashboardStorage(remote, vi.fn());
+    const detachRestored = attachDashboardStorage(restoredStorage);
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    expect(await screen.findByRole("textbox", { name: "Action item" })).toHaveValue("Protect unsent action");
+    detachRestored();
   });
 
   it("carries the previous weekly budget forward and keeps a manual override", async () => {
