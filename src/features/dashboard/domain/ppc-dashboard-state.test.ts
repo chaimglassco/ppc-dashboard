@@ -211,6 +211,10 @@ describe("PPC dashboard state", () => {
         { id: "risk", title: "Improve ACOS", target: "25%", actual: "32%", status: "At Risk" as const },
         { id: "missed", title: "Increase sales", target: "$500", actual: "$300", status: "Missed" as const },
       ],
+      actions: [
+        { id: "done-action", title: "Completed action", priority: "Low" as const, dueDate: "", done: true },
+        { id: "open-action", title: "Carry this action", priority: "High" as const, dueDate: "2026-09-03", done: false },
+      ],
       previousWeekResult: "Carry this result into next week.",
     };
     const next = createWeeklyPpcReport("product-1", "2026-09-02", previous);
@@ -219,6 +223,9 @@ describe("PPC dashboard state", () => {
       { title: "Improve ACOS", actual: "", status: "On Track" },
     ]);
     expect(next.previousWeekResult).toBe("Carry this result into next week.");
+    expect(next.actions).toEqual([{
+      id: "open-action-carried-2026-09-02-0", title: "Carry this action", priority: "High", dueDate: "2026-09-03", done: false,
+    }]);
     expect(next.weeklyBudget).toBe(700);
     expect(next.dailyBudget).toBe(100);
     expect(next.budgetHistory).toEqual([]);

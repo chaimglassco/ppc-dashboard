@@ -411,3 +411,5 @@ Simplified weekly planning controls: removed action priority and assignee placeh
 Compacted the Action Items header by removing its descriptive paragraph and replacing the labeled add button with an accessible icon-only + immediately beside the title.
 
 Replaced the shared dashboard's manual ETag-conflict stop with automatic validated three-way reconciliation and retry. Concurrent changes to separate records, report fields, scalar-ID lists, and independently added action/topic/goal rows are retained; exact same-field collisions use the latest local intent. Visible dashboard sessions now check for confirmed team updates every 15 seconds and on focus, remounting only when no local save for that dataset is pending.
+
+Added crash-safe recovery for weekly report edits. Pending Action Items and other report changes now enter a browser-local outbox before the debounced online save, survive refresh and temporary save failures, merge with the latest shared report, retry automatically, and clear only after server confirmation. New reporting weeks also carry unfinished Action Items forward while leaving completed items in the prior week.

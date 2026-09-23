@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createWeeklyPpcReport, PPC_DASHBOARD_STORAGE_KEY, reportKey } from "../domain/ppc-dashboard-state";
 import type { DashboardDocument, DashboardDocumentResponse } from "../domain/shared-dashboard";
-import { SharedDashboardStorage, type DashboardResponses } from "./shared-dashboard-client";
+import { PPC_SHARED_REPORT_OUTBOX_KEY, SharedDashboardStorage, type DashboardResponses } from "./shared-dashboard-client";
 
 const key = PPC_DASHBOARD_STORAGE_KEY;
 const reportsValue = (reports: Record<string, unknown>) => JSON.stringify({ version: 1, reports });
@@ -11,7 +11,8 @@ const document = (value: string, operationId = "operation-base", savedAt = "2026
 const response = (value: string, etag: string, operationId?: string, savedAt?: string): DashboardDocumentResponse => ({ document: document(value, operationId, savedAt), etag, canEdit: true });
 
 describe("SharedDashboardStorage", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  beforeEach(() => window.localStorage.clear());
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); window.localStorage.clear(); });
 
   it("merges and retries an ETag conflict without exposing a save error", async () => {
     const first = createWeeklyPpcReport("product-1", "2026-09-02");
@@ -58,5 +59,42 @@ describe("SharedDashboardStorage", () => {
     expect(storage.sync(new Map([[key, response(remote, "etag-2", "operation-remote", "2026-09-23T01:01:00.000Z")]]))).toBe(true);
     expect(JSON.parse(storage.getItem(key)!).reports[firstKey].notes).toBe("Colleague update");
     expect(remoteChange).toHaveBeenCalledOnce();
+  });
+
+  it("restores an unsent weekly-report edit after refresh and uploads it automatically", async () => {
+    vi.useFakeTimers();
+    const first = createWeeklyPpcReport("product-1", "2026-09-16");
+    const firstKey = reportKey(first.productId, first.weekStart);
+    const base = reportsValue({ [firstKey]: first });
+    const local = reportsValue({ [firstKey]: {
+      ...first,
+      actions: [{ id: "recover-me", title: "Recovered action", priority: "Medium", dueDate: "", done: false }],
+    } });
+    const responses: DashboardResponses = new Map([[key, response(base, "etag-1")]]);
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: "Temporarily unavailable." }, { status: 503 })));
+    const firstStorage = new SharedDashboardStorage(responses, vi.fn());
+
+    firstStorage.setItem(key, local);
+    await firstStorage.flush();
+
+    const latestLocal = reportsValue({ [firstKey]: {
+      ...first,
+      actions: [{ id: "recover-me", title: "Recovered action after error", priority: "Medium", dueDate: "", done: false }],
+    } });
+    expect(() => firstStorage.setItem(key, latestLocal)).not.toThrow();
+
+    expect(window.localStorage.getItem(PPC_SHARED_REPORT_OUTBOX_KEY)).not.toBeNull();
+
+    let uploadedValue = "";
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      uploadedValue = body.value;
+      return Response.json({ ...response(body.value, "etag-2", body.operationId, "2026-09-23T02:00:00.000Z") });
+    }));
+    const restoredStorage = new SharedDashboardStorage(responses, vi.fn());
+    await restoredStorage.flush();
+
+    expect(JSON.parse(uploadedValue).reports[firstKey].actions).toContainEqual(expect.objectContaining({ id: "recover-me", title: "Recovered action after error" }));
+    expect(window.localStorage.getItem(PPC_SHARED_REPORT_OUTBOX_KEY)).toBeNull();
   });
 });

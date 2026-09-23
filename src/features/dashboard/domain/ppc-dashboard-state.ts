@@ -97,12 +97,17 @@ export function createWeeklyPpcReport(productId: string, weekStart: string, prev
       ...goal, id: `${goal.id}-carried-${weekStart}-${index}`, actual: "", status: "On Track" as GoalStatus,
     }))
     : DEFAULT_GOALS.map(goal => ({ ...goal }));
+  const carriedActions = previousReport
+    ? previousReport.actions.filter(action => !action.done).map((action, index) => ({
+      ...action, id: `${action.id}-carried-${weekStart}-${index}`, done: false,
+    }))
+    : [];
   const weeklyBudget = previousReport?.weeklyBudget ?? 0;
   return {
     productId, weekStart, status: "Draft", weeklyBudget, dailyBudget: Math.round((weeklyBudget / 7) * 100) / 100, budgetHistory: [], spend: 0,
     ppcSales: 0, organicSales: 0, totalSales: 0, ppcOrders: 0, organicOrders: 0, totalOrders: 0, targetAcos: 0,
     acos: 0, tacos: 0, goals: carriedGoals, goalHistory: [], previousWeekResult: previousReport?.previousWeekResult || "",
-    notes: "", actions: [], updatedAt: null,
+    notes: "", actions: carriedActions, updatedAt: null,
   };
 }
 

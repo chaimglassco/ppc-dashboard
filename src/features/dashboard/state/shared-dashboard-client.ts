@@ -1,11 +1,14 @@
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
+import { PPC_DASHBOARD_STORAGE_KEY } from "../domain/ppc-dashboard-state";
 import { DASHBOARD_STORES, isDashboardStoreKey, mergeDashboardValues, parseDashboardDocument, validateDashboardValue, type DashboardDocumentResponse, type DashboardStoreKey } from "../domain/shared-dashboard";
 
 export type DashboardStorage = Pick<Storage, "getItem" | "setItem">;
 export type SharedSaveStatus = { pending: number; error: string };
 export type DashboardResponses = Map<DashboardStoreKey, DashboardDocumentResponse>;
+export const PPC_SHARED_REPORT_OUTBOX_KEY = "glassco.ppcSharedReportOutbox.v1";
 class DashboardRequestError extends Error { constructor(message: string, readonly status: number) { super(message); } }
+type PendingSave = { value: string; baseValue: string | null; expectedEtag: string | null; operationId: string };
 
 export async function requestDashboardStore(key: DashboardStoreKey, body?: { value: string; expectedEtag: string | null; operationId: string }): Promise<DashboardDocumentResponse> {
   const response = await fetch(withPpcBasePath(`/api/dashboard/state?key=${encodeURIComponent(key)}`), {
@@ -26,26 +29,77 @@ export async function loadDashboardStores(): Promise<DashboardResponses> {
 export class SharedDashboardStorage implements DashboardStorage {
   private values = new Map<DashboardStoreKey, string>();
   private responses: DashboardResponses;
-  private pending = new Map<DashboardStoreKey, { value: string; expectedEtag: string | null; operationId: string }>();
+  private pending = new Map<DashboardStoreKey, PendingSave>();
   private running = false;
   private error = "";
   private timer: ReturnType<typeof setTimeout> | undefined;
   constructor(responses: DashboardResponses, private onStatus: (status: SharedSaveStatus) => void, private onRemoteChange: (keys: DashboardStoreKey[]) => void = () => {}) {
     this.responses = new Map(responses);
     for (const [key, result] of responses) if (result.document) this.values.set(key, result.document.value);
+    this.restoreReportOutbox();
   }
   getItem(key: string) { return isDashboardStoreKey(key) ? this.values.get(key) ?? null : null; }
   setItem(key: string, raw: string) {
     if (!isDashboardStoreKey(key)) throw new Error("Unknown dashboard dataset.");
-    if (this.error) throw new Error(this.error);
     const value = validateDashboardValue(key, raw);
     if (this.values.get(key) === value) return;
     this.values.set(key, value);
     // Viewers may retrieve fresh metrics in memory, but cannot persist changes for the team.
     if (!this.responses.get(key)?.canEdit) return;
-    this.pending.set(key, { value, expectedEtag: this.responses.get(key)?.etag ?? null, operationId: crypto.randomUUID() });
+    const existing = this.pending.get(key);
+    this.pending.set(key, {
+      value,
+      baseValue: existing?.baseValue ?? this.responses.get(key)?.document?.value ?? null,
+      expectedEtag: this.responses.get(key)?.etag ?? null,
+      operationId: crypto.randomUUID(),
+    });
+    if (this.error && this.timer) { clearTimeout(this.timer); this.timer = undefined; }
+    this.error = "";
+    this.persistReportOutbox();
     this.notify();
     if (!this.timer) this.timer = setTimeout(() => { this.timer = undefined; void this.flush(); }, 500);
+  }
+  private restoreReportOutbox() {
+    if (typeof window === "undefined" || !this.responses.get(PPC_DASHBOARD_STORAGE_KEY)?.canEdit) return;
+    try {
+      const raw = window.localStorage.getItem(PPC_SHARED_REPORT_OUTBOX_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { version?: unknown; entry?: { value?: unknown; baseValue?: unknown } };
+      if (parsed.version !== 1 || !parsed.entry || typeof parsed.entry.value !== "string"
+        || !(parsed.entry.baseValue === null || typeof parsed.entry.baseValue === "string")) return;
+      const localValue = validateDashboardValue(PPC_DASHBOARD_STORAGE_KEY, parsed.entry.value);
+      const baseValue = parsed.entry.baseValue === null ? null : validateDashboardValue(PPC_DASHBOARD_STORAGE_KEY, parsed.entry.baseValue);
+      const remote = this.responses.get(PPC_DASHBOARD_STORAGE_KEY)!;
+      const remoteValue = remote.document?.value ?? null;
+      const merged = mergeDashboardValues(PPC_DASHBOARD_STORAGE_KEY, baseValue, localValue, remoteValue);
+      if (merged === remoteValue) {
+        window.localStorage.removeItem(PPC_SHARED_REPORT_OUTBOX_KEY);
+        return;
+      }
+      this.values.set(PPC_DASHBOARD_STORAGE_KEY, merged);
+      this.pending.set(PPC_DASHBOARD_STORAGE_KEY, {
+        value: merged, baseValue: remoteValue, expectedEtag: remote.etag, operationId: crypto.randomUUID(),
+      });
+      this.timer = setTimeout(() => { this.timer = undefined; this.notify(); void this.flush(); }, 0);
+    } catch {
+      // Invalid or unavailable recovery data never replaces the confirmed shared document.
+      try { window.localStorage.removeItem(PPC_SHARED_REPORT_OUTBOX_KEY); } catch { /* Browser storage is unavailable. */ }
+    }
+  }
+  private persistReportOutbox() {
+    if (typeof window === "undefined") return;
+    try {
+      const item = this.pending.get(PPC_DASHBOARD_STORAGE_KEY);
+      if (!item) {
+        window.localStorage.removeItem(PPC_SHARED_REPORT_OUTBOX_KEY);
+        return;
+      }
+      window.localStorage.setItem(PPC_SHARED_REPORT_OUTBOX_KEY, JSON.stringify({
+        version: 1, savedAt: new Date().toISOString(), entry: { value: item.value, baseValue: item.baseValue },
+      }));
+    } catch {
+      // Online persistence remains authoritative if the browser recovery area is unavailable or full.
+    }
   }
   private notify() { this.onStatus({ pending: this.pending.size, error: this.error }); }
   async flush() {
@@ -65,10 +119,11 @@ export class SharedDashboardStorage implements DashboardStorage {
             const remote = await requestDashboardStore(key);
             const latestLocal = this.pending.get(key)?.value ?? item.value;
             const merged = mergeDashboardValues(key, this.responses.get(key)?.document?.value ?? null, latestLocal, remote.document?.value ?? null);
-            item = { value: merged, expectedEtag: remote.etag, operationId: crypto.randomUUID() };
+            item = { value: merged, baseValue: remote.document?.value ?? null, expectedEtag: remote.etag, operationId: crypto.randomUUID() };
             this.values.set(key, merged);
             this.responses.set(key, remote);
             this.pending.set(key, item);
+            this.persistReportOutbox();
             this.notify();
             this.onRemoteChange([key]);
           }
@@ -76,10 +131,19 @@ export class SharedDashboardStorage implements DashboardStorage {
         if (!result.document || result.document.operationId !== item.operationId || result.document.value !== item.value) throw new Error("The server did not confirm this save. Keep the tab open and retry.");
         this.responses.set(key, result);
         if (this.pending.get(key) === item) this.pending.delete(key);
-        else { const newer = this.pending.get(key)!; this.pending.set(key, { ...newer, expectedEtag: result.etag }); }
+        else { const newer = this.pending.get(key)!; this.pending.set(key, { ...newer, baseValue: item.value, expectedEtag: result.etag }); }
+        this.persistReportOutbox();
         this.notify();
       }
-    } catch (error) { this.error = error instanceof Error ? error.message : "Online save failed."; }
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : "Online save failed.";
+      if (this.pending.size && !this.timer) this.timer = setTimeout(() => {
+        this.timer = undefined;
+        this.error = "";
+        this.notify();
+        void this.flush();
+      }, 5_000);
+    }
     finally { this.running = false; this.notify(); }
   }
   retry() { this.error = ""; this.notify(); void this.flush(); }
