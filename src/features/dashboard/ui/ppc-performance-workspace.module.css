@@ -210,7 +210,10 @@
 .summaryFooter { display: flex; justify-content: space-between; gap: 12px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border); color: var(--muted); font: 11px/1.5 var(--mono); }
 .summaryFooter > span:last-child { text-align: right; }
 .autoSaved { color: #047857; }
-.actionDescription { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.actionTitle { display: flex; align-items: center; gap: 8px; }
+.actionTitle .actionAddButton { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: white; color: #18181b; }
+.actionTitle .actionAddButton:hover { background: #f4f4f5; }
+.actionTitle .actionAddButton svg { width: 13px; height: 13px; }
 .actionList { display: flex; flex-direction: column; gap: 8px; }
 .actionRow { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: rgba(244,244,245,.4); }
 .actionRow:hover { background: #f4f4f5; }

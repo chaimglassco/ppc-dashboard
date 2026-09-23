@@ -407,3 +407,5 @@ Added Total Sales, Total Orders, and Total Units rows between the organic metric
 Reworked the workspace summary row into three responsive cards by moving Action Items beside Strategic Weekly Goals and Budget Utilization. Removed the Burn Rate Progress gauge while retaining budget totals, status, editing, and history.
 
 Simplified weekly planning controls: removed action priority and assignee placeholders, retained a clear trash action, removed the On Track/At Risk goal dropdown, and stacked Goal History with Add Goal. New reports inherit the preceding weekly budget until manually overridden. Blank weekly summaries now begin with light-green Good and light-red Bad sections.
+
+Compacted the Action Items header by removing its descriptive paragraph and replacing the labeled add button with an accessible icon-only + immediately beside the title.

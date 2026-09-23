@@ -453,5 +453,6 @@ Verify opportunity metric totals, sortable labels, row values, and Status are ce
 - [ ] Confirm Burn Rate Progress is absent while Weekly Limit, Spent, pacing status, and Budget History remain functional.
 - [ ] Confirm Goal History and Add Goal are stacked with one-line labels, active goal rows have no On Track/At Risk dropdown, and achieved/missed/delete actions still work.
 - [ ] Add, complete, and delete an action; confirm no priority selector or assignee placeholder appears and autosave still restores the action.
+- [ ] Confirm Action Items has no description, its icon-only + sits directly beside the title, and the control retains the accessible name Add Action Item.
 - [ ] Set a weekly budget, open the following week, and confirm the limit carries forward with a recalculated daily limit. Override the new week, navigate away and back, and confirm the override remains independent.
 - [ ] Confirm a blank Current Week Summary starts with light-green Good and light-red Bad sections and retains their content and order after reload.

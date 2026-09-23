@@ -362,6 +362,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(budgetCard).getByRole("textbox", { name: "Weekly limit" })).toBeVisible();
     expect(within(budgetCard).queryByText("Burn Rate Progress")).not.toBeInTheDocument();
     expect(within(actionCard).getByRole("button", { name: "Add Action Item" })).toBeVisible();
+    expect(within(actionCard).getByRole("button", { name: "Add Action Item" })).toHaveTextContent("");
+    expect(within(actionCard).queryByText("Operational tasks generated from this week’s performance analysis")).not.toBeInTheDocument();
     fireEvent.click(within(actionCard).getByRole("button", { name: "Add Action Item" }));
     expect(within(actionCard).queryByRole("combobox")).not.toBeInTheDocument();
     expect(within(actionCard).queryByLabelText("Assignee unavailable")).not.toBeInTheDocument();
