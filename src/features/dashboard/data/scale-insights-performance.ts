@@ -10,14 +10,23 @@ export type ScaleInsightsWeeklyPerformanceParams = {
 };
 
 export type ScaleInsightsWeeklyPerformance = ScaleInsightsWeeklyPerformanceParams & {
+  metricsRevision?: 2;
   currency: string;
   metrics: WeeklyPerformanceCalculatedMetrics;
   freshness: {
     adsDataAsOf: string;
     salesDataAsOf: string;
     salesDataThrough: string;
+    searchDataAsOf?: string;
   };
   warnings: string[];
+};
+
+type SearchTermTraffic = {
+  ppcClicks?: number;
+  ppcImpressions?: number;
+  dataAsOf: string;
+  warning?: string;
 };
 
 export class ScaleInsightsDataError extends Error {
@@ -58,6 +67,8 @@ const PPC_UNIT_KEYS = ["PPCUnits", "ppcUnits", "TotalPPCUnits", "totalPpcUnits",
 const SALES_PPC_UNIT_KEYS = ["PPCUnits", "ppcUnits", "TotalPPCUnits", "totalPpcUnits", "ppc_units", "total_ppc_units"];
 const TOTAL_UNIT_KEYS = ["total_units", "TotalUnits", "totalUnits", "Units", "units"];
 const ASIN_KEYS = ["asin", "ASIN", "product_asin", "productAsin", "ProductASIN"];
+const SEARCH_TERM_PAGE_SIZE = 500;
+const SEARCH_TERM_MAX_PAGES = 5;
 
 function normalizedKey(value: string) {
   return value.replace(/[^a-z0-9]/gi, "").toLowerCase();
@@ -73,9 +84,65 @@ function directPrimitive(record: Record<string, unknown>, keys: string[]) {
 
 function numericInteger(value: unknown) {
   if (typeof value === "number") return Number.isFinite(value) && value >= 0 && Number.isInteger(value) ? value : undefined;
-  if (typeof value !== "string" || !/^\d+$/.test(value.trim())) return undefined;
-  const parsed = Number(value);
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().replace(/,/g, "");
+  if (!/^\d+$/.test(normalized)) return undefined;
+  const parsed = Number(normalized);
   return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
+function searchTermTrafficRows(payload: Record<string, unknown>) {
+  if (!Array.isArray(payload.opps)) return [];
+  return payload.opps.flatMap(candidate => {
+    if (!isRecord(candidate) || !isRecord(candidate.metrics)) return [];
+    const impressions = numericInteger(directPrimitive(candidate.metrics, PPC_IMPRESSION_KEYS));
+    const clicks = numericInteger(directPrimitive(candidate.metrics, PPC_CLICK_KEYS));
+    return impressions == null || clicks == null ? [] : [{ impressions, clicks }];
+  });
+}
+
+async function loadSearchTermTraffic(params: ScaleInsightsWeeklyPerformanceParams, callTool: ScaleInsightsToolCaller): Promise<SearchTermTraffic> {
+  let ppcImpressions = 0;
+  let parsedRows = 0;
+  let expectedRows: number | undefined;
+  let ppcClicks: number | undefined;
+  let dataAsOf = "";
+
+  for (let page = 1; page <= SEARCH_TERM_MAX_PAGES; page += 1) {
+    const result = await callTool("get_search_term_performance", {
+      asin_list: [params.asin],
+      country: params.country,
+      start_date: params.startDate,
+      end_date: params.endDate,
+      mode: "raw",
+      waste_only: false,
+      sort_by: "sales",
+      sort_direction: "desc",
+      count: SEARCH_TERM_PAGE_SIZE,
+      page,
+    });
+    const payload = unwrapScaleInsightsPayload(result);
+    const scope = isRecord(payload.agg) ? payload.agg : payload;
+    assertScope(payload, params, scope);
+    const meta = isRecord(payload.oppMeta) ? payload.oppMeta : {};
+    const totals = isRecord(meta.totals) ? meta.totals : {};
+    expectedRows ??= numericInteger(meta.total_count);
+    ppcClicks ??= numericInteger(directPrimitive(totals, PPC_CLICK_KEYS));
+    dataAsOf ||= stringValue(meta.data_as_of);
+    const rows = searchTermTrafficRows(payload);
+    parsedRows += rows.length;
+    ppcImpressions += rows.reduce((total, row) => total + row.impressions, 0);
+    if (meta.has_next_page === false) break;
+    if (meta.has_next_page !== true && (expectedRows == null || page * SEARCH_TERM_PAGE_SIZE >= expectedRows)) break;
+  }
+
+  const complete = expectedRows === 0 || expectedRows != null && parsedRows >= expectedRows;
+  return {
+    ...(ppcClicks == null ? {} : { ppcClicks }),
+    ...(complete ? { ppcImpressions } : {}),
+    dataAsOf,
+    ...(complete ? {} : { warning: `Scale Insights search-term coverage exceeded ${SEARCH_TERM_MAX_PAGES * SEARCH_TERM_PAGE_SIZE} rows; Impressions remain unavailable.` }),
+  };
 }
 
 function collectScopedIntegerValues(value: unknown, asin: string, keys: string[], depth = 0): number[] {
@@ -187,9 +254,10 @@ export async function loadScaleInsightsWeeklyPerformance(
     end_date: params.endDate,
     mode: "raw",
   };
-  const [adsResult, salesResult] = await Promise.all([
+  const [adsResult, salesResult, searchTermTraffic] = await Promise.all([
     callTool("get_ads_performance", { ...commonArgs, summary_only: false, count: 1, page: 1 }),
     callTool("get_sales_data", { ...commonArgs, summary_only: true, group_by: "total", include_growth: false }),
+    loadSearchTermTraffic(params, callTool).catch((): SearchTermTraffic => ({ dataAsOf: "", warning: "Scale Insights did not return complete Search Term Performance traffic; Clicks and Impressions may be unavailable." })),
   ]);
 
   const ads = unwrapScaleInsightsPayload(adsResult);
@@ -213,8 +281,10 @@ export async function loadScaleInsightsWeeklyPerformance(
   const totalOrders = nonNegativeInteger(salesSummary.TotalOrders, "Total Orders");
   const totalSessions = nonNegativeInteger(salesSummary.TotalSessions, "Total Sessions");
   const ppcClicks = exactPpcClicks(adsResult, ads, adsTotals, adsAggregate, params.asin)
+    ?? searchTermTraffic.ppcClicks
     ?? numericInteger(directPrimitive(salesSummary, PPC_CLICK_KEYS));
-  const ppcImpressions = exactMetricValue(adsResult, ads, adsTotals, adsAggregate, params.asin, PPC_IMPRESSION_KEYS);
+  const ppcImpressions = exactMetricValue(adsResult, ads, adsTotals, adsAggregate, params.asin, PPC_IMPRESSION_KEYS)
+    ?? searchTermTraffic.ppcImpressions;
   const ppcUnits = exactMetricValue(adsResult, ads, adsTotals, adsAggregate, params.asin, PPC_UNIT_KEYS)
     ?? numericInteger(directPrimitive(salesSummary, SALES_PPC_UNIT_KEYS));
   const totalUnits = numericInteger(directPrimitive(salesSummary, TOTAL_UNIT_KEYS));
@@ -231,15 +301,18 @@ export async function loadScaleInsightsWeeklyPerformance(
   if (ppcClicks == null) {
     warnings.push("Scale Insights did not include PPC Clicks for this reporting period; PPC Conversion Rate is unavailable.");
   }
+  if (searchTermTraffic.warning) warnings.push(searchTermTraffic.warning);
 
   return {
     ...params,
+    metricsRevision: 2,
     currency: stringValue(adsAggregate.Currency) || "USD",
     metrics: calculateWeeklyPerformance({ spend, ppcSales, ppcOrders, totalSales, totalOrders, totalSessions, ...(ppcClicks == null ? {} : { ppcClicks }), ...(ppcImpressions == null ? {} : { ppcImpressions }), ...(ppcUnits == null ? {} : { ppcUnits }), ...(totalUnits == null ? {} : { totalUnits }) }),
     freshness: {
       adsDataAsOf: stringValue(adsMeta.data_as_of),
       salesDataAsOf: stringValue(salesMeta.data_as_of),
       salesDataThrough: stringValue(salesMeta.data_through),
+      ...(searchTermTraffic.dataAsOf ? { searchDataAsOf: searchTermTraffic.dataAsOf } : {}),
     },
     warnings,
   };

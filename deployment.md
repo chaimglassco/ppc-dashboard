@@ -287,3 +287,7 @@ Compact opportunity table alignment requires no configuration, environment, or d
 ## Six-week weekly performance table release
 
 This presentation and cache extension requires no environment variable, database migration, or API contract break. After deployment, verify the selected product's weekly panel shows six columns with the active week at the right edge, the requested row order, imported read-only values, and correct derived CPC/Organic Units. Confirm older cached records without optional impressions or unit fields still load and show unavailable cells. Rollback only removes the presentation extension; existing version-1 reports and caches remain compatible.
+
+## Weekly traffic metric completion release
+
+No environment, authentication, database, or storage-key migration is required. The first dashboard load after deployment refreshes visible snapshots that lack `metricsRevision: 2`, adding ASIN-scoped Search Term Performance traffic to the existing ads and sales calls. Monitor provider usage during that one-time six-week refresh. Verify subsequent loads reuse revision-2 snapshots and do not repeat the enrichment calls until Refresh Data is requested.

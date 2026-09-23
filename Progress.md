@@ -397,3 +397,7 @@ Centered opportunity metric totals, labels, and values, and reduced header/row s
 ## 2026-09-22 — Six-week Scale Insights weekly table
 
 Replaced the selected-product weekly metric card groups with a six-week Scale Insights-style table. The active week is the rightmost selected column, the five preceding Wednesday–Tuesday periods are shown beside it, and the requested paid, organic, and efficiency rows are rendered in a fixed order. Added optional impressions and unit fields to the provider adapter/cache, with derived CPC and Organic Units, read-only imported cells, compact trend bars, and regression coverage for the six-column layout.
+
+## 2026-09-23 — Weekly traffic metric completion
+
+Added complete Search Term Performance traffic retrieval to weekly performance so the six-week table can display actual Impressions, Clicks, and derived CPC even though the Scale Insights ads summary omits those fields. Added revision-2 snapshot marking and automatic refresh of older visible-week caches. Total Units continue to come from Sales Data; PPC Units remain unavailable because the connected reports do not expose an exact paid-unit field.

@@ -437,3 +437,10 @@ Verify opportunity metric totals, sortable labels, row values, and Status are ce
 - [ ] Reconcile imported Spend, PPC Sales, orders, clicks, impressions, and units with Scale Insights. Confirm CPC equals Spend / PPC Clicks and Organic Units equals Total Units - PPC Units when both are available.
 - [ ] Confirm imported cells are read-only, missing optional provider metrics display an em dash, and switching weeks reuses the saved cache without a new request.
 - [ ] Check the compact Analysis trend bars and verify there are no hydration or browser console errors.
+
+## Weekly traffic metric completion
+
+- [ ] Restore revision-1 cached weeks and confirm all six visible weeks refresh once to revision 2 without requiring manual week selection.
+- [ ] Reconcile Impressions and Clicks with complete ASIN-scoped Search Term Performance for each date range, and confirm CPC equals weekly Spend divided by refreshed Clicks.
+- [ ] Confirm incomplete search-term pagination never displays a partial Impression total and produces a bounded warning.
+- [ ] Confirm PPC Units and Organic Units remain unavailable when Scale Insights does not expose exact PPC-attributed units; no order-to-unit estimate may be shown.

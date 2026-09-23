@@ -64,13 +64,18 @@ describe("PpcPerformanceDashboard", () => {
 
   it("automatically backfills six visible weeks and keeps the selected week at the right edge", async () => {
     const metricsCalls: string[] = [];
+    window.localStorage.setItem(PPC_PERFORMANCE_CACHE_KEY, JSON.stringify({ version: 1, entries: { legacy: {
+      asin: "B012345678", country: "US", startDate: "2026-08-19", endDate: "2026-08-25", currency: "USD",
+      metrics: { spend: 50, ppcSales: 250, ppcOrders: 10, totalSales: 500, totalOrders: 20 },
+      freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: "2026-08-25" }, warnings: [],
+    } } }));
     vi.mocked(fetch).mockImplementation(async input => {
       const url = String(input);
       if (!url.includes("/api/dashboard/performance?")) return { ok: true, status: 200, json: async () => ({ products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }] }) } as Response;
       metricsCalls.push(url);
       const startDate = new URL(url, "http://localhost").searchParams.get("weekStart")!;
       return { ok: true, status: 200, json: async () => ({ performance: {
-        asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
+        metricsRevision: 2, asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
         metrics: { spend: 81.75, ppcSales: 481.75, ppcOrders: 23, ppcClicks: 48, ppcImpressions: 1200, ppcUnits: 31, totalUnits: 59, totalSales: 1317.35, totalOrders: 59, totalSessions: 122 },
         freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: startDate }, warnings: [],
       } }) } as Response;
@@ -95,7 +100,7 @@ describe("PpcPerformanceDashboard", () => {
       if (url.includes("/api/dashboard/performance?")) {
         const startDate = new URL(url, "http://localhost").searchParams.get("weekStart")!;
         return { ok: true, status: 200, json: async () => ({ performance: {
-          asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
+          metricsRevision: 2, asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
           metrics: { spend: 82, ppcSales: 482, ppcOrders: 23, totalSales: 1317, totalOrders: 59 },
           freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: addDaysIso(startDate, 6) }, warnings: [missingClicksWarning],
         } }) } as Response;
@@ -233,7 +238,7 @@ describe("PpcPerformanceDashboard", () => {
       if (!url.includes("/api/dashboard/performance?")) return { ok: true, status: 200, json: async () => ({ products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }] }) } as Response;
       const startDate = new URL(url, "http://localhost").searchParams.get("weekStart")!;
       return { ok: true, status: 200, json: async () => ({ performance: {
-        asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
+        metricsRevision: 2, asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
         metrics: { spend: 81.75, ppcSales: 481.75, ppcOrders: 23, ppcClicks: 48, ppcImpressions: 1200, ppcUnits: 31, totalUnits: 59, totalSales: 1317.35, totalOrders: 59 },
         freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: addDaysIso(startDate, 6) }, warnings: [],
       } }) } as Response;
@@ -286,7 +291,7 @@ describe("PpcPerformanceDashboard", () => {
       return {
         ok: true, status: 200,
         json: async () => ({ performance: {
-          asin: "B012345678", country: "US", startDate, endDate, currency: "USD",
+          metricsRevision: 2, asin: "B012345678", country: "US", startDate, endDate, currency: "USD",
           metrics: { spend: 50, ppcSales: 200, ppcOrders: 10, totalSales: 500, totalOrders: 25 },
           freshness: { adsDataAsOf: endDate, salesDataAsOf: endDate, salesDataThrough: endDate }, warnings: [],
         } }),

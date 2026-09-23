@@ -27,7 +27,7 @@ import { AccountCampaignCompare } from "./account-campaign-compare";
 import { WeeklyPerformanceTable, type WeeklyTableColumn } from "./weekly-performance-table";
 import { dashboardStorage } from "../state/shared-dashboard-client";
 import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
-import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, type PerformanceCache } from "../domain/ppc-performance-cache";
+import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, performanceSnapshotNeedsMetricsUpgrade, type PerformanceCache } from "../domain/ppc-performance-cache";
 import { getScaleInsightsAnalysisHref, PPC_ANALYSIS_COLUMNS } from "../domain/ppc-analysis-navigation";
 import styles from "./ppc-performance-dashboard.module.css";
 import periods from "./ppc-reporting-periods.module.css";
@@ -462,16 +462,18 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
       if (forceActiveRefresh) refreshRequest.current = "";
 
       const activeCached = cacheRef.current[snapshotKey];
-      if (activeCached && !forceActiveRefresh) {
+      const activeCacheNeedsUpgrade = performanceSnapshotNeedsMetricsUpgrade(activeCached);
+      if (activeCached && !forceActiveRefresh && !activeCacheNeedsUpgrade) {
         setPerformanceLoad({ key: snapshotKey, status: "ready", message: `Saved Scale Insights data through ${activeCached.freshness.salesDataThrough || activeCached.endDate}. Refresh to update.`, warnings: activeCached.warnings });
       } else {
-        setPerformanceLoad({ key: snapshotKey, status: "loading", message: "Retrieving Scale Insights performance…", warnings: [] });
+        setPerformanceLoad({ key: snapshotKey, status: "loading", message: activeCacheNeedsUpgrade ? "Updating saved weeks with traffic metrics…" : "Retrieving Scale Insights performance…", warnings: [] });
       }
 
       const orderedWeeks = [...new Set([activeWeekStart, ...performanceWeekStarts, ...weekStarts])];
       const pendingWeeks = orderedWeeks.filter(weekStart => {
         const key = performanceCacheKey(selectedAsin, weekStart);
-        return (weekStart === activeWeekStart && forceActiveRefresh) || !cacheRef.current[key];
+        const snapshot = cacheRef.current[key];
+        return (weekStart === activeWeekStart && forceActiveRefresh) || performanceSnapshotNeedsMetricsUpgrade(snapshot);
       });
       let nextWeekIndex = 0;
 
