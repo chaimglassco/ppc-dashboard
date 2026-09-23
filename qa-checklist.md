@@ -445,3 +445,9 @@ Verify opportunity metric totals, sortable labels, row values, and Status are ce
 - [ ] Reconcile Impressions and Clicks with complete ASIN-scoped Search Term Performance for each date range, and confirm CPC equals weekly Spend divided by refreshed Clicks.
 - [ ] Confirm incomplete search-term pagination never displays a partial Impression total and produces a bounded warning.
 - [ ] Confirm PPC Units and Organic Units remain unavailable when Scale Insights does not expose exact PPC-attributed units; no order-to-unit estimate may be shown.
+
+## Three-card workspace summary
+
+- [ ] Confirm Strategic Weekly Goals, Budget Utilization, and Action Items share the top row on desktop and stack legibly below 1280px.
+- [ ] Confirm Burn Rate Progress is absent while Weekly Limit, Spent, pacing status, and Budget History remain functional.
+- [ ] Add, complete, reprioritize, and remove an action from its new card and confirm autosave still restores it.

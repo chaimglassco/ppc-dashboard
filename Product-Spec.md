@@ -268,3 +268,5 @@ The selected product's Weekly PPC Performance panel now uses a Scale Insights-st
 ## Weekly traffic metric completion
 
 Weekly performance retrieval also reads complete ASIN-scoped Search Term Performance traffic for the same dates. This supplies actual PPC Clicks and Impressions when the advertising summary omits them; CPC remains derived from Spend divided by those clicks. Existing cached snapshots without the current metric revision are refreshed automatically across the visible six-week window. Scale Insights currently exposes Total Units but not PPC-attributed Units through the connected reporting tools, so PPC Units and Organic Units remain unavailable unless the provider begins returning exact PPC units.
+
+The weekly workspace opens with three cards in one desktop row: Strategic Weekly Goals, Budget Utilization, and Action Items. The budget card keeps its editable limits, current spend, pacing status, and history; the redundant Burn Rate Progress block is removed.

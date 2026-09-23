@@ -284,3 +284,5 @@ The table groups paid, organic, total, and efficiency metrics. Total Sales, Tota
 ## Weekly traffic enrichment and cache upgrade
 
 The weekly adapter runs the ads summary, sales summary, and paginated ASIN-scoped Search Term Performance traffic load together. Search-term pages use 500 rows with a five-page safety cap; impressions are summed only when coverage is complete, while the provider's full-population click total is retained. Successful responses carry `metricsRevision: 2`. The client treats older snapshots as readable but stale and refreshes each visible week once, replacing it in the existing version-1 cache.
+
+The workspace top grid is a responsive three-column presentation containing goals, budget, and action items. Moving Action Items changes component placement only; it continues editing the active report's existing `actions` array. Burn-rate calculations and gauge markup are no longer rendered.
