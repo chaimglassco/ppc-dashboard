@@ -14,6 +14,9 @@ type WeeklyTableMetric =
   | "organicSales"
   | "organicOrders"
   | "organicUnits"
+  | "totalSales"
+  | "totalOrders"
+  | "totalUnits"
   | "acos"
   | "tacos";
 
@@ -21,7 +24,7 @@ type WeeklyTableMetricDefinition = {
   key: WeeklyTableMetric;
   label: string;
   kind: "number" | "currency" | "percentage";
-  group: "paid" | "organic" | "efficiency";
+  group: "paid" | "organic" | "total" | "efficiency";
 };
 
 const WEEKLY_TABLE_METRICS: readonly WeeklyTableMetricDefinition[] = [
@@ -35,6 +38,9 @@ const WEEKLY_TABLE_METRICS: readonly WeeklyTableMetricDefinition[] = [
   { key: "organicSales", label: "Organic Sales", kind: "currency", group: "organic" },
   { key: "organicOrders", label: "Organic Orders", kind: "number", group: "organic" },
   { key: "organicUnits", label: "Organic Units", kind: "number", group: "organic" },
+  { key: "totalSales", label: "Total Sales", kind: "currency", group: "total" },
+  { key: "totalOrders", label: "Total Orders", kind: "number", group: "total" },
+  { key: "totalUnits", label: "Total Units", kind: "number", group: "total" },
   { key: "acos", label: "ACOS", kind: "percentage", group: "efficiency" },
   { key: "tacos", label: "TACOS", kind: "percentage", group: "efficiency" },
 ];

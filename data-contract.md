@@ -458,3 +458,5 @@ The existing version-1 weekly report and performance-cache records accept option
 ## Weekly performance metric revision 2
 
 Weekly performance responses may include `metricsRevision: 2` and optional `freshness.searchDataAsOf`. Revision 2 means Search Term Performance traffic enrichment was attempted for the exact ASIN and dates. Browser snapshots without revision 2 remain valid but are refreshed automatically. Complete search-term coverage supplies nonnegative integer `ppcClicks` and `ppcImpressions`; `cpc` is recalculated from Spend and PPC Clicks. Exact PPC Units are never inferred from PPC Orders or Total Units.
+
+The six-week table presents existing `totalSales`, `totalOrders`, and optional `totalUnits` snapshot values as a total-metrics block before ACOS and TACOS. This presentation change does not alter the response or browser-storage schemas.

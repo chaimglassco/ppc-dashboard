@@ -263,7 +263,7 @@ Untargeted opportunity metric headers, totals, and row values are centered. Redu
 
 ## Six-week Scale Insights performance view
 
-The selected product's Weekly PPC Performance panel now uses a Scale Insights-style six-week table. It always shows the selected Wednesday–Tuesday week as the sixth column on the right and the five immediately preceding weeks to its left. Rows are ordered as Impressions, Clicks, CPC, Spend, PPC Sales, PPC Orders, PPC Units, Organic Sales, Organic Orders, Organic Units, ACOS, and TACOS. The Analysis column provides a compact six-week visual trend, while imported values remain read-only and unavailable provider fields are shown as an em dash.
+The selected product's Weekly PPC Performance panel now uses a Scale Insights-style six-week table. It always shows the selected Wednesday–Tuesday week as the sixth column on the right and the five immediately preceding weeks to its left. Rows are ordered as Impressions, Clicks, CPC, Spend, PPC Sales, PPC Orders, PPC Units, Organic Sales, Organic Orders, Organic Units, Total Sales, Total Orders, Total Units, ACOS, and TACOS. The Analysis column provides a compact six-week visual trend, while imported values remain read-only and unavailable provider fields are shown as an em dash.
 
 ## Weekly traffic metric completion
 

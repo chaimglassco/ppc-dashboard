@@ -433,7 +433,8 @@ Verify opportunity metric totals, sortable labels, row values, and Status are ce
 ## Six-week weekly performance table
 
 - [ ] Select a product and verify Weekly PPC Performance renders exactly six Wednesday–Tuesday columns, with the selected week highlighted at the far right and the five preceding weeks ordered left to right.
-- [ ] Confirm row order is Impressions, Clicks, CPC, Spend, PPC Sales, PPC Orders, PPC Units, Organic Sales, Organic Orders, Organic Units, ACOS, TACOS.
+- [ ] Confirm row order is Impressions, Clicks, CPC, Spend, PPC Sales, PPC Orders, PPC Units, Organic Sales, Organic Orders, Organic Units, Total Sales, Total Orders, Total Units, ACOS, TACOS.
+- [ ] Reconcile Total Sales, Total Orders, and Total Units with the same Scale Insights weekly snapshot and confirm they appear directly above ACOS.
 - [ ] Reconcile imported Spend, PPC Sales, orders, clicks, impressions, and units with Scale Insights. Confirm CPC equals Spend / PPC Clicks and Organic Units equals Total Units - PPC Units when both are available.
 - [ ] Confirm imported cells are read-only, missing optional provider metrics display an em dash, and switching weeks reuses the saved cache without a new request.
 - [ ] Check the compact Analysis trend bars and verify there are no hydration or browser console errors.

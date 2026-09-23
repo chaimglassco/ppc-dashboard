@@ -279,6 +279,8 @@ Opportunity table density and metric alignment are presentation-only CSS rules s
 
 `PpcPerformanceDashboard` derives a six-week window from the active Wednesday week (`active - 35 days` through `active`) and loads uncached periods through the existing Scale Insights performance route with the current two-request concurrency limit. `WeeklyPerformanceTable` renders the stable metric row order and highlights the rightmost selected week. The provider adapter preserves optional PPC impressions, PPC units, and total units; the domain calculation derives CPC from Spend / PPC Clicks and Organic Units from Total Units - PPC Units when both inputs are present. Missing optional fields remain unavailable rather than estimated.
 
+The table groups paid, organic, total, and efficiency metrics. Total Sales, Total Orders, and Total Units use the same validated weekly snapshot fields and render immediately above ACOS and TACOS.
+
 ## Weekly traffic enrichment and cache upgrade
 
 The weekly adapter runs the ads summary, sales summary, and paginated ASIN-scoped Search Term Performance traffic load together. Search-term pages use 500 rows with a five-page safety cap; impressions are summed only when coverage is complete, while the provider's full-population click total is retained. Successful responses carry `metricsRevision: 2`. The client treats older snapshots as readable but stale and refreshes each visible week once, replacing it in the existing version-1 cache.

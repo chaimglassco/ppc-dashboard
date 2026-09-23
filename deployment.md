@@ -291,3 +291,5 @@ This presentation and cache extension requires no environment variable, database
 ## Weekly traffic metric completion release
 
 No environment, authentication, database, or storage-key migration is required. The first dashboard load after deployment refreshes visible snapshots that lack `metricsRevision: 2`, adding ASIN-scoped Search Term Performance traffic to the existing ads and sales calls. Monitor provider usage during that one-time six-week refresh. Verify subsequent loads reuse revision-2 snapshots and do not repeat the enrichment calls until Refresh Data is requested.
+
+The Total Sales, Total Orders, and Total Units weekly rows require no migration or new provider request; they render values already present in each validated snapshot.

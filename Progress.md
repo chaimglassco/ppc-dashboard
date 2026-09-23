@@ -401,3 +401,5 @@ Replaced the selected-product weekly metric card groups with a six-week Scale In
 ## 2026-09-23 — Weekly traffic metric completion
 
 Added complete Search Term Performance traffic retrieval to weekly performance so the six-week table can display actual Impressions, Clicks, and derived CPC even though the Scale Insights ads summary omits those fields. Added revision-2 snapshot marking and automatic refresh of older visible-week caches. Total Units continue to come from Sales Data; PPC Units remain unavailable because the connected reports do not expose an exact paid-unit field.
+
+Added Total Sales, Total Orders, and Total Units rows between the organic metrics and ACOS in the six-week performance table.
