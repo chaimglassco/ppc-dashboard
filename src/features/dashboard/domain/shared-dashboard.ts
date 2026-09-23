@@ -24,6 +24,114 @@ export function isDashboardStoreKey(key: unknown): key is DashboardStoreKey {
   return DASHBOARD_STORES.some(store => store.key === key);
 }
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+
+function emptyDashboardValue(key: DashboardStoreKey) {
+  return JSON.stringify(key === PPC_DASHBOARD_CATALOG_STORAGE_KEY
+    ? { version: 1, tags: [], customProducts: [], productOverrides: {}, hiddenPipelineProductIds: [], productOrderIds: [] }
+    : { version: 1, [key === PPC_DASHBOARD_STORAGE_KEY ? "reports" : "entries"]: {} });
+}
+
+function jsonEqual(left: JsonValue, right: JsonValue): boolean {
+  if (left === right) return true;
+  if (Array.isArray(left) || Array.isArray(right)) return Array.isArray(left) && Array.isArray(right)
+    && left.length === right.length && left.every((value, index) => jsonEqual(value, right[index]));
+  if (!record(left) || !record(right)) return false;
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  return leftKeys.length === rightKeys.length && leftKeys.every(key => Object.hasOwn(right, key) && jsonEqual(left[key] as JsonValue, right[key] as JsonValue));
+}
+
+function mergeObject(base: Record<string, JsonValue>, local: Record<string, JsonValue>, remote: Record<string, JsonValue>): Record<string, JsonValue> {
+  const merged: Record<string, JsonValue> = {};
+  for (const key of new Set([...Object.keys(base), ...Object.keys(remote), ...Object.keys(local)])) {
+    const inBase = Object.hasOwn(base, key);
+    const inLocal = Object.hasOwn(local, key);
+    const inRemote = Object.hasOwn(remote, key);
+    if (!inLocal) {
+      if (!inBase || inRemote && !jsonEqual(remote[key], base[key])) {
+        if (inRemote) merged[key] = remote[key];
+      }
+      continue;
+    }
+    if (!inRemote) {
+      if (!inBase || !jsonEqual(local[key], base[key])) merged[key] = local[key];
+      continue;
+    }
+    if (!inBase) {
+      const emptyBase: JsonValue = Array.isArray(local[key]) && Array.isArray(remote[key]) ? []
+        : record(local[key]) && record(remote[key]) ? {} : null;
+      merged[key] = jsonEqual(local[key], remote[key]) ? local[key] : mergeJson(emptyBase, local[key], remote[key]);
+      continue;
+    }
+    merged[key] = mergeJson(base[key], local[key], remote[key]);
+  }
+  return merged;
+}
+
+function mergeScalarArray(base: JsonValue[], local: JsonValue[], remote: JsonValue[]) {
+  const primitive = (value: JsonValue) => value === null || ["boolean", "number", "string"].includes(typeof value);
+  if (![...base, ...local, ...remote].every(primitive)) return local;
+  const key = (value: JsonValue) => `${typeof value}:${String(value)}`;
+  const baseKeys = new Set(base.map(key));
+  const localKeys = new Set(local.map(key));
+  const remoteKeys = new Set(remote.map(key));
+  const included = new Set<string>();
+  for (const itemKey of new Set([...baseKeys, ...remoteKeys, ...localKeys])) {
+    const before = baseKeys.has(itemKey);
+    const here = localKeys.has(itemKey);
+    const there = remoteKeys.has(itemKey);
+    if (here === before ? there : there === before ? here : here) included.add(itemKey);
+  }
+  return [...local, ...remote].filter((value, index, values) => included.has(key(value)) && values.findIndex(item => key(item) === key(value)) === index);
+}
+
+function mergeIdArray(base: JsonValue[], local: JsonValue[], remote: JsonValue[]): JsonValue[] | null {
+  const all = [...base, ...local, ...remote];
+  if (!all.length || !all.every(value => record(value) && typeof value.id === "string")) return null;
+  const map = (values: JsonValue[]) => new Map(values.map(value => [(value as { id: string }).id, value]));
+  const baseMap = map(base);
+  const localMap = map(local);
+  const remoteMap = map(remote);
+  if (baseMap.size !== base.length || localMap.size !== local.length || remoteMap.size !== remote.length) return null;
+  const ids = (values: JsonValue[]) => values.map(value => (value as { id: string }).id);
+  const localReordered = !jsonEqual(ids(base), ids(local));
+  const order = [...new Set([...(localReordered ? ids(local) : ids(remote)), ...ids(local), ...ids(remote), ...ids(base)])];
+  const merged: JsonValue[] = [];
+  for (const id of order) {
+    const before = baseMap.get(id);
+    const here = localMap.get(id);
+    const there = remoteMap.get(id);
+    if (here === undefined) {
+      if (before === undefined || there !== undefined && !jsonEqual(there, before)) {
+        if (there !== undefined) merged.push(there);
+      }
+      continue;
+    }
+    if (there === undefined) {
+      if (before === undefined || !jsonEqual(here, before)) merged.push(here);
+      continue;
+    }
+    merged.push(before === undefined ? mergeJson({} as JsonValue, here, there) : mergeJson(before, here, there));
+  }
+  return merged;
+}
+
+function mergeJson(base: JsonValue, local: JsonValue, remote: JsonValue): JsonValue {
+  if (jsonEqual(local, base)) return remote;
+  if (jsonEqual(remote, base) || jsonEqual(local, remote)) return local;
+  if (Array.isArray(base) && Array.isArray(local) && Array.isArray(remote)) return mergeIdArray(base, local, remote) ?? mergeScalarArray(base, local, remote);
+  if (record(base) && record(local) && record(remote)) return mergeObject(base as Record<string, JsonValue>, local as Record<string, JsonValue>, remote as Record<string, JsonValue>);
+  // Both sessions changed the same scalar field. The edit being saved is the latest intent.
+  return local;
+}
+
+export function mergeDashboardValues(key: DashboardStoreKey, baseRaw: string | null, localRaw: string, remoteRaw: string | null) {
+  const base = JSON.parse(validateDashboardValue(key, baseRaw ?? emptyDashboardValue(key))) as JsonValue;
+  const local = JSON.parse(validateDashboardValue(key, localRaw)) as JsonValue;
+  const remote = JSON.parse(validateDashboardValue(key, remoteRaw ?? emptyDashboardValue(key))) as JsonValue;
+  return validateDashboardValue(key, JSON.stringify(mergeJson(base, local, remote)));
+}
 
 // Use the existing v1 parsers, but reject dropped records instead of silently migrating partial data.
 export function validateDashboardValue(key: DashboardStoreKey, raw: string): string {

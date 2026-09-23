@@ -27,7 +27,8 @@
 
 - [ ] Sign in as ADMIN at `/ppc/dashboard` with an empty shared store, confirm the migration prompt lists only local datasets absent online, download the local backup, and import them.
 - [ ] Sign in from a second browser/session and confirm the imported catalog, reports, performance cache, account comparison, and opportunity cache load without local browser state.
-- [ ] Edit a shared report and catalog value, reload from another session, and confirm the change persists; exercise Refresh team data and retry after a simulated conflict.
+- [ ] Edit a shared report and catalog value, then confirm another visible session receives the confirmed update within 15 seconds or immediately on focus without using Refresh team data.
+- [ ] Simulate two editors saving different records, different fields on one report, and separate stable-ID action additions. Confirm the second save automatically merges/retries without a conflict banner and both edits persist. Change the same scalar in both sessions and confirm the latest local save wins.
 - [ ] Confirm VIEWER can read shared dashboard state but cannot upload or mutate it, and malformed/oversized payloads return bounded errors without replacing the confirmed state.
 - [ ] Confirm the state route returns no-store responses, rejects missing/invalid Pipeline sessions, stores no raw CSV or credentials, and preserves a before-write history object.
 

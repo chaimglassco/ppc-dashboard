@@ -23,6 +23,7 @@ function SharedDashboardWorkspaceClient({ initialToday }: { initialToday: string
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState<SharedSaveStatus>({ pending: 0, error: "" });
   const [reload, setReload] = useState(0);
+  const [remoteSync, setRemoteSync] = useState<{ version: number; keys: DashboardStoreKey[] }>({ version: 0, keys: [] });
   const storage = useRef<SharedDashboardStorage | null>(null);
 
   useEffect(() => {
@@ -47,7 +48,7 @@ function SharedDashboardWorkspaceClient({ initialToday }: { initialToday: string
 
   useEffect(() => {
     if (!responses || candidates.length) return;
-    const adapter = new SharedDashboardStorage(responses, setStatus);
+    const adapter = new SharedDashboardStorage(responses, setStatus, keys => setRemoteSync(current => ({ version: current.version + 1, keys })));
     storage.current = adapter;
     const detach = attachDashboardStorage(adapter);
     const timer = setTimeout(() => setReady(true), 0);
@@ -55,6 +56,24 @@ function SharedDashboardWorkspaceClient({ initialToday }: { initialToday: string
     window.addEventListener("beforeunload", warn);
     return () => { clearTimeout(timer); detach(); window.removeEventListener("beforeunload", warn); };
   }, [responses, candidates]);
+
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    let syncing = false;
+    const sync = async () => {
+      if (syncing || document.visibilityState !== "visible") return;
+      syncing = true;
+      try {
+        const latest = await loadDashboardStores();
+        if (!cancelled) storage.current?.sync(latest);
+      } catch { /* Keep confirmed shared data visible; the next interval or focus retries. */ }
+      finally { syncing = false; }
+    };
+    const interval = window.setInterval(() => { void sync(); }, 15_000);
+    window.addEventListener("focus", sync);
+    return () => { cancelled = true; window.clearInterval(interval); window.removeEventListener("focus", sync); };
+  }, [ready]);
 
   const exportLocal = () => downloadBackup(Object.fromEntries(DASHBOARD_STORES.flatMap(({ key }) => { const value = window.localStorage.getItem(key); return value ? [[key, value]] : []; })), "ppc-local-backup");
   const migrate = async () => {
@@ -77,7 +96,7 @@ function SharedDashboardWorkspaceClient({ initialToday }: { initialToday: string
 
   return <>
     <section className={styles.bar} aria-label="Shared dashboard status">
-      <div><strong>Team dashboard</strong><p role={status.error || problem ? "alert" : "status"}>{status.error || problem || (status.pending ? `Saving ${status.pending} dataset${status.pending === 1 ? "" : "s"} online… Keep this tab open.` : ready ? canEdit ? "Shared data loaded · Changes save online" : "Shared data loaded · View-only access" : "Loading shared dashboard…")}</p></div>
+      <div><strong>Team dashboard</strong><p role={status.error || problem ? "alert" : "status"}>{status.error || problem || (status.pending ? `Saving ${status.pending} dataset${status.pending === 1 ? "" : "s"} online… Keep this tab open.` : ready ? canEdit ? "Shared data loaded · Changes save online · Team updates sync automatically" : "Shared data loaded · View-only access" : "Loading shared dashboard…")}</p></div>
       <div className={styles.actions}>
         <button type="button" onClick={exportLocal}>Download local backup</button>
         {status.error ? <><button type="button" onClick={() => downloadBackup(storage.current?.exportData() ?? {}, "ppc-pending-changes")}>Download pending changes</button><button type="button" onClick={() => storage.current?.retry()}>Retry save</button></> : null}
@@ -85,7 +104,7 @@ function SharedDashboardWorkspaceClient({ initialToday }: { initialToday: string
       </div>
     </section>
     {candidates.length ? <section className={styles.import} aria-label="Share existing dashboard data"><h2>Share this browser’s existing dashboard data</h2><p>The following datasets are not online yet. Importing creates shared copies for the team and downloads a backup. Your existing local data is kept. Datasets already online are never replaced by this import.</p><ul>{candidates.map(item => <li key={item.key}>{item.label}: {item.count} records</li>)}</ul><button type="button" disabled={busy} onClick={() => void migrate()}>{busy ? "Sharing…" : "Back up and share these datasets"}</button><button type="button" disabled={busy} onClick={() => { setCandidates([]); setProblem(""); }}>Use shared data without importing</button></section> : null}
-    {ready && !candidates.length ? <PpcPerformanceDashboard key={reload} initialToday={initialToday} /> : !candidates.length ? <p className={styles.wait}>{problem ? "Team data is unavailable. Retry with Refresh team data. Local records have not been changed." : "Connecting to the shared dashboard…"}</p> : null}
+    {ready && !candidates.length ? <PpcPerformanceDashboard key={reload} initialToday={initialToday} remoteSync={remoteSync} /> : !candidates.length ? <p className={styles.wait}>{problem ? "Team data is unavailable. Retry with Refresh team data. Local records have not been changed." : "Connecting to the shared dashboard…"}</p> : null}
   </>;
 }
 

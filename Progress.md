@@ -409,3 +409,5 @@ Reworked the workspace summary row into three responsive cards by moving Action 
 Simplified weekly planning controls: removed action priority and assignee placeholders, retained a clear trash action, removed the On Track/At Risk goal dropdown, and stacked Goal History with Add Goal. New reports inherit the preceding weekly budget until manually overridden. Blank weekly summaries now begin with light-green Good and light-red Bad sections.
 
 Compacted the Action Items header by removing its descriptive paragraph and replacing the labeled add button with an accessible icon-only + immediately beside the title.
+
+Replaced the shared dashboard's manual ETag-conflict stop with automatic validated three-way reconciliation and retry. Concurrent changes to separate records, report fields, scalar-ID lists, and independently added action/topic/goal rows are retained; exact same-field collisions use the latest local intent. Visible dashboard sessions now check for confirmed team updates every 15 seconds and on focus, remounting only when no local save for that dataset is pending.

@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PPC_DASHBOARD_CATALOG_STORAGE_KEY } from "../domain/ppc-dashboard-catalog";
-import { PPC_DASHBOARD_STORAGE_KEY, addDaysIso } from "../domain/ppc-dashboard-state";
+import { PPC_DASHBOARD_STORAGE_KEY, addDaysIso, createWeeklyPpcReport } from "../domain/ppc-dashboard-state";
 import { PPC_PERFORMANCE_CACHE_KEY } from "../domain/ppc-performance-cache";
 import { PpcPerformanceDashboard } from "./ppc-performance-dashboard";
 
@@ -282,6 +282,24 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.click(productsTab);
     expect(productsTab).toHaveAttribute("aria-selected", "true");
     expect(await screen.findByRole("heading", { name: "Products" })).toBeVisible();
+  });
+
+  it("applies a confirmed remote report update without resetting the selected workspace tab", async () => {
+    const view = render(<PpcPerformanceDashboard initialToday="2026-08-28" remoteSync={{ version: 0, keys: [] }} />);
+    expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
+    fireEvent.click(screen.getByRole("tab", { name: "Dashboard" }));
+    const report = {
+      ...createWeeklyPpcReport("product-1", "2026-08-26"),
+      notes: "## Good\nRemote improvement",
+      summaryTopics: [{ id: "remote-good", title: "Good", body: "Remote improvement" }],
+    };
+    localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({ version: 1, reports: { "product-1:2026-08-26": report } }));
+
+    view.rerender(<PpcPerformanceDashboard initialToday="2026-08-28" remoteSync={{ version: 1, keys: [PPC_DASHBOARD_STORAGE_KEY] }} />);
+
+    expect(screen.getByRole("tab", { name: "Dashboard" })).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(screen.getByRole("tab", { name: /Products/ }));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Good documentation" })).toHaveValue("Remote improvement"));
   });
 
   it("marks live goal actuals partial while the reporting week is incomplete", async () => {

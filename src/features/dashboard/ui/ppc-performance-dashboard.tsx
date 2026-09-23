@@ -26,6 +26,9 @@ import { PerformanceOverviewDashboard } from "./performance-overview-dashboard";
 import { AccountCampaignCompare } from "./account-campaign-compare";
 import { WeeklyPerformanceTable, type WeeklyTableColumn } from "./weekly-performance-table";
 import { dashboardStorage } from "../state/shared-dashboard-client";
+import { ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY } from "../domain/account-campaign-compare";
+import { PPC_CAMPAIGN_CSV_CACHE_KEY } from "../domain/campaign-comparison-csv";
+import { PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY } from "../domain/untargeted-sales-opportunities";
 import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, performanceSnapshotNeedsMetricsUpgrade, type PerformanceCache } from "../domain/ppc-performance-cache";
 import { getScaleInsightsAnalysisHref, PPC_ANALYSIS_COLUMNS } from "../domain/ppc-analysis-navigation";
@@ -236,7 +239,7 @@ function statusTone(status: string) {
   return styles.info;
 }
 
-export function PpcPerformanceDashboard({ initialToday }: { initialToday: string }) {
+export function PpcPerformanceDashboard({ initialToday, remoteSync }: { initialToday: string; remoteSync?: { version: number; keys: readonly string[] } }) {
   const initialWeekStart = startOfWeekIso(initialToday);
   const initialMonthKey = initialToday.slice(0, 7);
   const [pipelineProducts, setPipelineProducts] = useState<DashboardProduct[]>([]);
@@ -305,6 +308,25 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
     const productTimer = window.setTimeout(() => void loadProducts(controller.signal), 0);
     return () => { window.clearTimeout(storageTimer); window.clearTimeout(productTimer); controller.abort(); };
   }, [loadProducts]);
+
+  useEffect(() => {
+    if (!remoteSync?.version) return;
+    const timer = window.setTimeout(() => {
+      const keys = new Set(remoteSync.keys);
+      if (keys.has(PPC_DASHBOARD_STORAGE_KEY)) setReports(parsePpcDashboardStore(dashboardStorage().getItem(PPC_DASHBOARD_STORAGE_KEY)).reports);
+      if (keys.has(PPC_DASHBOARD_CATALOG_STORAGE_KEY)) {
+        const nextCatalog = parseDashboardCatalogStore(dashboardStorage().getItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY));
+        const orderedProducts = orderDashboardProductsByTag(mergeDashboardProducts(pipelineProducts, nextCatalog), nextCatalog.tags);
+        setCatalog(nextCatalog);
+        setSelectedProductId(current => orderedProducts.some(product => product.id === current) ? current : orderedProducts[0]?.id ?? "");
+      }
+      if (keys.has(PPC_PERFORMANCE_CACHE_KEY)) {
+        cacheRef.current = parsePerformanceCache(dashboardStorage().getItem(PPC_PERFORMANCE_CACHE_KEY));
+        setPerformanceCache(cacheRef.current);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [pipelineProducts, remoteSync]);
 
   useEffect(() => {
     if (dirtyReportKeys.size === 0) return;
@@ -656,7 +678,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
       <button type="button" role="tab" aria-selected={activeView === "compare"} className={activeView === "compare" ? styles.activeViewTab : ""} onClick={() => setActiveView("compare")}><GitCompareArrows aria-hidden="true" />Compare</button>
     </nav>
 
-    {activeView === "dashboard" ? <PerformanceOverviewDashboard products={products} reports={reports} currentWeekStart={currentWeekStart} todayIso={initialToday} /> : activeView === "compare" ? <AccountCampaignCompare todayIso={initialToday} /> : <>
+    {activeView === "dashboard" ? <PerformanceOverviewDashboard products={products} reports={reports} currentWeekStart={currentWeekStart} todayIso={initialToday} /> : activeView === "compare" ? <AccountCampaignCompare key={`account-${remoteSync?.keys.includes(ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY) ? remoteSync.version : 0}`} todayIso={initialToday} /> : <>
     <ProductPortfolioPanel products={products} tags={catalog.tags} loading={productsLoading} error={productsError} selectedProductId={selectedProductId} onSelectProduct={selectProduct} onRetry={() => void loadProducts()} onCreateTag={createTag} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} onReorderProducts={reorderProducts} />
 
     <aside className={periods.periodsPanel} aria-labelledby="periods-heading">
@@ -722,8 +744,8 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
             <section className={`${ws.card} ${ws.summaryCard} ${ws.currentSummaryCard}`} aria-labelledby="notes-heading"><div className={ws.cardTitle}><h3 id="notes-heading"><FileText />Current Week Summary</h3></div><SummaryTopicComposer key={selectedKey} topics={getSummaryTopics(report)} onChange={summaryTopics => patchReport({ summaryTopics, notes: summaryTopicsNotes(summaryTopics) })} /><footer className={ws.summaryFooter}><span className={dirty ? ws.unsaved : ws.autoSaved}>{dirty ? saveNotice || "Saving…" : report.updatedAt ? "Saved locally" : "Not saved yet"}</span><span>Last edited: {report.updatedAt ? new Date(report.updatedAt).toLocaleString() : "—"}</span></footer></section>
           </div>
 
-          <CampaignWeeklyComparison asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={performanceRefresh} />
-          <UntargetedSalesOpportunities asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={opportunityRefresh.key === snapshotKey ? opportunityRefresh.version : 0} onPpcClicksLoaded={receiveOpportunityPpcClicks} />
+          <CampaignWeeklyComparison key={`campaign-${remoteSync?.keys.includes(PPC_CAMPAIGN_CSV_CACHE_KEY) ? remoteSync.version : 0}`} asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={performanceRefresh} />
+          <UntargetedSalesOpportunities key={`opportunity-${remoteSync?.keys.includes(PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY) ? remoteSync.version : 0}`} asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={opportunityRefresh.key === snapshotKey ? opportunityRefresh.version : 0} onPpcClicksLoaded={receiveOpportunityPpcClicks} />
 
         </div></div>
       </>}
