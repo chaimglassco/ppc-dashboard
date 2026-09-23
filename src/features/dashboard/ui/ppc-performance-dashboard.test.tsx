@@ -34,9 +34,11 @@ describe("PpcPerformanceDashboard", () => {
     const summary = await screen.findByRole("region", { name: "Current Week Summary" });
     const add = within(summary).getByRole("button", { name: "Add summary topic" });
     expect(add).toHaveTextContent("");
-    expect(within(summary).getAllByRole("textbox", { name: /Topic title/ }).map(input => (input as HTMLInputElement).value)).toEqual(["Impression", "Conversion Rate", "Spend & ACOS Efficiency"]);
+    expect(within(summary).getAllByRole("textbox", { name: /Topic title/ }).map(input => (input as HTMLInputElement).value)).toEqual(["Good", "Bad"]);
+    expect(within(summary).getByRole("region", { name: "Summary topic Good" }).className).toMatch(/summaryTopicGood/);
+    expect(within(summary).getByRole("region", { name: "Summary topic Bad" }).className).toMatch(/summaryTopicBad/);
     fireEvent.click(add);
-    fireEvent.change(within(summary).getByRole("textbox", { name: "Topic title 4" }), { target: { value: "Next Week" } });
+    fireEvent.change(within(summary).getByRole("textbox", { name: "Topic title 3" }), { target: { value: "Next Week" } });
     const notes = within(summary).getByRole("textbox", { name: "Next Week documentation" });
     fireEvent.focus(notes);
     fireEvent.change(notes, { target: { value: "Raise bids carefully" } });
@@ -44,19 +46,19 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.click(within(summary).getByRole("button", { name: "Bold Performance documentation" }));
     expect(notes).toHaveValue("**Raise** bids carefully");
     fireEvent.click(within(summary).getByRole("button", { name: "Move Next Week up" }));
-    fireEvent.click(within(summary).getByRole("button", { name: "Remove topic Impression" }));
+    fireEvent.click(within(summary).getByRole("button", { name: "Remove topic Good" }));
     await waitFor(() => {
       const stored = JSON.parse(localStorage.getItem(PPC_DASHBOARD_STORAGE_KEY)!);
-      expect(stored.reports["product-1:2026-08-26"].summaryTopics.map((topic: { title: string }) => topic.title)).toEqual(["Conversion Rate", "Next Week", "Spend & ACOS Efficiency"]);
+      expect(stored.reports["product-1:2026-08-26"].summaryTopics.map((topic: { title: string }) => topic.title)).toEqual(["Next Week", "Bad"]);
       expect(stored.reports["product-1:2026-08-26"].notes).toBe("## Next Week\n**Raise** bids carefully");
     }, { timeout: 3000 });
     view.unmount();
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     expect(await screen.findByRole("textbox", { name: "Next Week documentation" })).toHaveValue("**Raise** bids carefully");
-    expect(screen.getByRole("textbox", { name: "Topic title 2" })).toHaveValue("Next Week");
-    expect(screen.queryByRole("textbox", { name: "Impression documentation" })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Topic title 1" })).toHaveValue("Next Week");
+    expect(screen.queryByRole("textbox", { name: "Good documentation" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /August 19 to August 25/ }));
-    expect(await screen.findByRole("textbox", { name: "Impression documentation" })).toHaveValue("");
+    expect(await screen.findByRole("textbox", { name: "Good documentation" })).toHaveValue("");
     expect(screen.queryByRole("textbox", { name: "Next Week documentation" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /August 26 to September 1/ }));
     expect(await screen.findByRole("textbox", { name: "Next Week documentation" })).toHaveValue("**Raise** bids carefully");
@@ -75,7 +77,7 @@ describe("PpcPerformanceDashboard", () => {
       metricsCalls.push(url);
       const startDate = new URL(url, "http://localhost").searchParams.get("weekStart")!;
       return { ok: true, status: 200, json: async () => ({ performance: {
-        metricsRevision: 2, asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
+        metricsRevision: 3, asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
         metrics: { spend: 81.75, ppcSales: 481.75, ppcOrders: 23, ppcClicks: 48, ppcImpressions: 1200, ppcUnits: 31, totalUnits: 59, totalSales: 1317.35, totalOrders: 59, totalSessions: 122 },
         freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: startDate }, warnings: [],
       } }) } as Response;
@@ -103,7 +105,7 @@ describe("PpcPerformanceDashboard", () => {
       if (url.includes("/api/dashboard/performance?")) {
         const startDate = new URL(url, "http://localhost").searchParams.get("weekStart")!;
         return { ok: true, status: 200, json: async () => ({ performance: {
-          metricsRevision: 2, asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
+          metricsRevision: 3, asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
           metrics: { spend: 82, ppcSales: 482, ppcOrders: 23, totalSales: 1317, totalOrders: 59 },
           freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: addDaysIso(startDate, 6) }, warnings: [missingClicksWarning],
         } }) } as Response;
@@ -173,7 +175,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(screen.getByText((_, element) => element?.tagName === "SMALL" && element.textContent === "$1,150 remaining")).toBeVisible();
     expect(screen.getByText("Spent (23%)")).toBeVisible();
     expect(screen.queryByText("Burn Rate Progress")).not.toBeInTheDocument();
-    fireEvent.change(screen.getByRole("textbox", { name: "Impression documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Good documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
     expect(within(screen.getByRole("region", { name: "Current Week Summary" })).getByText("Saving changes…")).toBeVisible();
     await waitFor(() => expect(screen.getByText("Changes saved automatically")).toBeVisible(), { timeout: 3_000 });
@@ -188,7 +190,7 @@ describe("PpcPerformanceDashboard", () => {
       dailyBudget: 214.29,
       budgetHistory: [expect.objectContaining({ from: 0, to: 1500 })],
       spend: 350,
-      notes: "## Impression\nScale the best converting exact-match campaign.",
+      notes: "## Good\nScale the best converting exact-match campaign.",
       status: "Draft",
     });
   }, 10_000);
@@ -242,7 +244,7 @@ describe("PpcPerformanceDashboard", () => {
       if (!url.includes("/api/dashboard/performance?")) return { ok: true, status: 200, json: async () => ({ products: [{ id: "product-1", name: "Glass Cleaner", asin: "B012345678", sku: "GC-01", stageId: "launch", status: "Active" }] }) } as Response;
       const startDate = new URL(url, "http://localhost").searchParams.get("weekStart")!;
       return { ok: true, status: 200, json: async () => ({ performance: {
-        metricsRevision: 2, asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
+        metricsRevision: 3, asin: "B012345678", country: "US", startDate, endDate: addDaysIso(startDate, 6), currency: "USD",
         metrics: { spend: 81.75, ppcSales: 481.75, ppcOrders: 23, ppcClicks: 48, ppcImpressions: 1200, ppcUnits: 31, totalUnits: 59, totalSales: 1317.35, totalOrders: 59 },
         freshness: { adsDataAsOf: "ads", salesDataAsOf: "sales", salesDataThrough: addDaysIso(startDate, 6) }, warnings: [],
       } }) } as Response;
@@ -295,7 +297,7 @@ describe("PpcPerformanceDashboard", () => {
       return {
         ok: true, status: 200,
         json: async () => ({ performance: {
-          metricsRevision: 2, asin: "B012345678", country: "US", startDate, endDate, currency: "USD",
+          metricsRevision: 3, asin: "B012345678", country: "US", startDate, endDate, currency: "USD",
           metrics: { spend: 50, ppcSales: 200, ppcOrders: 10, totalSales: 500, totalOrders: 25 },
           freshness: { adsDataAsOf: endDate, salesDataAsOf: endDate, salesDataThrough: endDate }, warnings: [],
         } }),
@@ -352,10 +354,18 @@ describe("PpcPerformanceDashboard", () => {
     expect(performanceCard.compareDocumentPosition(goalsCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(performanceCard.compareDocumentPosition(budgetCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(performanceCard.compareDocumentPosition(actionCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
-    expect(within(goalsCard).getByRole("button", { name: "Add Goal" })).toBeVisible();
+    const goalHistory = within(goalsCard).getByRole("button", { name: "Goal History" });
+    const addGoal = within(goalsCard).getByRole("button", { name: "Add Goal" });
+    expect(addGoal).toBeVisible();
+    expect(goalHistory.parentElement).toBe(addGoal.parentElement);
+    expect(within(goalsCard).queryByRole("combobox", { name: /status/i })).not.toBeInTheDocument();
     expect(within(budgetCard).getByRole("textbox", { name: "Weekly limit" })).toBeVisible();
     expect(within(budgetCard).queryByText("Burn Rate Progress")).not.toBeInTheDocument();
     expect(within(actionCard).getByRole("button", { name: "Add Action Item" })).toBeVisible();
+    fireEvent.click(within(actionCard).getByRole("button", { name: "Add Action Item" }));
+    expect(within(actionCard).queryByRole("combobox")).not.toBeInTheDocument();
+    expect(within(actionCard).queryByLabelText("Assignee unavailable")).not.toBeInTheDocument();
+    expect(within(actionCard).getByRole("button", { name: "Remove New action item" })).toHaveAttribute("title", "Delete action item");
     fireEvent.change(within(budgetCard).getByRole("textbox", { name: "Weekly limit" }), { target: { value: "50" } });
     fireEvent.change(within(budgetCard).getByRole("textbox", { name: "Actual spend" }), { target: { value: "75" } });
     expect(within(budgetCard).getByText("Over Budget")).toBeVisible();
@@ -364,6 +374,27 @@ describe("PpcPerformanceDashboard", () => {
     const summary = screen.getByRole("region", { name: "Current Week Summary" });
     expect(within(summary).getByRole("button", { name: "Add summary topic" })).toBeVisible();
     expect(actionCard).toBeVisible();
+  });
+
+  it("carries the previous weekly budget forward and keeps a manual override", async () => {
+    window.localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      reports: {
+        "product-1:2026-08-19": { productId: "product-1", weekStart: "2026-08-19", weeklyBudget: 700, dailyBudget: 100 },
+      },
+    }));
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+
+    expect(await screen.findByRole("textbox", { name: "Weekly limit" })).toHaveValue("700");
+    const weeklyLimit = screen.getByRole("textbox", { name: "Weekly limit" });
+    fireEvent.focus(weeklyLimit);
+    fireEvent.change(weeklyLimit, { target: { value: "840" } });
+    fireEvent.blur(weeklyLimit);
+    fireEvent.click(screen.getByRole("button", { name: /August 19 to August 25/ }));
+    expect(screen.getByRole("textbox", { name: "Weekly limit" })).toHaveValue("700");
+    fireEvent.click(screen.getByRole("button", { name: /August 26 to September 1/ }));
+    expect(screen.getByRole("textbox", { name: "Weekly limit" })).toHaveValue("840");
   });
   it("starts with the first priority-tag product and omits its tag beside the workspace title", async () => {
     window.localStorage.setItem(PPC_DASHBOARD_CATALOG_STORAGE_KEY, JSON.stringify({

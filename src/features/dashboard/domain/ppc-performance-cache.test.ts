@@ -13,9 +13,11 @@ it("restores genuine zero-valued snapshots and recalculates derived metrics", ()
   expect(entries[performanceCacheKey(snapshot.asin, snapshot.startDate)].metrics.conversionRate).toBeUndefined();
   const withPpcClicks = parsePerformanceSnapshot({ ...snapshot, metrics: { ...snapshot.metrics, ppcOrders: 27, ppcClicks: 78, totalOrders: 42, totalSessions: 87 } });
   expect(withPpcClicks?.metrics.conversionRate).toBe(34.62);
-  const revised = parsePerformanceSnapshot({ ...snapshot, metricsRevision: 2, metrics: { ...snapshot.metrics, ppcClicks: 78, ppcImpressions: 1200, totalUnits: 44 }, freshness: { ...snapshot.freshness, searchDataAsOf: "search" } });
-  expect(revised).toMatchObject({ metricsRevision: 2, metrics: { ppcImpressions: 1200, totalUnits: 44, cpc: 0 }, freshness: { searchDataAsOf: "search" } });
+  const revisionTwo = parsePerformanceSnapshot({ ...snapshot, metricsRevision: 2, metrics: { ...snapshot.metrics, ppcClicks: 78, ppcImpressions: 1200, totalUnits: 44 }, freshness: { ...snapshot.freshness, searchDataAsOf: "search" } });
+  const revised = parsePerformanceSnapshot({ ...snapshot, metricsRevision: 3, metrics: { ...snapshot.metrics, ppcClicks: 78, ppcImpressions: 1200, ppcUnits: 20, totalUnits: 44 }, freshness: { ...snapshot.freshness, searchDataAsOf: "search" } });
+  expect(revised).toMatchObject({ metricsRevision: 3, metrics: { ppcImpressions: 1200, ppcUnits: 20, organicUnits: 24, totalUnits: 44, cpc: 0 }, freshness: { searchDataAsOf: "search" } });
   expect(performanceSnapshotNeedsMetricsUpgrade(entries[performanceCacheKey(snapshot.asin, snapshot.startDate)])).toBe(true);
+  expect(performanceSnapshotNeedsMetricsUpgrade(revisionTwo ?? undefined)).toBe(true);
   expect(performanceSnapshotNeedsMetricsUpgrade(revised ?? undefined)).toBe(false);
 });
 it("rejects invalid metrics, dates, marketplace, and malformed storage", () => {

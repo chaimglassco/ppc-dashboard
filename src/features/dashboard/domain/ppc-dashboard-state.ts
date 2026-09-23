@@ -68,7 +68,10 @@ export function reportKey(productId: string, weekStart: string) { return `${prod
 export function getSummaryTopics(report: WeeklyPpcReport): SummaryTopic[] {
   if (report.summaryTopics) return report.summaryTopics;
   if (report.notes) return [{ id: "summary-legacy", title: "General Summary", body: report.notes }];
-  return ["Impression", "Conversion Rate", "Spend & ACOS Efficiency"].map((title, index) => ({ id: `summary-default-${index}`, title, body: "" }));
+  return [
+    { id: "summary-default-good", title: "Good", body: "" },
+    { id: "summary-default-bad", title: "Bad", body: "" },
+  ];
 }
 
 export function summaryTopicsNotes(topics: SummaryTopic[]) {
@@ -94,8 +97,9 @@ export function createWeeklyPpcReport(productId: string, weekStart: string, prev
       ...goal, id: `${goal.id}-carried-${weekStart}-${index}`, actual: "", status: "On Track" as GoalStatus,
     }))
     : DEFAULT_GOALS.map(goal => ({ ...goal }));
+  const weeklyBudget = previousReport?.weeklyBudget ?? 0;
   return {
-    productId, weekStart, status: "Draft", weeklyBudget: 0, dailyBudget: 0, budgetHistory: [], spend: 0,
+    productId, weekStart, status: "Draft", weeklyBudget, dailyBudget: Math.round((weeklyBudget / 7) * 100) / 100, budgetHistory: [], spend: 0,
     ppcSales: 0, organicSales: 0, totalSales: 0, ppcOrders: 0, organicOrders: 0, totalOrders: 0, targetAcos: 0,
     acos: 0, tacos: 0, goals: carriedGoals, goalHistory: [], previousWeekResult: previousReport?.previousWeekResult || "",
     notes: "", actions: [], updatedAt: null,

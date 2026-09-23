@@ -4,6 +4,10 @@ import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatRe
 describe("PPC dashboard state", () => {
   it("restores summary topics, preserves legacy notes, and rejects malformed topic storage", () => {
     const report = createWeeklyPpcReport("product-1", "2026-08-26");
+    expect(getSummaryTopics(report)).toEqual([
+      { id: "summary-default-good", title: "Good", body: "" },
+      { id: "summary-default-bad", title: "Bad", body: "" },
+    ]);
     const topics = [{ id: "topic-1", title: "Conversion Rate", body: "Keep the best campaign." }, { id: "topic-2", title: "Spend", body: "Reduce bids." }];
     const parse = (summaryTopics: unknown) => parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { saved: { ...report, notes: "Legacy notes", summaryTopics } } })).reports[reportKey(report.productId, report.weekStart)];
     expect(parse(topics).summaryTopics).toEqual(topics);
@@ -200,6 +204,8 @@ describe("PPC dashboard state", () => {
   it("carries unfinished goals into the following week and resets their progress", () => {
     const previous = {
       ...createWeeklyPpcReport("product-1", "2026-08-26"),
+      weeklyBudget: 700,
+      dailyBudget: 100,
       goals: [
         { id: "done", title: "Completed goal", target: "10", actual: "10", status: "Achieved" as const },
         { id: "risk", title: "Improve ACOS", target: "25%", actual: "32%", status: "At Risk" as const },
@@ -213,5 +219,8 @@ describe("PPC dashboard state", () => {
       { title: "Improve ACOS", actual: "", status: "On Track" },
     ]);
     expect(next.previousWeekResult).toBe("Carry this result into next week.");
+    expect(next.weeklyBudget).toBe(700);
+    expect(next.dailyBudget).toBe(100);
+    expect(next.budgetHistory).toEqual([]);
   });
 });

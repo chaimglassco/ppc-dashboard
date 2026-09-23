@@ -14,17 +14,17 @@ The ASIN row includes a keyboard-accessible copy button with copied feedback. AC
 
 ## September 11 custom-goal and budget-card behavior
 
-Budget Utilization remains top-aligned beside Strategic Weekly Goals and does not move its controls when the goal list becomes taller. The goal selector offers Custom Goal. A custom selection displays a manual goal-text field, keeps Target editable, leaves Actual unavailable because no live metric is mapped, and retains On Track/At Risk plus achieved, missed, and delete controls.
+Budget Utilization remains top-aligned beside Strategic Weekly Goals and does not move its controls when the goal list becomes taller. The goal selector offers Custom Goal. A custom selection displays a manual goal-text field, keeps Target editable, leaves Actual unavailable because no live metric is mapped, and retains achieved, missed, and delete controls.
 
 ## September 11 compact goals and conversion rate
 
-Each active goal displays Target on the first line and Actual directly below it. The On Track/At Risk selector and achieved, missed, and delete icon buttons share the same top-row control group. Previous Week Summary contains the label Performance Documentation and a vertically resizable read-only field. Both summary headers omit report-state badges, and the prior summary omits Completed, Status, archive, and ROAS metadata.
+Each active goal displays Target on the first line and Actual directly below it. Achieved, missed, and delete icon buttons share the footer without a separate interim-status selector. Previous Week Summary contains the label Performance Documentation and a vertically resizable read-only field. Both summary headers omit report-state badges, and the prior summary omits Completed, Status, archive, and ROAS metadata.
 
 PPC Conversion Rate is displayed as a whole percentage. When the prior period also has PPC Clicks, the card shows its whole-number previous value and week-over-week direction.
 
 ## September 11 dashboard control revision
 
-The workspace header presents **Refresh Data** and edits save automatically. Previous Week Summary is view-only and stays blank when no result was entered. The final card is titled **Action Items** and contains completion, title, priority, assignee placeholder, and delete controls without a due-date picker. Weekly goal progress places Actual below Target, and achieved/missed/delete buttons sit beside the status selector. Budget Utilization places the calculated daily limit inside the Weekly Limit tile and does not repeat daily limit or over/remaining balance outside the primary tiles.
+The workspace header presents **Refresh Data** and edits save automatically. Previous Week Summary is view-only and stays blank when no result was entered. The final top-row card is titled **Action Items** and contains completion, title, and delete controls. Weekly goal progress places Actual below Target, with achieved/missed/delete buttons in the footer. Budget Utilization places the calculated daily limit inside the Weekly Limit tile and does not repeat daily limit or over/remaining balance outside the primary tiles.
 
 ## September 11 dashboard catalog behavior
 
@@ -255,7 +255,7 @@ Campaign Movers and Anchors uses Scale Insights' dedicated campaign-performance 
 
 Weekly monetary goal targets display whole dollars, matching Actual, while decimal values remain editable.
 
-Current Week Summary uses editable topic cards. Blank reports start with Impression, Conversion Rate, and Spend & ACOS Efficiency; legacy notes open intact in General Summary. An icon-only + in the formatting toolbar adds topics; titles can be renamed inline, topics removed, and arrow controls change their order. Formatting applies to the active topic and changes use existing autosave.
+Current Week Summary uses editable topic cards. Blank reports start with Good and Bad sections, using light-green and light-red backgrounds respectively; legacy notes open intact in General Summary. An icon-only + in the formatting toolbar adds topics; titles can be renamed inline, topics removed, and arrow controls change their order. Formatting applies to the active topic and changes use existing autosave.
 
 Untargeted opportunity totals appear above their metric column headings. Create Bulk Campaigns shares the match-count toolbar; the local-filter implementation notice is removed.
 
@@ -267,6 +267,6 @@ The selected product's Weekly PPC Performance panel now uses a Scale Insights-st
 
 ## Weekly traffic metric completion
 
-Weekly performance retrieval also reads complete ASIN-scoped Search Term Performance traffic for the same dates. This supplies actual PPC Clicks and Impressions when the advertising summary omits them; CPC remains derived from Spend divided by those clicks. Existing cached snapshots without the current metric revision are refreshed automatically across the visible six-week window. Scale Insights currently exposes Total Units but not PPC-attributed Units through the connected reporting tools, so PPC Units and Organic Units remain unavailable unless the provider begins returning exact PPC units.
+Weekly performance retrieval also reads complete ASIN-scoped Search Term Performance traffic for the same dates. This supplies actual PPC Clicks, Impressions, and exact PPC Units when the provider returns an aggregate or complete row-level unit field; CPC remains derived from Spend divided by those clicks and Organic Units from Total Units minus exact PPC Units. Existing cached snapshots without the current metric revision are refreshed automatically across the visible six-week window. PPC Units and Organic Units remain unavailable when Scale Insights omits an exact paid-unit field; orders are never substituted for units.
 
-The weekly workspace opens with three cards in one desktop row: Strategic Weekly Goals, Budget Utilization, and Action Items. The budget card keeps its editable limits, current spend, pacing status, and history; the redundant Burn Rate Progress block is removed.
+The weekly workspace opens with three cards in one desktop row: Strategic Weekly Goals, Budget Utilization, and Action Items. Goal History and Add Goal are stacked in the card header, and active goals use achieved, missed, and delete actions without a separate On Track/At Risk selector. Action rows show completion, title, and delete controls without priority or assignee placeholders. A new week's budget inherits the immediately preceding weekly limit and remains independently editable. The budget card keeps its editable limits, current spend, pacing status, and history; the redundant Burn Rate Progress block is removed.

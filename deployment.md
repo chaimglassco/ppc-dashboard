@@ -288,10 +288,10 @@ Compact opportunity table alignment requires no configuration, environment, or d
 
 This presentation and cache extension requires no environment variable, database migration, or API contract break. After deployment, verify the selected product's weekly panel shows six columns with the active week at the right edge, the requested row order, imported read-only values, and correct derived CPC/Organic Units. Confirm older cached records without optional impressions or unit fields still load and show unavailable cells. Rollback only removes the presentation extension; existing version-1 reports and caches remain compatible.
 
-## Weekly traffic metric completion release
+## Weekly traffic and unit metric completion release
 
-No environment, authentication, database, or storage-key migration is required. The first dashboard load after deployment refreshes visible snapshots that lack `metricsRevision: 2`, adding ASIN-scoped Search Term Performance traffic to the existing ads and sales calls. Monitor provider usage during that one-time six-week refresh. Verify subsequent loads reuse revision-2 snapshots and do not repeat the enrichment calls until Refresh Data is requested.
+No environment, authentication, database, or storage-key migration is required. The first dashboard load after deployment refreshes visible snapshots that lack `metricsRevision: 3`, adding exact PPC-unit parsing to the existing ASIN-scoped Search Term Performance enrichment. Monitor provider usage during that one-time six-week refresh. Verify subsequent loads reuse revision-3 snapshots and do not repeat the enrichment calls until Refresh Data is requested. If Scale Insights omits units, the two unit rows must stay unavailable.
 
 The Total Sales, Total Orders, and Total Units weekly rows require no migration or new provider request; they render values already present in each validated snapshot.
 
-The three-card top-row layout and Burn Rate Progress removal require no environment, API, or storage migration. Verify the layout at desktop and narrow widths after deployment; existing goals, budget history, and action items remain compatible.
+The three-card top-row layout and Burn Rate Progress removal require no environment, API, or storage migration. Verify the layout at desktop and narrow widths after deployment; Goal History/Add Goal stack cleanly, interim goal status and action priority/assignee controls are absent, and delete controls remain. Create the next week to verify weekly-budget inheritance and manual override isolation. Confirm new blank summaries start with tinted Good/Bad sections. Existing goals, reports, budget history, and action items remain compatible.

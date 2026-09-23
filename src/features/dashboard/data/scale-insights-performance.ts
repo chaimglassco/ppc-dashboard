@@ -10,7 +10,7 @@ export type ScaleInsightsWeeklyPerformanceParams = {
 };
 
 export type ScaleInsightsWeeklyPerformance = ScaleInsightsWeeklyPerformanceParams & {
-  metricsRevision?: 2;
+  metricsRevision?: 2 | 3;
   currency: string;
   metrics: WeeklyPerformanceCalculatedMetrics;
   freshness: {
@@ -25,6 +25,7 @@ export type ScaleInsightsWeeklyPerformance = ScaleInsightsWeeklyPerformanceParam
 type SearchTermTraffic = {
   ppcClicks?: number;
   ppcImpressions?: number;
+  ppcUnits?: number;
   dataAsOf: string;
   warning?: string;
 };
@@ -97,7 +98,8 @@ function searchTermTrafficRows(payload: Record<string, unknown>) {
     if (!isRecord(candidate) || !isRecord(candidate.metrics)) return [];
     const impressions = numericInteger(directPrimitive(candidate.metrics, PPC_IMPRESSION_KEYS));
     const clicks = numericInteger(directPrimitive(candidate.metrics, PPC_CLICK_KEYS));
-    return impressions == null || clicks == null ? [] : [{ impressions, clicks }];
+    const ppcUnits = numericInteger(directPrimitive(candidate.metrics, PPC_UNIT_KEYS));
+    return impressions == null || clicks == null ? [] : [{ impressions, clicks, ...(ppcUnits == null ? {} : { ppcUnits }) }];
   });
 }
 
@@ -106,6 +108,9 @@ async function loadSearchTermTraffic(params: ScaleInsightsWeeklyPerformanceParam
   let parsedRows = 0;
   let expectedRows: number | undefined;
   let ppcClicks: number | undefined;
+  let ppcUnits: number | undefined;
+  let rowPpcUnits = 0;
+  let unitRows = 0;
   let dataAsOf = "";
 
   for (let page = 1; page <= SEARCH_TERM_MAX_PAGES; page += 1) {
@@ -128,18 +133,23 @@ async function loadSearchTermTraffic(params: ScaleInsightsWeeklyPerformanceParam
     const totals = isRecord(meta.totals) ? meta.totals : {};
     expectedRows ??= numericInteger(meta.total_count);
     ppcClicks ??= numericInteger(directPrimitive(totals, PPC_CLICK_KEYS));
+    ppcUnits ??= numericInteger(directPrimitive(totals, PPC_UNIT_KEYS));
     dataAsOf ||= stringValue(meta.data_as_of);
     const rows = searchTermTrafficRows(payload);
     parsedRows += rows.length;
     ppcImpressions += rows.reduce((total, row) => total + row.impressions, 0);
+    rowPpcUnits += rows.reduce((total, row) => total + (row.ppcUnits ?? 0), 0);
+    unitRows += rows.filter(row => row.ppcUnits != null).length;
     if (meta.has_next_page === false) break;
     if (meta.has_next_page !== true && (expectedRows == null || page * SEARCH_TERM_PAGE_SIZE >= expectedRows)) break;
   }
 
   const complete = expectedRows === 0 || expectedRows != null && parsedRows >= expectedRows;
+  const completeUnitRows = complete && expectedRows != null && unitRows >= expectedRows;
   return {
     ...(ppcClicks == null ? {} : { ppcClicks }),
     ...(complete ? { ppcImpressions } : {}),
+    ...(ppcUnits == null ? completeUnitRows ? { ppcUnits: rowPpcUnits } : {} : { ppcUnits }),
     dataAsOf,
     ...(complete ? {} : { warning: `Scale Insights search-term coverage exceeded ${SEARCH_TERM_MAX_PAGES * SEARCH_TERM_PAGE_SIZE} rows; Impressions remain unavailable.` }),
   };
@@ -286,6 +296,7 @@ export async function loadScaleInsightsWeeklyPerformance(
   const ppcImpressions = exactMetricValue(adsResult, ads, adsTotals, adsAggregate, params.asin, PPC_IMPRESSION_KEYS)
     ?? searchTermTraffic.ppcImpressions;
   const ppcUnits = exactMetricValue(adsResult, ads, adsTotals, adsAggregate, params.asin, PPC_UNIT_KEYS)
+    ?? searchTermTraffic.ppcUnits
     ?? numericInteger(directPrimitive(salesSummary, SALES_PPC_UNIT_KEYS));
   const totalUnits = numericInteger(directPrimitive(salesSummary, TOTAL_UNIT_KEYS));
   const salesPpcCost = finiteNonNegative(salesSummary.TotalPPCCost, "sales-report PPC Cost");
@@ -305,7 +316,7 @@ export async function loadScaleInsightsWeeklyPerformance(
 
   return {
     ...params,
-    metricsRevision: 2,
+    metricsRevision: 3,
     currency: stringValue(adsAggregate.Currency) || "USD",
     metrics: calculateWeeklyPerformance({ spend, ppcSales, ppcOrders, totalSales, totalOrders, totalSessions, ...(ppcClicks == null ? {} : { ppcClicks }), ...(ppcImpressions == null ? {} : { ppcImpressions }), ...(ppcUnits == null ? {} : { ppcUnits }), ...(totalUnits == null ? {} : { totalUnits }) }),
     freshness: {

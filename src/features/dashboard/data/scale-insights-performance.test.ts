@@ -29,8 +29,8 @@ function salesPayload(overrides: Record<string, unknown> = {}) {
 function searchPayload(overrides: Record<string, unknown> = {}) {
   return {
     agg: { Country: "US", StartDate: "2026-08-26", EndDate: "2026-09-01" },
-    oppMeta: { total_count: 1, returned_count: 1, has_next_page: false, totals: { total_clicks: 48 }, data_as_of: "search" },
-    opps: [{ entityType: "SearchTerm", metrics: { Impressions: "1,200", Clicks: "48" } }],
+    oppMeta: { total_count: 1, returned_count: 1, has_next_page: false, totals: { total_clicks: 48, total_units: 31 }, data_as_of: "search" },
+    opps: [{ entityType: "SearchTerm", metrics: { Impressions: "1,200", Clicks: "48", Units: "31" } }],
     ...overrides,
   };
 }
@@ -49,7 +49,7 @@ describe("Scale Insights weekly performance", () => {
 
     await expect(loadScaleInsightsWeeklyPerformance(params, callTool)).resolves.toEqual({
       ...params,
-      metricsRevision: 2,
+      metricsRevision: 3,
       currency: "USD",
       metrics: {
         spend: 81.75,
@@ -124,8 +124,8 @@ describe("Scale Insights weekly performance", () => {
     expect(result.metrics.ppcImpressions).toBe(1200);
     expect(result.metrics.cpc).toBe(1.7);
     expect(result.metrics.totalUnits).toBe(59);
-    expect(result.metrics.ppcUnits).toBeUndefined();
-    expect(result.metrics.organicUnits).toBeUndefined();
+    expect(result.metrics.ppcUnits).toBe(31);
+    expect(result.metrics.organicUnits).toBe(28);
   });
 
   it("sums impressions only after every search-term page is loaded", async () => {
@@ -134,13 +134,15 @@ describe("Scale Insights weekly performance", () => {
       if (name === "get_sales_data") return salesPayload();
       return searchPayload({
         oppMeta: { total_count: 2, returned_count: 1, has_next_page: args.page === 1, totals: { total_clicks: 48 }, data_as_of: "search" },
-        opps: [{ entityType: "SearchTerm", metrics: { Impressions: args.page === 1 ? "700" : "500", Clicks: "24" } }],
+        opps: [{ entityType: "SearchTerm", metrics: { Impressions: args.page === 1 ? "700" : "500", Clicks: "24", Units: args.page === 1 ? "18" : "13" } }],
       });
     });
 
     const result = await loadScaleInsightsWeeklyPerformance(params, callTool);
     expect(result.metrics.ppcImpressions).toBe(1200);
     expect(result.metrics.ppcClicks).toBe(48);
+    expect(result.metrics.ppcUnits).toBe(31);
+    expect(result.metrics.organicUnits).toBe(28);
     expect(callTool).toHaveBeenCalledWith("get_search_term_performance", expect.objectContaining({ page: 2 }));
   });
 

@@ -145,7 +145,7 @@ Use this checklist before merging or deploying changes.
 
 ## Goal history and previous-week comparisons
 
-Create or edit a goal, then use the circle-check Achieved action and verify it immediately leaves the active list and appears in Goal History with its target, actual, outcome, reporting week, and recorded date. Repeat with the X Missed action. Reload and switch weeks to confirm product-wide history persists. Verify Delete still removes without creating history, active status choices are limited to On Track/At Risk, malformed history is dropped, legacy terminal goals migrate, Escape/backdrop/Close dismiss the dialog, and other products do not expose this product's history.
+Create or edit a goal, then use the circle-check Achieved action and verify it immediately leaves the active list and appears in Goal History with its target, actual, outcome, reporting week, and recorded date. Repeat with the X Missed action. Reload and switch weeks to confirm product-wide history persists. Verify Delete still removes without creating history, no active status dropdown is rendered, malformed history is dropped, legacy terminal goals migrate, Escape/backdrop/Close dismiss the dialog, and other products do not expose this product's history.
 
 Click Add Goal and verify the selector offers exactly Increase Spend, Decrease Spend, PPC Sales, Total Sales, PPC Order, Organic Order, Total Orders, ACOS, and TACOS. Confirm each Actual maps to its matching weekly metric and both Spend directions use actual spend. Select Organic Order and confirm Number/Percentage appears; Number must equal organic orders, while Percentage must equal rounded organic orders divided by total orders. Enter Targets and confirm currency plus non-ACOS percentages show two decimals after blur, while ACOS and count Targets remain whole. Verify Actual is read-only, updates when refreshed Scale Insights metrics change, shows Waiting without a snapshot, Partial when the snapshot ends before Tuesday, and Final when it covers Wednesday–Tuesday. Resolve both a Partial and Final goal and confirm Goal History preserves the formatted Target, displayed Actual, and completeness label. Restore legacy Spend/Sales goal data and verify it maps to Decrease Spend/PPC Sales while unknown names are not discarded.
 
@@ -439,15 +439,19 @@ Verify opportunity metric totals, sortable labels, row values, and Status are ce
 - [ ] Confirm imported cells are read-only, missing optional provider metrics display an em dash, and switching weeks reuses the saved cache without a new request.
 - [ ] Check the compact Analysis trend bars and verify there are no hydration or browser console errors.
 
-## Weekly traffic metric completion
+## Weekly traffic and unit metric completion
 
-- [ ] Restore revision-1 cached weeks and confirm all six visible weeks refresh once to revision 2 without requiring manual week selection.
+- [ ] Restore revision-2 and older cached weeks and confirm all six visible weeks refresh once to revision 3 without requiring manual week selection.
 - [ ] Reconcile Impressions and Clicks with complete ASIN-scoped Search Term Performance for each date range, and confirm CPC equals weekly Spend divided by refreshed Clicks.
+- [ ] When Scale Insights supplies exact aggregate or complete row-level PPC Units, reconcile PPC Units and confirm Organic Units equals Total Units minus PPC Units.
 - [ ] Confirm incomplete search-term pagination never displays a partial Impression total and produces a bounded warning.
-- [ ] Confirm PPC Units and Organic Units remain unavailable when Scale Insights does not expose exact PPC-attributed units; no order-to-unit estimate may be shown.
+- [ ] Confirm PPC Units and Organic Units remain unavailable when Scale Insights does not expose exact PPC-attributed units; no order-to-unit or sales-share estimate may be shown.
 
 ## Three-card workspace summary
 
 - [ ] Confirm Strategic Weekly Goals, Budget Utilization, and Action Items share the top row on desktop and stack legibly below 1280px.
 - [ ] Confirm Burn Rate Progress is absent while Weekly Limit, Spent, pacing status, and Budget History remain functional.
-- [ ] Add, complete, reprioritize, and remove an action from its new card and confirm autosave still restores it.
+- [ ] Confirm Goal History and Add Goal are stacked with one-line labels, active goal rows have no On Track/At Risk dropdown, and achieved/missed/delete actions still work.
+- [ ] Add, complete, and delete an action; confirm no priority selector or assignee placeholder appears and autosave still restores the action.
+- [ ] Set a weekly budget, open the following week, and confirm the limit carries forward with a recalculated daily limit. Override the new week, navigate away and back, and confirm the override remains independent.
+- [ ] Confirm a blank Current Week Summary starts with light-green Good and light-red Bad sections and retains their content and order after reload.

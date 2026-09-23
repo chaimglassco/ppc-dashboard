@@ -398,10 +398,12 @@ Centered opportunity metric totals, labels, and values, and reduced header/row s
 
 Replaced the selected-product weekly metric card groups with a six-week Scale Insights-style table. The active week is the rightmost selected column, the five preceding Wednesday–Tuesday periods are shown beside it, and the requested paid, organic, and efficiency rows are rendered in a fixed order. Added optional impressions and unit fields to the provider adapter/cache, with derived CPC and Organic Units, read-only imported cells, compact trend bars, and regression coverage for the six-column layout.
 
-## 2026-09-23 — Weekly traffic metric completion
+## 2026-09-23 — Weekly traffic and unit metric completion
 
-Added complete Search Term Performance traffic retrieval to weekly performance so the six-week table can display actual Impressions, Clicks, and derived CPC even though the Scale Insights ads summary omits those fields. Added revision-2 snapshot marking and automatic refresh of older visible-week caches. Total Units continue to come from Sales Data; PPC Units remain unavailable because the connected reports do not expose an exact paid-unit field.
+Added complete Search Term Performance retrieval to weekly performance so the six-week table can display actual Impressions, Clicks, derived CPC, and exact PPC Units when Scale Insights supplies an aggregate or complete row-level unit field. Added revision-3 snapshot marking and automatic refresh of older visible-week caches. Total Units continue to come from Sales Data, Organic Units derive only when exact PPC Units are present, and no order-to-unit estimate is used.
 
 Added Total Sales, Total Orders, and Total Units rows between the organic metrics and ACOS in the six-week performance table.
 
 Reworked the workspace summary row into three responsive cards by moving Action Items beside Strategic Weekly Goals and Budget Utilization. Removed the Burn Rate Progress gauge while retaining budget totals, status, editing, and history.
+
+Simplified weekly planning controls: removed action priority and assignee placeholders, retained a clear trash action, removed the On Track/At Risk goal dropdown, and stacked Goal History with Add Goal. New reports inherit the preceding weekly budget until manually overridden. Blank weekly summaries now begin with light-green Good and light-red Bad sections.

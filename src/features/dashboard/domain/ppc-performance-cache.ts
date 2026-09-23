@@ -2,7 +2,7 @@ import { calculateWeeklyPerformance } from "./ppc-dashboard-state";
 import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
 
 export const PPC_PERFORMANCE_CACHE_KEY = "glassco.ppcPerformanceCache.v1";
-export const PPC_PERFORMANCE_METRICS_REVISION = 2;
+export const PPC_PERFORMANCE_METRICS_REVISION = 3;
 export type PerformanceCache = Record<string, ScaleInsightsWeeklyPerformance>;
 export const performanceCacheKey = (asin: string, weekStart: string) => `US:${asin.trim().toUpperCase()}:${weekStart}`;
 export const performanceSnapshotNeedsMetricsUpgrade = (snapshot: ScaleInsightsWeeklyPerformance | undefined) => snapshot?.metricsRevision !== PPC_PERFORMANCE_METRICS_REVISION;
@@ -23,7 +23,7 @@ export function parsePerformanceSnapshot(value: unknown): ScaleInsightsWeeklyPer
   if (ppcClicks != null && (typeof ppcClicks !== "number" || !Number.isFinite(ppcClicks) || ppcClicks < 0 || !Number.isInteger(ppcClicks))) return null;
   for (const value of [ppcImpressions, ppcUnits, totalUnits]) if (value != null && (typeof value !== "number" || !Number.isFinite(value) || value < 0 || !Number.isInteger(value))) return null;
   return {
-    asin, country, startDate, endDate, ...(value.metricsRevision === 2 ? { metricsRevision: 2 as const } : {}), currency: text(value.currency),
+    asin, country, startDate, endDate, ...(value.metricsRevision === 2 || value.metricsRevision === 3 ? { metricsRevision: value.metricsRevision } : {}), currency: text(value.currency),
     metrics: calculateWeeklyPerformance({ spend: spend as number, ppcSales: ppcSales as number, ppcOrders: ppcOrders as number, totalSales: totalSales as number, totalOrders: totalOrders as number, ...(totalSessions == null ? {} : { totalSessions }), ...(ppcClicks == null ? {} : { ppcClicks }), ...(typeof ppcImpressions === "number" ? { ppcImpressions } : {}), ...(typeof ppcUnits === "number" ? { ppcUnits } : {}), ...(typeof totalUnits === "number" ? { totalUnits } : {}) }),
     freshness: { adsDataAsOf: text(value.freshness.adsDataAsOf), salesDataAsOf: text(value.freshness.salesDataAsOf), salesDataThrough: text(value.freshness.salesDataThrough), ...(value.freshness.searchDataAsOf == null ? {} : { searchDataAsOf: text(value.freshness.searchDataAsOf) }) },
     warnings: Array.isArray(value.warnings) ? value.warnings.filter((warning): warning is string => typeof warning === "string").slice(0, 10).map(text) : [],

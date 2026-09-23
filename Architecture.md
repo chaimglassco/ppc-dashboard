@@ -16,7 +16,7 @@ The planning grid uses start alignment, and Budget Utilization no longer uses an
 
 The performance adapter retains `TotalSessions` from the already-requested Scale Insights sales summary for compatibility. The authenticated route, version-1 performance cache, and version-1 weekly report optionally accept `ppcClicks` and calculated `conversionRate`; missing click denominators render an explicit unavailable state. Conversion comparisons use the same current/previous availability guard as the other metric cards.
 
-Previous Week Summary renders the existing fallback result as a native read-only textarea with vertical resize enabled. It has no report-status chip or footer metadata, and Current Week Summary has no Draft/status chip. Goal rows group the status selector and three outcome controls in one inline cluster, while the Target and read-only Actual form a two-row value stack beside the progress bar.
+Previous Week Summary renders the existing fallback result as a native read-only textarea with vertical resize enabled. It has no report-status chip or footer metadata, and Current Week Summary has no Draft/status chip. Goal rows group achieved, missed, and delete controls in the footer without an interim status selector, while the Target and read-only Actual form a two-row value stack beside the progress bar.
 
 ## Dashboard control presentation
 
@@ -281,8 +281,8 @@ Opportunity table density and metric alignment are presentation-only CSS rules s
 
 The table groups paid, organic, total, and efficiency metrics. Total Sales, Total Orders, and Total Units use the same validated weekly snapshot fields and render immediately above ACOS and TACOS.
 
-## Weekly traffic enrichment and cache upgrade
+## Weekly traffic and unit enrichment and cache upgrade
 
-The weekly adapter runs the ads summary, sales summary, and paginated ASIN-scoped Search Term Performance traffic load together. Search-term pages use 500 rows with a five-page safety cap; impressions are summed only when coverage is complete, while the provider's full-population click total is retained. Successful responses carry `metricsRevision: 2`. The client treats older snapshots as readable but stale and refreshes each visible week once, replacing it in the existing version-1 cache.
+The weekly adapter runs the ads summary, sales summary, and paginated ASIN-scoped Search Term Performance load together. Search-term pages use 500 rows with a five-page safety cap; impressions are summed only when coverage is complete, while the provider's full-population click total is retained. PPC Units use a provider aggregate when present or a row sum only when every expected row supplies units. Successful responses carry `metricsRevision: 3`. The client treats revision-2 and older snapshots as readable but stale and refreshes each visible week once, replacing it in the existing version-1 cache.
 
-The workspace top grid is a responsive three-column presentation containing goals, budget, and action items. Moving Action Items changes component placement only; it continues editing the active report's existing `actions` array. Burn-rate calculations and gauge markup are no longer rendered.
+The workspace top grid is a responsive three-column presentation containing goals, budget, and action items. Active goal status remains stored for backward compatibility, while the workspace exposes terminal achieved/missed actions and deletion without the interim status selector. Action priority and due-date fields remain parseable for compatibility but are no longer rendered. New reports copy the prior report's weekly budget and derive its daily limit; later edits affect only that new report. Burn-rate calculations and gauge markup are no longer rendered.

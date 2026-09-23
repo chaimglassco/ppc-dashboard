@@ -60,8 +60,9 @@
 .cardTitle h3 svg { width: 18px; height: 18px; }
 .cardTitle > span, .sectionTitleGroup > span { padding: 2px 8px; border: 1px solid var(--border); background: #f4f4f5; border-radius: 4px; font: 500 11px/1.5 var(--mono); white-space: nowrap; }
 .sectionTitleGroup { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.goalHeaderActions { display: flex; gap: 6px; }
+.goalHeaderActions { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
 .goalHeaderActions button, .cardTitle > button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; background: white; font-size: 11px; }
+.goalHeaderActions button { justify-content: center; white-space: nowrap; }
 .goalHeaderActions button:hover { background: #f4f4f5; }
 .goalList { display: flex; flex-direction: column; gap: 12px; }
 .goalRow { padding: 14px; background: #fafafa; border: 1px solid var(--border); border-radius: 8px; }
@@ -69,8 +70,6 @@
 .goalDefinition label, .goalMetrics label { display: grid; min-width: 0; gap: 3px; color: var(--muted); font: 10px var(--mono); }
 .goalDefinition label { flex: 1; }
 .goalDefinition select { width: 100%; border: 0; color: #09090b; background: transparent; padding: 3px 0; font-family: var(--font-workspace-sans), sans-serif; font-size: 12px; font-weight: 700; }
-.goalStatusActions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
-.goalStatusActions > select { width: auto; max-width: 90px; border: 1px solid var(--border); border-radius: 4px; padding: 3px; font: 10px var(--mono); }
 .goalDefinition .customGoalName { flex: 1 0 100%; margin-top: 4px; }
 .customGoalName input { width: 100%; height: 30px; min-width: 0; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #09090b; font: 12px var(--font-workspace-sans), sans-serif; }
 .goalInlineValues { display: grid; gap: 2px; min-width: 132px; font: 11px var(--mono); color: var(--muted); }
@@ -196,6 +195,10 @@
 .summaryTopics { display: flex; flex-direction: column; gap: 12px; }
 .summaryTopic { padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: #fafafa; }
 .summaryTopic:focus-within { border-color: #27272a; background: white; }
+.summaryTopicGood { border-color: #bbf7d0; background: #f0fdf4; }
+.summaryTopicBad { border-color: #fecdd3; background: #fff1f2; }
+.summaryTopicGood:focus-within { border-color: #22c55e; background: #f0fdf4; }
+.summaryTopicBad:focus-within { border-color: #f43f5e; background: #fff1f2; }
 .summaryTopicHeader { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
 .summaryTopicHeader > input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; color: #18181b; font: 600 11px/1.5 var(--mono); text-transform: uppercase; }
 .summaryTopicActions { display: flex; flex: none; gap: 2px; }
@@ -208,17 +211,14 @@
 .summaryFooter > span:last-child { text-align: right; }
 .autoSaved { color: #047857; }
 .actionDescription { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
-.assigneePlaceholder { display: grid; place-items: center; width: 20px; height: 20px; flex: none; border-radius: 50%; border: 1px solid var(--border); background: #f4f4f5; color: var(--muted); font: 9px var(--mono); }
 .actionList { display: flex; flex-direction: column; gap: 8px; }
 .actionRow { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: rgba(244,244,245,.4); }
 .actionRow:hover { background: #f4f4f5; }
 .actionRow > button { display: grid; place-items: center; flex: none; width: 18px; height: 18px; padding: 0; border: 1px solid #a1a1aa; border-radius: 4px; background: white; color: #71717a; }
 .actionRow > button:last-child { border: 0; background: transparent; }
 .actionRow > input { min-width: 0; flex: 1; padding: 0; background: transparent; border: 0; color: black; font-size: 12px; font-weight: 600; text-overflow: ellipsis; }
-.actionRow > select { max-width: 85px; padding: 3px 5px; border: 1px solid var(--border); border-radius: 4px; font: 10px var(--mono); }
 .actionRow > button.actionDone { background: #52525b; color: white; border-color: #52525b; }
 .actionRow:has(.actionDone) > input { color: #a1a1aa; text-decoration: line-through; }
-.priorityHigh { background: #09090b; color: white; }.priorityMedium, .priorityLow { background: white; color: #52525b; }
 .goalCard, .budgetCard, .actionCard { display: flex; flex-direction: column; }
 .budgetHistoryPagination { display: flex; gap: 4px; justify-content: flex-end; margin-top: 8px; }
 .budgetHistoryPagination button { display: grid; place-items: center; min-width: 24px; height: 24px; border: 1px solid var(--border); background: white; border-radius: 4px; }

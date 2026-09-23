@@ -11,7 +11,7 @@ import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
   PPC_DASHBOARD_STORAGE_KEY, addDaysIso, addMonthsIso, calculateWeeklyPerformance, createWeeklyPpcReport, currency,
   formatReportingMonthRange, formatWeekRange, formatWeeklyGoalTarget, formatWeeklyGoalValue, getIsoWeekNumber, getSelectedMonthWeekStarts, getSummaryTopics, summaryTopicsNotes, parsePpcDashboardStore, percentage, reportKey,
-  startOfWeekIso, withCalculatedPerformance, type ActionItem, type DashboardProduct, type GoalOutcome, type GoalStatus,
+  startOfWeekIso, withCalculatedPerformance, type ActionItem, type DashboardProduct, type GoalOutcome,
   WEEKLY_GOAL_OPTIONS, weeklyGoalActualValue, weeklyGoalLabel, weeklyGoalUnit, type GoalDataState, type SummaryTopic, type WeeklyGoal, type WeeklyGoalMetric, type WeeklyPpcReport,
 } from "../domain/ppc-dashboard-state";
 import {
@@ -41,7 +41,6 @@ type PerformanceLoadState = {
   authorizationUrl?: string;
 };
 
-const ACTIVE_GOAL_STATUSES: GoalStatus[] = ["On Track", "At Risk"];
 const AUTO_SAVE_DELAY_MS = 500;
 const BUDGET_HISTORY_PAGE_SIZE = 5;
 const PERFORMANCE_BACKFILL_CONCURRENCY = 2;
@@ -137,7 +136,7 @@ function WeeklyGoalRow({ goal, report, dataState, onUpdate, onResolve, onRemove 
       {isCustomGoal ? <label className={ws.customGoalName}>Goal text<input aria-label="Custom goal text" value={goal.title === "Custom goal" ? "" : goal.title} placeholder="Write your goal…" onChange={event => onUpdate({ title: event.target.value || "Custom goal" })} /></label> : null}
     </div>
     <div className={ws.goalProgress}><span><i style={{ width: `${goalProgress}%` }} /></span><div className={ws.goalInlineValues}><label><span>Target</span><input aria-label={`${label} target`} inputMode="decimal" value={targetEditing ? goal.target.replace(/[^0-9.-]/g, "") : formatWeeklyGoalTarget(goal)} placeholder="—" onFocus={() => setTargetEditing(true)} onBlur={() => setTargetEditing(false)} onChange={event => onUpdate({ target: event.target.value })} /></label><label><span>Actual</span><input aria-label={`${label} actual`} aria-readonly="true" readOnly value={actual} placeholder="—" /></label></div></div>
-    <div className={ws.goalFooter}><small className={`${ws.goalDataState} ${actualState === "Final" ? ws.goalActualFinal : actualState === "Partial" ? ws.goalActualPartial : ws.goalActualWaiting}`}>{actualState ?? (goal.metric ? "Waiting" : isCustomGoal ? "Manual goal" : "Select goal")}</small><div className={ws.goalStatusActions}><select aria-label={`${label} status`} className={workspaceStatusTone(goal.status)} value={goal.status} onChange={event => onUpdate({ status: event.target.value as GoalStatus })}>{ACTIVE_GOAL_STATUSES.map(status => <option className={workspaceStatusTone(status)} key={status}>{status}</option>)}</select><div className={ws.goalOutcomeActions}><button type="button" aria-label={`Mark ${label} achieved`} title="Mark achieved" onClick={() => onResolve("Achieved")}><CheckCircle2 aria-hidden="true" /></button><button type="button" aria-label={`Mark ${label} missed`} title="Mark missed" onClick={() => onResolve("Missed")}><X aria-hidden="true" /></button><button type="button" aria-label={`Remove ${label}`} onClick={onRemove}><Trash2 aria-hidden="true" /></button></div></div></div>
+    <div className={ws.goalFooter}><small className={`${ws.goalDataState} ${actualState === "Final" ? ws.goalActualFinal : actualState === "Partial" ? ws.goalActualPartial : ws.goalActualWaiting}`}>{actualState ?? (goal.metric ? "Waiting" : isCustomGoal ? "Manual goal" : "Select goal")}</small><div className={ws.goalOutcomeActions}><button type="button" aria-label={`Mark ${label} achieved`} title="Mark achieved" onClick={() => onResolve("Achieved")}><CheckCircle2 aria-hidden="true" /></button><button type="button" aria-label={`Mark ${label} missed`} title="Mark missed" onClick={() => onResolve("Missed")}><X aria-hidden="true" /></button><button type="button" aria-label={`Remove ${label}`} onClick={onRemove}><Trash2 aria-hidden="true" /></button></div></div>
   </div>;
 }
 
@@ -221,7 +220,7 @@ function SummaryTopicComposer({ topics, onChange }: { topics: SummaryTopic[]; on
       activeTopicRef.current = id;
       window.requestAnimationFrame(() => textareaRefs.current.get(id)?.focus());
     }}><Plus aria-hidden="true" /></button>
-  </span></span><div className={ws.summaryTopics}>{topics.map((topic, index) => <section key={topic.id} className={ws.summaryTopic} aria-label={`Summary topic ${topic.title || "Untitled Topic"}`}>
+  </span></span><div className={ws.summaryTopics}>{topics.map((topic, index) => <section key={topic.id} className={`${ws.summaryTopic} ${topic.id === "summary-default-good" || topic.title.trim().toLowerCase() === "good" ? ws.summaryTopicGood : topic.id === "summary-default-bad" || topic.title.trim().toLowerCase() === "bad" ? ws.summaryTopicBad : ""}`} aria-label={`Summary topic ${topic.title || "Untitled Topic"}`}>
     <div className={ws.summaryTopicHeader}><input aria-label={`Topic title ${index + 1}`} maxLength={200} value={topic.title} placeholder="Topic title" onChange={event => updateTopic(topic.id, { title: event.target.value })} /><div className={ws.summaryTopicActions}>
       <button type="button" aria-label={`Move ${topic.title || "Untitled Topic"} up`} disabled={index === 0} onClick={() => moveTopic(index, -1)}><ArrowUp aria-hidden="true" /></button>
       <button type="button" aria-label={`Move ${topic.title || "Untitled Topic"} down`} disabled={index === topics.length - 1} onClick={() => moveTopic(index, 1)}><ArrowDown aria-hidden="true" /></button>
@@ -235,19 +234,6 @@ function statusTone(status: string) {
   if (status === "Needs Review" || status === "At Risk") return styles.warning;
   if (status === "Missed") return styles.danger;
   return styles.info;
-}
-
-function workspaceStatusTone(status: string) {
-  if (status === "Completed" || status === "Achieved" || status === "On Track") return ws.success;
-  if (status === "Needs Review" || status === "At Risk") return ws.warning;
-  if (status === "Missed") return ws.danger;
-  return ws.info;
-}
-
-function priorityTone(priority: ActionItem["priority"]) {
-  if (priority === "High") return ws.priorityHigh;
-  if (priority === "Low") return ws.priorityLow;
-  return ws.priorityMedium;
 }
 
 export function PpcPerformanceDashboard({ initialToday }: { initialToday: string }) {
@@ -719,7 +705,7 @@ export function PpcPerformanceDashboard({ initialToday }: { initialToday: string
               </details>
             </section>
 
-            <section className={`${ws.card} ${ws.actionCard}`} aria-labelledby="actions-heading"><div className={ws.cardTitle}><div><h3 id="actions-heading">Action Items</h3><p className={ws.actionDescription}>Operational tasks generated from this week’s performance analysis</p></div><button type="button" onClick={addAction}><Plus />Add Action Item</button></div><div className={ws.actionList}>{report.actions.map(action => <div className={ws.actionRow} key={action.id}><button type="button" className={action.done ? ws.actionDone : ""} aria-label={action.done ? `Mark ${action.title} incomplete` : `Mark ${action.title} complete`} onClick={() => updateAction(action.id, { done: !action.done })}>{action.done ? <Check /> : null}</button><input aria-label="Action item" value={action.title} onChange={event => updateAction(action.id, { title: event.target.value })} /><select aria-label={`${action.title} priority`} className={priorityTone(action.priority)} value={action.priority} onChange={event => updateAction(action.id, { priority: event.target.value as ActionItem["priority"] })}><option>High</option><option>Medium</option><option>Low</option></select><span className={ws.assigneePlaceholder} aria-label="Assignee unavailable">—</span><button type="button" aria-label={`Remove ${action.title}`} onClick={() => removeAction(action.id)}><Trash2 /></button></div>)}</div></section>
+            <section className={`${ws.card} ${ws.actionCard}`} aria-labelledby="actions-heading"><div className={ws.cardTitle}><div><h3 id="actions-heading">Action Items</h3><p className={ws.actionDescription}>Operational tasks generated from this week’s performance analysis</p></div><button type="button" onClick={addAction}><Plus />Add Action Item</button></div><div className={ws.actionList}>{report.actions.map(action => <div className={ws.actionRow} key={action.id}><button type="button" className={action.done ? ws.actionDone : ""} aria-label={action.done ? `Mark ${action.title} incomplete` : `Mark ${action.title} complete`} onClick={() => updateAction(action.id, { done: !action.done })}>{action.done ? <Check /> : null}</button><input aria-label="Action item" value={action.title} onChange={event => updateAction(action.id, { title: event.target.value })} /><button type="button" aria-label={`Remove ${action.title}`} title="Delete action item" onClick={() => removeAction(action.id)}><Trash2 aria-hidden="true" /></button></div>)}</div></section>
           </div>
 
           <section className={`${ws.card} ${ws.performanceCard}`} aria-labelledby="metrics-heading">
