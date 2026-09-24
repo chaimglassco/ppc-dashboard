@@ -14,7 +14,12 @@ export async function readDashboardDocument(key: DashboardStoreKey) {
   const result = await get(pathFor(key), { access: "private", useCache: false });
   if (!result) return { document: null, etag: null };
   if (result.statusCode !== 200) throw new Error("Could not read current dashboard data.");
-  return { document: parseDashboardDocument(await new Response(result.stream).json(), key), etag: result.blob.etag };
+  const document = parseDashboardDocument(await new Response(result.stream).json(), key);
+  // Private content GET can expose a representation ETag that differs from the
+  // Blob API's canonical ETag used by put(ifMatch). Read that tag from metadata.
+  const metadata = await head(pathFor(key));
+  if (!metadata.etag) throw new Error("Could not verify the current dashboard version.");
+  return { document, etag: metadata.etag };
 }
 
 export async function saveDashboardDocument(document: DashboardDocument, expectedEtag: string | null) {

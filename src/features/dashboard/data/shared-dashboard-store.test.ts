@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { BlobPreconditionFailedError, get, head, put } from "@vercel/blob";
 import { PPC_DASHBOARD_STORAGE_KEY } from "../domain/ppc-dashboard-state";
 import type { DashboardDocument } from "../domain/shared-dashboard";
-import { DashboardConflict, saveDashboardDocument } from "./shared-dashboard-store";
+import { DashboardConflict, readDashboardDocument, saveDashboardDocument } from "./shared-dashboard-store";
 
 vi.mock("@vercel/blob", () => ({ get: vi.fn(), head: vi.fn(), put: vi.fn(), BlobPreconditionFailedError: class extends Error {} }));
 
@@ -31,6 +31,19 @@ describe("shared dashboard Blob saves", () => {
     await expect(saveDashboardDocument(next, "etag-1")).resolves.toMatchObject({ document: next, etag: "etag-2" });
     expect(put).toHaveBeenCalledTimes(2);
     expect(vi.mocked(put).mock.calls[1][2]).toMatchObject({ access: "private", allowOverwrite: true, ifMatch: "etag-1" });
+  });
+
+  it("uses the Blob metadata ETag when private content GET reports another tag", async () => {
+    vi.mocked(head).mockResolvedValue({ etag: "canonical-etag" } as Awaited<ReturnType<typeof head>>);
+    const loaded = await readDashboardDocument(key);
+    expect(loaded).toMatchObject({ document: current, etag: "canonical-etag" });
+    const next = { ...current, operationId: "next-operation", value: JSON.stringify({ version: 1, reports: { report: {} } }) };
+    vi.mocked(get).mockResolvedValue({ statusCode: 200, stream: new ReadableStream<Uint8Array>({ start(controller) {
+      controller.enqueue(new TextEncoder().encode(JSON.stringify(current))); controller.close();
+    } }), blob: { etag: "representation-etag" } } as Awaited<ReturnType<typeof get>>);
+    vi.mocked(put).mockResolvedValue({ etag: "next-canonical-etag" } as Awaited<ReturnType<typeof put>>);
+    await expect(saveDashboardDocument(next, "canonical-etag")).resolves.toMatchObject({ etag: "next-canonical-etag" });
+    expect(vi.mocked(put).mock.calls[1][2]).toMatchObject({ ifMatch: "canonical-etag" });
   });
 
   it("accepts a desired value that another tab already saved without writing again", async () => {
