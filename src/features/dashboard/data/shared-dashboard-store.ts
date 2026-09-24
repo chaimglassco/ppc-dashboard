@@ -3,7 +3,9 @@ import { randomUUID } from "node:crypto";
 import { parseDashboardDocument, type DashboardDocument, type DashboardStoreKey } from "../domain/shared-dashboard";
 
 const pathFor = (key: DashboardStoreKey) => `glassco/ppc-team/v1/${key}.json`;
-export class DashboardConflict extends Error {}
+export class DashboardConflict extends Error {
+  constructor(message: string, readonly reason: "stale_etag" | "write_precondition") { super(message); }
+}
 function requireStorage() {
   if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) throw new Error("Shared dashboard storage is not configured.");
 }
@@ -20,7 +22,9 @@ export async function saveDashboardDocument(document: DashboardDocument, expecte
   const current = await readDashboardDocument(document.key);
   // A response can be lost after a successful write. Retrying the same operation is safe.
   if (current.document?.operationId === document.operationId && current.document.value === document.value) return current;
-  if (current.etag !== expectedEtag) throw new DashboardConflict("Someone else updated this dataset. Download your pending changes, then reload the shared data.");
+  // Another session may have already written the exact desired value.
+  if (current.document?.value === document.value) return current;
+  if (current.etag !== expectedEtag) throw new DashboardConflict("Someone else updated this dataset while it was saving.", "stale_etag");
   if (current.document) {
     await put(`glassco/ppc-team-history/v1/${document.key}/${randomUUID()}.json`, JSON.stringify(current.document), {
       access: "private", addRandomSuffix: false, allowOverwrite: false, contentType: "application/json",
@@ -33,9 +37,9 @@ export async function saveDashboardDocument(document: DashboardDocument, expecte
     });
     return { document, etag: result.etag };
   } catch (error) {
-    if (error instanceof BlobPreconditionFailedError) throw new DashboardConflict("Someone else updated this dataset. Download your pending changes, then reload the shared data.");
+    if (error instanceof BlobPreconditionFailedError) throw new DashboardConflict("Someone else updated this dataset while it was saving.", "write_precondition");
     // Create-only races also remain conflicts; never retry by overwriting.
-    if (expectedEtag === null && (await readDashboardDocument(document.key)).document) throw new DashboardConflict("Shared data was created in another session. Reload to use it; your local copy is unchanged.");
+    if (expectedEtag === null && (await readDashboardDocument(document.key)).document) throw new DashboardConflict("Shared data was created in another session while it was saving.", "write_precondition");
     throw error;
   }
 }

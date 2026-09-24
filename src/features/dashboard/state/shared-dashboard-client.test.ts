@@ -9,10 +9,12 @@ const document = (value: string, operationId = "operation-base", savedAt = "2026
   version: 1, key, value, operationId, savedAt, actor: "user@example.com",
 });
 const response = (value: string, etag: string, operationId?: string, savedAt?: string): DashboardDocumentResponse => ({ document: document(value, operationId, savedAt), etag, canEdit: true });
+const outboxEntries = () => Array.from({ length: window.localStorage.length }, (_, index) => window.localStorage.key(index) || "")
+  .filter(candidate => candidate.startsWith(PPC_SHARED_REPORT_OUTBOX_KEY));
 
 describe("SharedDashboardStorage", () => {
-  beforeEach(() => window.localStorage.clear());
-  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); window.localStorage.clear(); });
+  beforeEach(() => { window.localStorage.clear(); window.sessionStorage.clear(); });
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window.localStorage.clear(); window.sessionStorage.clear(); });
 
   it("merges and retries an ETag conflict without exposing a save error", async () => {
     const first = createWeeklyPpcReport("product-1", "2026-09-02");
@@ -43,7 +45,7 @@ describe("SharedDashboardStorage", () => {
 
     expect(putCount).toBe(2);
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(statuses.at(-1)).toEqual({ pending: 0, error: "" });
+    expect(statuses.at(-1)).toMatchObject({ pending: 0, error: "" });
     expect(remoteChange).toHaveBeenCalled();
     expect(JSON.parse(savedValue).reports[firstKey]).toMatchObject({ notes: "Local summary", weeklyBudget: 700, dailyBudget: 100 });
   });
@@ -112,7 +114,7 @@ describe("SharedDashboardStorage", () => {
     } });
     expect(() => firstStorage.setItem(key, latestLocal)).not.toThrow();
 
-    expect(window.localStorage.getItem(PPC_SHARED_REPORT_OUTBOX_KEY)).not.toBeNull();
+    expect(outboxEntries()).toHaveLength(1);
 
     let uploadedValue = "";
     vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -124,6 +126,77 @@ describe("SharedDashboardStorage", () => {
     await restoredStorage.flush();
 
     expect(JSON.parse(uploadedValue).reports[firstKey].actions).toContainEqual(expect.objectContaining({ id: "recover-me", title: "Recovered action after error" }));
-    expect(window.localStorage.getItem(PPC_SHARED_REPORT_OUTBOX_KEY)).toBeNull();
+    expect(outboxEntries()).toHaveLength(0);
+  });
+
+  it("keeps separate browser-tab recovery copies until each tab's save is confirmed", () => {
+    const first = createWeeklyPpcReport("product-1", "2026-09-16");
+    const firstKey = reportKey(first.productId, first.weekStart);
+    const remote: DashboardResponses = new Map([[key, response(reportsValue({ [firstKey]: first }), "etag-1")]]);
+    const action = (id: string) => ({ id, title: id, priority: "Medium", dueDate: "", done: false });
+    const editorA = new SharedDashboardStorage(remote, vi.fn());
+    editorA.setItem(key, reportsValue({ [firstKey]: { ...first, actions: [action("first-tab")] } }));
+    window.sessionStorage.clear();
+    const editorB = new SharedDashboardStorage(remote, vi.fn());
+    editorB.setItem(key, reportsValue({ [firstKey]: { ...first, actions: [action("second-tab")] } }));
+    expect(outboxEntries()).toHaveLength(2);
+    expect(outboxEntries()[0]).not.toBe(outboxEntries()[1]);
+  });
+
+  it("keeps an unsaved report pending and surfaces repeated conflicts", async () => {
+    const first = createWeeklyPpcReport("product-1", "2026-09-16");
+    const firstKey = reportKey(first.productId, first.weekStart);
+    const base = reportsValue({ [firstKey]: first });
+    const local = reportsValue({ [firstKey]: { ...first, actions: [{ id: "pending", title: "Pending action", priority: "Medium", dueDate: "", done: false }] } });
+    const statuses: Array<{ pending: number; error: string }> = [];
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => init?.method === "PUT"
+      ? Response.json({ error: "Someone else updated this dataset." }, { status: 409 })
+      : Response.json(response(base, "etag-2"))));
+    const storage = new SharedDashboardStorage(new Map([[key, response(base, "etag-1")]]), status => statuses.push(status));
+    storage.setItem(key, local);
+    await storage.flush();
+    expect(storage.hasPending()).toBe(true);
+    expect(statuses.at(-1)?.error).toContain("Not saved online yet");
+    expect(outboxEntries()).toHaveLength(1);
+  });
+
+  it("restores the legacy outbox without replacing a newer team Action Item", async () => {
+    vi.useFakeTimers();
+    const first = createWeeklyPpcReport("product-1", "2026-09-16");
+    const firstKey = reportKey(first.productId, first.weekStart);
+    const base = reportsValue({ [firstKey]: first });
+    const action = (id: string) => ({ id, title: id, priority: "Medium", dueDate: "", done: false });
+    const local = reportsValue({ [firstKey]: { ...first, actions: [action("recovered")] } });
+    const remote = reportsValue({ [firstKey]: { ...first, actions: [action("teammate")] } });
+    window.localStorage.setItem(PPC_SHARED_REPORT_OUTBOX_KEY, JSON.stringify({ version: 1, entry: { value: local, baseValue: base } }));
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      return Response.json(response(body.value, "etag-3", body.operationId));
+    }));
+    const storage = new SharedDashboardStorage(new Map([[key, response(remote, "etag-2")]]), vi.fn());
+    expect(JSON.parse(storage.getItem(key)!).reports[firstKey].actions).toHaveLength(2);
+    await storage.flush();
+    expect(outboxEntries()).toHaveLength(0);
+  });
+
+  it("warns when browser recovery cannot be written and blocks viewer report edits", () => {
+    vi.useFakeTimers();
+    const first = createWeeklyPpcReport("product-1", "2026-09-16");
+    const firstKey = reportKey(first.productId, first.weekStart);
+    const base = reportsValue({ [firstKey]: first });
+    const local = reportsValue({ [firstKey]: { ...first, actions: [{ id: "pending", title: "Pending", priority: "Medium", dueDate: "", done: false }] } });
+    const originalSetItem = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, itemKey, value) {
+      if (this === window.localStorage) throw new Error("Storage full");
+      return originalSetItem.call(this, itemKey, value);
+    });
+    const statuses: Array<{ pending: number; error: string; recoveryError?: string }> = [];
+    const editor = new SharedDashboardStorage(new Map([[key, response(base, "etag-1")]]), status => statuses.push(status));
+    editor.setItem(key, local);
+    expect(statuses.at(-1)).toMatchObject({ pending: 1, recoveryError: expect.stringContaining("recovery storage is unavailable") });
+
+    const viewer = new SharedDashboardStorage(new Map([[key, { ...response(base, "etag-1"), canEdit: false }]]), vi.fn());
+    expect(() => viewer.setItem(key, local)).toThrow(/view-only/);
+    expect(viewer.getItem(key)).toBe(base);
   });
 });

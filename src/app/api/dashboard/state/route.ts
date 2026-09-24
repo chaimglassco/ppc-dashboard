@@ -44,6 +44,7 @@ export async function PUT(request: Request) {
     const result = await saveDashboardDocument({ version: 1, key, value: input.value, operationId: input.operationId, actor: verified.user.id ?? verified.user.email, savedAt: new Date().toISOString() }, input.expectedEtag);
     return json({ ...result, canEdit: true });
   } catch (error) {
+    if (error instanceof DashboardConflict) console.warn("[dashboard/state] save conflict", { key, reason: error.reason, operationId: input.operationId });
     return json({ error: error instanceof DashboardConflict ? error.message : "The dashboard could not save online. Keep this tab open and retry." }, error instanceof DashboardConflict ? 409 : 503);
   }
 }

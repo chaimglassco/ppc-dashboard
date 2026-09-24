@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PPC_DASHBOARD_CATALOG_STORAGE_KEY } from "../domain/ppc-dashboard-catalog";
 import { PPC_DASHBOARD_STORAGE_KEY, addDaysIso, createWeeklyPpcReport } from "../domain/ppc-dashboard-state";
 import { PPC_PERFORMANCE_CACHE_KEY } from "../domain/ppc-performance-cache";
-import { attachDashboardStorage, PPC_SHARED_REPORT_OUTBOX_KEY, SharedDashboardStorage, type DashboardResponses } from "../state/shared-dashboard-client";
+import { PPC_WORKSPACE_SELECTION_KEY } from "../domain/ppc-workspace-selection";
+import { attachDashboardStorage, SharedDashboardStorage, type DashboardResponses } from "../state/shared-dashboard-client";
 import { PpcPerformanceDashboard } from "./ppc-performance-dashboard";
 
 describe("PpcPerformanceDashboard", () => {
@@ -407,6 +408,28 @@ describe("PpcPerformanceDashboard", () => {
     expect(await screen.findByRole("textbox", { name: "Action item" })).toHaveValue("Review PPC bids");
   });
 
+  it("restores the product and prior week containing an Action Item after refresh", async () => {
+    const view = render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    await screen.findByRole("region", { name: "Action Items" });
+    fireEvent.click(screen.getByRole("button", { name: /August 19 to August 25/ }));
+    const actionCard = screen.getByRole("region", { name: "Action Items" });
+    fireEvent.click(within(actionCard).getByRole("button", { name: "Add Action Item" }));
+    fireEvent.change(within(actionCard).getByRole("textbox", { name: "Action item" }), { target: { value: "Review last week" } });
+    expect(JSON.parse(localStorage.getItem(PPC_WORKSPACE_SELECTION_KEY)!).weekStart).toBe("2026-08-19");
+    view.unmount();
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+    expect(await screen.findByRole("textbox", { name: "Action item" })).toHaveValue("Review last week");
+    expect(screen.getByRole("button", { name: /August 19 to August 25/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("does not allow a viewer to create an unsavable Action Item", async () => {
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" canEdit={false} />);
+    const actionCard = await screen.findByRole("region", { name: "Action Items" });
+    expect(within(actionCard).getByRole("button", { name: "Add Action Item" })).toBeDisabled();
+    expect(screen.getAllByText("View-only access").length).toBeGreaterThan(0);
+  });
+
   it("restores a queued cloud Action Item when refreshed before the upload starts", async () => {
     const remote: DashboardResponses = new Map([[PPC_DASHBOARD_STORAGE_KEY, { document: null, etag: null, canEdit: true }]]);
     const firstStorage = new SharedDashboardStorage(remote, vi.fn());
@@ -415,7 +438,8 @@ describe("PpcPerformanceDashboard", () => {
     const actionCard = await screen.findByRole("region", { name: "Action Items" });
     fireEvent.click(within(actionCard).getByRole("button", { name: "Add Action Item" }));
     fireEvent.change(within(actionCard).getByRole("textbox", { name: "Action item" }), { target: { value: "Protect unsent action" } });
-    expect(localStorage.getItem(PPC_SHARED_REPORT_OUTBOX_KEY)).toContain("Protect unsent action");
+    expect(Array.from({ length: localStorage.length }, (_, index) => localStorage.getItem(localStorage.key(index) || "") || "")
+      .some(value => value.includes("Protect unsent action"))).toBe(true);
 
     view.unmount();
     detachFirst();

@@ -460,3 +460,13 @@ Verify opportunity metric totals, sortable labels, row values, and Status are ce
 - [ ] Add and rename an Action Item, refresh immediately without waiting for the network debounce, and confirm its title returns. Make separate additions in two editors and confirm both survive conflict reconciliation and reload; confirm the UI says Saved online only after the upload is confirmed.
 - [ ] Set a weekly budget, open the following week, and confirm the limit carries forward with a recalculated daily limit. Override the new week, navigate away and back, and confirm the override remains independent.
 - [ ] Confirm a blank Current Week Summary starts with light-green Good and light-red Bad sections and retains their content and order after reload.
+
+## Action Item refresh and cloud-save regression
+
+- [ ] Select a non-first product and an older week, add/edit/complete/delete an Action Item, then refresh immediately and after online confirmation. Confirm the same product, week, and visible months reopen with the expected rows.
+- [ ] Open the same dataset in two signed-in editors; add different Action Items concurrently and confirm both IDs, titles, and original weeks survive full reloads in both browsers.
+- [ ] Force repeated 409 responses and a network failure. Confirm the item remains in the tab's recovery outbox, the UI says Not saved online, and Retry or automatic recovery eventually clears the outbox only after server confirmation.
+- [ ] Deny localStorage writes and verify the recovery warning appears while the tab is kept open; view-only users must not be able to add, edit, complete, or delete Action Items.
+- [ ] Inspect production save logs for the sanitized `stale_etag`/`write_precondition` reason and confirm normal edits no longer enter a conflict loop. Check the original browser outbox and shared Blob history before attempting recovery of older missing items.
+
+Automated verification: lint and typecheck passed; all 65 test files passed with two workers (388 passed, 6 skipped), and the production build passed. Local `/ppc/dashboard` and `/ppc/library` both reached the Pipeline sign-in gate. Authenticated visual and cross-editor checks remain open until a signed-in browser is available.

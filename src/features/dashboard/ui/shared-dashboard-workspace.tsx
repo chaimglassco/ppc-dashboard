@@ -96,7 +96,7 @@ function SharedDashboardWorkspaceClient({ initialToday }: { initialToday: string
 
   return <>
     <section className={styles.bar} aria-label="Shared dashboard status">
-      <div><strong>Team dashboard</strong><p role={status.error || problem ? "alert" : "status"}>{status.error || problem || (status.pending ? `Saving ${status.pending} dataset${status.pending === 1 ? "" : "s"} online… Keep this tab open.` : ready ? canEdit ? "Shared data loaded · Changes save online · Team updates sync automatically" : "Shared data loaded · View-only access" : "Loading shared dashboard…")}</p></div>
+      <div><strong>Team dashboard</strong><p role={status.error || status.recoveryError || problem ? "alert" : "status"}>{status.error || status.recoveryError || problem || (status.pending ? `Saving ${status.pending} dataset${status.pending === 1 ? "" : "s"} online… Keep this tab open.` : ready ? canEdit ? "Shared data loaded · Changes save online · Team updates sync automatically" : "Shared data loaded · View-only access" : "Loading shared dashboard…")}</p></div>
       <div className={styles.actions}>
         <button type="button" onClick={exportLocal}>Download local backup</button>
         {status.error ? <><button type="button" onClick={() => downloadBackup(storage.current?.exportData() ?? {}, "ppc-pending-changes")}>Download pending changes</button><button type="button" onClick={() => storage.current?.retry()}>Retry save</button></> : null}
@@ -104,7 +104,7 @@ function SharedDashboardWorkspaceClient({ initialToday }: { initialToday: string
       </div>
     </section>
     {candidates.length ? <section className={styles.import} aria-label="Share existing dashboard data"><h2>Share this browser’s existing dashboard data</h2><p>The following datasets are not online yet. Importing creates shared copies for the team and downloads a backup. Your existing local data is kept. Datasets already online are never replaced by this import.</p><ul>{candidates.map(item => <li key={item.key}>{item.label}: {item.count} records</li>)}</ul><button type="button" disabled={busy} onClick={() => void migrate()}>{busy ? "Sharing…" : "Back up and share these datasets"}</button><button type="button" disabled={busy} onClick={() => { setCandidates([]); setProblem(""); }}>Use shared data without importing</button></section> : null}
-    {ready && !candidates.length ? <PpcPerformanceDashboard key={reload} initialToday={initialToday} remoteSync={remoteSync} sharedSaveStatus={status} /> : !candidates.length ? <p className={styles.wait}>{problem ? "Team data is unavailable. Retry with Refresh team data. Local records have not been changed." : "Connecting to the shared dashboard…"}</p> : null}
+    {ready && !candidates.length ? <PpcPerformanceDashboard key={reload} initialToday={initialToday} remoteSync={remoteSync} sharedSaveStatus={status} canEdit={canEdit} /> : !candidates.length ? <p className={styles.wait}>{problem ? "Team data is unavailable. Retry with Refresh team data. Local records have not been changed." : "Connecting to the shared dashboard…"}</p> : null}
   </>;
 }
 

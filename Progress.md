@@ -415,3 +415,7 @@ Replaced the shared dashboard's manual ETag-conflict stop with automatic validat
 Added crash-safe recovery for weekly report edits. Pending Action Items and other report changes now enter a browser-local outbox before the debounced online save, survive refresh and temporary save failures, merge with the latest shared report, retry automatically, and clear only after server confirmation. New reporting weeks also carry unfinished Action Items forward while leaving completed items in the prior week.
 
 Closed the remaining 500 ms gap before reports entered the recovery queue: report edits now queue immediately. Repeated remote ETag conflicts keep retrying without leaving a stale conflict banner. Added a two-editor Action Item merge and immediate-refresh regression test, and made Action Item rows smaller and lighter.
+
+## 2026-09-24 — Action Item refresh and save investigation
+
+Traced the disappearing list to both view selection resetting after refresh and unconfirmed cloud writes. Added validated browser-local selection restoration, per-tab recovery outboxes with legacy recovery, visible recovery failures, bounded conflict retry feedback, read-only Action Item controls for viewers, and server conflict-condition logging without report content. An online write with an identical value is acknowledged. Historical item restoration still requires access to the original browser outbox or shared Blob history; neither is available in the current signed-out browser session.

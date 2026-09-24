@@ -228,9 +228,9 @@ function normalizeGoalHistoryEntry(value: unknown, index: number): GoalHistoryEn
 }
 
 function normalizeAction(value: unknown, index: number): ActionItem | null {
-  if (!isRecord(value)) return null;
-  const title = String(value.title ?? "").trim();
-  if (!title) return null;
+  if (!isRecord(value) || typeof value.title !== "string") return null;
+  // An empty title is a valid in-progress edit; only explicit deletion removes an item.
+  const title = value.title.slice(0, 500);
   const priorities: ActionItem["priority"][] = ["High", "Medium", "Low"];
   return { id: String(value.id ?? `action-${index}`), title, priority: priorities.includes(value.priority as ActionItem["priority"]) ? value.priority as ActionItem["priority"] : "Medium", dueDate: String(value.dueDate ?? ""), done: value.done === true };
 }

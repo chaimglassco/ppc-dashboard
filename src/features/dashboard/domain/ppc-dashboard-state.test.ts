@@ -77,6 +77,14 @@ describe("PPC dashboard state", () => {
     expect(parsed.reports["product-1:2026-08-26"].actions.map(action => action.title)).toEqual(["Edited task", "Inspect exact match"]);
   });
 
+  it("keeps an Action Item while its title is temporarily empty during editing", () => {
+    const report = createWeeklyPpcReport("product-1", "2026-08-26");
+    const parsed = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { report: {
+      ...report, actions: [{ id: "action-edit", title: "", priority: "Medium", dueDate: "", done: false }],
+    } } }));
+    expect(parsed.reports["product-1:2026-08-26"].actions).toContainEqual(expect.objectContaining({ id: "action-edit", title: "" }));
+  });
+
   it("validates goal history and migrates terminal legacy goals out of the active list", () => {
     const parsed = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { report: {
       ...createWeeklyPpcReport("product-1", "2026-08-26"),
