@@ -418,8 +418,10 @@ Closed the remaining 500 ms gap before reports entered the recovery queue: repor
 
 ## 2026-09-24 — Action Item refresh and save investigation
 
-Traced the disappearing list to both view selection resetting after refresh and unconfirmed cloud writes. Added validated browser-local selection restoration, per-tab recovery outboxes with legacy recovery, visible recovery failures, bounded conflict retry feedback, read-only Action Item controls for viewers, and server conflict-condition logging without report content. An online write with an identical value is acknowledged. Historical item restoration still requires access to the original browser outbox or shared Blob history; neither is available in the current signed-out browser session.
+Traced the disappearing list to both view selection resetting after refresh and unconfirmed cloud writes. Added validated browser-local selection restoration, per-tab recovery outboxes with legacy recovery, visible recovery failures, bounded conflict retry feedback, read-only Action Item controls for viewers, and server conflict-condition logging without report content. An online write with an identical value is acknowledged.
 
 The first production release exposed continuing `write_precondition` rejections from Vercel Blob. Added a metadata-only diagnostic comparing the Blob API's authoritative ETag with the private content GET ETag; it logs equality flags without report contents or ETag values. This narrows the remaining server-side correction.
 
 The diagnostic confirmed that private content GET and Blob metadata returned different ETags for the same report. Updated shared reads to return the metadata ETag for conditional writes and added a regression test for this exact mismatch.
+
+After the corrected deployment, a pending report save returned HTTP 200 and the repeated 409 loop stopped. In the signed-in production dashboard, the user's three previously missing default Action Items were visible under Round U – 3/16 – 2 Pack for Sep 23–29 and remained after a full refresh; the user confirmed they were the missing rows. Older or differently titled items still require the original browser outbox or private history for identification.
