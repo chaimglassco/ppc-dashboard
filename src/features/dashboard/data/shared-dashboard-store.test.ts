@@ -1,10 +1,10 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { get, put } from "@vercel/blob";
+import { BlobPreconditionFailedError, get, head, put } from "@vercel/blob";
 import { PPC_DASHBOARD_STORAGE_KEY } from "../domain/ppc-dashboard-state";
 import type { DashboardDocument } from "../domain/shared-dashboard";
 import { DashboardConflict, saveDashboardDocument } from "./shared-dashboard-store";
 
-vi.mock("@vercel/blob", () => ({ get: vi.fn(), put: vi.fn(), BlobPreconditionFailedError: class extends Error {} }));
+vi.mock("@vercel/blob", () => ({ get: vi.fn(), head: vi.fn(), put: vi.fn(), BlobPreconditionFailedError: class extends Error {} }));
 
 const key = PPC_DASHBOARD_STORAGE_KEY;
 const current: DashboardDocument = {
@@ -20,6 +20,7 @@ describe("shared dashboard Blob saves", () => {
       controller.close();
     } });
     vi.mocked(get).mockResolvedValue({ statusCode: 200, stream, blob: { etag: "etag-1" } } as Awaited<ReturnType<typeof get>>);
+    vi.mocked(head).mockResolvedValue({ etag: "etag-1" } as Awaited<ReturnType<typeof head>>);
     vi.mocked(put).mockReset();
   });
   afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
@@ -42,5 +43,17 @@ describe("shared dashboard Blob saves", () => {
     const next = { ...current, operationId: "next-operation", value: JSON.stringify({ version: 1, reports: { report: {} } }) };
     await expect(saveDashboardDocument(next, "old-etag")).rejects.toMatchObject({ reason: "stale_etag" } satisfies Partial<DashboardConflict>);
     expect(put).not.toHaveBeenCalled();
+  });
+
+  it("checks authoritative metadata when a conditional Blob write is rejected", async () => {
+    const next = { ...current, operationId: "next-operation", value: JSON.stringify({ version: 1, reports: { report: {} } }) };
+    vi.mocked(put).mockResolvedValueOnce({ etag: "backup-etag" } as Awaited<ReturnType<typeof put>>)
+      .mockRejectedValueOnce(new BlobPreconditionFailedError());
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(saveDashboardDocument(next, "etag-1")).rejects.toMatchObject({ reason: "write_precondition" } satisfies Partial<DashboardConflict>);
+    expect(head).toHaveBeenCalled();
+    expect(warning).toHaveBeenCalledWith("[dashboard/state] Blob precondition detail", expect.objectContaining({
+      metadataMatchesRead: true, metadataMatchesExpected: true,
+    }));
   });
 });

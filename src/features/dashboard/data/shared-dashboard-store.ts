@@ -1,4 +1,4 @@
-import { BlobPreconditionFailedError, get, put } from "@vercel/blob";
+import { BlobPreconditionFailedError, get, head, put } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
 import { parseDashboardDocument, type DashboardDocument, type DashboardStoreKey } from "../domain/shared-dashboard";
 
@@ -37,7 +37,18 @@ export async function saveDashboardDocument(document: DashboardDocument, expecte
     });
     return { document, etag: result.etag };
   } catch (error) {
-    if (error instanceof BlobPreconditionFailedError) throw new DashboardConflict("Someone else updated this dataset while it was saving.", "write_precondition");
+    if (error instanceof BlobPreconditionFailedError) {
+      const metadata = await head(pathFor(document.key)).catch(() => null);
+      console.warn("[dashboard/state] Blob precondition detail", {
+        key: document.key,
+        expectedMatchesRead: expectedEtag === current.etag,
+        metadataMatchesRead: metadata?.etag === current.etag,
+        metadataMatchesExpected: metadata?.etag === expectedEtag,
+        readEtagMissing: !current.etag,
+        metadataEtagMissing: !metadata?.etag,
+      });
+      throw new DashboardConflict("Someone else updated this dataset while it was saving.", "write_precondition");
+    }
     // Create-only races also remain conflicts; never retry by overwriting.
     if (expectedEtag === null && (await readDashboardDocument(document.key)).document) throw new DashboardConflict("Shared data was created in another session while it was saving.", "write_precondition");
     throw error;
