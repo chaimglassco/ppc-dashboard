@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent a
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
-  PPC_DASHBOARD_STORAGE_KEY, addDaysIso, addMonthsIso, calculateWeeklyPerformance, createWeeklyPpcReport, currency, latestWeeklyBudget,
+  PPC_DASHBOARD_STORAGE_KEY, addDaysIso, addMonthsIso, calculateWeeklyPerformance, createWeeklyPpcReport, currency, latestWeeklyBudget, withInheritedWeeklyBudget,
   formatReportingMonthRange, formatWeekRange, formatWeeklyGoalTarget, formatWeeklyGoalValue, getIsoWeekNumber, getSelectedMonthWeekStarts, getSummaryTopics, summaryTopicsNotes, parsePpcDashboardStore, percentage, reportKey,
   startOfWeekIso, withCalculatedPerformance, type ActionItem, type DashboardProduct, type GoalOutcome,
   WEEKLY_GOAL_OPTIONS, weeklyGoalActualValue, weeklyGoalLabel, weeklyGoalUnit, type GoalDataState, type SummaryTopic, type WeeklyGoal, type WeeklyGoalMetric, type WeeklyPpcReport,
@@ -381,7 +381,11 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
     ? withCalculatedPerformance({ ...(previousDraft ?? createWeeklyPpcReport(selectedProductId, previousWeekStart)), ...previousSnapshot.metrics, ppcClicks: previousSnapshot.metrics.ppcClicks })
     : previousDraft;
   const inheritedWeeklyBudget = selectedProductId ? latestWeeklyBudget(reports, selectedProductId, activeWeekStart) : undefined;
-  const savedReport = selectedKey ? reports[selectedKey] ?? createWeeklyPpcReport(selectedProductId, activeWeekStart, previousReport, inheritedWeeklyBudget) : null;
+  const savedReport = selectedKey
+    ? reports[selectedKey]
+      ? withInheritedWeeklyBudget(reports[selectedKey], inheritedWeeklyBudget)
+      : createWeeklyPpcReport(selectedProductId, activeWeekStart, previousReport, inheritedWeeklyBudget)
+    : null;
   const report = savedReport && cachedPerformance ? withCalculatedPerformance({ ...savedReport, ...cachedPerformance.metrics, ppcClicks: cachedPerformance.metrics.ppcClicks }) : savedReport;
   const saveMessage = saveNotice ? saveNotice
     : !canEdit ? "View-only access"
@@ -592,7 +596,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
     const from = budgetEditStartRef.current?.key === selectedKey ? budgetEditStartRef.current.value : report.weeklyBudget;
     budgetEditStartRef.current = null;
     if (from === to) return;
-    const suffix = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : String(Date.now());
+    const suffix = crypto.randomUUID();
     patchReport({
       weeklyBudget: to,
       dailyBudget: dailyLimitFromWeekly(to),

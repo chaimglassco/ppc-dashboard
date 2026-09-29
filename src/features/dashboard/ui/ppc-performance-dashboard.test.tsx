@@ -458,6 +458,7 @@ describe("PpcPerformanceDashboard", () => {
       version: 1,
       reports: {
         "product-1:2026-08-12": { productId: "product-1", weekStart: "2026-08-12", weeklyBudget: 700, dailyBudget: 100 },
+        "product-1:2026-08-26": { productId: "product-1", weekStart: "2026-08-26", weeklyBudget: 0, dailyBudget: 0 },
       },
     }));
 

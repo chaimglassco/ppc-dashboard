@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatReportingMonthRange, formatWeekRange, formatWeeklyGoalTarget, formatWeeklyGoalValue, getMonthWeekStarts, getSelectedMonthWeekStarts, getSummaryTopics, latestWeeklyBudget, summaryTopicsNotes, parsePpcDashboardStore, reportKey, startOfWeekIso, weeklyGoalActualValue, weeklyGoalUnit, withCalculatedPerformance } from "./ppc-dashboard-state";
+import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatReportingMonthRange, formatWeekRange, formatWeeklyGoalTarget, formatWeeklyGoalValue, getMonthWeekStarts, getSelectedMonthWeekStarts, getSummaryTopics, latestWeeklyBudget, summaryTopicsNotes, parsePpcDashboardStore, reportKey, startOfWeekIso, weeklyGoalActualValue, weeklyGoalUnit, withCalculatedPerformance, withInheritedWeeklyBudget } from "./ppc-dashboard-state";
 import type { WeeklyPpcReport } from "./ppc-dashboard-state";
 
 describe("PPC dashboard state", () => {
@@ -74,6 +74,7 @@ describe("PPC dashboard state", () => {
     const reports = {
       "product-1:2026-08-05": { ...createWeeklyPpcReport("product-1", "2026-08-05"), weeklyBudget: 500 },
       "product-1:2026-08-19": { ...createWeeklyPpcReport("product-1", "2026-08-19"), weeklyBudget: 700 },
+      "product-1:2026-08-26": createWeeklyPpcReport("product-1", "2026-08-26"),
       "product-2:2026-08-26": { ...createWeeklyPpcReport("product-2", "2026-08-26"), weeklyBudget: 900 },
     };
 
@@ -81,6 +82,11 @@ describe("PPC dashboard state", () => {
     expect(latestWeeklyBudget(reports, "product-1", "2026-08-19")).toBe(500);
     expect(latestWeeklyBudget(reports, "product-3", "2026-09-02")).toBeUndefined();
     expect(createWeeklyPpcReport("product-1", "2026-09-02", null, 700).weeklyBudget).toBe(700);
+    expect(withInheritedWeeklyBudget(reports["product-1:2026-08-26"], 700)).toMatchObject({ weeklyBudget: 700, dailyBudget: 100 });
+
+    const explicitZero = { ...reports["product-1:2026-08-26"], budgetHistory: [{ id: "zero", changedAt: "2026-08-26T12:00:00.000Z", from: 700, to: 0 }] };
+    expect(withInheritedWeeklyBudget(explicitZero, 700).weeklyBudget).toBe(0);
+    expect(latestWeeklyBudget({ ...reports, "product-1:2026-08-26": explicitZero }, "product-1", "2026-09-02")).toBe(0);
   });
 
   it("starts actions empty and removes only the untouched legacy seeded task", () => {

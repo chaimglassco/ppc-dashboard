@@ -61,11 +61,20 @@ const LEGACY_REPORTING_WEEK_START_DAY = 1;
 
 export function reportKey(productId: string, weekStart: string) { return `${productId}:${weekStart}`; }
 
+function hasExplicitWeeklyBudget(report: WeeklyPpcReport) {
+  return report.weeklyBudget > 0 || report.budgetHistory[0]?.to === report.weeklyBudget;
+}
+
 export function latestWeeklyBudget(reports: Record<string, WeeklyPpcReport>, productId: string, weekStart: string) {
   const latest = Object.values(reports)
-    .filter(report => report.productId === productId && report.weekStart < weekStart)
+    .filter(report => report.productId === productId && report.weekStart < weekStart && hasExplicitWeeklyBudget(report))
     .sort((first, second) => second.weekStart.localeCompare(first.weekStart))[0];
   return latest?.weeklyBudget;
+}
+
+export function withInheritedWeeklyBudget(report: WeeklyPpcReport, inheritedWeeklyBudget?: number) {
+  if (hasExplicitWeeklyBudget(report) || inheritedWeeklyBudget == null || inheritedWeeklyBudget <= 0) return report;
+  return { ...report, weeklyBudget: inheritedWeeklyBudget, dailyBudget: Math.round((inheritedWeeklyBudget / 7) * 100) / 100 };
 }
 
 export function getSummaryTopics(report: WeeklyPpcReport): SummaryTopic[] {

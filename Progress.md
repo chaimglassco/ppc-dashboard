@@ -437,3 +437,5 @@ Corrected the Scale Insights Day Parting destination to /Sales/DayParting with a
 ## 2026-09-29 — Continuous weekly budget carry-forward
 
 New weekly reports now inherit the most recently saved earlier weekly budget for the same product, including when one or more intervening weeks have no saved report. A manual weekly-limit change remains scoped to that week and becomes the amount inherited by later weeks until another manual change is saved.
+
+Existing reports that were automatically saved with a zero weekly budget before this fix now display the latest earlier budget as well. A zero remains unchanged when Budget History records that the user deliberately changed the limit to zero.
