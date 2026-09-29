@@ -208,6 +208,10 @@
 .formatToolbar button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #52525b; }
 .formatToolbar button:hover { background: white; }
 .formatToolbar svg { width: 15px; height: 15px; }
+.topicFormatToolbar { display: flex; flex: none; align-items: center; gap: 1px; }
+.topicFormatToolbar button { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #71717a; }
+.topicFormatToolbar button:hover { background: rgba(255,255,255,.75); color: #18181b; }
+.topicFormatToolbar svg { width: 13px; height: 13px; }
 .notesArea { width: 100%; min-height: 220px; overflow: hidden; resize: none; border: 0; background: transparent; padding: 0; color: #27272a; font: 12px/1.6 var(--mono) !important; }
 .notesArea::placeholder { color: #a1a1aa; }
 .summaryCard { display: flex; flex-direction: column; min-height: 348px; }
@@ -229,7 +233,7 @@
 .summaryTopicActions { display: flex; flex: none; gap: 2px; }
 .summaryTopicActions button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #71717a; }
 .summaryTopicActions button:hover { background: #e4e4e7; color: #18181b; }
-.summaryTopicActions button:disabled, .formatToolbar button:disabled { opacity: .35; cursor: default; }
+.summaryTopicActions button:disabled, .formatToolbar button:disabled, .topicFormatToolbar button:disabled { opacity: .35; cursor: default; }
 .summaryTopicActions svg { width: 14px; height: 14px; }
 .summaryCard .summaryTopic .notesArea { display: block; min-height: 64px; }
 .summaryFooter { display: flex; justify-content: space-between; gap: 12px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border); color: var(--muted); font: 11px/1.5 var(--mono); }

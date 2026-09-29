@@ -151,7 +151,6 @@ function resizeSummaryTextarea(textarea: HTMLTextAreaElement) {
 function SummaryTopicComposer({ topics, onChange }: { topics: SummaryTopic[]; onChange: (topics: SummaryTopic[]) => void }) {
   const label = "Performance documentation";
   const textareaRefs = useRef(new Map<string, HTMLTextAreaElement>());
-  const activeTopicRef = useRef<string | null>(null);
   useLayoutEffect(() => {
     textareaRefs.current.forEach(resizeSummaryTextarea);
   }, [topics]);
@@ -161,8 +160,8 @@ function SummaryTopicComposer({ topics, onChange }: { topics: SummaryTopic[]; on
     [next[index], next[index + offset]] = [next[index + offset], next[index]];
     onChange(next);
   };
-  const applyFormat = (format: "bold" | "italic" | "underline" | "bullet" | "numbered") => {
-    const topic = topics.find(topic => topic.id === activeTopicRef.current) ?? topics[0];
+  const applyFormat = (format: "bold" | "italic" | "underline" | "bullet" | "numbered", topicId: string) => {
+    const topic = topics.find(candidate => candidate.id === topicId);
     if (!topic) return;
     const textarea = textareaRefs.current.get(topic.id);
     if (!textarea) return;
@@ -219,24 +218,24 @@ function SummaryTopicComposer({ topics, onChange }: { topics: SummaryTopic[]; on
     });
   };
 
-  return <div className={ws.textAreaLabel}><span className={ws.textAreaHeader}><span>{label}</span><span className={ws.formatToolbar} role="toolbar" aria-label={`${label} formatting`} onMouseDown={event => event.preventDefault()}>
-    <button type="button" aria-label={`Bold ${label}`} onClick={() => applyFormat("bold")}><Bold aria-hidden="true" /></button>
-    <button type="button" aria-label={`Italic ${label}`} onClick={() => applyFormat("italic")}><Italic aria-hidden="true" /></button>
-    <button type="button" aria-label={`Underline ${label}`} onClick={() => applyFormat("underline")}><Underline aria-hidden="true" /></button>
-    <button type="button" aria-label={`Bulleted list ${label}`} onClick={() => applyFormat("bullet")}><List aria-hidden="true" /></button>
-    <button type="button" aria-label={`Numbered list ${label}`} onClick={() => applyFormat("numbered")}><ListOrdered aria-hidden="true" /></button>
+  return <div className={ws.textAreaLabel}><span className={ws.textAreaHeader}><span>{label}</span><span className={ws.formatToolbar}>
     <button type="button" aria-label="Add summary topic" disabled={topics.length >= 100} onClick={() => {
       const id = crypto.randomUUID();
       onChange([...topics, { id, title: "New Topic", body: "" }]);
-      activeTopicRef.current = id;
       window.requestAnimationFrame(() => textareaRefs.current.get(id)?.focus());
     }}><Plus aria-hidden="true" /></button>
   </span></span><div className={ws.summaryTopics}>{topics.map((topic, index) => <section key={topic.id} className={`${ws.summaryTopic} ${topic.id === "summary-default-good" || topic.title.trim().toLowerCase() === "good" ? ws.summaryTopicGood : topic.id === "summary-default-bad" || topic.title.trim().toLowerCase() === "bad" ? ws.summaryTopicBad : ""}`} aria-label={`Summary topic ${topic.title || "Untitled Topic"}`}>
-    <div className={ws.summaryTopicHeader}><input aria-label={`Topic title ${index + 1}`} maxLength={200} value={topic.title} placeholder="Topic title" onChange={event => updateTopic(topic.id, { title: event.target.value })} /><div className={ws.summaryTopicActions}>
+    <div className={ws.summaryTopicHeader}><input aria-label={`Topic title ${index + 1}`} maxLength={200} value={topic.title} placeholder="Topic title" onChange={event => updateTopic(topic.id, { title: event.target.value })} /><span className={ws.topicFormatToolbar} role="toolbar" aria-label={`${topic.title || "Untitled Topic"} formatting`} onMouseDown={event => event.preventDefault()}>
+      <button type="button" aria-label={`Bold ${topic.title || "Untitled Topic"}`} onClick={() => applyFormat("bold", topic.id)}><Bold aria-hidden="true" /></button>
+      <button type="button" aria-label={`Italic ${topic.title || "Untitled Topic"}`} onClick={() => applyFormat("italic", topic.id)}><Italic aria-hidden="true" /></button>
+      <button type="button" aria-label={`Underline ${topic.title || "Untitled Topic"}`} onClick={() => applyFormat("underline", topic.id)}><Underline aria-hidden="true" /></button>
+      <button type="button" aria-label={`Bulleted list ${topic.title || "Untitled Topic"}`} onClick={() => applyFormat("bullet", topic.id)}><List aria-hidden="true" /></button>
+      <button type="button" aria-label={`Numbered list ${topic.title || "Untitled Topic"}`} onClick={() => applyFormat("numbered", topic.id)}><ListOrdered aria-hidden="true" /></button>
+    </span><div className={ws.summaryTopicActions}>
       <button type="button" aria-label={`Move ${topic.title || "Untitled Topic"} up`} disabled={index === 0} onClick={() => moveTopic(index, -1)}><ArrowUp aria-hidden="true" /></button>
       <button type="button" aria-label={`Move ${topic.title || "Untitled Topic"} down`} disabled={index === topics.length - 1} onClick={() => moveTopic(index, 1)}><ArrowDown aria-hidden="true" /></button>
       <button type="button" aria-label={`Remove topic ${topic.title || "Untitled Topic"}`} onClick={() => onChange(topics.filter(candidate => candidate.id !== topic.id))}><X aria-hidden="true" /></button>
-    </div></div><textarea ref={element => { if (element) textareaRefs.current.set(topic.id, element); else textareaRefs.current.delete(topic.id); }} className={ws.notesArea} aria-label={`${topic.title || "Untitled Topic"} documentation`} value={topic.body} onFocus={() => { activeTopicRef.current = topic.id; }} onChange={event => { resizeSummaryTextarea(event.currentTarget); updateTopic(topic.id, { body: event.target.value }); }} onKeyDown={event => continueList(event, topic)} placeholder="Add discussion notes…" />
+    </div></div><textarea ref={element => { if (element) textareaRefs.current.set(topic.id, element); else textareaRefs.current.delete(topic.id); }} className={ws.notesArea} aria-label={`${topic.title || "Untitled Topic"} documentation`} value={topic.body} onChange={event => { resizeSummaryTextarea(event.currentTarget); updateTopic(topic.id, { body: event.target.value }); }} onKeyDown={event => continueList(event, topic)} placeholder="Add discussion notes…" />
   </section>)}{!topics.length ? <p>No topics yet. Use + to add a topic.</p> : null}</div></div>;
 }
 

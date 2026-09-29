@@ -28,6 +28,8 @@ The workspace header presents **Refresh Data** and edits save automatically. Pre
 
 Current Week Summary topic composers automatically grow to show their complete note content when text is entered, formatted, or restored. They do not use an internal scrollbar or manual resize handle.
 
+Each Current Week Summary topic header contains its own bold, italic, underline, bulleted-list, and numbered-list controls between the title and the move/delete actions. The documentation-level header retains the Add Topic action.
+
 ## September 11 dashboard catalog behavior
 
 The All Tags product view groups products in this order: Lead Came, Complementary, Homasote Board, Shard Catcher, Kiln Paper, then every other or untagged product. Existing saved order is preserved inside each group. Changing the tag filter selects the first product matching that tag and the active search, immediately updating Reporting Periods and the workspace. The current-period badge uses light blue, Partial uses light red, and the workspace product title no longer repeats the product tag.

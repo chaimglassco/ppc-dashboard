@@ -1,5 +1,10 @@
 # Project Progress
 
+## September 29, 2026 — per-topic summary formatting controls
+
+- Moved bold, italic, underline, bulleted-list, and numbered-list controls into every Current Week Summary topic header.
+- Kept Add Topic in the documentation header and preserved automatic composer growth, topic movement, deletion, and saved formatting.
+
 ## September 29, 2026 — auto-growing summary composers
 
 - Made every editable Current Week Summary topic expand vertically to fit its notes on initial load and after each edit or formatting action.

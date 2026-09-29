@@ -1,5 +1,10 @@
 # QA Checklist
 
+## September 29 per-topic summary formatting
+
+- [x] Confirm every Current Week Summary topic header shows bold, italic, underline, bullet, and numbered-list controls before its move/delete actions.
+- [x] Select text in a custom topic and confirm its own toolbar formats only that topic while auto-growth and persistence remain intact.
+
 ## September 29 auto-growing summary composer
 
 - [x] Enter multi-line text in a Current Week Summary topic and confirm its textarea height follows the content without an internal scrollbar or resize handle.

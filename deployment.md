@@ -1,5 +1,9 @@
 # Deployment Guide
 
+## September 29 per-topic formatting release
+
+This presentation-only release needs no environment, API, database, or storage migration. After deployment, verify each Current Week Summary card has its own five text-style controls in the card header and that Add Topic remains in the documentation header. Format selected text in Good and Bad independently, then reload to confirm the saved markup remains.
+
 ## September 29 auto-growing summary-composer release
 
 This presentation-only release needs no environment, API, database, or storage migration. After deployment, add enough lines to a Current Week Summary topic to exceed its initial height and confirm the colored card expands to keep every line visible. Reload and confirm the restored content receives the same height.

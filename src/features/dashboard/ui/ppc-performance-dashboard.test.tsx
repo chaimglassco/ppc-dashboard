@@ -47,7 +47,7 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.change(notes, { target: { value: "Raise bids carefully" } });
     expect(notes).toHaveStyle({ height: "180px" });
     (notes as HTMLTextAreaElement).setSelectionRange(0, 5);
-    fireEvent.click(within(summary).getByRole("button", { name: "Bold Performance documentation" }));
+    fireEvent.click(within(summary).getByRole("button", { name: "Bold Next Week" }));
     expect(notes).toHaveValue("**Raise** bids carefully");
     fireEvent.click(within(summary).getByRole("button", { name: "Move Next Week up" }));
     fireEvent.click(within(summary).getByRole("button", { name: "Remove topic Good" }));
