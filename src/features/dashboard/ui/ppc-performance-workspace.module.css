@@ -100,30 +100,32 @@
 .budgetHistory summary { cursor: pointer; }
 .budgetHistory table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 10px; text-align: left; }
 .budgetHistory th, .budgetHistory td { padding: 6px; border-bottom: 1px solid var(--border); }
-.budgetStrip { padding: 12px 16px; }
-.budgetStripHeading { display: flex; align-items: center; gap: 8px; min-width: 190px; }
-.budgetStripHeading h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
-.budgetStripHeading h3 svg { width: 16px; height: 16px; }
-.budgetStripHeading > span { padding: 2px 7px; border-radius: 4px; background: #f4f4f5; font: 600 9px/1.5 var(--mono); white-space: nowrap; }
-.budgetStripMetrics { display: grid; grid-template-columns: minmax(180px, .8fr) minmax(320px, 2fr) minmax(120px, .55fr); align-items: center; gap: 22px; margin-top: 10px; }
-.budgetCap { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px; color: var(--muted); font: 10px/1.5 var(--mono); }
-.budgetCap > span:first-child { text-transform: uppercase; letter-spacing: .05em; }
-.budgetCap .moneyInput { width: auto; }
-.budgetCap .moneyInput input, .budgetCap .moneyInput i { width: auto; font-size: 13px; font-weight: 800; text-align: left; }
-.budgetCap small { flex-basis: 100%; color: var(--muted); }
-.budgetProgressBlock { display: grid; gap: 6px; }
-.budgetProgressLabels { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; font: 10px/1.5 var(--mono); }
-.budgetProgressLabels label { display: flex; align-items: baseline; gap: 4px; }
-.budgetProgressLabels .moneyInput { width: auto; }
-.budgetProgressLabels .moneyInput input, .budgetProgressLabels .moneyInput i { width: auto; font-size: 13px; font-weight: 800; text-align: left; }
-.budgetProgressLabels small { color: var(--muted); font-weight: 500; }
-.budgetProgressLabels > strong { white-space: nowrap; }
-.budgetProgressTrack { height: 7px; overflow: hidden; border-radius: 99px; background: #e4e4e7; }
+.budgetStrip { padding: 10px 16px; }
+.budgetStripMain { display: grid; grid-template-columns: auto auto minmax(260px, 1fr) auto auto auto; align-items: center; gap: 18px; }
+.budgetStripHeading { display: flex; align-items: center; gap: 8px; padding-right: 18px; border-right: 1px solid var(--border); }
+.budgetStripHeading > i { width: 8px; height: 8px; border-radius: 50%; background: #09090b; }
+.budgetStripHeading h3 { margin: 0; font: 700 11px/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.budgetAmounts { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; font: 11px/1.4 var(--mono); color: #71717a; }
+.budgetAmounts label { display: inline-flex; align-items: baseline; gap: 4px; }
+.budgetAmounts .moneyInput { width: auto; }
+.budgetAmounts .moneyInput input, .budgetAmounts .moneyInput i { width: auto; font-size: 14px; font-weight: 800; text-align: left; }
+.budgetAmounts label:nth-of-type(2) .moneyInput input, .budgetAmounts label:nth-of-type(2) .moneyInput i { color: #52525b; font-size: 11px; font-weight: 600; }
+.budgetAmounts small { color: #71717a; font-size: 9px; }
+.budgetAmounts > strong { margin-left: 5px; padding: 3px 7px; border: 1px solid var(--border); border-radius: 4px; background: #f4f4f5; color: #52525b; font-size: 9px; }
+.budgetProgressBlock { display: grid; min-width: 0; gap: 5px; }
+.budgetProgressLabels { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; color: #71717a; font: 9px/1.4 var(--mono); }
+.budgetProgressLabels > strong { color: #52525b; font-weight: 500; white-space: nowrap; }
+.budgetProgressTrack { height: 6px; overflow: hidden; border-radius: 99px; background: #e4e4e7; }
 .budgetProgressTrack i { display: block; height: 100%; border-radius: inherit; background: #09090b; }
-.budgetStatusSummary { display: grid; justify-items: end; gap: 3px; padding-left: 18px; border-left: 1px solid var(--border); font: 10px/1.5 var(--mono); text-transform: uppercase; }
-.budgetStatusSummary small { color: var(--muted); }
-.budgetStatusSummary strong { padding: 3px 8px; border-radius: 4px; background: #09090b; color: white; font-size: 10px; }
-.budgetStrip .budgetHistory { margin-top: 8px; }
+.budgetMiniMetric { display: grid; gap: 1px; padding-left: 14px; border-left: 1px solid var(--border); white-space: nowrap; font: 9px/1.35 var(--mono); text-transform: uppercase; }
+.budgetMiniMetric small { color: #71717a; letter-spacing: .05em; }
+.budgetMiniMetric strong { color: #18181b; font-size: 10px; }
+.budgetStatusChip { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 9px; border-radius: 4px; background: #09090b; color: white; font: 700 9px/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.budgetStatusChip i { width: 6px; height: 6px; border-radius: 50%; background: #34d399; }
+.budgetStatusWarning i { background: #fbbf24; }
+.budgetStatusDanger i { background: #fb7185; }
+.budgetStripHistory { margin-top: 6px; }
+.budgetStripHistory > summary { width: fit-content; color: #71717a; font-size: 9px; }
 .performanceCard { display: flex; flex-direction: column; gap: 24px; }
 .performanceTitleBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 .performanceTitleBar > div:first-child { flex: 1; min-width: 0; }
@@ -266,7 +268,8 @@
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @container (max-width: 850px) { .metricInputWrap input, .metricInputWrap i, .unavailableValue, .metricDisplayValue { font-size: 24px; }.goalInlineValues { max-width: 145px; }.asinNavigation { gap: 12px; }.asinNavigationColumn + .asinNavigationColumn { padding-left: 12px; } }
 @media (max-width: 1279px) { .twoColumn, .threeColumn { grid-template-columns: 1fr; }.asinNavigation { display: none; } }
-@container (max-width: 760px) { .planningGrid { grid-template-columns: 1fr; }.budgetStripMetrics { grid-template-columns: 1fr; gap: 10px; }.budgetStatusSummary { justify-items: start; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--border); } }
+@container (max-width: 900px) { .budgetStripMain { grid-template-columns: repeat(3, minmax(0, 1fr)); }.budgetProgressBlock { grid-column: 1 / -1; grid-row: 2; }.budgetStripHeading { border-right: 0; }.budgetMiniMetric { padding-left: 0; border-left: 0; } }
+@container (max-width: 760px) { .planningGrid { grid-template-columns: 1fr; }.budgetStripMain { grid-template-columns: 1fr; gap: 10px; }.budgetProgressBlock { grid-column: auto; grid-row: auto; }.budgetStripHeading, .budgetMiniMetric { padding: 0; border: 0; } }
 @media (max-width: 1023px) { .metricGroupGrid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 @media (max-width: 767px) { .metricGroupGrid { grid-template-columns: repeat(2,minmax(0,1fr)); }.workspaceHeader { align-items: flex-start; }.performanceSync { justify-content: flex-start; }.metricGroupHeading { align-items: flex-start; flex-wrap: wrap; } }
 @media (max-width: 639px) { .metricGroupGrid { grid-template-columns: 1fr; }.workspaceScroll { padding: 24px 16px; }.workspaceHeader { padding: 16px; flex-direction: column; }.workspaceProduct { width: 100%; flex: auto; }.card { padding: 24px 16px; }.budgetStrip, .goalCard, .actionCard { padding: 14px; }.sectionTitleGroup { flex-wrap: wrap; }.goalHeaderActions { width: 100%; }.goalMetrics { grid-template-columns: 1fr 1fr; }.saveArea { justify-items: start; }.saveArea small { text-align: left; }.actionRow { flex-wrap: wrap; gap: 8px; }.actionRow > input:first-of-type { flex-basis: calc(100% - 30px); }.summaryFooter { flex-wrap: wrap; } }

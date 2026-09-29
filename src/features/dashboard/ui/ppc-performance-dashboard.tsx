@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import {
-  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, Clock3, Copy, DollarSign,
+  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, Clock3, Copy,
   FileText, Flag, GitCompareArrows, Italic, LayoutDashboard, Underline, List, ListOrdered, Package, Plus, RefreshCw, Tag, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
@@ -467,6 +467,12 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
   const budgetUsage = report ? percentage(report.spend, report.weeklyBudget) : 0;
   const budgetBalance = report ? report.weeklyBudget - report.spend : 0;
   const isOverspent = budgetBalance < 0;
+  const activeWeekEnd = addDaysIso(activeWeekStart, 6);
+  const elapsedBudgetDays = initialToday < activeWeekStart ? 0 : initialToday > activeWeekEnd ? 7
+    : Math.min(7, Math.max(1, Math.round((Date.parse(`${initialToday}T00:00:00Z`) - Date.parse(`${activeWeekStart}T00:00:00Z`)) / 86_400_000) + 1));
+  const elapsedBudgetPercent = Math.round((elapsedBudgetDays / 7) * 1000) / 10;
+  const burnRateDelta = Math.round(budgetUsage - elapsedBudgetPercent);
+  const dailySpendAverage = elapsedBudgetDays && report ? report.spend / elapsedBudgetDays : 0;
 
   useEffect(() => {
     if (!cacheReady || !selectedKey || !selectedAsin) return;
@@ -748,13 +754,15 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
         <div className={ws.workspaceScroll}><div className={ws.workspaceCanvas}>
           <div className={ws.planningStack}>
             <section className={`${ws.card} ${ws.budgetCard} ${ws.budgetStrip}`} aria-label="Budget Utilization">
-              <div className={ws.budgetStripHeading}><h3 id="budget-heading"><DollarSign />Budget Pacing</h3><span className={isOverspent ? ws.pacingDanger : budgetUsage >= 80 ? ws.pacingWarning : ws.pacingHealthy}>{isOverspent ? "Over Budget" : budgetUsage >= 80 ? "Watch Pacing" : "Pacing Optimal"}</span></div>
-              <div className={ws.budgetStripMetrics}>
-                <label className={ws.budgetCap}><span>Weekly cap</span><span className={ws.moneyInput}><i>$</i><input aria-label="Weekly limit" inputMode="decimal" style={{ width: `${Math.max(1, roundedMetricValue(report.weeklyBudget).length)}ch` }} value={report.weeklyBudget ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(report.weeklyBudget) : ""} placeholder="0" onFocus={() => { budgetEditStartRef.current = { key: selectedKey, value: report.weeklyBudget }; }} onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} onBlur={event => finishBudgetEdit(event.currentTarget.value)} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span><small>Daily limit <strong>{preciseCurrency(dailyLimitFromWeekly(report.weeklyBudget))}</strong></small></label>
-                <div className={ws.budgetProgressBlock}><div className={ws.budgetProgressLabels}><label><span className={ws.moneyInput}><i>$</i><input aria-label="Actual spend" aria-readonly={importedMetricsLocked || undefined} readOnly={importedMetricsLocked} inputMode="numeric" style={{ width: `${Math.max(1, roundedMetricValue(report.spend).length)}ch` }} value={roundedMetricValue(report.spend)} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span><small>({budgetUsage}% spent)</small></label><strong>{preciseCurrency(Math.abs(budgetBalance))} <small>{isOverspent ? "overspent" : "remaining"}</small></strong></div><span className={ws.budgetProgressTrack}><i style={{ width: `${Math.min(100, budgetUsage)}%` }} /></span></div>
-                <div className={ws.budgetStatusSummary}><small>Budget status</small><strong>{isOverspent ? "Needs action" : budgetUsage >= 80 ? "Watch closely" : "On Track"}</strong></div>
+              <div className={ws.budgetStripMain}>
+                <div className={ws.budgetStripHeading}><i /><h3 id="budget-heading">Budget Pacing</h3></div>
+                <div className={ws.budgetAmounts}><label><span className={ws.moneyInput}><i>$</i><input aria-label="Actual spend" aria-readonly={importedMetricsLocked || undefined} readOnly={importedMetricsLocked} inputMode="numeric" style={{ width: `${Math.max(1, roundedMetricValue(report.spend).length)}ch` }} value={roundedMetricValue(report.spend)} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span></label><span>/</span><label><span className={ws.moneyInput}><i>$</i><input aria-label="Weekly limit" inputMode="decimal" style={{ width: `${Math.max(1, roundedMetricValue(report.weeklyBudget).length)}ch` }} value={report.weeklyBudget ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(report.weeklyBudget) : ""} placeholder="0" onFocus={() => { budgetEditStartRef.current = { key: selectedKey, value: report.weeklyBudget }; }} onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} onBlur={event => finishBudgetEdit(event.currentTarget.value)} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span><small>cap</small></label><strong>{budgetUsage}%</strong></div>
+                <div className={ws.budgetProgressBlock}><span className={ws.budgetProgressTrack}><i style={{ width: `${Math.min(100, budgetUsage)}%` }} /></span><div className={ws.budgetProgressLabels}><small>Day {elapsedBudgetDays} of 7 ({elapsedBudgetPercent}% elapsed)</small><strong>{preciseCurrency(Math.abs(budgetBalance))} {isOverspent ? "overspent" : "remaining"}</strong></div></div>
+                <div className={ws.budgetMiniMetric}><small>Burn Rate</small><strong>{burnRateDelta > 0 ? "+" : ""}{burnRateDelta}% vs exp</strong></div>
+                <div className={ws.budgetMiniMetric}><small>Daily Avg</small><strong>{preciseCurrency(dailySpendAverage)} / day</strong></div>
+                <span className={`${ws.budgetStatusChip} ${isOverspent ? ws.budgetStatusDanger : budgetUsage >= 80 ? ws.budgetStatusWarning : ""}`}><i />{isOverspent ? "Over Budget" : budgetUsage >= 80 ? "Watch" : "Optimal"}</span>
               </div>
-              <details className={ws.budgetHistory}><summary>Budget History</summary>
+              <details className={`${ws.budgetHistory} ${ws.budgetStripHistory}`}><summary>Budget History</summary>
                 <table aria-label="Budget change history"><thead><tr><th>Date of Change</th><th>From</th><th>To</th></tr></thead><tbody>{visibleBudgetHistory.length ? visibleBudgetHistory.map(change => <tr key={change.id}><td>{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(change.changedAt))}</td><td>{preciseCurrency(change.from)}</td><td>{preciseCurrency(change.to)}</td></tr>) : <tr><td colSpan={3}>No budget changes recorded yet.</td></tr>}</tbody></table>
                 {budgetHistoryPageCount > 1 ? <nav className={ws.budgetHistoryPagination} aria-label="Budget history pages"><button type="button" aria-label="Previous budget history page" disabled={budgetHistoryPage === 1} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage - 1 })}><ArrowLeft aria-hidden="true" /></button>{Array.from({ length: budgetHistoryPageCount }, (_, index) => index + 1).map(page => <button type="button" key={page} aria-label={`Budget history page ${page}`} aria-current={page === budgetHistoryPage ? "page" : undefined} onClick={() => setBudgetHistoryView({ key: selectedKey, page })}>{page}</button>)}<button type="button" aria-label="Next budget history page" disabled={budgetHistoryPage === budgetHistoryPageCount} onClick={() => setBudgetHistoryView({ key: selectedKey, page: budgetHistoryPage + 1 })}><ArrowRight aria-hidden="true" /></button></nav> : null}
               </details>

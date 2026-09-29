@@ -1,5 +1,11 @@
 # QA Checklist
 
+## September 30 compact budget pacing bar
+
+- [x] Confirm the desktop strip shows spend/cap, percentage, progress, elapsed day, remaining balance, burn rate, daily average, and status in one row.
+- [x] Edit spend and cap and confirm every derived value updates while Budget History records cap changes.
+- [x] Confirm Over Budget remains explicit and the strip stacks without clipping in narrow containers.
+
 ## September 29 per-topic summary formatting
 
 - [x] Confirm every Current Week Summary topic header shows bold, italic, underline, bullet, and numbered-list controls before its move/delete actions.

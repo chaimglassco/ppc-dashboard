@@ -1,5 +1,10 @@
 # Project Progress
 
+## September 30, 2026 — compact budget pacing bar
+
+- Rebuilt Budget Pacing as one compact horizontal strip with editable spend and cap, utilization percentage, progress, elapsed week, remaining balance, burn-rate variance, daily spend average, and status.
+- Preserved budget inheritance, change history, overspend handling, automatic saving, and responsive stacking for narrow workspaces.
+
 ## September 29, 2026 — per-topic summary formatting controls
 
 - Moved bold, italic, underline, bulleted-list, and numbered-list controls into every Current Week Summary topic header.

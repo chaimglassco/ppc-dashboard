@@ -1,5 +1,9 @@
 # Deployment Guide
 
+## September 30 compact budget-pacing release
+
+This presentation-only release needs no environment, API, database, or storage migration. After deployment, verify the Budget Pacing row recalculates percentage, progress, remaining/overspent balance, elapsed-week burn rate, daily average, and status when spend or cap changes. Expand Budget History to confirm prior cap changes remain available, then check the stacked narrow layout.
+
 ## September 29 per-topic formatting release
 
 This presentation-only release needs no environment, API, database, or storage migration. After deployment, verify each Current Week Summary card has its own five text-style controls in the card header and that Add Topic remains in the documentation header. Format selected text in Good and Bad independently, then reload to confirm the saved markup remains.
