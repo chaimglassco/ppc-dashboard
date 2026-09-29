@@ -611,7 +611,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(asinNavigation).getByRole("link", { name: "Daily Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/SalesTrend?cycles=7&daysPerCycle=1&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Weekly Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/SalesTrend?cycles=7&daysPerCycle=7&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Monthly Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/SalesTrend?cycles=7&daysPerCycle=30&to=2026-09-01&asinList=B012345679");
-    expect(within(asinNavigation).getByRole("link", { name: "Day Parting" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/DaypartingTrend?to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Day Parting" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/DayParting?weeks=4&to=2026-09-01&asinList=B012345679");
     const trendNavigation = within(asinNavigation).getByRole("group", { name: "Trend reports" });
     expect(within(trendNavigation).getAllByRole("link").map(link => link.textContent)).toEqual(["Daily Performance", "Weekly Performance", "Monthly Performance", "Day Parting"]);
     for (const link of within(asinNavigation).getAllByRole("link")) {

@@ -15,7 +15,7 @@ export const PPC_ANALYSIS_COLUMNS = [
     { slug: "daily-performance-trend", label: "Daily Performance", path: "/Sales/SalesTrend", daysPerCycle: 1 },
     { slug: "weekly-performance-trend", label: "Weekly Performance", path: "/Sales/SalesTrend", daysPerCycle: 7 },
     { slug: "monthly-performance-trend", label: "Monthly Performance", path: "/Sales/SalesTrend", daysPerCycle: 30 },
-    { slug: "day-parting", label: "Day Parting", path: "/Sales/DaypartingTrend" },
+    { slug: "day-parting", label: "Day Parting", path: "/Sales/DayParting" },
   ] },
 ] as const;
 
@@ -42,7 +42,9 @@ export function getScaleInsightsAnalysisHref(asinValue: string, section: PpcAnal
   if ("daysPerCycle" in route) {
     url.searchParams.set("cycles", "7");
     url.searchParams.set("daysPerCycle", String(route.daysPerCycle));
-  } else if (section !== "day-parting") {
+  } else if (section === "day-parting") {
+    url.searchParams.set("weeks", "4");
+  } else {
     url.searchParams.set("from", from);
   }
   url.searchParams.set("to", to);

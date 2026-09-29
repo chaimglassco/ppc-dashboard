@@ -20,7 +20,7 @@ describe("PPC analysis navigation", () => {
       "https://portal.scaleinsights.com/Sales/SalesTrend?cycles=7&daysPerCycle=30&to=2026-09-01&asinList=B012345678",
     );
     expect(getScaleInsightsAnalysisHref("b012345678", "day-parting", "2026-08-26", "2026-09-01")).toBe(
-      "https://portal.scaleinsights.com/Sales/DaypartingTrend?to=2026-09-01&asinList=B012345678",
+      "https://portal.scaleinsights.com/Sales/DayParting?weeks=4&to=2026-09-01&asinList=B012345678",
     );
     expect(getScaleInsightsAnalysisHref("not-an-asin", "search-terms", "2026-08-26", "2026-09-01")).toBe(
       "https://portal.scaleinsights.com/Ads",

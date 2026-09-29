@@ -472,3 +472,5 @@ Verify opportunity metric totals, sortable labels, row values, and Status are ce
 Automated verification: lint and typecheck passed; all 65 test files passed with two workers (390 passed, 6 skipped), and the production build passed. Local `/ppc/dashboard` and `/ppc/library` reached the Pipeline sign-in gate. In a signed-in production session, a non-first product and older week survived full reload; the user's three recovered Action Items appeared in their original product/week and remained after reload with Saved online shown. The corrected deployment recorded a successful PUT and no 409s in the following two-minute window. A separate signed-in editor and a live add/edit/complete/delete cycle remain to be checked.
 
 2026-09-29: Verify a newly added weekly goal persists after refresh and that deleting it remains deleted after refresh and in the next week. Verify Day Parting appears below Monthly Performance for a selected ASIN.
+
+2026-09-29: Open Day Parting from a selected product and confirm the destination uses /Sales/DayParting?weeks=4 and retains the selected ASIN and date.
