@@ -174,8 +174,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(budgetHistory).getByText("$0")).toBeVisible();
     expect(within(budgetHistory).getByText("$1,500")).toBeVisible();
     fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "350" } });
-    expect(screen.getByText((_, element) => element?.tagName === "SMALL" && element.textContent === "$1,150 remaining")).toBeVisible();
-    expect(screen.getByText("Spent (23%)")).toBeVisible();
+    expect(screen.getByText((_, element) => element?.tagName === "STRONG" && element.textContent === "$1,150 remaining")).toBeVisible();
+    expect(screen.getByText("(23% spent)")).toBeVisible();
     expect(screen.queryByText("Burn Rate Progress")).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("textbox", { name: "Good documentation" }), { target: { value: "Scale the best converting exact-match campaign." } });
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
@@ -371,8 +371,8 @@ describe("PpcPerformanceDashboard", () => {
     const goalsCard = screen.getByRole("region", { name: "Weekly Goals" });
     const budgetCard = screen.getByRole("region", { name: "Budget Utilization" });
     const actionCard = screen.getByRole("region", { name: "Action Items" });
-    expect(goalsCard.parentElement).toBe(budgetCard.parentElement);
     expect(goalsCard.parentElement).toBe(actionCard.parentElement);
+    expect(budgetCard.parentElement).toBe(goalsCard.parentElement?.parentElement);
     expect(performanceCard.compareDocumentPosition(goalsCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(performanceCard.compareDocumentPosition(budgetCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(performanceCard.compareDocumentPosition(actionCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
@@ -382,9 +382,11 @@ describe("PpcPerformanceDashboard", () => {
     expect(goalHistory.parentElement).toBe(addGoal.parentElement);
     expect(within(goalsCard).queryByRole("combobox", { name: /status/i })).not.toBeInTheDocument();
     expect(within(budgetCard).getByRole("textbox", { name: "Weekly limit" })).toBeVisible();
+    expect(within(budgetCard).getByRole("heading", { name: "Budget Pacing" })).toBeVisible();
+    expect(within(goalsCard).getByRole("heading", { name: "Strategic Goals" })).toBeVisible();
     expect(within(budgetCard).queryByText("Burn Rate Progress")).not.toBeInTheDocument();
     expect(within(actionCard).getByRole("button", { name: "Add Action Item" })).toBeVisible();
-    expect(within(actionCard).getByRole("button", { name: "Add Action Item" })).toHaveTextContent("");
+    expect(within(actionCard).getByRole("button", { name: "Add Action Item" })).toHaveTextContent("Add Item");
     expect(within(actionCard).queryByText("Operational tasks generated from this week’s performance analysis")).not.toBeInTheDocument();
     fireEvent.click(within(actionCard).getByRole("button", { name: "Add Action Item" }));
     expect(within(actionCard).queryByRole("combobox")).not.toBeInTheDocument();

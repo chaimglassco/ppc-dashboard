@@ -1,5 +1,12 @@
 # QA Checklist
 
+## September 29 compact weekly planning layout
+
+- [x] Confirm Budget Pacing renders as a full-width strip before the goals and actions cards and retains weekly-limit, spend, status, progress, and history controls.
+- [x] Confirm Strategic Goals and Action Items share an equal desktop row, expose live counts, and retain their existing edit controls.
+- [x] Confirm the planning row collapses to one column in a narrow workspace without clipping the budget metrics.
+- [x] Confirm the focused dashboard interaction suite covers the revised hierarchy and labeled Add Item action.
+
 ## September 22 workspace recovery and chunked Products checks
 
 - [x] Confirm the Products route normalizes an inline Pipeline workspace and a chunked `binary-v2` manifest with versioned chunks.

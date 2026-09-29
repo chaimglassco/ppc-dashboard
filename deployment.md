@@ -1,5 +1,9 @@
 # Deployment Guide
 
+## September 29 compact weekly planning release
+
+This presentation-only release needs no environment, API, database, or storage migration. After deployment, verify Budget Pacing spans the workspace above the two-column Strategic Goals and Action Items row, all planning controls remain editable for authorized users, and the row stacks cleanly at narrow widths. Existing weekly budgets, history, goals, and action items remain compatible.
+
 ## September 22 workspace recovery and chunked Products transport
 
 This release makes the Products adapter compatible with Pipeline workspaces larger than the inline response limit. It requests the `binary-v2` workspace manifest and reassembles its versioned chunks server-side; no browser storage migration or new environment variable is required. The shared Pipeline workspace was repaired additively to 23 products, including recovered prior-laptop ASINs `B0D1PHP7HQ` and `B0DYSBW3X5`.

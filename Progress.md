@@ -1,5 +1,11 @@
 # Project Progress
 
+## September 29, 2026 — compact weekly planning layout
+
+- Reworked the Products workspace planning area to match the supplied reference: Budget Pacing is now a full-width summary strip with cap, spend progress, remaining balance, status, and collapsible history.
+- Placed Strategic Goals and Action Items in an equal two-column row below the strip, with live count badges and visible Add Goal/Add Item actions. The layout collapses to a single column at narrow workspace widths.
+- Preserved budget editing and inheritance, goal outcomes, action completion, history, auto-save, and the existing storage contract.
+
 ## September 22, 2026 — shared online PPC dashboard state
 
 - Added authenticated `/ppc/api/dashboard/state` reads and optimistic-concurrency writes backed by private Vercel Blob.
