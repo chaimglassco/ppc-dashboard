@@ -155,7 +155,8 @@
 .weeklyTable tbody th { color: #27272a; font-size: 11px; font-weight: 700; }
 .weeklyTable tbody td { color: #18181b; font-weight: 600; }
 .weeklyTable tbody tr:last-child th, .weeklyTable tbody tr:last-child td { border-bottom: 0; }
-.weeklyTable tbody tr.weeklyGroupStart th, .weeklyTable tbody tr.weeklyGroupStart td { border-top: 2px solid #c8c5ca; }
+.weeklyTable tbody tr.weeklyGroupHeader td { padding: 7px 9px; border-top: 2px solid #c8c5ca; border-bottom: 1px solid #d4d4d8; background: #f4f4f5; color: #52525b; font-size: 9px; font-weight: 800; letter-spacing: .14em; text-align: left; }
+.weeklyTable tbody tr.weeklyGroupHeader:first-child td { border-top: 0; }
 .weeklySelectedColumn { background: #fffde7 !important; }
 .weeklyTable td > input { width: 100%; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: right; }
 .weeklyTable td > input:read-only { cursor: default; }

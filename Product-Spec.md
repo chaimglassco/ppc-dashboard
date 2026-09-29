@@ -66,7 +66,7 @@ The second panel follows the supplied HTML reference as a 340px white reporting 
 
 The third panel follows the supplied HTML reference: product header; Strategic Weekly Goals and Budget Utilization; Weekly PPC Performance; side-by-side Previous/Current Week Summary; Campaign Week-over-Week Comparison; and Action Items. Desktop metrics are two rows of five equal cards. Row one is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Row two is PPC Orders, Org. Orders, Total Orders, ACOS, and TACOS. Goals, budget history, current-week notes formatting, and action completion remain functional. Save retains local auto-save.
 
-The six-week performance table orders rows by business hierarchy: Total Sales, Total Orders, Total Units; Spend, PPC Sales, Organic Sales; PPC Orders, PPC Units, Organic Orders, Organic Units; ACOS, TACOS; Impressions, Clicks, CPC. Section boundaries use stronger horizontal dividers.
+The six-week performance table orders rows by business hierarchy and labels each group with a full-width header: TOTAL for Total Sales, Total Orders, and Total Units; SALES for Spend, PPC Sales, and Organic Sales; ORDERS for PPC Orders, PPC Units, Organic Orders, and Organic Units; EFFICIENCY for ACOS and TACOS; and TRAFFIC for Impressions, Clicks, and CPC.
 
 ## Goal history and previous-week metric comparisons
 

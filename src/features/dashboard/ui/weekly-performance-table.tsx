@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { addDaysIso, type GoalDataState, type WeeklyPpcReport } from "../domain/ppc-dashboard-state";
 import ws from "./ppc-performance-workspace.module.css";
 
@@ -44,6 +45,14 @@ const WEEKLY_TABLE_METRICS: readonly WeeklyTableMetricDefinition[] = [
   { key: "ppcClicks", label: "Clicks", kind: "number", group: "traffic" },
   { key: "cpc", label: "CPC", kind: "currency", group: "traffic" },
 ];
+
+const WEEKLY_GROUP_LABELS: Record<WeeklyTableMetricDefinition["group"], string> = {
+  total: "TOTAL",
+  sales: "SALES",
+  orders: "ORDERS",
+  efficiency: "EFFICIENCY",
+  traffic: "TRAFFIC",
+};
 
 const EDITABLE_METRICS = new Set<WeeklyTableMetric>([
   "ppcImpressions",
@@ -164,35 +173,40 @@ export function WeeklyPerformanceTable({
               .filter((value): value is number => value != null && Number.isFinite(value));
             const maximum = Math.max(...values, 1);
             const previousGroup = WEEKLY_TABLE_METRICS[index - 1]?.group;
+            const startsGroup = previousGroup !== definition.group;
             return (
-              <tr
-                key={definition.key}
-                className={previousGroup && previousGroup !== definition.group ? ws.weeklyGroupStart : undefined}
-              >
-                <th scope="row">{definition.label}</th>
-                {columns.map(column => {
-                  const value = metricValue(column.report, definition.key);
-                  return (
-                    <td
-                      key={column.weekStart}
-                      className={column.weekStart === selectedWeekStart ? ws.weeklySelectedColumn : undefined}
-                    >
-                      {cellInput(definition, column, value)}
-                    </td>
-                  );
-                })}
-                <td className={ws.weeklyTrend} aria-label={`${definition.label} six-week trend`}>
+              <Fragment key={definition.key}>
+                {startsGroup ? (
+                  <tr className={ws.weeklyGroupHeader} aria-label={`${WEEKLY_GROUP_LABELS[definition.group]} section`}>
+                    <td colSpan={columns.length + 2}>{WEEKLY_GROUP_LABELS[definition.group]}</td>
+                  </tr>
+                ) : null}
+                <tr>
+                  <th scope="row">{definition.label}</th>
                   {columns.map(column => {
                     const value = metricValue(column.report, definition.key);
                     return (
-                      <i
+                      <td
                         key={column.weekStart}
-                        style={{ height: `${value == null ? 2 : Math.max(8, (value / maximum) * 100)}%` }}
-                      />
+                        className={column.weekStart === selectedWeekStart ? ws.weeklySelectedColumn : undefined}
+                      >
+                        {cellInput(definition, column, value)}
+                      </td>
                     );
                   })}
-                </td>
-              </tr>
+                  <td className={ws.weeklyTrend} aria-label={`${definition.label} six-week trend`}>
+                    {columns.map(column => {
+                      const value = metricValue(column.report, definition.key);
+                      return (
+                        <i
+                          key={column.weekStart}
+                          style={{ height: `${value == null ? 2 : Math.max(8, (value / maximum) * 100)}%` }}
+                        />
+                      );
+                    })}
+                  </td>
+                </tr>
+              </Fragment>
             );
           })}
         </tbody>

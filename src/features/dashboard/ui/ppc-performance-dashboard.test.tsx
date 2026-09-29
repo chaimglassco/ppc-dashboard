@@ -94,6 +94,9 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(table).getAllByRole("rowheader").map(row => row.textContent)).toEqual([
       "Total Sales", "Total Orders", "Total Units", "Spend", "PPC Sales", "Organic Sales", "PPC Orders", "PPC Units", "Organic Orders", "Organic Units", "ACOS", "TACOS", "Impressions", "Clicks", "CPC",
     ]);
+    expect(within(table).getAllByRole("row", { name: /section$/ }).map(row => row.textContent)).toEqual([
+      "TOTAL", "SALES", "ORDERS", "EFFICIENCY", "TRAFFIC",
+    ]);
     expect(within(table).getByRole("row", { name: /Spend/ })).toHaveTextContent("$81.75");
     expect(within(table).getByRole("row", { name: /CPC/ })).toHaveTextContent("$1.70");
     expect(within(table).getByRole("row", { name: /Organic Units/ })).toHaveTextContent("28");

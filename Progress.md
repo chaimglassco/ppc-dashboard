@@ -437,6 +437,10 @@ Added complete Search Term Performance retrieval to weekly performance so the si
 
 Expanded weekly Sales retrieval to detailed output and normalized nested PPC Units, Organic Units, and Total Units fields. The adapter now reconciles a missing third total from the other two exact unit values, preserves missing data instead of turning an empty Search Term report into zero units, and marks results as revision 4 so existing six-week browser snapshots refresh automatically.
 
+## 2026-09-30 — Weekly metric section headers
+
+Added full-width TOTAL, SALES, ORDERS, EFFICIENCY, and TRAFFIC headers to the six-week performance table so each metric group is immediately identifiable without changing the metric order or weekly values.
+
 Added Total Sales, Total Orders, and Total Units rows between the organic metrics and ACOS in the six-week performance table.
 
 Reworked the workspace summary row into three responsive cards by moving Action Items beside Strategic Weekly Goals and Budget Utilization. Removed the Burn Rate Progress gauge while retaining budget totals, status, editing, and history.
