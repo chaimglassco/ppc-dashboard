@@ -61,6 +61,13 @@ const LEGACY_REPORTING_WEEK_START_DAY = 1;
 
 export function reportKey(productId: string, weekStart: string) { return `${productId}:${weekStart}`; }
 
+export function latestWeeklyBudget(reports: Record<string, WeeklyPpcReport>, productId: string, weekStart: string) {
+  const latest = Object.values(reports)
+    .filter(report => report.productId === productId && report.weekStart < weekStart)
+    .sort((first, second) => second.weekStart.localeCompare(first.weekStart))[0];
+  return latest?.weeklyBudget;
+}
+
 export function getSummaryTopics(report: WeeklyPpcReport): SummaryTopic[] {
   if (report.summaryTopics) return report.summaryTopics;
   if (report.notes) return [{ id: "summary-legacy", title: "General Summary", body: report.notes }];
@@ -87,7 +94,7 @@ function normalizeSummaryTopics(value: unknown): SummaryTopic[] | undefined {
   return topics;
 }
 
-export function createWeeklyPpcReport(productId: string, weekStart: string, previousReport?: WeeklyPpcReport | null): WeeklyPpcReport {
+export function createWeeklyPpcReport(productId: string, weekStart: string, previousReport?: WeeklyPpcReport | null, inheritedWeeklyBudget?: number): WeeklyPpcReport {
   const carriedGoals = previousReport
     ? previousReport.goals.filter(goal => goal.status !== "Achieved" && goal.status !== "Missed").map((goal, index) => ({
       ...goal, id: `${goal.id}-carried-${weekStart}-${index}`, actual: "", status: "On Track" as GoalStatus,
@@ -98,7 +105,7 @@ export function createWeeklyPpcReport(productId: string, weekStart: string, prev
       ...action, id: `${action.id}-carried-${weekStart}-${index}`, done: false,
     }))
     : [];
-  const weeklyBudget = previousReport?.weeklyBudget ?? 0;
+  const weeklyBudget = inheritedWeeklyBudget ?? previousReport?.weeklyBudget ?? 0;
   return {
     productId, weekStart, status: "Draft", weeklyBudget, dailyBudget: Math.round((weeklyBudget / 7) * 100) / 100, budgetHistory: [], spend: 0,
     ppcSales: 0, organicSales: 0, totalSales: 0, ppcOrders: 0, organicOrders: 0, totalOrders: 0, targetAcos: 0,

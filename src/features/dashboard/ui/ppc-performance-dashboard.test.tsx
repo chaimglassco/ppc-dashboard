@@ -453,11 +453,11 @@ describe("PpcPerformanceDashboard", () => {
     detachRestored();
   });
 
-  it("carries the previous weekly budget forward and keeps a manual override", async () => {
+  it("carries the latest earlier weekly budget across a missing week and keeps a manual override", async () => {
     window.localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
       version: 1,
       reports: {
-        "product-1:2026-08-19": { productId: "product-1", weekStart: "2026-08-19", weeklyBudget: 700, dailyBudget: 100 },
+        "product-1:2026-08-12": { productId: "product-1", weekStart: "2026-08-12", weeklyBudget: 700, dailyBudget: 100 },
       },
     }));
 

@@ -474,3 +474,5 @@ Automated verification: lint and typecheck passed; all 65 test files passed with
 2026-09-29: Verify a newly added weekly goal persists after refresh and that deleting it remains deleted after refresh and in the next week. Verify Day Parting appears below Monthly Performance for a selected ASIN.
 
 2026-09-29: Open Day Parting from a selected product and confirm the destination uses /Sales/DayParting?weeks=4 and retains the selected ASIN and date.
+
+2026-09-29: Set a weekly limit, skip an intervening week without saving a report, and confirm the next selected week inherits the latest amount. Change that amount and confirm the following week inherits the new value while earlier weeks retain their original budgets.
