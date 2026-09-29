@@ -314,7 +314,7 @@ This presentation and cache extension requires no environment variable, database
 
 The Sales Trend unit recovery keeps the version-1 browser storage key and requires no environment or database migration. On first dashboard load after deployment, revision-3 and older visible weeks refresh through the existing authenticated endpoint. Verify Scale Insights PPC Units and Organic Units populate the matching weekly rows, including a period where Sales Trend returns nested unit totals, and confirm an empty Search Term report does not display a false zero. Refresh Data must replace the active week with revision-4 data.
 
-The weekly table section-header update is presentation-only. Verify TOTAL, SALES, ORDERS, EFFICIENCY, and TRAFFIC each span the table width and precede the correct metric rows at desktop and horizontally scrolled narrow widths.
+The weekly table section-header update is presentation-only. Verify TOTAL, SALES, ORDERS, EFFICIENCY, and TRAFFIC each span the Metric label and six weekly columns, precede the correct metric rows, and render without an Analysis column at desktop and horizontally scrolled narrow widths.
 
 ## Weekly traffic and unit metric completion release
 

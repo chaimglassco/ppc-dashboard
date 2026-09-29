@@ -89,7 +89,7 @@ describe("PpcPerformanceDashboard", () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
     const table = await screen.findByRole("table", { name: "Six-week Scale Insights performance" });
     await waitFor(() => expect(metricsCalls).toHaveLength(6));
-    expect(within(table).getAllByRole("columnheader")).toHaveLength(8);
+    expect(within(table).getAllByRole("columnheader")).toHaveLength(7);
     expect(within(table).getByRole("columnheader", { name: /Aug 26, 2026 to Sep 01, 2026, selected week/ })).toBeVisible();
     expect(within(table).getAllByRole("rowheader").map(row => row.textContent)).toEqual([
       "Total Sales", "Total Orders", "Total Units", "Spend", "PPC Sales", "Organic Sales", "PPC Orders", "PPC Units", "Organic Orders", "Organic Units", "ACOS", "TACOS", "Impressions", "Clicks", "CPC",

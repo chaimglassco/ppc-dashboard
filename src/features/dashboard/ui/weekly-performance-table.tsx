@@ -163,22 +163,17 @@ export function WeeklyPerformanceTable({
                 </th>
               );
             })}
-            <th scope="col">Analysis</th>
           </tr>
         </thead>
         <tbody>
           {WEEKLY_TABLE_METRICS.map((definition, index) => {
-            const values = columns
-              .map(column => metricValue(column.report, definition.key))
-              .filter((value): value is number => value != null && Number.isFinite(value));
-            const maximum = Math.max(...values, 1);
             const previousGroup = WEEKLY_TABLE_METRICS[index - 1]?.group;
             const startsGroup = previousGroup !== definition.group;
             return (
               <Fragment key={definition.key}>
                 {startsGroup ? (
                   <tr className={ws.weeklyGroupHeader} aria-label={`${WEEKLY_GROUP_LABELS[definition.group]} section`}>
-                    <td colSpan={columns.length + 2}>{WEEKLY_GROUP_LABELS[definition.group]}</td>
+                    <td colSpan={columns.length + 1}>{WEEKLY_GROUP_LABELS[definition.group]}</td>
                   </tr>
                 ) : null}
                 <tr>
@@ -194,17 +189,6 @@ export function WeeklyPerformanceTable({
                       </td>
                     );
                   })}
-                  <td className={ws.weeklyTrend} aria-label={`${definition.label} six-week trend`}>
-                    {columns.map(column => {
-                      const value = metricValue(column.report, definition.key);
-                      return (
-                        <i
-                          key={column.weekStart}
-                          style={{ height: `${value == null ? 2 : Math.max(8, (value / maximum) * 100)}%` }}
-                        />
-                      );
-                    })}
-                  </td>
                 </tr>
               </Fragment>
             );

@@ -441,6 +441,8 @@ Expanded weekly Sales retrieval to detailed output and normalized nested PPC Uni
 
 Added full-width TOTAL, SALES, ORDERS, EFFICIENCY, and TRAFFIC headers to the six-week performance table so each metric group is immediately identifiable without changing the metric order or weekly values.
 
+Removed the Analysis trend column so the table now contains the Metric label and six weekly value columns only.
+
 Added Total Sales, Total Orders, and Total Units rows between the organic metrics and ACOS in the six-week performance table.
 
 Reworked the workspace summary row into three responsive cards by moving Action Items beside Strategic Weekly Goals and Budget Utilization. Removed the Burn Rate Progress gauge while retaining budget totals, status, editing, and history.
