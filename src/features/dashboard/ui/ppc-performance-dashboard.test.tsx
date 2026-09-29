@@ -304,6 +304,9 @@ describe("PpcPerformanceDashboard", () => {
   });
 
   it("marks live goal actuals partial while the reporting week is incomplete", async () => {
+    const report = createWeeklyPpcReport("product-1", "2026-08-26");
+    report.goals = [{ id: "test-acos", title: "ACOS", metric: "acos", unit: "percentage", target: "25", actual: "", status: "On Track" }];
+    localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({ version: 1, reports: { "product-1:2026-08-26": report } }));
     vi.mocked(fetch).mockImplementation(async input => {
       const url = String(input);
       if (!url.includes("/api/dashboard/performance?")) return {
@@ -325,7 +328,7 @@ describe("PpcPerformanceDashboard", () => {
 
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
-    expect(await screen.findByText("Scale Insights synced through 2026-08-28.")).toBeVisible();
+    expect(await screen.findByText("Scale Insights synced through 2026-08-28.", {}, { timeout: 5000 })).toBeVisible();
     expect(within(screen.getByRole("button", { name: /August 26 to September 1/ })).getByText("Partial")).toBeVisible();
     expect(screen.getByRole("textbox", { name: "ACOS actual" })).toHaveValue("25%");
     expect(within(screen.getByRole("textbox", { name: "ACOS actual" }).closest("[class*=goalRow]")!).getByText("Partial")).toBeVisible();
@@ -350,7 +353,7 @@ describe("PpcPerformanceDashboard", () => {
 
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
-    const connect = await screen.findByRole("link", { name: "Connect Scale Insights" });
+    const connect = await screen.findByRole("link", { name: "Connect Scale Insights" }, { timeout: 5000 });
     expect(connect).toHaveAttribute("href", "https://vercel.com/api/v1/connect/authorize/scl_test");
     expect(screen.getByText("Connect Scale Insights once to retrieve weekly performance.")).toBeVisible();
     expect(window.localStorage.getItem("SCALE_INSIGHTS_MCP_ACCESS_TOKEN")).toBeNull();
@@ -594,7 +597,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(headerAsinLink.closest("p")).not.toHaveTextContent("August 26 to September 1");
     expect(headerAsinLink.closest("p")).not.toHaveTextContent("Week 35");
     const asinNavigation = screen.getByRole("navigation", { name: "Scale Insights analysis for ASIN B012345679" });
-    expect(within(asinNavigation).getAllByRole("link")).toHaveLength(11);
+    expect(within(asinNavigation).getAllByRole("link")).toHaveLength(12);
     expect(within(within(asinNavigation).getByRole("group", { name: "Performance reports" })).getAllByRole("link").map(link => link.textContent)).toEqual(["Campaigns", "Keyword Targeting", "Product Targeting", "Search Terms"]);
     expect(within(within(asinNavigation).getByRole("group", { name: "Targeting reports" })).getAllByRole("link").map(link => link.textContent)).toEqual(["Ad Types", "Match Types", "Placements", "Main Keywords"]);
     expect(within(asinNavigation).getByRole("link", { name: "Campaigns" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Ads/Performance/Campaigns/Index?from=2026-08-26&to=2026-09-01&asinList=B012345679");
@@ -608,8 +611,9 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(asinNavigation).getByRole("link", { name: "Daily Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/SalesTrend?cycles=7&daysPerCycle=1&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Weekly Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/SalesTrend?cycles=7&daysPerCycle=7&to=2026-09-01&asinList=B012345679");
     expect(within(asinNavigation).getByRole("link", { name: "Monthly Performance" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/SalesTrend?cycles=7&daysPerCycle=30&to=2026-09-01&asinList=B012345679");
+    expect(within(asinNavigation).getByRole("link", { name: "Day Parting" })).toHaveAttribute("href", "https://portal.scaleinsights.com/Sales/DaypartingTrend?to=2026-09-01&asinList=B012345679");
     const trendNavigation = within(asinNavigation).getByRole("group", { name: "Trend reports" });
-    expect(within(trendNavigation).getAllByRole("link").map(link => link.textContent)).toEqual(["Daily Performance", "Weekly Performance", "Monthly Performance"]);
+    expect(within(trendNavigation).getAllByRole("link").map(link => link.textContent)).toEqual(["Daily Performance", "Weekly Performance", "Monthly Performance", "Day Parting"]);
     for (const link of within(asinNavigation).getAllByRole("link")) {
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");

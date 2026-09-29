@@ -470,3 +470,7 @@ Moving Action Items into the top three-card grid, compacting its title/add contr
 `glassco.ppcWorkspaceSelection.v1` is a browser-only version-1 preference containing `productId`, Wednesday `weekStart`, and one to 24 valid `YYYY-MM` visible months. Invalid or out-of-range selections are ignored. It is never uploaded. Report recovery continues to use `{ version: 1, savedAt, entry: { value, baseValue } }`; new writes use `glassco.ppcSharedReportOutbox.v1:<tab UUID>` so tabs do not replace each other's pending report, while the unsuffixed key is read for migration. The report schema and shared API response are unchanged. An empty in-progress Action Item title remains a valid string so typing through a blank field does not delete the row. A pending report clears from its outbox only after the exact value is confirmed online.
 
 The shared response's `etag` is the canonical private Blob metadata ETag, obtained with `head()`. It is the token required for the next `put(ifMatch)`; the private content GET's representation ETag is not a compatible write token in the observed production store. This changes no response field or document version.
+
+## 2026-09-29 — Weekly goal persistence and Day Parting
+
+New weekly reports start without prefilled goals. Saved empty goal lists remain empty when loaded and when the next week is created, so a deleted goal does not reappear. Added goals use unique IDs and enter the existing immediate shared-save/recovery queue. The selected product links to Scale Insights Day Parting below Monthly Performance.

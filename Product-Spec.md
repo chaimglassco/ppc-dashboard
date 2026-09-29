@@ -276,3 +276,7 @@ When a new Wednesday reporting week is created, every unfinished Action Item fro
 Weekly report edits now enter that recovery queue during the edit event itself, so refreshing immediately after adding or typing an Action Item does not bypass it. The shared status shows when the edit is saving and when the cloud confirms it. Action rows use smaller, lighter text and tighter spacing.
 
 The dashboard remembers the selected product, reporting week, and visible months in this browser, then restores that view after refresh. If the product no longer exists, it selects an available product. Action Items remain attached to their original product and week. The browser keeps each tab's unconfirmed report edit in a recovery outbox until the server confirms it. A repeated conflict or failed recovery write displays a clear unsaved state; view-only users cannot change Action Items.
+
+## 2026-09-29 — Weekly goal persistence and Day Parting
+
+New weekly reports start without prefilled goals. Saved empty goal lists remain empty when loaded and when the next week is created, so a deleted goal does not reappear. Added goals use unique IDs and enter the existing immediate shared-save/recovery queue. The selected product links to Scale Insights Day Parting below Monthly Performance.

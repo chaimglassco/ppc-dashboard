@@ -303,3 +303,5 @@ The refresh-recovery release adds only browser preferences and a per-tab outbox 
 The first live check found continuing `write_precondition` responses. The follow-up diagnostic compares private Blob `head()` metadata with `get()` response tags on rejected writes and logs only equality/missing flags. Check those flags before changing concurrency controls or retry behavior; never disable conditional writes merely to make a save succeed.
 
 The diagnostic showed metadata and private content GET ETags differ in production. The corrected release obtains the metadata ETag with `head()` and keeps `ifMatch` enabled. After promotion, verify pending saves complete, refresh retains Action Items, and 409 counts stop recurring. If a genuine collision occurs, check that it is rare and resolved by merge/retry rather than dropping the outbox.
+
+2026-09-29 release: Weekly goals no longer use seeded defaults; an empty goals array is intentional and must remain empty through shared storage and reload. The selected-product Scale Insights links include Day Parting.

@@ -56,10 +56,6 @@ export const WEEKLY_GOAL_OPTIONS: ReadonlyArray<{ value: WeeklyGoalMetric; label
   { value: "tacos", label: "TACOS" },
 ];
 
-const DEFAULT_GOALS: WeeklyGoal[] = [
-  { id: "goal-acos", title: "ACOS", metric: "acos", unit: "percentage", target: "25", actual: "", status: "On Track" },
-  { id: "goal-sales", title: "PPC Sales", metric: "ppcSales", unit: "currency", target: "", actual: "", status: "On Track" },
-];
 const REPORTING_WEEK_START_DAY = 3;
 const LEGACY_REPORTING_WEEK_START_DAY = 1;
 
@@ -96,7 +92,7 @@ export function createWeeklyPpcReport(productId: string, weekStart: string, prev
     ? previousReport.goals.filter(goal => goal.status !== "Achieved" && goal.status !== "Missed").map((goal, index) => ({
       ...goal, id: `${goal.id}-carried-${weekStart}-${index}`, actual: "", status: "On Track" as GoalStatus,
     }))
-    : DEFAULT_GOALS.map(goal => ({ ...goal }));
+    : [];
   const carriedActions = previousReport
     ? previousReport.actions.filter(action => !action.done).map((action, index) => ({
       ...action, id: `${action.id}-carried-${weekStart}-${index}`, done: false,
@@ -301,7 +297,7 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
     ...(totalUnits == null ? {} : { totalUnits }),
     ...(summaryTopics == null ? {} : { summaryTopics }),
     targetAcos: finiteNumber(value.targetAcos), acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
-    goals: Array.isArray(value.goals) ? goals : DEFAULT_GOALS.map(goal => ({ ...goal })), goalHistory, previousWeekResult: String(value.previousWeekResult ?? ""), notes: summaryTopics == null ? String(value.notes ?? "") : summaryTopicsNotes(summaryTopics),
+    goals: Array.isArray(value.goals) ? goals : [], goalHistory, previousWeekResult: String(value.previousWeekResult ?? ""), notes: summaryTopics == null ? String(value.notes ?? "") : summaryTopicsNotes(summaryTopics),
     actions: Array.isArray(value.actions) ? actions : [], updatedAt,
   });
 }

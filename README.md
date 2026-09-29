@@ -215,3 +215,7 @@ Supported Library body fields use a visual Tiptap composer with Normal, Bold, It
 Rich content is stored as validated JSON beside synchronized legacy text fields. Existing plain-text and repository Markdown bodies are converted when opened; no separate rich-text conversion job is required. Reader checklists are disabled, while checklist state can be edited and persisted in the builder.
 
 Formatting saves use a content-only mutation. Pipeline canonicalizes the rich-text JSON, preserves the document identity and lifecycle, and returns the saved active document with its new record version. Library verifies that response before leaving edit mode; a missing or malformed response keeps the editor and unsaved changes open instead of removing the document from the reader or cache.
+
+## 2026-09-29 — Weekly goal persistence and Day Parting
+
+New weekly reports start without prefilled goals. Saved empty goal lists remain empty when loaded and when the next week is created, so a deleted goal does not reappear. Added goals use unique IDs and enter the existing immediate shared-save/recovery queue. The selected product links to Scale Insights Day Parting below Monthly Performance.

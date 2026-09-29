@@ -643,7 +643,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
   };
   const addGoal = () => {
     if (!report) return;
-    patchReport({ goals: [...report.goals, { id: `goal-${Date.now()}`, title: "Choose goal", target: "", actual: "", status: "On Track" }] });
+    patchReport({ goals: [...report.goals, { id: `goal-${crypto.randomUUID()}`, title: "Choose goal", target: "", actual: "", status: "On Track" }] });
   };
   const resolveGoal = (goalId: string, status: GoalOutcome) => {
     if (!report) return;

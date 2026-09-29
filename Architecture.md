@@ -292,3 +292,7 @@ The weekly workspace writes each changed report to `SharedDashboardStorage` sync
 The active product/week/month selection is a validated browser preference, independent of the shared report. The report recovery outbox is scoped to a browser tab via session storage, while the previous unsuffixed key is read for migration. Pending edits merge with the latest confirmed document on a genuine ETag conflict and remain queued through bounded retries. The server records only the conflict condition (`stale_etag` or `write_precondition`) and dataset key, never report contents; an already-identical remote value counts as confirmation. Failure to write browser recovery storage is surfaced before the user leaves the page.
 
 Private Blob content is read with `get(..., useCache: false)`, but its response ETag is not used for conditional writes. A `head()` metadata request supplies the canonical ETag returned to clients and passed back to `put(ifMatch)`; the content remains validated before use. This corrects a production mismatch between the content-response ETag and the Blob API's write precondition ETag.
+
+## 2026-09-29 — Weekly goal persistence and Day Parting
+
+New weekly reports start without prefilled goals. Saved empty goal lists remain empty when loaded and when the next week is created, so a deleted goal does not reappear. Added goals use unique IDs and enter the existing immediate shared-save/recovery queue. The selected product links to Scale Insights Day Parting below Monthly Performance.

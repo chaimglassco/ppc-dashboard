@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { addDaysIso, calculateWeeklyPerformance, createWeeklyPpcReport, formatReportingMonthRange, formatWeekRange, formatWeeklyGoalTarget, formatWeeklyGoalValue, getMonthWeekStarts, getSelectedMonthWeekStarts, getSummaryTopics, summaryTopicsNotes, parsePpcDashboardStore, reportKey, startOfWeekIso, weeklyGoalActualValue, weeklyGoalUnit, withCalculatedPerformance } from "./ppc-dashboard-state";
+import type { WeeklyPpcReport } from "./ppc-dashboard-state";
 
 describe("PPC dashboard state", () => {
+  it("does not recreate deleted goals when a report is loaded or a new week begins", () => {
+    const empty = createWeeklyPpcReport("product-1", "2026-08-26");
+    expect(empty.goals).toEqual([]);
+    const restored = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { saved: { ...empty, goals: [] } } })).reports[reportKey(empty.productId, empty.weekStart)];
+    expect(restored.goals).toEqual([]);
+    expect(createWeeklyPpcReport("product-1", "2026-09-02", restored).goals).toEqual([]);
+    const legacy = parsePpcDashboardStore(JSON.stringify({ version: 1, reports: { saved: { ...empty, goals: undefined } } })).reports[reportKey(empty.productId, empty.weekStart)];
+    expect(legacy.goals).toEqual([]);
+  });
   it("restores summary topics, preserves legacy notes, and rejects malformed topic storage", () => {
     const report = createWeeklyPpcReport("product-1", "2026-08-26");
     expect(getSummaryTopics(report)).toEqual([
@@ -115,6 +125,10 @@ describe("PPC dashboard state", () => {
   it("validates structured goal metrics and derives their actual values from weekly performance", () => {
     const report = withCalculatedPerformance({
       ...createWeeklyPpcReport("product-1", "2026-08-26"),
+      goals: [
+        { id: "acos", title: "ACOS", metric: "acos", unit: "percentage", target: "25", actual: "", status: "On Track" },
+        { id: "sales", title: "PPC Sales", metric: "ppcSales", unit: "currency", target: "", actual: "", status: "On Track" },
+      ] as WeeklyPpcReport["goals"],
       spend: 82.4, ppcSales: 500, totalSales: 1200, ppcOrders: 20, totalOrders: 50,
     });
     const organicGoal = { id: "organic", title: "Organic Order", metric: "organicOrders" as const, unit: "percentage" as const, target: "65", actual: "", status: "On Track" as const };

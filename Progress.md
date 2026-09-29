@@ -425,3 +425,7 @@ The first production release exposed continuing `write_precondition` rejections 
 The diagnostic confirmed that private content GET and Blob metadata returned different ETags for the same report. Updated shared reads to return the metadata ETag for conditional writes and added a regression test for this exact mismatch.
 
 After the corrected deployment, a pending report save returned HTTP 200 and the repeated 409 loop stopped. In the signed-in production dashboard, the user's three previously missing default Action Items were visible under Round U – 3/16 – 2 Pack for Sep 23–29 and remained after a full refresh; the user confirmed they were the missing rows. Older or differently titled items still require the original browser outbox or private history for identification.
+
+## 2026-09-29 — Weekly goal persistence and Day Parting
+
+New weekly reports start without prefilled goals. Saved empty goal lists remain empty when loaded and when the next week is created, so a deleted goal does not reappear. Added goals use unique IDs and enter the existing immediate shared-save/recovery queue. The selected product links to Scale Insights Day Parting below Monthly Performance.
