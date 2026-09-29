@@ -701,7 +701,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
       goalHistory: [{ ...goal, actual, status, resolvedAt: new Date().toISOString(), ...(goalDataState ? { dataState: goalDataState } : {}) }, ...report.goalHistory].slice(0, 100),
     });
   };
-  const removeGoal = (goalId: string) => { if (report) patchReport({ goals: report.goals.filter(goal => goal.id !== goalId) }); };
+  const removeGoal = (goalId: string) => { if (report) patchReport({ goals: report.goals.filter(goal => goal.id !== goalId), deletedGoalIds: [...new Set([...(report.deletedGoalIds ?? []), goalId])] }); };
   const updateAction = (actionId: string, patch: Partial<ActionItem>) => {
     if (report) patchReport({ actions: report.actions.map(action => action.id === actionId ? { ...action, ...patch } : action) });
   };

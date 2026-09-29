@@ -45,6 +45,11 @@ function jsonEqual(left: JsonValue, right: JsonValue): boolean {
 function mergeObject(base: Record<string, JsonValue>, local: Record<string, JsonValue>, remote: Record<string, JsonValue>): Record<string, JsonValue> {
   const merged: Record<string, JsonValue> = {};
   for (const key of new Set([...Object.keys(base), ...Object.keys(remote), ...Object.keys(local)])) {
+    // Deletion records are permanent intent, including during stale outbox recovery.
+    if (key === "deletedGoalIds") {
+      merged[key] = [...new Set([base[key], local[key], remote[key]].flatMap(value => Array.isArray(value) ? value.filter(item => typeof item === "string") : []))];
+      continue;
+    }
     const inBase = Object.hasOwn(base, key);
     const inLocal = Object.hasOwn(local, key);
     const inRemote = Object.hasOwn(remote, key);

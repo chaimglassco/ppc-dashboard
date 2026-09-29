@@ -6,6 +6,23 @@ const report = (weekStart: string) => createWeeklyPpcReport("product-1", weekSta
 const value = (reports: Record<string, unknown>) => JSON.stringify({ version: 1, reports });
 
 describe("shared dashboard merging", () => {
+  it("keeps deleted goals removed when a stale session edits them or recovers without a base", () => {
+    const first = report("2026-09-02");
+    const key = reportKey(first.productId, first.weekStart);
+    const goal = { id: "deleted-sales", title: "PPC Sales", target: "", actual: "", status: "On Track" };
+    const base = value({ [key]: { ...first, goals: [goal] } });
+    const deleted = value({ [key]: { ...first, goals: [], deletedGoalIds: [goal.id] } });
+    const stale = value({ [key]: { ...first, goals: [{ ...goal, target: "500" }], notes: "Keep this note" } });
+    for (const original of [base, null]) {
+      for (const [local, remote] of [[deleted, stale], [stale, deleted]]) {
+        const merged = JSON.parse(mergeDashboardValues(PPC_DASHBOARD_STORAGE_KEY, original, local, remote));
+        expect(merged.reports[key].goals).toEqual([]);
+        expect(merged.reports[key].deletedGoalIds).toEqual([goal.id]);
+        if (original) expect(merged.reports[key].notes).toBe("Keep this note");
+      }
+    }
+  });
+
   it("preserves edits from both sessions when they touch different fields and records", () => {
     const first = report("2026-09-02");
     const firstKey = reportKey(first.productId, first.weekStart);

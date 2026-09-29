@@ -335,3 +335,6 @@ The diagnostic showed metadata and private content GET ETags differ in productio
 2026-09-29 release: Weekly goals no longer use seeded defaults; an empty goals array is intentional and must remain empty through shared storage and reload. The selected-product Scale Insights links include Day Parting.
 
 2026-09-29 follow-up: The Day Parting link uses the portal-confirmed /Sales/DayParting route and weeks=4 query parameter. Verify it with a signed-in Scale Insights session after deployment.
+# Goal deletion persistence — 2026-09-30
+
+Weekly reports retain optional `deletedGoalIds` in the existing version-1 record. Deleting a goal records its ID; loading and shared conflict/recovery merges remove that ID from active goals. Deletion IDs merge cumulatively so a stale session cannot restore a deleted goal. New goals use fresh IDs. Verify deletion survives reload, concurrent edits, and recovery of an older pending save, while other goals and notes remain intact. No environment or database migration is required.

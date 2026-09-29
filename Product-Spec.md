@@ -288,3 +288,6 @@ The dashboard remembers the selected product, reporting week, and visible months
 ## 2026-09-29 — Weekly goal persistence and Day Parting
 
 New weekly reports start without prefilled goals. Saved empty goal lists remain empty when loaded and when the next week is created, so a deleted goal does not reappear. Added goals use unique IDs and enter the existing immediate shared-save/recovery queue. The selected product links to Scale Insights Day Parting below Monthly Performance.
+# Goal deletion persistence — 2026-09-30
+
+Weekly reports retain optional `deletedGoalIds` in the existing version-1 record. Deleting a goal records its ID; loading and shared conflict/recovery merges remove that ID from active goals. Deletion IDs merge cumulatively so a stale session cannot restore a deleted goal. New goals use fresh IDs. Verify deletion survives reload, concurrent edits, and recovery of an older pending save, while other goals and notes remain intact. No environment or database migration is required.

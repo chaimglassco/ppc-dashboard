@@ -513,3 +513,6 @@ Automated verification: lint and typecheck passed; all 65 test files passed with
 2026-09-29: Set a weekly limit, skip an intervening week without saving a report, and confirm the next selected week inherits the latest amount. Change that amount and confirm the following week inherits the new value while earlier weeks retain their original budgets.
 
 2026-09-29: Load an existing current-week report that was automatically saved with a zero limit and confirm it displays the latest earlier budget. Then explicitly change a weekly limit to zero and confirm later weeks preserve that deliberate zero.
+# Goal deletion persistence — 2026-09-30
+
+Weekly reports retain optional `deletedGoalIds` in the existing version-1 record. Deleting a goal records its ID; loading and shared conflict/recovery merges remove that ID from active goals. Deletion IDs merge cumulatively so a stale session cannot restore a deleted goal. New goals use fresh IDs. Verify deletion survives reload, concurrent edits, and recovery of an older pending save, while other goals and notes remain intact. No environment or database migration is required.

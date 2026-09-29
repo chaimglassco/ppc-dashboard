@@ -480,3 +480,6 @@ Corrected the Scale Insights Day Parting destination to /Sales/DayParting with a
 New weekly reports now inherit the most recently saved earlier weekly budget for the same product, including when one or more intervening weeks have no saved report. A manual weekly-limit change remains scoped to that week and becomes the amount inherited by later weeks until another manual change is saved.
 
 Existing reports that were automatically saved with a zero weekly budget before this fix now display the latest earlier budget as well. A zero remains unchanged when Budget History records that the user deliberately changed the limit to zero.
+# Goal deletion persistence — 2026-09-30
+
+Weekly reports retain optional `deletedGoalIds` in the existing version-1 record. Deleting a goal records its ID; loading and shared conflict/recovery merges remove that ID from active goals. Deletion IDs merge cumulatively so a stale session cannot restore a deleted goal. New goals use fresh IDs. Verify deletion survives reload, concurrent edits, and recovery of an older pending save, while other goals and notes remain intact. No environment or database migration is required.

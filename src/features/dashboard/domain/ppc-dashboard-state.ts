@@ -20,6 +20,7 @@ export type WeeklyPpcReport = {
   totalSessions?: number; ppcClicks?: number; ppcImpressions?: number; ppcUnits?: number; totalUnits?: number; organicUnits?: number; cpc?: number; conversionRate?: number;
   goals: WeeklyGoal[]; goalHistory: GoalHistoryEntry[]; previousWeekResult: string; notes: string; actions: ActionItem[]; updatedAt: string | null;
   summaryTopics?: SummaryTopic[];
+  deletedGoalIds?: string[];
 };
 export type WeeklyPerformanceSourceMetrics = {
   spend: number;
@@ -274,7 +275,8 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
   const weekStart = storedWeekDate.getDay() === LEGACY_REPORTING_WEEK_START_DAY ? addDaysIso(storedWeekStart, 2) : storedWeekStart;
   const statuses: ReportStatus[] = ["Draft", "In Progress", "Completed", "Needs Review"];
   const parsedGoals = Array.isArray(value.goals) ? value.goals.map(normalizeGoal).filter((goal): goal is WeeklyGoal => Boolean(goal)) : [];
-  const goals = parsedGoals.filter(goal => goal.status !== "Achieved" && goal.status !== "Missed");
+  const deletedGoalIds = Array.isArray(value.deletedGoalIds) ? [...new Set(value.deletedGoalIds.filter((id): id is string => typeof id === "string" && id.length > 0 && id.length <= 1000))] : [];
+  const goals = parsedGoals.filter(goal => !deletedGoalIds.includes(goal.id) && goal.status !== "Achieved" && goal.status !== "Missed");
   const updatedAt = typeof value.updatedAt === "string" && !Number.isNaN(new Date(value.updatedAt).getTime()) ? new Date(value.updatedAt).toISOString() : null;
   const storedGoalHistory = Array.isArray(value.goalHistory)
     ? value.goalHistory.map(normalizeGoalHistoryEntry).filter((goal): goal is GoalHistoryEntry => Boolean(goal))
@@ -312,6 +314,7 @@ function normalizeReport(value: unknown): WeeklyPpcReport | null {
     ...(ppcUnits == null ? {} : { ppcUnits }),
     ...(totalUnits == null ? {} : { totalUnits }),
     ...(summaryTopics == null ? {} : { summaryTopics }),
+    ...(deletedGoalIds.length ? { deletedGoalIds } : {}),
     targetAcos: finiteNumber(value.targetAcos), acos: finiteNumber(value.acos), tacos: finiteNumber(value.tacos),
     goals: Array.isArray(value.goals) ? goals : [], goalHistory, previousWeekResult: String(value.previousWeekResult ?? ""), notes: summaryTopics == null ? String(value.notes ?? "") : summaryTopicsNotes(summaryTopics),
     actions: Array.isArray(value.actions) ? actions : [], updatedAt,
