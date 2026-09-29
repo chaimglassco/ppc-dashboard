@@ -467,7 +467,7 @@ Verify opportunity metric totals, sortable labels, row values, and Status are ce
 ## Six-week weekly performance table
 
 - [ ] Select a product and verify Weekly PPC Performance renders exactly six Wednesday–Tuesday columns, with the selected week highlighted at the far right and the five preceding weeks ordered left to right.
-- [ ] Confirm row order is Impressions, Clicks, CPC, Spend, PPC Sales, PPC Orders, PPC Units, Organic Sales, Organic Orders, Organic Units, Total Sales, Total Orders, Total Units, ACOS, TACOS.
+- [ ] Confirm row order is Total Sales, Total Orders, Total Units; Spend, PPC Sales, Organic Sales; PPC Orders, PPC Units, Organic Orders, Organic Units; ACOS, TACOS; Impressions, Clicks, CPC.
 - [ ] Reconcile Total Sales, Total Orders, and Total Units with the same Scale Insights weekly snapshot and confirm they appear directly above ACOS.
 - [ ] Reconcile imported Spend, PPC Sales, orders, clicks, impressions, and units with Scale Insights. Confirm CPC equals Spend / PPC Clicks and Organic Units equals Total Units - PPC Units when both are available.
 - [ ] Confirm imported cells are read-only, missing optional provider metrics display an em dash, and switching weeks reuses the saved cache without a new request.
@@ -475,9 +475,10 @@ Verify opportunity metric totals, sortable labels, row values, and Status are ce
 
 ## Weekly traffic and unit metric completion
 
-- [ ] Restore revision-2 and older cached weeks and confirm all six visible weeks refresh once to revision 3 without requiring manual week selection.
+- [ ] Restore revision-3 and older cached weeks and confirm all six visible weeks refresh once to revision 4 without requiring manual week selection.
 - [ ] Reconcile Impressions and Clicks with complete ASIN-scoped Search Term Performance for each date range, and confirm CPC equals weekly Spend divided by refreshed Clicks.
-- [ ] When Scale Insights supplies exact aggregate or complete row-level PPC Units, reconcile PPC Units and confirm Organic Units equals Total Units minus PPC Units.
+- [ ] When Scale Insights supplies exact aggregate, complete row-level, or nested Sales Trend PPC/Organic/Total Units, reconcile PPC Units and Organic Units. Confirm a missing third unit value is calculated only from the other two exact totals.
+- [ ] Confirm an empty Search Term report remains unavailable and does not override valid Sales Trend units with a false zero.
 - [ ] Confirm incomplete search-term pagination never displays a partial Impression total and produces a bounded warning.
 - [ ] Confirm PPC Units and Organic Units remain unavailable when Scale Insights does not expose exact PPC-attributed units; no order-to-unit or sales-share estimate may be shown.
 

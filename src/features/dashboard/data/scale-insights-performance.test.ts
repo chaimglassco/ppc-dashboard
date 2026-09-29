@@ -49,7 +49,7 @@ describe("Scale Insights weekly performance", () => {
 
     await expect(loadScaleInsightsWeeklyPerformance(params, callTool)).resolves.toEqual({
       ...params,
-      metricsRevision: 3,
+      metricsRevision: 4,
       currency: "USD",
       metrics: {
         spend: 81.75,
@@ -82,7 +82,7 @@ describe("Scale Insights weekly performance", () => {
     expect(callTool).toHaveBeenCalledWith("get_ads_performance", expect.objectContaining({
       asin_list: [params.asin], country: "US", start_date: params.startDate, end_date: params.endDate, summary_only: false, count: 1, page: 1,
     }));
-    expect(callTool).toHaveBeenCalledWith("get_sales_data", expect.objectContaining({ group_by: "total", include_growth: false }));
+    expect(callTool).toHaveBeenCalledWith("get_sales_data", expect.objectContaining({ group_by: "total", include_growth: false, summary_only: false }));
     expect(callTool).toHaveBeenCalledWith("get_search_term_performance", expect.objectContaining({ count: 500, mode: "raw", waste_only: false }));
   });
 
@@ -128,6 +128,19 @@ describe("Scale Insights weekly performance", () => {
     expect(result.metrics.organicUnits).toBe(28);
   });
 
+  it("reads nested Sales Trend unit totals and derives a missing paid count", async () => {
+    const callTool = vi.fn(async (name: string) => providerPayload(
+      name,
+      adsPayload({ totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23 } }),
+      salesPayload({ Summary: { TotalSales: 1317.35, TotalOrders: 59, TotalSessions: 122, TotalPPCCost: 81.75, TotalPPCSales: 481.75, Units: { TotalUnits: 80, OrganicUnits: 51 } } }),
+      searchPayload({ oppMeta: { total_count: 0, returned_count: 0, has_next_page: false, totals: { total_clicks: 48 }, data_as_of: "search" }, opps: [] }),
+    ));
+
+    const result = await loadScaleInsightsWeeklyPerformance(params, callTool);
+    expect(result.metrics).toMatchObject({ ppcUnits: 29, organicUnits: 51, totalUnits: 80 });
+    expect(result.warnings).not.toContain(expect.stringContaining("unit counts"));
+  });
+
   it("sums impressions only after every search-term page is loaded", async () => {
     const callTool = vi.fn(async (name: string, args: Record<string, unknown>) => {
       if (name === "get_ads_performance") return adsPayload({ totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23 } });
@@ -150,7 +163,7 @@ describe("Scale Insights weekly performance", () => {
     const callTool = vi.fn(async (name: string) => providerPayload(name, adsPayload(), salesPayload({ Summary: { TotalSales: 1317.35, TotalOrders: 59, TotalSessions: 122, TotalPPCCost: 82, TotalPPCSales: 482 } })));
 
     const result = await loadScaleInsightsWeeklyPerformance(params, callTool);
-    expect(result.warnings).toEqual([expect.stringContaining("synced at different times")]);
+    expect(result.warnings).toContainEqual(expect.stringContaining("synced at different times"));
   });
 
   it("does not substitute overall sessions when exact PPC Clicks are absent", async () => {

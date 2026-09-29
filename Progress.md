@@ -433,6 +433,10 @@ Replaced the selected-product weekly metric card groups with a six-week Scale In
 
 Added complete Search Term Performance retrieval to weekly performance so the six-week table can display actual Impressions, Clicks, derived CPC, and exact PPC Units when Scale Insights supplies an aggregate or complete row-level unit field. Added revision-3 snapshot marking and automatic refresh of older visible-week caches. Total Units continue to come from Sales Data, Organic Units derive only when exact PPC Units are present, and no order-to-unit estimate is used.
 
+## 2026-09-30 — Sales Trend unit recovery
+
+Expanded weekly Sales retrieval to detailed output and normalized nested PPC Units, Organic Units, and Total Units fields. The adapter now reconciles a missing third total from the other two exact unit values, preserves missing data instead of turning an empty Search Term report into zero units, and marks results as revision 4 so existing six-week browser snapshots refresh automatically.
+
 Added Total Sales, Total Orders, and Total Units rows between the organic metrics and ACOS in the six-week performance table.
 
 Reworked the workspace summary row into three responsive cards by moving Action Items beside Strategic Weekly Goals and Budget Utilization. Removed the Burn Rate Progress gauge while retaining budget totals, status, editing, and history.
