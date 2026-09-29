@@ -1,5 +1,10 @@
 # Project Progress
 
+## September 30, 2026 — weekly metric table order
+
+- Reordered the six-week performance table into Total, Sales, Orders, Efficiency, and Traffic sections.
+- The row sequence is now Total Sales/Orders/Units; Spend/PPC Sales/Organic Sales; PPC Orders/Units and Organic Orders/Units; ACOS/TACOS; then Impressions/Clicks/CPC.
+
 ## September 30, 2026 — compact budget pacing bar
 
 - Rebuilt Budget Pacing as one compact horizontal strip with editable spend and cap, utilization percentage, progress, elapsed week, remaining balance, burn-rate variance, daily spend average, and status.

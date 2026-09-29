@@ -1,5 +1,9 @@
 # Deployment Guide
 
+## September 30 weekly metric-order release
+
+This presentation-only release needs no environment, API, database, or storage migration. After deployment, verify the six-week table begins with Total metrics and ends with Traffic metrics in the documented order. Confirm selected-week editing and imported read-only values still map to the correct rows.
+
 ## September 30 compact budget-pacing release
 
 This presentation-only release needs no environment, API, database, or storage migration. After deployment, verify the Budget Pacing row recalculates percentage, progress, remaining/overspent balance, elapsed-week burn rate, daily average, and status when spend or cap changes. Expand Budget History to confirm prior cap changes remain available, then check the stacked narrow layout.

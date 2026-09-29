@@ -162,8 +162,6 @@
 .weeklyUnavailable { color: #a1a1aa !important; font-weight: 500; }
 .weeklyTrend { width: 96px; display: table-cell; vertical-align: bottom; }
 .weeklyTrend i { display: inline-block; width: 9px; min-height: 2px; margin: 0 1px; background: #9fb2c7; vertical-align: bottom; }
-.weeklyTable tbody tr:nth-child(n+8) .weeklyTrend i { background: #8bc4aa; }
-.weeklyTable tbody tr:nth-child(n+11) .weeklyTrend i { background: #d7a27e; }
 .metricGroup { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .metricGroupHeading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .metricGroupHeading h4 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }

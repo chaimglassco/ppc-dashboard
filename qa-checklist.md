@@ -1,5 +1,10 @@
 # QA Checklist
 
+## September 30 weekly metric table order
+
+- [x] Confirm row headers appear in Total, Sales, Orders, Efficiency, then Traffic order.
+- [x] Confirm group divider lines appear before Spend, PPC Orders, ACOS, and Impressions while all six week values and analysis trends remain aligned.
+
 ## September 30 compact budget pacing bar
 
 - [x] Confirm the desktop strip shows spend/cap, percentage, progress, elapsed day, remaining balance, burn rate, daily average, and status in one row.

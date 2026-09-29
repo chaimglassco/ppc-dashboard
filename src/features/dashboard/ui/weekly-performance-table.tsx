@@ -24,25 +24,25 @@ type WeeklyTableMetricDefinition = {
   key: WeeklyTableMetric;
   label: string;
   kind: "number" | "currency" | "percentage";
-  group: "paid" | "organic" | "total" | "efficiency";
+  group: "total" | "sales" | "orders" | "efficiency" | "traffic";
 };
 
 const WEEKLY_TABLE_METRICS: readonly WeeklyTableMetricDefinition[] = [
-  { key: "ppcImpressions", label: "Impressions", kind: "number", group: "paid" },
-  { key: "ppcClicks", label: "Clicks", kind: "number", group: "paid" },
-  { key: "cpc", label: "CPC", kind: "currency", group: "paid" },
-  { key: "spend", label: "Spend", kind: "currency", group: "paid" },
-  { key: "ppcSales", label: "PPC Sales", kind: "currency", group: "paid" },
-  { key: "ppcOrders", label: "PPC Orders", kind: "number", group: "paid" },
-  { key: "ppcUnits", label: "PPC Units", kind: "number", group: "paid" },
-  { key: "organicSales", label: "Organic Sales", kind: "currency", group: "organic" },
-  { key: "organicOrders", label: "Organic Orders", kind: "number", group: "organic" },
-  { key: "organicUnits", label: "Organic Units", kind: "number", group: "organic" },
   { key: "totalSales", label: "Total Sales", kind: "currency", group: "total" },
   { key: "totalOrders", label: "Total Orders", kind: "number", group: "total" },
   { key: "totalUnits", label: "Total Units", kind: "number", group: "total" },
+  { key: "spend", label: "Spend", kind: "currency", group: "sales" },
+  { key: "ppcSales", label: "PPC Sales", kind: "currency", group: "sales" },
+  { key: "organicSales", label: "Organic Sales", kind: "currency", group: "sales" },
+  { key: "ppcOrders", label: "PPC Orders", kind: "number", group: "orders" },
+  { key: "ppcUnits", label: "PPC Units", kind: "number", group: "orders" },
+  { key: "organicOrders", label: "Organic Orders", kind: "number", group: "orders" },
+  { key: "organicUnits", label: "Organic Units", kind: "number", group: "orders" },
   { key: "acos", label: "ACOS", kind: "percentage", group: "efficiency" },
   { key: "tacos", label: "TACOS", kind: "percentage", group: "efficiency" },
+  { key: "ppcImpressions", label: "Impressions", kind: "number", group: "traffic" },
+  { key: "ppcClicks", label: "Clicks", kind: "number", group: "traffic" },
+  { key: "cpc", label: "CPC", kind: "currency", group: "traffic" },
 ];
 
 const EDITABLE_METRICS = new Set<WeeklyTableMetric>([

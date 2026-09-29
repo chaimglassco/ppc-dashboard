@@ -92,7 +92,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(table).getAllByRole("columnheader")).toHaveLength(8);
     expect(within(table).getByRole("columnheader", { name: /Aug 26, 2026 to Sep 01, 2026, selected week/ })).toBeVisible();
     expect(within(table).getAllByRole("rowheader").map(row => row.textContent)).toEqual([
-      "Impressions", "Clicks", "CPC", "Spend", "PPC Sales", "PPC Orders", "PPC Units", "Organic Sales", "Organic Orders", "Organic Units", "Total Sales", "Total Orders", "Total Units", "ACOS", "TACOS",
+      "Total Sales", "Total Orders", "Total Units", "Spend", "PPC Sales", "Organic Sales", "PPC Orders", "PPC Units", "Organic Orders", "Organic Units", "ACOS", "TACOS", "Impressions", "Clicks", "CPC",
     ]);
     expect(within(table).getByRole("row", { name: /Spend/ })).toHaveTextContent("$81.75");
     expect(within(table).getByRole("row", { name: /CPC/ })).toHaveTextContent("$1.70");
@@ -368,7 +368,7 @@ describe("PpcPerformanceDashboard", () => {
     const performanceCard = screen.getByRole("region", { name: "Weekly PPC Performance" });
     const table = within(performanceCard).getByRole("table", { name: "Six-week Scale Insights performance" });
     expect(within(table).getAllByRole("rowheader").map(row => row.textContent)).toEqual([
-      "Impressions", "Clicks", "CPC", "Spend", "PPC Sales", "PPC Orders", "PPC Units", "Organic Sales", "Organic Orders", "Organic Units", "Total Sales", "Total Orders", "Total Units", "ACOS", "TACOS",
+      "Total Sales", "Total Orders", "Total Units", "Spend", "PPC Sales", "Organic Sales", "PPC Orders", "PPC Units", "Organic Orders", "Organic Units", "ACOS", "TACOS", "Impressions", "Clicks", "CPC",
     ]);
     expect(within(performanceCard).getByRole("textbox", { name: "Target ACOS" })).toBeVisible();
     const goalsCard = screen.getByRole("region", { name: "Weekly Goals" });

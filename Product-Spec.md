@@ -66,6 +66,8 @@ The second panel follows the supplied HTML reference as a 340px white reporting 
 
 The third panel follows the supplied HTML reference: product header; Strategic Weekly Goals and Budget Utilization; Weekly PPC Performance; side-by-side Previous/Current Week Summary; Campaign Week-over-Week Comparison; and Action Items. Desktop metrics are two rows of five equal cards. Row one is Total Spend, PPC Sales, Organic Sales, Total Sales, and Conversion Rate. Row two is PPC Orders, Org. Orders, Total Orders, ACOS, and TACOS. Goals, budget history, current-week notes formatting, and action completion remain functional. Save retains local auto-save.
 
+The six-week performance table orders rows by business hierarchy: Total Sales, Total Orders, Total Units; Spend, PPC Sales, Organic Sales; PPC Orders, PPC Units, Organic Orders, Organic Units; ACOS, TACOS; Impressions, Clicks, CPC. Section boundaries use stronger horizontal dividers.
+
 ## Goal history and previous-week metric comparisons
 
 Each active weekly goal has explicit Achieved and Missed actions beside Delete. Resolving a goal removes it from the active list and records its title, target, actual, outcome, completion time, and reporting week in the selected product's Goal History. The history button sits beside Add Goal and shows resolved goals across that product's saved weeks. Active status choices remain On Track or At Risk. Older terminal goals are migrated into history when restored.
