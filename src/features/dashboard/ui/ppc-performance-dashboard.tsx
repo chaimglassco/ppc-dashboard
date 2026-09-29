@@ -232,6 +232,28 @@ function SummaryTopicComposer({ topics, onChange }: { topics: SummaryTopic[]; on
   </section>)}{!topics.length ? <p>No topics yet. Use + to add a topic.</p> : null}</div></div>;
 }
 
+function summaryTopicsFromText(text: string): SummaryTopic[] {
+  const source = text.trim();
+  if (!source) return [];
+  const headings = [...source.matchAll(/^##\s+(.+)\r?$/gm)];
+  if (!headings.length) return [{ id: "previous-summary-general", title: "General Summary", body: source }];
+  return headings.map((heading, index) => ({
+    id: `previous-summary-${index}`,
+    title: heading[1].trim(),
+    body: source.slice((heading.index ?? 0) + heading[0].length, headings[index + 1]?.index ?? source.length).trim(),
+  }));
+}
+
+function ReadOnlySummaryTopics({ topics }: { topics: SummaryTopic[] }) {
+  return <div className={ws.readOnlySummary}><span>Performance Documentation</span><div className={ws.summaryTopics}>
+    {topics.map(topic => <section key={topic.id} className={`${ws.summaryTopic} ${topic.title.trim().toLowerCase() === "good" ? ws.summaryTopicGood : topic.title.trim().toLowerCase() === "bad" ? ws.summaryTopicBad : ""}`} aria-label={`Previous summary topic ${topic.title || "Untitled Topic"}`}>
+      <div className={ws.summaryTopicHeader}><strong>{topic.title || "Untitled Topic"}</strong></div>
+      <p className={ws.readOnlyTopicBody}>{topic.body || "No discussion notes."}</p>
+    </section>)}
+    {!topics.length ? <p className={ws.emptyPreviousSummary}>No previous week documentation yet.</p> : null}
+  </div></div>;
+}
+
 function statusTone(status: string) {
   if (status === "Completed" || status === "Achieved" || status === "On Track") return styles.success;
   if (status === "Needs Review" || status === "At Risk") return styles.warning;
@@ -414,6 +436,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
     return [{ weekStart, dataState, report: periodReport }];
   });
   const previousSummaryText = report?.previousWeekResult || previousReport?.previousWeekResult || previousReport?.notes || "";
+  const previousSummaryTopics = previousReport?.summaryTopics ?? summaryTopicsFromText(previousSummaryText);
   const budgetHistoryPageCount = Math.max(1, Math.ceil((report?.budgetHistory.length ?? 0) / BUDGET_HISTORY_PAGE_SIZE));
   const budgetHistoryPage = budgetHistoryView.key === selectedKey ? Math.min(budgetHistoryView.page, budgetHistoryPageCount) : 1;
   const visibleBudgetHistory = report?.budgetHistory.slice((budgetHistoryPage - 1) * BUDGET_HISTORY_PAGE_SIZE, budgetHistoryPage * BUDGET_HISTORY_PAGE_SIZE) ?? [];
@@ -747,7 +770,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
           </section>
 
           <div className={ws.twoColumn}>
-            <section className={`${ws.card} ${ws.summaryCard}`} aria-labelledby="previous-heading"><div className={ws.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Summary</h3></div><label className={ws.readOnlySummary}><span>Performance Documentation</span><textarea aria-label="Previous week performance documentation" readOnly value={previousSummaryText} /></label></section>
+            <section className={`${ws.card} ${ws.summaryCard}`} aria-labelledby="previous-heading"><div className={ws.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Summary</h3></div><ReadOnlySummaryTopics topics={previousSummaryTopics} /></section>
             <section className={`${ws.card} ${ws.summaryCard} ${ws.currentSummaryCard}`} aria-labelledby="notes-heading"><div className={ws.cardTitle}><h3 id="notes-heading"><FileText />Current Week Summary</h3></div><SummaryTopicComposer key={selectedKey} topics={getSummaryTopics(report)} onChange={summaryTopics => patchReport({ summaryTopics, notes: summaryTopicsNotes(summaryTopics) })} /><footer className={ws.summaryFooter}><span className={saveNotice || sharedSaveStatus?.error || sharedSaveStatus?.recoveryError ? ws.unsaved : ws.autoSaved}>{saveMessage}</span><span>Last edited: {report.updatedAt ? new Date(report.updatedAt).toLocaleString() : "—"}</span></footer></section>
           </div>
 

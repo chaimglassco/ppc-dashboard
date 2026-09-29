@@ -526,8 +526,33 @@ describe("PpcPerformanceDashboard", () => {
     render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
 
     expect(await screen.findByRole("heading", { name: "Glass Cleaner" })).toBeVisible();
-    expect(screen.getByRole("textbox", { name: "Previous week performance documentation" })).toHaveValue("Keep the winning exact campaign.");
+    const previousSummary = screen.getByRole("region", { name: "Previous Week Summary" });
+    expect(within(previousSummary).getByRole("region", { name: "Previous summary topic General Summary" })).toHaveTextContent("Keep the winning exact campaign.");
+    expect(within(previousSummary).queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Carry-forward result and lessons" })).not.toBeInTheDocument();
+  });
+
+  it("shows the previous week's Good and Bad topics as read-only colored summary cards", async () => {
+    window.localStorage.setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      reports: {
+        "product-1:2026-08-19": {
+          productId: "product-1", weekStart: "2026-08-19",
+          summaryTopics: [
+            { id: "good", title: "Good", body: "PPC orders increased." },
+            { id: "bad", title: "Bad", body: "ACOS increased." },
+          ],
+        },
+        "product-1:2026-08-26": { productId: "product-1", weekStart: "2026-08-26" },
+      },
+    }));
+
+    render(<PpcPerformanceDashboard initialToday="2026-08-28" />);
+
+    const previousSummary = await screen.findByRole("region", { name: "Previous Week Summary" });
+    expect(within(previousSummary).getByRole("region", { name: "Previous summary topic Good" })).toHaveTextContent("PPC orders increased.");
+    expect(within(previousSummary).getByRole("region", { name: "Previous summary topic Bad" })).toHaveTextContent("ACOS increased.");
+    expect(within(previousSummary).queryByRole("textbox")).not.toBeInTheDocument();
   });
 
   it("shows only selected-month weeks, including their boundary overlap", async () => {

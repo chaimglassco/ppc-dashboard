@@ -1,5 +1,10 @@
 # QA Checklist
 
+## September 29 previous-week summary cards
+
+- [x] Confirm structured Good and Bad topics from the prior week render as read-only green and red cards.
+- [x] Confirm legacy plain-text documentation renders in a neutral General Summary card and no editable previous-week textbox appears.
+
 ## September 29 compact weekly planning layout
 
 - [x] Confirm Budget Pacing renders as a full-width strip before the goals and actions cards and retains weekly-limit, spend, status, progress, and history controls.

@@ -8,6 +8,8 @@ PPC Conversion Rate derives from optional `ppcClicks` and PPC Orders. The perfor
 
 ASIN clipboard state is transient component state and never enters browser storage. Goal History and Add Goal are grouped at the right side of the Strategic Weekly Goals header, and no active-goal count is derived or persisted. Whole-number Target ACOS and PPC Conversion Rate values are presentation formatting; calculations and stored numeric values retain their existing precision.
 
+Previous Week Summary projects the prior report's validated `summaryTopics` into read-only topic cards. When only legacy text is available, render-time parsing recognizes Markdown level-two topic headings and otherwise creates one neutral General Summary card. This adds no persisted fields or migration.
+
 ## Custom goals and independent planning-card height
 
 The planning grid uses start alignment, and Budget Utilization no longer uses an automatic top margin. Each card therefore keeps its own content height when the goal list grows. Custom goal selection reuses `WeeklyGoal.title`, target, status, and outcome behavior; the optional `custom: true` marker prevents legacy metric-name inference from converting manual text into a predefined metric during version-1 report validation.

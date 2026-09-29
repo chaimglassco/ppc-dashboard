@@ -1,5 +1,10 @@
 # Project Progress
 
+## September 29, 2026 — matching previous-week summary cards
+
+- Replaced the Previous Week Summary textarea with the same topic-card presentation used by Current Week Summary while keeping prior content read-only.
+- Preserved green Good and red Bad tones from structured summaries and added a neutral General Summary card for legacy plain-text documentation.
+
 ## September 29, 2026 — compact weekly planning layout
 
 - Reworked the Products workspace planning area to match the supplied reference: Budget Pacing is now a full-width summary strip with cap, spend progress, remaining balance, status, and collapsible history.

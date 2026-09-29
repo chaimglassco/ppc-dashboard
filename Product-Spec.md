@@ -24,7 +24,7 @@ PPC Conversion Rate is displayed as a whole percentage. When the prior period al
 
 ## September 11 dashboard control revision
 
-The workspace header presents **Refresh Data** and edits save automatically. Previous Week Summary is view-only and stays blank when no result was entered. The final top-row card is titled **Action Items** and contains completion, title, and delete controls. Weekly goal progress places Actual below Target, with achieved/missed/delete buttons in the footer. Budget Utilization places the calculated daily limit inside the Weekly Limit tile and does not repeat daily limit or over/remaining balance outside the primary tiles.
+The workspace header presents **Refresh Data** and edits save automatically. Previous Week Summary is view-only and presents saved topics with the same cards as Current Week Summary, including green Good and red Bad tones; legacy plain text uses a neutral General Summary card. It shows an empty-state message when no result was entered. The final top-row card is titled **Action Items** and contains completion, title, and delete controls. Weekly goal progress places Actual below Target, with achieved/missed/delete buttons in the footer. Budget Utilization places the calculated daily limit inside the Weekly Limit tile and does not repeat daily limit or over/remaining balance outside the primary tiles.
 
 ## September 11 dashboard catalog behavior
 

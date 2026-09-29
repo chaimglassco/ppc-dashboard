@@ -1,5 +1,9 @@
 # Deployment Guide
 
+## September 29 previous-week summary-card release
+
+This presentation-only release needs no environment, API, database, or storage migration. After deployment, select a week whose prior report contains Good and Bad topics and confirm they appear as read-only green and red cards beside Current Week Summary. Legacy plain-text summaries remain visible in a neutral card.
+
 ## September 29 compact weekly planning release
 
 This presentation-only release needs no environment, API, database, or storage migration. After deployment, verify Budget Pacing spans the workspace above the two-column Strategic Goals and Action Items row, all planning controls remain editable for authorized users, and the row stacks cleanly at narrow widths. Existing weekly budgets, history, goals, and action items remain compatible.
