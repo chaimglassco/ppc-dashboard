@@ -42,8 +42,10 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.click(add);
     fireEvent.change(within(summary).getByRole("textbox", { name: "Topic title 3" }), { target: { value: "Next Week" } });
     const notes = within(summary).getByRole("textbox", { name: "Next Week documentation" });
+    Object.defineProperty(notes, "scrollHeight", { configurable: true, value: 180 });
     fireEvent.focus(notes);
     fireEvent.change(notes, { target: { value: "Raise bids carefully" } });
+    expect(notes).toHaveStyle({ height: "180px" });
     (notes as HTMLTextAreaElement).setSelectionRange(0, 5);
     fireEvent.click(within(summary).getByRole("button", { name: "Bold Performance documentation" }));
     expect(notes).toHaveValue("**Raise** bids carefully");

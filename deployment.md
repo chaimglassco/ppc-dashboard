@@ -1,5 +1,9 @@
 # Deployment Guide
 
+## September 29 auto-growing summary-composer release
+
+This presentation-only release needs no environment, API, database, or storage migration. After deployment, add enough lines to a Current Week Summary topic to exceed its initial height and confirm the colored card expands to keep every line visible. Reload and confirm the restored content receives the same height.
+
 ## September 29 previous-week summary-card release
 
 This presentation-only release needs no environment, API, database, or storage migration. After deployment, select a week whose prior report contains Good and Bad topics and confirm they appear as read-only green and red cards beside Current Week Summary. Legacy plain-text summaries remain visible in a neutral card.

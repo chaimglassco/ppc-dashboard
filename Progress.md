@@ -1,5 +1,10 @@
 # Project Progress
 
+## September 29, 2026 — auto-growing summary composers
+
+- Made every editable Current Week Summary topic expand vertically to fit its notes on initial load and after each edit or formatting action.
+- Removed the manual resize handle and internal textarea scrolling so long documentation remains fully visible inside its Good, Bad, or custom topic card.
+
 ## September 29, 2026 — matching previous-week summary cards
 
 - Replaced the Previous Week Summary textarea with the same topic-card presentation used by Current Week Summary while keeping prior content read-only.

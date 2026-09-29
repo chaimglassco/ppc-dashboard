@@ -1,5 +1,10 @@
 # QA Checklist
 
+## September 29 auto-growing summary composer
+
+- [x] Enter multi-line text in a Current Week Summary topic and confirm its textarea height follows the content without an internal scrollbar or resize handle.
+- [x] Confirm saved and formatted topic content recalculates its height after render.
+
 ## September 29 previous-week summary cards
 
 - [x] Confirm structured Good and Bad topics from the prior week render as read-only green and red cards.

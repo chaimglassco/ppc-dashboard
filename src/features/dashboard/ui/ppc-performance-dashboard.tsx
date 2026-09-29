@@ -5,7 +5,7 @@ import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, Clock3, Copy, DollarSign,
   FileText, Flag, GitCompareArrows, Italic, LayoutDashboard, Underline, List, ListOrdered, Package, Plus, RefreshCw, Tag, Trash2, X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
@@ -143,10 +143,18 @@ function WeeklyGoalRow({ goal, report, dataState, onUpdate, onResolve, onRemove 
   </div>;
 }
 
+function resizeSummaryTextarea(textarea: HTMLTextAreaElement) {
+  textarea.style.height = "auto";
+  textarea.style.height = `${Math.max(100, textarea.scrollHeight)}px`;
+}
+
 function SummaryTopicComposer({ topics, onChange }: { topics: SummaryTopic[]; onChange: (topics: SummaryTopic[]) => void }) {
   const label = "Performance documentation";
   const textareaRefs = useRef(new Map<string, HTMLTextAreaElement>());
   const activeTopicRef = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    textareaRefs.current.forEach(resizeSummaryTextarea);
+  }, [topics]);
   const updateTopic = (id: string, patch: Partial<SummaryTopic>) => onChange(topics.map(topic => topic.id === id ? { ...topic, ...patch } : topic));
   const moveTopic = (index: number, offset: number) => {
     const next = [...topics];
@@ -228,7 +236,7 @@ function SummaryTopicComposer({ topics, onChange }: { topics: SummaryTopic[]; on
       <button type="button" aria-label={`Move ${topic.title || "Untitled Topic"} up`} disabled={index === 0} onClick={() => moveTopic(index, -1)}><ArrowUp aria-hidden="true" /></button>
       <button type="button" aria-label={`Move ${topic.title || "Untitled Topic"} down`} disabled={index === topics.length - 1} onClick={() => moveTopic(index, 1)}><ArrowDown aria-hidden="true" /></button>
       <button type="button" aria-label={`Remove topic ${topic.title || "Untitled Topic"}`} onClick={() => onChange(topics.filter(candidate => candidate.id !== topic.id))}><X aria-hidden="true" /></button>
-    </div></div><textarea ref={element => { if (element) textareaRefs.current.set(topic.id, element); else textareaRefs.current.delete(topic.id); }} className={ws.notesArea} aria-label={`${topic.title || "Untitled Topic"} documentation`} value={topic.body} onFocus={() => { activeTopicRef.current = topic.id; }} onChange={event => updateTopic(topic.id, { body: event.target.value })} onKeyDown={event => continueList(event, topic)} placeholder="Add discussion notes…" />
+    </div></div><textarea ref={element => { if (element) textareaRefs.current.set(topic.id, element); else textareaRefs.current.delete(topic.id); }} className={ws.notesArea} aria-label={`${topic.title || "Untitled Topic"} documentation`} value={topic.body} onFocus={() => { activeTopicRef.current = topic.id; }} onChange={event => { resizeSummaryTextarea(event.currentTarget); updateTopic(topic.id, { body: event.target.value }); }} onKeyDown={event => continueList(event, topic)} placeholder="Add discussion notes…" />
   </section>)}{!topics.length ? <p>No topics yet. Use + to add a topic.</p> : null}</div></div>;
 }
 
