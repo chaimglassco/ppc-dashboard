@@ -159,7 +159,17 @@ export async function getScaleInsightsWeeklyPerformance(
   params: ScaleInsightsWeeklyPerformanceParams,
   identity: ScaleInsightsRequestIdentity,
 ): Promise<ScaleInsightsWeeklyPerformance> {
-  return withScaleInsightsClient(identity, callTool => loadScaleInsightsWeeklyPerformance(params, callTool));
+  return withScaleInsightsToolSession(identity, ({ definitions, callTool }) => {
+    const requestId = crypto.randomUUID();
+    const diagnostic = (event: string, details: Record<string, unknown>) => console.info(JSON.stringify({
+      route: "/api/dashboard/performance", requestId, event, ...details,
+    }));
+    diagnostic("weekly_tool_contract", {
+      tools: definitions.filter(tool => ["get_sales_data", "get_ads_performance", "get_search_term_performance", "get_sales_trend"].includes(tool.name))
+        .map(tool => ({ name: tool.name, schema: summarizeCampaignToolSchema(tool.inputSchema) })),
+    });
+    return loadScaleInsightsWeeklyPerformance(params, callTool, diagnostic);
+  });
 }
 
 export async function getScaleInsightsPerformanceOverview(

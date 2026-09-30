@@ -125,9 +125,11 @@ export function WeeklyPerformanceTable({
     const isSelected = column.weekStart === selectedWeekStart;
     const editable = isSelected && !importedLocked && EDITABLE_METRICS.has(definition.key);
     if (!editable || value == null) {
+      const missingUnits = value == null && (definition.key === "ppcUnits" || definition.key === "organicUnits");
       return (
-        <span className={value == null ? ws.weeklyUnavailable : undefined}>
-          {formatMetric(value, definition.kind)}
+        <span className={value == null ? ws.weeklyUnavailable : undefined}
+          title={missingUnits ? "Scale Insights API has not supplied the exact PPC/Organic Units split for this week." : undefined}>
+          {missingUnits ? "Unavailable" : formatMetric(value, definition.kind)}
         </span>
       );
     }

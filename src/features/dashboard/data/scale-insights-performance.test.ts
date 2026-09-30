@@ -40,6 +40,40 @@ function providerPayload(name: string, ads: unknown = adsPayload(), sales: unkno
 }
 
 describe("Scale Insights weekly performance", () => {
+  it("preserves live-provider total units while explaining an omitted attribution split", async () => {
+    // Field structure and totals observed in the live MCP response on 2026-09-30.
+    const liveSales = salesPayload({ Summary: { TotalASINs: 1, TotalSales: 1317.35, TotalUnits: 65, TotalOrders: 59, TotalPPCCost: 81.75, TotalPPCSales: 481.75, TotalSessions: 285 },
+      ASINs: [{ ASIN: params.asin, TotalUnits: 65 }], Daily: null });
+    const liveAds = adsPayload({ totals: { row_count: 1, total_spend: 81.75, total_sales: 481.75, total_orders: 23 } });
+    const liveSearch = searchPayload({ oppMeta: { total_count: 1, returned_count: 1, has_next_page: false, totals: { total_clicks: 48 } },
+      opps: [{ entityType: "SearchTerm", entity: "private-query", metrics: { ASIN: params.asin, Orders: "9", Clicks: "48", Impressions: "1200" } }] });
+    const diagnostic = vi.fn();
+    const result = await loadScaleInsightsWeeklyPerformance(params, vi.fn(async name => providerPayload(name, liveAds, liveSales, liveSearch)), diagnostic);
+    expect(result.metrics.totalUnits).toBe(65);
+    expect(result.metrics.ppcUnits).toBeUndefined();
+    expect(result.metrics.organicUnits).toBeUndefined();
+    expect(result.warnings).toContainEqual(expect.stringContaining("API did not supply"));
+    expect(diagnostic).toHaveBeenCalledWith("weekly_unit_contract", expect.objectContaining({ hasPpcUnits: false, hasTotalUnits: true }));
+    expect(JSON.stringify(diagnostic.mock.calls)).not.toContain("private-query");
+    expect(JSON.stringify(diagnostic.mock.calls)).not.toContain(params.asin);
+  });
+
+  it("accepts explicit zero paid units from the scoped Sales summary", async () => {
+    const result = await loadScaleInsightsWeeklyPerformance(params, vi.fn(async name => providerPayload(name,
+      adsPayload({ totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23 } }),
+      salesPayload({ Summary: { ...salesPayload().Summary, TotalPPCUnits: 0 } }),
+      searchPayload({ oppMeta: { total_count: 0, has_next_page: false, totals: {} }, opps: [] }))));
+    expect(result.metrics).toMatchObject({ ppcUnits: 0, organicUnits: 59, totalUnits: 59 });
+  });
+
+  it("ignores unit values in other ASIN rows and daily series", async () => {
+    const sales = salesPayload({ ASINs: [{ ASIN: "B012345678", TotalPPCUnits: 99 }], Daily: [{ Units: 3, PPCUnits: 2 }] });
+    const result = await loadScaleInsightsWeeklyPerformance(params, vi.fn(async name => providerPayload(name,
+      adsPayload({ totals: { total_spend: 81.75, total_sales: 481.75, total_orders: 23 } }), sales,
+      searchPayload({ oppMeta: { total_count: 0, has_next_page: false, totals: {} }, opps: [] }))));
+    expect(result.metrics.ppcUnits).toBeUndefined();
+    expect(result.metrics.totalUnits).toBe(59);
+  });
   it("unwraps JSON text from an MCP tool response", () => {
     expect(unwrapScaleInsightsPayload({ content: [{ type: "text", text: JSON.stringify({ ok: true }) }] })).toEqual({ ok: true });
   });
