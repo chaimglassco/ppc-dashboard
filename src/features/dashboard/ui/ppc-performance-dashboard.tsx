@@ -3,7 +3,7 @@
 import Image from "next/image";
 import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, Clock3, Copy,
-  FileText, Flag, GitCompareArrows, Italic, LayoutDashboard, Underline, List, ListOrdered, Package, Plus, RefreshCw, Tag, Trash2, X,
+  FileText, Flag, GitCompareArrows, Italic, LayoutDashboard, Underline, List, ListOrdered, Package, Plus, RefreshCw, Trash2, X,
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
@@ -394,7 +394,6 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
   }, [selectionReady, selectedProductId, activeWeekStart, selectedMonths]);
   const performanceWeekStarts = useMemo(() => Array.from({ length: 6 }, (_, index) => addDaysIso(activeWeekStart, (index - 5) * 7)), [activeWeekStart]);
   const selectedProduct = products.find(product => product.id === selectedProductId) ?? null;
-  const selectedProductTag = selectedProduct ? catalog.tags.find(tag => tag.id === selectedProduct.tagId) ?? null : null;
   const selectedKey = selectedProductId && activeWeekStart ? reportKey(selectedProductId, activeWeekStart) : "";
   const selectedAsin = selectedProduct?.asin?.trim() || "";
   const snapshotKey = performanceCacheKey(selectedAsin, activeWeekStart);
@@ -737,7 +736,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
         const isSelected = weekStart === activeWeekStart;
         return <button type="button" key={weekStart} aria-label={`${formatWeekRange(weekStart)} reporting period`} aria-pressed={isSelected} className={`${periods.periodCard} ${isSelected ? periods.selectedPeriod : ""}`} onClick={() => selectWeek(weekStart)}>
           {isCurrent ? <span className={periods.currentBadge}>Current</span> : null}
-          <span className={periods.periodTop}><span className={periods.periodIdentity}><strong>{formatPeriodCardRange(weekStart)}</strong><span className={periods.periodMeta}>{isCurrent ? <><small>Week {getIsoWeekNumber(weekStart)}</small><i aria-hidden="true" /><span><Clock3 aria-hidden="true" />In Review</span></> : selectedProductTag ? <span className={periods.productTag}><Tag aria-hidden="true" />{selectedProductTag.name}</span> : <small>Week {getIsoWeekNumber(weekStart)}</small>}</span></span><span className={`${periods.statusChip} ${periodStatus === "Partial" ? periods.partialStatus : ""}`}>{periodStatus}</span></span>
+          <span className={periods.periodTop}><span className={periods.periodIdentity}><strong>{formatPeriodCardRange(weekStart)}</strong><span className={periods.periodMeta}>{isCurrent ? <><small>Week {getIsoWeekNumber(weekStart)}</small><i aria-hidden="true" /><span><Clock3 aria-hidden="true" />In Review</span></> : <small>Week {getIsoWeekNumber(weekStart)}</small>}</span></span><span className={`${periods.statusChip} ${periodStatus === "Partial" ? periods.partialStatus : ""}`}>{periodStatus}</span></span>
           <span className={periods.periodStats}><span><small>Spend</small><strong>{currency(periodReport?.spend ?? 0)}</strong></span><span><small>Sales</small><strong>{currency(periodReport?.ppcSales ?? 0)}</strong></span><span><small>Orders</small><strong>{periodReport?.ppcOrders ?? 0}</strong></span><span><small>ACoS</small><strong>{Math.round(periodReport?.acos ?? 0)}%</strong></span></span>
         </button>;
       })}</div>
