@@ -218,6 +218,9 @@
 .summaryCard .textAreaHeader > span:first-child { font-weight: 700; text-transform: uppercase; }
 .summaryCard .notesArea { min-height: 100px; flex: 1; }
 .summaryTopics { display: flex; flex-direction: column; gap: 12px; }
+.summaryColumns .textAreaHeader, .summaryColumns .readOnlySummary > span { min-height: 34px; display: flex; align-items: center; }
+.summaryColumns .summaryTopicHeader { min-height: 33px; }
+.summaryColumns .readOnlyTopicBody { min-height: 100px; }
 .summaryTopic { padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: #fafafa; }
 .summaryTopic:focus-within { border-color: #27272a; background: white; }
 .summaryTopicGood { border-color: #bbf7d0; background: #f0fdf4; }

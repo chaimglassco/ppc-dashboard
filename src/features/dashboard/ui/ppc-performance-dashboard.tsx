@@ -5,7 +5,7 @@ import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, Clock3, Copy,
   FileText, Flag, GitCompareArrows, Italic, LayoutDashboard, Underline, List, ListOrdered, Package, Plus, RefreshCw, Trash2, X,
 } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import {
@@ -249,6 +249,35 @@ function summaryTopicsFromText(text: string): SummaryTopic[] {
     title: heading[1].trim(),
     body: source.slice((heading.index ?? 0) + heading[0].length, headings[index + 1]?.index ?? source.length).trim(),
   }));
+}
+
+function SummaryColumns({ children }: { children: ReactNode }) {
+  const columnsRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const root = columnsRef.current;
+    if (!root) return;
+    const panels = Array.from(root.children) as HTMLElement[];
+    const topics = panels.map(panel => Array.from(panel.querySelectorAll<HTMLElement>(`.${ws.summaryTopic}`)));
+    const align = () => {
+      topics.flat().forEach(topic => { topic.style.minHeight = ""; });
+      if (panels.length !== 2 || panels[0].offsetTop !== panels[1].offsetTop) return;
+      for (let index = 0; index < Math.min(topics[0].length, topics[1].length); index += 1) {
+        const pair = [topics[0][index], topics[1][index]];
+        const height = Math.max(...pair.map(topic => topic.getBoundingClientRect().height));
+        pair.forEach(topic => { topic.style.minHeight = `${height}px`; });
+      }
+    };
+    align();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(align);
+    observer.observe(root);
+    topics.flat().forEach(topic => {
+      const body = topic.querySelector("textarea, p");
+      if (body) observer.observe(body);
+    });
+    return () => observer.disconnect();
+  }, [children]);
+  return <div ref={columnsRef} className={`${ws.twoColumn} ${ws.summaryColumns}`}>{children}</div>;
 }
 
 function ReadOnlySummaryTopics({ topics }: { topics: SummaryTopic[] }) {
@@ -783,10 +812,10 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
             <WeeklyPerformanceTable columns={performanceColumns} selectedWeekStart={activeWeekStart} importedLocked={importedMetricsLocked} onChange={patchReport} />
           </section>
 
-          <div className={ws.twoColumn}>
+          <SummaryColumns>
             <section className={`${ws.card} ${ws.summaryCard}`} aria-labelledby="previous-heading"><div className={ws.cardTitle}><h3 id="previous-heading"><CheckCircle2 />Previous Week Summary</h3></div><ReadOnlySummaryTopics topics={previousSummaryTopics} /></section>
             <section className={`${ws.card} ${ws.summaryCard} ${ws.currentSummaryCard}`} aria-labelledby="notes-heading"><div className={ws.cardTitle}><h3 id="notes-heading"><FileText />Current Week Summary</h3></div><SummaryTopicComposer key={selectedKey} topics={getSummaryTopics(report)} onChange={summaryTopics => patchReport({ summaryTopics, notes: summaryTopicsNotes(summaryTopics) })} /><footer className={ws.summaryFooter}><span className={saveNotice || sharedSaveStatus?.error || sharedSaveStatus?.recoveryError ? ws.unsaved : ws.autoSaved}>{saveMessage}</span><span>Last edited: {report.updatedAt ? new Date(report.updatedAt).toLocaleString() : "—"}</span></footer></section>
-          </div>
+          </SummaryColumns>
 
           <CampaignWeeklyComparison key={`campaign-${remoteSync?.keys.includes(PPC_CAMPAIGN_CSV_CACHE_KEY) ? remoteSync.version : 0}`} asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={performanceRefresh} />
           <UntargetedSalesOpportunities key={`opportunity-${remoteSync?.keys.includes(PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY) ? remoteSync.version : 0}`} asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={opportunityRefresh.key === snapshotKey ? opportunityRefresh.version : 0} onPpcClicksLoaded={receiveOpportunityPpcClicks} />
