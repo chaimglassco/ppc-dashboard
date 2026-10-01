@@ -1,12 +1,32 @@
 "use client";
 
 import Image from "next/image";
-import { Eye, GripVertical, ImagePlus, Package, Pencil, Plus, RefreshCw, Search, Tag, Trash2, X } from "lucide-react";
+import { Check, Copy, Eye, GripVertical, ImagePlus, Package, Pencil, Plus, RefreshCw, Search, Tag, Trash2, X } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { withPpcBasePath } from "@/lib/glassco-apps";
 import { getPipelineAuthorizationHeader } from "@/lib/pipeline-session";
 import { MAX_DASHBOARD_PRODUCT_IMAGE_BYTES, type DashboardTag, type ManagedDashboardProduct } from "../domain/ppc-dashboard-catalog";
 import styles from "./product-portfolio-panel.module.css";
+
+function CopyAsinButton({ asin }: { asin: string }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const resetTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (resetTimer.current != null) window.clearTimeout(resetTimer.current); }, []);
+  const copyAsin = async () => {
+    try {
+      await navigator.clipboard.writeText(asin);
+      setCopyState("copied");
+    } catch {
+      setCopyState("error");
+    }
+    if (resetTimer.current != null) window.clearTimeout(resetTimer.current);
+    resetTimer.current = window.setTimeout(() => setCopyState("idle"), 1_500);
+  };
+  const label = copyState === "copied" ? `Copied ASIN ${asin}` : copyState === "error" ? `Copy ASIN ${asin} failed` : `Copy ASIN ${asin}`;
+  return <button type="button" className={styles.copyAsinButton} aria-label={label} title={copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy ASIN"} onClick={copyAsin}>
+    {copyState === "copied" ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+  </button>;
+}
 
 export type ProductFormValue = {
   id: string;
@@ -215,8 +235,12 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
           onDrop={event => { if (editMode && draggedId) { event.preventDefault(); moveProduct(draggedId, product.id); setDraggedId(""); setDropTargetId(""); } }}>
           <button type="button" className={styles.productSelect} aria-pressed={selected} onClick={() => onSelectProduct(product.id)}>
             <span className={styles.productImage}>{product.imageDataUrl ? <Image src={product.imageDataUrl} alt={`${product.name} product`} width={44} height={44} unoptimized /> : <Package aria-hidden="true" />}</span>
-            <span className={styles.productCopy}><span className={styles.productTitle}><i aria-hidden="true" /><strong>{product.name}</strong></span>{tag ? <em><Tag aria-hidden="true" />{tag.name}</em> : null}</span>
+            <span className={styles.productCopy}><span className={styles.productTitle}><i aria-hidden="true" /><strong role="heading" aria-level={2}>{product.name}</strong></span>{tag ? <em><Tag aria-hidden="true" />{tag.name}</em> : null}</span>
           </button>
+          <div className={styles.productIdentifiers}>
+            <span>ASIN: {product.asin ? <><a href={`https://www.amazon.com/dp/${encodeURIComponent(product.asin)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open ${selected ? "selected product" : product.name} ASIN ${product.asin} on Amazon`}>{product.asin}</a><CopyAsinButton key={product.asin} asin={product.asin} /></> : "N/A"}</span>
+            <span>SKU: {product.sku ? <a href={`https://sellercentral.amazon.com/myinventory/inventory?searchField=sku&searchTerm=${encodeURIComponent(product.sku)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open ${selected ? "selected product" : product.name} SKU ${product.sku} in Seller Central`}>{product.sku}</a> : "N/A"}</span>
+          </div>
           {editMode ? <div className={styles.cardActions}><button type="button" aria-label={`Edit ${product.name}`} title="Edit product" onClick={() => openEditProduct(product)}><Pencil aria-hidden="true" /></button><button type="button" aria-label={`Delete ${product.name}`} title="Delete product" onClick={() => setDeleteCandidate(product)}><Trash2 aria-hidden="true" /></button>
             <button type="button" draggable className={styles.dragHandle} aria-label={`Reorder ${product.name}`} title="Drag to reorder, or use Up and Down arrow keys"
               onDragStart={event => { setDraggedId(product.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", product.id); }}

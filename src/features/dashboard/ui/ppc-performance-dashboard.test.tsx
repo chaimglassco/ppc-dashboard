@@ -378,7 +378,8 @@ describe("PpcPerformanceDashboard", () => {
     const budgetCard = screen.getByRole("region", { name: "Budget Utilization" });
     const actionCard = screen.getByRole("region", { name: "Action Items" });
     expect(goalsCard.parentElement).toBe(actionCard.parentElement);
-    expect(budgetCard.parentElement).toBe(goalsCard.parentElement?.parentElement);
+    expect(budgetCard.parentElement?.tagName).toBe("HEADER");
+    expect(screen.getAllByRole("region", { name: "Budget Utilization" })).toHaveLength(1);
     expect(performanceCard.compareDocumentPosition(goalsCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(performanceCard.compareDocumentPosition(budgetCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     expect(performanceCard.compareDocumentPosition(actionCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
@@ -618,7 +619,7 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.click(within(productDialog).getByRole("button", { name: "Add product" }));
 
     expect(await screen.findByRole("heading", { name: "Glass Polish" })).toBeVisible();
-    expect(screen.getAllByAltText("Glass Polish product")).toHaveLength(2);
+    expect(screen.getAllByAltText("Glass Polish product")).toHaveLength(1);
     expect(screen.queryByRole("link", { name: "Open ASIN B012345679 on Amazon" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open SKU POLISH-01 in Seller Central" })).not.toBeInTheDocument();
     const headerAsinLink = screen.getByRole("link", { name: "Open selected product ASIN B012345679 on Amazon" });
@@ -628,8 +629,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(headerAsinLink).toHaveAttribute("target", "_blank");
     expect(headerSkuLink).toHaveAttribute("rel", "noopener noreferrer");
     expect(headerAsinLink.parentElement?.nextElementSibling).toContainElement(headerSkuLink);
-    expect(headerAsinLink.closest("p")).not.toHaveTextContent("August 26 to September 1");
-    expect(headerAsinLink.closest("p")).not.toHaveTextContent("Week 35");
+    expect(headerAsinLink.parentElement?.parentElement).not.toHaveTextContent("August 26 to September 1");
+    expect(headerAsinLink.parentElement?.parentElement).not.toHaveTextContent("Week 35");
     const asinNavigation = screen.getByRole("navigation", { name: "Scale Insights analysis for ASIN B012345679" });
     expect(within(asinNavigation).getAllByRole("link")).toHaveLength(12);
     expect(within(within(asinNavigation).getByRole("group", { name: "Performance reports" })).getAllByRole("link").map(link => link.textContent)).toEqual(["Campaigns", "Keyword Targeting", "Product Targeting", "Search Terms"]);

@@ -725,3 +725,12 @@
     grid-template-columns: 1fr;
   }
 }
+
+.productTitle > strong { margin: 0; }
+.productIdentifiers { display: grid; gap: 5px; padding: 0 12px 12px; font: 10px/1.5 monospace; overflow-wrap: anywhere; }
+.productIdentifiers > span { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.productIdentifiers a { color: inherit; text-decoration: none; }
+.productIdentifiers a:hover { text-decoration: underline; }
+.productIdentifiers a:focus-visible, .copyAsinButton:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; }
+.copyAsinButton { display: inline-flex; align-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 2px; }
+.copyAsinButton svg { width: 12px; height: 12px; }
