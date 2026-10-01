@@ -92,14 +92,14 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(table).getAllByRole("columnheader")).toHaveLength(7);
     expect(within(table).getByRole("columnheader", { name: /Aug 26, 2026 to Sep 01, 2026, selected week/ })).toBeVisible();
     expect(within(table).getAllByRole("rowheader").map(row => row.textContent)).toEqual([
-      "Total Sales", "Total Orders", "Total Units", "Spend", "PPC Sales", "Organic Sales", "PPC Orders", "PPC Units", "Organic Orders", "Organic Units", "ACOS", "TACOS", "Impressions", "Clicks", "CPC",
+      "Total Sales", "Total Orders", "Total Units", "Spend", "PPC Sales", "Organic Sales", "PPC Orders", "Organic Orders", "ACOS", "TACOS", "Impressions", "Clicks", "CPC",
     ]);
     expect(within(table).getAllByRole("row", { name: /section$/ }).map(row => row.textContent)).toEqual([
       "TOTAL", "SALES", "ORDERS", "EFFICIENCY", "TRAFFIC",
     ]);
     expect(within(table).getByRole("row", { name: /Spend/ })).toHaveTextContent("$81.75");
     expect(within(table).getByRole("row", { name: /CPC/ })).toHaveTextContent("$1.70");
-    expect(within(table).getByRole("row", { name: /Organic Units/ })).toHaveTextContent("28");
+    expect(within(table).queryByRole("row", { name: /Organic Units|PPC Units/ })).not.toBeInTheDocument();
     expect(within(table).getByRole("row", { name: /Total Sales/ })).toHaveTextContent("$1,317.35");
     expect(within(table).getByRole("row", { name: /Total Orders/ })).toHaveTextContent("59");
     expect(within(table).getByRole("row", { name: /Total Units/ })).toHaveTextContent("59");
@@ -371,7 +371,7 @@ describe("PpcPerformanceDashboard", () => {
     const performanceCard = screen.getByRole("region", { name: "Weekly PPC Performance" });
     const table = within(performanceCard).getByRole("table", { name: "Six-week Scale Insights performance" });
     expect(within(table).getAllByRole("rowheader").map(row => row.textContent)).toEqual([
-      "Total Sales", "Total Orders", "Total Units", "Spend", "PPC Sales", "Organic Sales", "PPC Orders", "PPC Units", "Organic Orders", "Organic Units", "ACOS", "TACOS", "Impressions", "Clicks", "CPC",
+      "Total Sales", "Total Orders", "Total Units", "Spend", "PPC Sales", "Organic Sales", "PPC Orders", "Organic Orders", "ACOS", "TACOS", "Impressions", "Clicks", "CPC",
     ]);
     expect(within(performanceCard).getByRole("textbox", { name: "Target ACOS" })).toBeVisible();
     const goalsCard = screen.getByRole("region", { name: "Weekly Goals" });
