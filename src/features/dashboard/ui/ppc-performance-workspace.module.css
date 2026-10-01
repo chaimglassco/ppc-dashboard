@@ -287,11 +287,10 @@
 @media (max-width: 767px) { .metricGroupGrid { grid-template-columns: repeat(2,minmax(0,1fr)); }.workspaceHeader { align-items: flex-start; }.performanceSync { justify-content: flex-start; }.metricGroupHeading { align-items: flex-start; flex-wrap: wrap; } }
 @media (max-width: 639px) { .metricGroupGrid { grid-template-columns: 1fr; }.workspaceScroll { padding: 24px 16px; }.workspaceHeader { padding: 16px; flex-direction: column; }.workspaceProduct { width: 100%; flex: auto; }.card { padding: 24px 16px; }.budgetStrip, .goalCard, .actionCard { padding: 14px; }.sectionTitleGroup { flex-wrap: wrap; }.goalHeaderActions { width: 100%; }.goalMetrics { grid-template-columns: 1fr 1fr; }.saveArea { justify-items: start; }.saveArea small { text-align: left; }.actionRow { flex-wrap: wrap; gap: 8px; }.actionRow > input:first-of-type { flex-basis: calc(100% - 30px); }.summaryFooter { flex-wrap: wrap; } }
 
-.headerBudget { flex: 1 1 360px; min-width: 0; border: 0; padding: 0; background: transparent; }
-.headerBudget .budgetStripMain { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.headerBudget { flex: 1 1 300px; min-width: 0; border: 0; padding: 0; background: transparent; }
+.headerBudget .budgetStripMain { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 10px; }
 .headerBudget .budgetStripHeading { grid-column: 1 / 3; padding: 0; border: 0; }
 .headerBudget .budgetAmounts { grid-column: 1 / -1; grid-row: 2; }
-.headerBudget .budgetProgressBlock { grid-column: 1 / -1; grid-row: 3; }
-.headerBudget .budgetMiniMetric { grid-row: 4; padding: 0; border: 0; }
+.headerBudget .budgetMiniMetric { grid-row: 3; padding: 0; border: 0; }
 .headerBudget .budgetStatusChip { grid-column: 3; grid-row: 1; justify-self: end; }
 @media (max-width: 639px) { .headerBudget { flex: auto; width: 100%; } }

@@ -170,7 +170,7 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.focus(weeklyLimit);
     fireEvent.change(weeklyLimit, { target: { value: "1500" } });
     fireEvent.blur(weeklyLimit);
-    expect(screen.getByText("Day 3 of 7 (42.9% elapsed)")).toBeVisible();
+    expect(screen.queryByText(/of 7 .*elapsed/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("Budget History", { selector: "summary" }));
     const budgetHistory = screen.getByRole("table", { name: "Budget change history" });
     expect(within(budgetHistory).getByRole("columnheader", { name: "Date of Change" })).toBeVisible();
@@ -179,7 +179,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(budgetHistory).getByText("$0")).toBeVisible();
     expect(within(budgetHistory).getByText("$1,500")).toBeVisible();
     fireEvent.change(screen.getByRole("textbox", { name: "Actual spend" }), { target: { value: "350" } });
-    expect(screen.getByText((_, element) => element?.tagName === "STRONG" && element.textContent === "$1,150 remaining")).toBeVisible();
+    expect(screen.getByText((_, element) => element?.tagName === "STRONG" && element.textContent === "$1,150")).toBeVisible();
     expect(screen.getByText("$116.67 / day")).toBeVisible();
     expect(screen.getByText("23%")).toBeVisible();
     expect(screen.queryByText("Burn Rate Progress")).not.toBeInTheDocument();
