@@ -143,6 +143,41 @@ function WeeklyGoalRow({ goal, report, dataState, onUpdate, onResolve, onRemove 
   </div>;
 }
 
+const WEEK_METRIC_CARDS = [
+  { key: "totalSales", label: "Total Sales", kind: "currency" },
+  { key: "totalOrders", label: "Total Orders", kind: "number" },
+  { key: "spend", label: "Spend", kind: "currency" },
+  { key: "ppcSales", label: "PPC Sales", kind: "currency" },
+  { key: "organicSales", label: "Organic Sales", kind: "currency" },
+  { key: "ppcOrders", label: "PPC Orders", kind: "number" },
+  { key: "organicOrders", label: "Organic Orders", kind: "number" },
+  { key: "acos", label: "ACOS", kind: "percentage" },
+  { key: "tacos", label: "TACOS", kind: "percentage" },
+] as const;
+
+function WeekMetricCards({ current, previous }: { current?: WeeklyTableColumn; previous?: WeeklyTableColumn }) {
+  const format = (value: number | undefined, kind: string) => {
+    if (value == null || !Number.isFinite(value)) return "—";
+    if (kind === "currency") return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+    return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value)}${kind === "percentage" ? "%" : ""}`;
+  };
+  return <section className={ws.weekMetricOverview} aria-label="Selected week metric cards">
+    <div className={ws.weekMetricCaption}><strong>{current ? formatWeekRange(current.weekStart) : "Selected week"}</strong><span>vs previous week{current?.dataState === "Partial" ? " · Selected week is partial; previous week covers its full period" : ""}</span></div>
+    <div className={ws.weekMetricGrid}>{WEEK_METRIC_CARDS.map(({ key, label, kind }) => {
+      const value = current?.report?.[key];
+      const prior = previous?.report?.[key];
+      const available = value != null && prior != null && Number.isFinite(value) && Number.isFinite(prior);
+      const delta = available ? value - prior : null;
+      const change = delta == null ? "No comparison" : kind === "percentage" ? `${delta > 0 ? "+" : ""}${delta.toFixed(1)} pp` : prior === 0 ? value === 0 ? "0%" : "New" : `${delta > 0 ? "+" : ""}${(delta / prior! * 100).toFixed(1)}%`;
+      const tone = delta == null || delta === 0 || key === "spend" ? "neutral" : (kind === "percentage" ? delta < 0 : delta > 0) ? "positive" : "negative";
+      return <article key={key} className={ws.weekMetricTile} aria-label={`${label} weekly comparison`} data-tone={tone}>
+        <span className={ws.weekMetricLabel}>{label}</span><strong className={ws.weekMetricValue}>{format(value, kind)}</strong>
+        <div className={ws.weekMetricComparison}><span title="Previous week">Prev {format(prior, kind)}</span><b title={kind === "percentage" ? "Percentage-point change from previous week" : "Change from previous week"}>{change}</b></div>
+      </article>;
+    })}</div>
+  </section>;
+}
+
 function resizeSummaryTextarea(textarea: HTMLTextAreaElement) {
   textarea.style.height = "auto";
   textarea.style.height = `${Math.max(100, textarea.scrollHeight)}px`;
@@ -809,6 +844,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
               <div className={ws.performanceSync}><span role="status" className={displayedPerformanceLoad.status === "error" ? ws.performanceError : ""}><i />{displayedPerformanceLoad.message}</span>{displayedPerformanceLoad.authorizationUrl ? <a href={displayedPerformanceLoad.authorizationUrl}>Connect Scale Insights</a> : null}</div>
             </div>
             {displayedPerformanceLoad.warnings.length ? <ul className={ws.performanceWarnings}>{displayedPerformanceLoad.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}
+            <WeekMetricCards current={performanceColumns.find(column => column.weekStart === activeWeekStart)} previous={performanceColumns.find(column => column.weekStart === previousWeekStart)} />
             <WeeklyPerformanceTable columns={performanceColumns} selectedWeekStart={activeWeekStart} importedLocked={importedMetricsLocked} onChange={patchReport} />
           </section>
 
