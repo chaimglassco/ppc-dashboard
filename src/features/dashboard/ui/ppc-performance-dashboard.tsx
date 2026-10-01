@@ -20,6 +20,7 @@ import {
 import { ProductPortfolioPanel, type ProductFormValue } from "./product-portfolio-panel";
 import { ProductPerformanceChat, type PerformanceChatPeriod } from "./product-performance-chat";
 import { CampaignWeeklyComparison } from "./campaign-weekly-comparison";
+import { CampaignContribution } from "./campaign-contribution";
 import { UntargetedSalesOpportunities, type OpportunityPpcClickTotal } from "./untargeted-sales-opportunities";
 import { PerformanceOverviewDashboard } from "./performance-overview-dashboard";
 import { AccountCampaignCompare } from "./account-campaign-compare";
@@ -27,7 +28,7 @@ import { WeeklyPerformanceTable, type WeeklyTableColumn } from "./weekly-perform
 import { dashboardStorage, type SharedSaveStatus } from "../state/shared-dashboard-client";
 import { ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY } from "../domain/account-campaign-compare";
 import { PPC_CAMPAIGN_CSV_CACHE_KEY } from "../domain/campaign-comparison-csv";
-import { PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY } from "../domain/untargeted-sales-opportunities";
+import { PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY, PPC_OPPORTUNITY_HISTORY_CACHE_KEY } from "../domain/untargeted-sales-opportunities";
 import type { ScaleInsightsWeeklyPerformance } from "../data/scale-insights-performance";
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache, parsePerformanceSnapshot, performanceCacheKey, performanceSnapshotNeedsMetricsUpgrade, type PerformanceCache } from "../domain/ppc-performance-cache";
 import { PPC_WORKSPACE_SELECTION_KEY, parsePpcWorkspaceSelection, serializePpcWorkspaceSelection } from "../domain/ppc-workspace-selection";
@@ -832,8 +833,9 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
             <section className={`${ws.card} ${ws.summaryCard} ${ws.currentSummaryCard}`} aria-labelledby="notes-heading"><div className={ws.cardTitle}><h3 id="notes-heading"><FileText />Current Week Summary</h3></div><SummaryTopicComposer key={selectedKey} topics={getSummaryTopics(report)} onChange={summaryTopics => patchReport({ summaryTopics, notes: summaryTopicsNotes(summaryTopics) })} /><footer className={ws.summaryFooter}><span className={saveNotice || sharedSaveStatus?.error || sharedSaveStatus?.recoveryError ? ws.unsaved : ws.autoSaved}>{saveMessage}</span><span>Last edited: {report.updatedAt ? new Date(report.updatedAt).toLocaleString() : "—"}</span></footer></section>
           </SummaryColumns>
 
+          <CampaignContribution asin={selectedAsin} productName={selectedProduct.name} country="US" weekStart={activeWeekStart} refreshVersion={performanceRefresh} />
           <CampaignWeeklyComparison key={`campaign-${remoteSync?.keys.includes(PPC_CAMPAIGN_CSV_CACHE_KEY) ? remoteSync.version : 0}`} asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={performanceRefresh} />
-          <UntargetedSalesOpportunities key={`opportunity-${remoteSync?.keys.includes(PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY) ? remoteSync.version : 0}`} asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={opportunityRefresh.key === snapshotKey ? opportunityRefresh.version : 0} onPpcClicksLoaded={receiveOpportunityPpcClicks} />
+          <UntargetedSalesOpportunities key={`opportunity-${remoteSync?.keys.some(key => key === PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY || key === PPC_OPPORTUNITY_HISTORY_CACHE_KEY) ? remoteSync.version : 0}`} asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={opportunityRefresh.key === snapshotKey ? opportunityRefresh.version : 0} onPpcClicksLoaded={receiveOpportunityPpcClicks} />
 
         </div></div>
       </>}

@@ -47,6 +47,13 @@ describe("untargeted sales opportunities API", () => {
     expect((await response.json()).opportunities.warnings).toEqual([expect.stringContaining("Partial week")]);
   });
 
+  it("accepts only one or twelve weeks and rechecks the twelve-week range within the authenticated connector", async () => {
+    expect(() => parseUntargetedOpportunityQuery(new Request(`${requestUrl}&weeks=13`))).toThrow(/1 or 12/);
+    const response = await GET(new Request(`${requestUrl}&weeks=12`));
+    expect(response.status).toBe(200);
+    expect(getScaleInsightsUntargetedSalesOpportunities).toHaveBeenCalledWith(expect.objectContaining({ startDate: "2026-06-17", endDate: "2026-09-06", includeHistory: true, verifyCoverage: true }), expect.objectContaining({ userId: "pipeline-user-1" }), expect.objectContaining({ requestId: expect.any(String) }));
+  });
+
   it("authenticates before loading data", async () => {
     vi.mocked(verifyPipelineRequest).mockResolvedValue(new Response(null, { status: 401 }));
     const response = await GET(new Request(requestUrl));

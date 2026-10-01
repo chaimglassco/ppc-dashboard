@@ -173,3 +173,17 @@
   .opportunityFilters { grid-template-columns: 1fr 1fr; }
   .bulkCampaignBar { width: 100%; margin-left: 0; }
 }
+
+.historyControls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.historyControls label { display: grid; gap: 5px; max-width: 100%; color: #52525b; font: 600 9px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.historyControls select { width: 280px; max-width: 100%; min-height: 34px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: white; color: #18181b; font: 11px/1.4 var(--mono); }
+.historyControls button { min-height: 34px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; background: white; font-size: 11px; }
+.targetingUnverifiedGroup th { background: #fffbeb; color: #92400e; font-weight: 600; text-align: left; }
+.unverifiedBadge { display: inline-flex; padding: 3px 7px; border: 1px solid #fcd34d; border-radius: 999px; background: #fffbeb; color: #92400e; font: 600 9px/1.4 var(--mono); white-space: nowrap; }
+.contributionSummary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 16px 0; }
+.contributionSummary > div { display: flex; flex-direction: column; gap: 5px; border: 1px solid #e2e3e8; border-radius: 6px; padding: 12px; }
+.contributionSummary strong { font-size: 20px; }
+.contributionDrivers { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin: 16px 0; }
+.contributionDrivers label { display: block; margin: 8px 0; }
+.contributionDrivers input[type="number"] { width: 65px; margin-left: 8px; }
+.contributionDiagnosis { display: block; margin-bottom: 4px; font-size: 11px; }

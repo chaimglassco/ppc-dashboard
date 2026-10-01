@@ -3,7 +3,8 @@ import { PPC_DASHBOARD_CATALOG_STORAGE_KEY, parseDashboardCatalogStore } from ".
 import { PPC_PERFORMANCE_CACHE_KEY, parsePerformanceCache } from "./ppc-performance-cache";
 import { ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY, parseAccountCampaignSnapshotCache } from "./account-campaign-compare";
 import { PPC_CAMPAIGN_CSV_CACHE_KEY, parseCampaignCsvImportCache } from "./campaign-comparison-csv";
-import { PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY, parseUntargetedOpportunityCache } from "./untargeted-sales-opportunities";
+import { PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY, PPC_OPPORTUNITY_HISTORY_CACHE_KEY, parseUntargetedOpportunityCache } from "./untargeted-sales-opportunities";
+import { parseOpportunityHistoryCache } from "./opportunity-history";
 
 export const DASHBOARD_STORES = [
   { key: PPC_DASHBOARD_STORAGE_KEY, label: "Weekly reports, goals and notes" },
@@ -12,6 +13,7 @@ export const DASHBOARD_STORES = [
   { key: ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY, label: "Account campaign CSV imports" },
   { key: PPC_CAMPAIGN_CSV_CACHE_KEY, label: "Product campaign CSV imports" },
   { key: PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY, label: "Saved search term opportunities" },
+  { key: PPC_OPPORTUNITY_HISTORY_CACHE_KEY, label: "Twelve-week search term history" },
 ] as const;
 export type DashboardStoreKey = typeof DASHBOARD_STORES[number]["key"];
 export const MAX_SHARED_DASHBOARD_BYTES = 3_500_000;
@@ -156,6 +158,7 @@ export function validateDashboardValue(key: DashboardStoreKey, raw: string): str
       : key === PPC_PERFORMANCE_CACHE_KEY ? parsePerformanceCache(raw)
       : key === ACCOUNT_CAMPAIGN_SNAPSHOT_STORAGE_KEY ? parseAccountCampaignSnapshotCache(raw)
       : key === PPC_CAMPAIGN_CSV_CACHE_KEY ? parseCampaignCsvImportCache(raw)
+      : key === PPC_OPPORTUNITY_HISTORY_CACHE_KEY ? parseOpportunityHistoryCache(raw)
       : parseUntargetedOpportunityCache(raw);
     if (Object.keys(entries).length !== Object.keys(value[field]).length) throw new Error("Some saved dashboard records are invalid. The original data has been kept.");
     normalized = { version: 1, [field]: entries };

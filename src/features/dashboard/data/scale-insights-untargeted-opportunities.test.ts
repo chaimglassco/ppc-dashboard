@@ -1,6 +1,8 @@
 import type { Tool } from "@modelcontextprotocol/client";
 import { describe, expect, it, vi } from "vitest";
-import { buildOpportunityToolArgs, loadUntargetedSalesOpportunities, ScaleInsightsOpportunityProviderError } from "./scale-insights-untargeted-opportunities";
+import { buildOpportunityToolArgs, loadUntargetedSalesOpportunities, parseExactTargetCoverage, ScaleInsightsOpportunityProviderError } from "./scale-insights-untargeted-opportunities";
+import exactLive from "./fixtures/exact-coverage-live.json";
+import searchLive from "./fixtures/search-terms-live-2026-09-23.json";
 
 const params = { asin: "B012345678", country: "US", startDate: "2026-09-02", endDate: "2026-09-08", dataState: "Final" as const };
 const definitions = [
@@ -10,6 +12,25 @@ const definitions = [
 ] as Tool[];
 
 describe("Scale Insights untargeted sales opportunity adapter", () => {
+  it("parses live explicit exact coverage and rejects wrong scope or truncated coverage", () => {
+    const liveParams = { ...params, asin: "B0DCTX18KK", startDate: "2026-07-08", endDate: "2026-09-29" };
+    const result = { content: [{ type: "text", text: JSON.stringify(exactLive) }] };
+    expect([...parseExactTargetCoverage(result, liveParams, ["5/32 lead came"]).values()]).toEqual(["untargeted"]);
+    expect(parseExactTargetCoverage(result, { ...liveParams, country: "CA" }, ["5/32 lead came"]).size).toBe(0);
+    expect(parseExactTargetCoverage({ structuredContent: { ...exactLive, QueryTruncated: true } }, liveParams, ["5/32 lead came"]).size).toBe(0);
+    expect([...parseExactTargetCoverage({ structuredContent: { ...exactLive, Results: [{ Query: "5/32 lead came", HasExactMatch: true }] } }, liveParams, ["5/32 lead came"]).values()]).toEqual(["targeted"]);
+  });
+  it("sums distinct live campaign rows without duplicating mirrored content, including zero-order spend", async () => {
+    const liveParams = { ...params, asin: "B0DCTX18KK", startDate: "2026-09-23", endDate: "2026-09-29", includeHistory: true };
+    const callTool = vi.fn(async (name: string) => name === "get_search_term_performance" ? { structuredContent: searchLive, content: [{ type: "text", text: JSON.stringify(searchLive) }] } : { structuredContent: { opps: [], oppMeta: { total_count: 0, has_next_page: false } } });
+    const result = await loadUntargetedSalesOpportunities(liveParams, definitions, callTool);
+    expect(result.performanceRows?.find(row => row.term === "5/64 round u lead came")).toMatchObject({ sales: 52.97, orders: 3, clicks: 3, impressions: 13 });
+    expect(result.performanceRows?.find(row => row.term === "5/64 round u lead came")?.spend).toBeCloseTo(1.89, 2);
+    expect(result.ppcClicks).toBe(searchLive.oppMeta.totals.total_clicks);
+    expect(result.performanceRows?.reduce((total, row) => total + row.spend, 0)).toBeCloseTo(searchLive.oppMeta.totals.total_spend, 2);
+    expect(result.performanceRows?.reduce((total, row) => total + row.sales, 0)).toBeCloseTo(searchLive.oppMeta.totals.total_sales, 2);
+    expect(result.complete).toBe(true);
+  });
   it("builds only arguments advertised by each tool", () => {
     expect(buildOpportunityToolArgs(definitions[0], params)).toEqual({
       asin_list: ["B012345678"], country: "US", start_date: "2026-09-02", end_date: "2026-09-08", mode: "raw", waste_only: false, sort_by: "sales", sort_direction: "desc", count: 500, page: 1,

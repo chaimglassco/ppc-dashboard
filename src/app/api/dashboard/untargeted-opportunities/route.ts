@@ -10,6 +10,7 @@ import { withPpcBasePath } from "@/lib/glassco-apps";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 const SUPPORTED_MARKETPLACES = new Set(["US", "CA", "MX", "UK", "DE", "FR", "IT", "ES", "NL", "JP", "SG", "AU"]);
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, max-age=0" };
@@ -29,6 +30,8 @@ export function parseUntargetedOpportunityQuery(request: Request) {
   const asin = (search.get("asin") || "").trim().toUpperCase();
   const country = (search.get("country") || "US").trim().toUpperCase();
   const startDate = (search.get("weekStart") || "").trim();
+  const weeks = search.get("weeks");
+  if (weeks != null && weeks !== "1" && weeks !== "12") throw new TypeError("Weeks must be 1 or 12.");
   if (!/^[A-Z0-9]{10}$/.test(asin)) throw new TypeError("A valid 10-character ASIN is required.");
   if (!SUPPORTED_MARKETPLACES.has(country)) throw new TypeError("The selected marketplace is not supported.");
   if (!isIsoDate(startDate)) throw new TypeError("A valid reporting week start is required.");
@@ -57,6 +60,12 @@ export async function GET(request: Request) {
     endDate: parsed.endDate > cutoff ? cutoff : parsed.endDate,
     dataState: parsed.endDate > cutoff ? "Partial" : "Final",
   };
+  const query = new URL(request.url).searchParams;
+  if (query.get("weeks") === "12") {
+    params.startDate = addDaysIso(parsed.startDate, -77);
+    params.includeHistory = true;
+    params.verifyCoverage = true;
+  } else if (query.get("history") === "1") params.includeHistory = true;
   const requestId = crypto.randomUUID();
 
   try {

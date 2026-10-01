@@ -37,6 +37,7 @@ import {
 import type { UntargetedSalesOpportunities } from "../domain/untargeted-sales-opportunities";
 import { loadScaleInsightsPerformanceOverview, type PerformanceOverviewParams } from "./scale-insights-performance-overview";
 import type { PerformanceOverviewData } from "../domain/performance-overview";
+import { loadCampaignContribution } from "./scale-insights-campaign-contribution";
 
 const DEFAULT_SCALE_INSIGHTS_MCP_URL = "https://mcp.scaleinsights.com/mcp";
 const DEFAULT_SCALE_INSIGHTS_CONNECTOR = "mcp.scaleinsights.com/glassco-scale-insights";
@@ -188,6 +189,12 @@ export async function getScaleInsightsCampaignComparison(
     if (!adsTool) throw new ScaleInsightsConfigurationError("Scale Insights did not advertise campaign performance access.");
     return loadScaleInsightsCampaignComparison(params, callTool, getScaleInsightsCampaignToolCapabilities(adsTool.inputSchema));
   });
+}
+
+export async function getScaleInsightsCampaignContribution(params: ScaleInsightsCampaignComparisonParams, identity: ScaleInsightsRequestIdentity, requestId: string) {
+  return withScaleInsightsToolSession(identity, ({ definitions, callTool }) => loadCampaignContribution(params, definitions, callTool, (event, details) => {
+    console.warn(JSON.stringify({ message: "Scale Insights campaign contribution diagnostic", requestId, event, ...details }));
+  }));
 }
 
 export async function getScaleInsightsCampaignSpendBaseline(

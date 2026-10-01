@@ -1,6 +1,7 @@
 import type { Tool } from "@modelcontextprotocol/client";
 import { unwrapScaleInsightsPayload, type ScaleInsightsToolCaller } from "./scale-insights-performance";
-import type { UntargetedSalesOpportunities, UntargetedSalesOpportunity } from "../domain/untargeted-sales-opportunities";
+import type { TargetingState, UntargetedSalesOpportunities, UntargetedSalesOpportunity } from "../domain/untargeted-sales-opportunities";
+import { opportunityTermKey } from "../domain/opportunity-history";
 
 export type UntargetedOpportunityParams = {
   asin: string;
@@ -8,6 +9,8 @@ export type UntargetedOpportunityParams = {
   startDate: string;
   endDate: string;
   dataState: "Final" | "Partial";
+  includeHistory?: boolean;
+  verifyCoverage?: boolean;
 };
 
 export type OpportunityProviderErrorCode = "opportunity_capability_missing" | "opportunity_rows_unreadable" | "source_rows_unreadable";
@@ -21,7 +24,7 @@ export class ScaleInsightsOpportunityProviderError extends Error {
 
 export type OpportunityDiagnosticReporter = (event: string, details: Record<string, unknown>) => void;
 
-type ProviderMetrics = Omit<UntargetedSalesOpportunity, "type" | "sourceCampaignId" | "sourceAdGroupId" | "sourceKeyword" | "sourceMatchType">;
+type ProviderMetrics = Pick<UntargetedSalesOpportunity, "term" | "sales" | "orders" | "spend" | "impressions" | "clicks" | "acos"> & { providerRowKey?: string; rowAsin?: string };
 type SourceValue = Pick<UntargetedSalesOpportunity, "sourceCampaignId" | "sourceAdGroupId" | "sourceKeyword" | "sourceMatchType"> & { term: string; sales: number; orders: number; spend: number };
 
 const TERM_KEYS = ["search_term", "searchTerm", "SearchTerm", "customer_search_term", "customerSearchTerm", "search_query", "searchQuery", "SearchQuery", "query", "Query", "keyword_text", "keywordText", "KeywordText", "keyword", "Keyword", "target_asin", "targetAsin", "TargetASIN", "target", "Target", "entity", "Entity"];
@@ -51,6 +54,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function normalizedKey(value: string) {
   return value.replace(/[^a-z0-9]/gi, "").toLowerCase();
 }
+const normalizedTerm = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
 
 function fieldValue(record: Record<string, unknown>, keys: string[]) {
   const values = new Map(Object.entries(record).map(([key, value]) => [normalizedKey(key), value]));
@@ -127,7 +131,12 @@ function metricsFromRecord(record: Record<string, unknown>): ProviderMetrics | n
   if (sales == null || orders == null || spend == null || impressions == null || clicks == null) return null;
   const providerAcos = numberValue(nestedFieldValue(record, ACOS_KEYS));
   const acos = providerAcos ?? (sales > 0 ? Math.round((spend / sales) * 10_000) / 100 : null);
-  return { term, sales, orders, spend, impressions, clicks, acos };
+  const campaign = stringValue(nestedFieldValue(record, CAMPAIGN_ID_KEYS));
+  const adGroup = stringValue(nestedFieldValue(record, AD_GROUP_ID_KEYS));
+  const entity = stringValue(nestedFieldValue(record, ["KeywordId", "TargetId"]));
+  const rowAsin = stringValue(nestedFieldValue(record, ["ASIN", "asin"])).toUpperCase() || undefined;
+  const providerRowKey = campaign ? `${rowAsin ?? ""}:${campaign}:${adGroup}:${entity}` : undefined;
+  return { term, sales, orders, spend, impressions, clicks, acos, providerRowKey, rowAsin };
 }
 
 function collectMetricRows(value: unknown, depth = 0): ProviderMetrics[] {
@@ -263,7 +272,7 @@ export function buildOpportunityToolArgs(tool: Tool, params: UntargetedOpportuni
   set(["sort_by", "sortBy"], "sales");
   set(["sort_direction", "sortDirection"], "desc");
   set(["summary_only", "summaryOnly"], false);
-  set(["count", "limit", "page_size", "pageSize"], PAGE_SIZE);
+  set(["count", "limit", "page_size", "pageSize"], params.includeHistory && tool.name === "get_search_term_keyword_analysis" ? 100 : PAGE_SIZE);
   set(["page", "page_number", "pageNumber"], page);
   return args;
 }
@@ -294,16 +303,25 @@ async function loadPages(tool: Tool, params: UntargetedOpportunityParams, callTo
   return results;
 }
 
-function uniqueMetrics(results: unknown[]) {
-  const map = new Map<string, ProviderMetrics>();
+function uniqueMetrics(results: unknown[], asin: string) {
+  const sourceRows = new Map<string, ProviderMetrics>();
   for (const result of results) {
     for (const payload of payloads(result)) {
       for (const row of collectMetricRows(payload)) {
-        const key = normalizedKey(row.term);
-        const existing = map.get(key);
-        if (!existing || row.sales > existing.sales) map.set(key, row);
+        if (row.rowAsin && row.rowAsin !== asin) continue;
+        const key = `${normalizedTerm(row.term)}:${row.providerRowKey ?? "aggregate"}`;
+        const existing = sourceRows.get(key);
+        if (!existing || row.sales > existing.sales) sourceRows.set(key, row);
       }
     }
+  }
+  const map = new Map<string, ProviderMetrics>();
+  for (const row of sourceRows.values()) {
+    const key = normalizedTerm(row.term);
+    const previous = map.get(key);
+    const combined = { term: row.term, sales: row.sales + (previous?.sales ?? 0), spend: row.spend + (previous?.spend ?? 0), orders: row.orders + (previous?.orders ?? 0), impressions: row.impressions + (previous?.impressions ?? 0), clicks: row.clicks + (previous?.clicks ?? 0), acos: row.acos };
+    combined.acos = combined.sales > 0 ? combined.spend / combined.sales * 100 : null;
+    map.set(key, combined);
   }
   return map;
 }
@@ -313,7 +331,7 @@ function uniqueSources(results: unknown[]) {
   for (const result of results) {
     for (const payload of payloads(result)) {
       for (const row of collectSourceRows(payload)) {
-        const key = normalizedKey(row.term);
+        const key = normalizedTerm(row.term);
         const existing = map.get(key);
         if (!existing || row.sales > existing.sales || (row.sales === existing.sales && (row.orders > existing.orders || (row.orders === existing.orders && row.spend > existing.spend)))) map.set(key, row);
       }
@@ -338,7 +356,7 @@ function collectProductTargets(value: unknown, depth = 0): string[] {
 }
 
 function uniqueProductTargets(results: unknown[]) {
-  return new Set(results.flatMap(result => payloads(result).flatMap(payload => collectProductTargets(payload))).map(normalizedKey));
+  return new Set(results.flatMap(result => payloads(result).flatMap(payload => collectProductTargets(payload))).map(normalizedTerm));
 }
 
 function resultSetIsComplete(results: unknown[]) {
@@ -370,7 +388,7 @@ export async function loadUntargetedSalesOpportunities(
     period: { startDate: params.startDate, endDate: params.endDate },
   });
   const searchResults = await loadPages(searchTool, params, callTool);
-  const metrics = uniqueMetrics(searchResults);
+  const metrics = uniqueMetrics(searchResults, params.asin);
   const searchResultCount = totalCount(searchResults[0]);
   const searchResultsComplete = resultSetIsComplete(searchResults)
     || (searchResultCount != null && metrics.size >= searchResultCount);
@@ -390,11 +408,11 @@ export async function loadUntargetedSalesOpportunities(
   reportDiagnostic?.("opportunity_source_result", { providerResultCount: totalCount(sourceResults[0]), parsedRowCount: sources.size });
   if (convertingMetrics.size > 0 && !sources.size) {
     reportDiagnostic?.("source_rows_unreadable", { resultCount: totalCount(sourceResults[0]), tool: sourceTool.name });
-    if ((totalCount(sourceResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("source_rows_unreadable", "Scale Insights returned a campaign-attribution format this version cannot read.");
+    if (!params.includeHistory && (totalCount(sourceResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("source_rows_unreadable", "Scale Insights returned a campaign-attribution format this version cannot read.");
   }
 
   const productCandidateKeys = new Set([...convertingMetrics.entries()]
-    .filter(([key]) => sources.has(key))
+    .filter(([key]) => params.includeHistory || sources.has(key))
     .filter(([, row]) => /^[A-Z0-9]{10}$/i.test(row.term.trim()))
     .map(([key]) => key));
   const targetTool = definitions.find(tool => tool.name === "get_target_performance");
@@ -431,8 +449,38 @@ export async function loadUntargetedSalesOpportunities(
 
   const warnings: string[] = [];
   if (searchResults.length === MAX_PAGES && (totalCount(searchResults.at(-1)) ?? 0) > MAX_PAGES * PAGE_SIZE) warnings.push(`Search-query results were limited to ${MAX_PAGES * PAGE_SIZE} rows.`);
-  if (sourceResults.length === MAX_PAGES && (totalCount(sourceResults.at(-1)) ?? 0) > MAX_PAGES * PAGE_SIZE) warnings.push(`Campaign-attribution results were limited to ${MAX_PAGES * PAGE_SIZE} rows.`);
+  if (params.includeHistory && !resultSetIsComplete(sourceResults) && convertingMetrics.size) warnings.push("Campaign attribution is incomplete; some source details may be unavailable.");
   if (productCandidateKeys.size > 0 && !productCoverageComplete) warnings.push("Product ASIN opportunities were omitted because complete product-target coverage was unavailable.");
+  let targetingCoverage: UntargetedSalesOpportunities["targetingCoverage"];
+  if (params.verifyCoverage) {
+    targetingCoverage = [...convertingMetrics.values()].map(row => {
+      const type = /^[A-Z0-9]{10}$/i.test(row.term.trim()) ? "Product ASIN" as const : "Search term" as const;
+      const key = normalizedTerm(row.term);
+      const state: TargetingState = type === "Product ASIN" && productCoverageComplete
+        ? targetedProductAsins.has(key) ? "targeted" : "untargeted" : "unverified";
+      return { term: row.term, type, state };
+    });
+    const tool = definitions.find(candidate => candidate.name === "get_ppc_exact_coverage");
+    const terms = targetingCoverage.filter(row => row.type === "Search term");
+    const supported = tool && supportsSearchScope(tool) && hasAnyProperty(tool, ["query_list", "queryList"]) && hasAnyProperty(tool, ["country", "country_code", "countryCode", "marketplace"]);
+    if (supported) {
+      // The provider accepts at most 100 queries per call. Bound this check to 500 terms;
+      // excess candidates stay explicitly unverified instead of silently disappearing.
+      for (let offset = 0; offset < Math.min(terms.length, 500); offset += 100) {
+        const batch = terms.slice(offset, offset + 100);
+        const args = buildOpportunityToolArgs(tool, params);
+        const queryKey = hasAnyProperty(tool, ["query_list"]) ? "query_list" : "queryList";
+        args[queryKey] = batch.map(row => row.term);
+        try {
+          const result = await callTool(tool.name, args);
+          const states = parseExactTargetCoverage(result, params, batch.map(row => row.term));
+          batch.forEach(row => { row.state = states.get(opportunityTermKey(row.type, row.term)) ?? "unverified"; });
+        } catch { warnings.push("Some exact-target checks failed. Those candidates remain targeting unverified."); }
+      }
+    }
+    if (targetingCoverage.some(row => row.state === "unverified")) warnings.push("Scale Insights could not confirm current targeting for every candidate. Unverified rows cannot be selected for bulk campaigns.");
+    reportDiagnostic?.("opportunity_current_coverage", { tool: tool?.name ?? null, candidateCount: targetingCoverage.length, unverifiedCount: targetingCoverage.filter(row => row.state === "unverified").length });
+  }
   return {
     asin: params.asin,
     country: params.country,
@@ -443,5 +491,26 @@ export async function loadUntargetedSalesOpportunities(
     freshness: { searchDataAsOf: freshness(searchResults[0]), coverageDataAsOf: freshness(sourceResults[0]) },
     opportunities,
     warnings,
+    ...(params.includeHistory ? {
+      performanceRows: [...metrics.values()].map(row => ({ ...row, type: /^[A-Z0-9]{10}$/i.test(row.term.trim()) ? "Product ASIN" as const : "Search term" as const })),
+      complete: searchResultsComplete && (!params.verifyCoverage || targetingCoverage?.every(row => row.state !== "unverified") === true),
+    } : {}),
+    ...(targetingCoverage ? { targetingCoverage, freshness: { searchDataAsOf: freshness(searchResults[0]), coverageDataAsOf: new Date().toISOString() } } : {}),
   };
+}
+
+export function parseExactTargetCoverage(result: unknown, params: UntargetedOpportunityParams, requested: string[]) {
+  const states = new Map<string, TargetingState>();
+  const allowed = new Set(requested.map(term => opportunityTermKey("Search term", term)));
+  for (const payload of payloads(result)) {
+    if (!isRecord(payload) || payload.Country !== params.country || payload.StartDate !== params.startDate || payload.EndDate !== params.endDate
+      || !Array.isArray(payload.AsinList) || payload.AsinList.length !== 1 || payload.AsinList[0] !== params.asin
+      || payload.AsinTruncated !== false || payload.QueryTruncated !== false || !Array.isArray(payload.Results)) continue;
+    for (const row of payload.Results) {
+      if (!isRecord(row) || typeof row.Query !== "string" || typeof row.HasExactMatch !== "boolean") continue;
+      const key = opportunityTermKey("Search term", row.Query);
+      if (allowed.has(key)) states.set(key, row.HasExactMatch ? "targeted" : "untargeted");
+    }
+  }
+  return states;
 }

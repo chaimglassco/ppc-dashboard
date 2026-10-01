@@ -1,4 +1,5 @@
 export type UntargetedOpportunityType = "Search term" | "Product ASIN";
+export type TargetingState = "untargeted" | "targeted" | "unverified";
 
 export type UntargetedSalesOpportunity = {
   term: string;
@@ -13,6 +14,9 @@ export type UntargetedSalesOpportunity = {
   impressions: number;
   clicks: number;
   acos: number | null;
+  lastSeen?: string;
+  weeksAppeared?: number;
+  targetingState?: TargetingState;
 };
 
 export type UntargetedSalesOpportunities = {
@@ -25,9 +29,14 @@ export type UntargetedSalesOpportunities = {
   freshness: { searchDataAsOf: string; coverageDataAsOf: string };
   opportunities: UntargetedSalesOpportunity[];
   warnings: string[];
+  performanceRows?: UntargetedSalesOpportunity[];
+  targetingCoverage?: { term: string; type: UntargetedOpportunityType; state: TargetingState }[];
+  complete?: boolean;
+  history?: { weekStarts: string[]; loadedWeeks: string[]; failedWeeks: string[]; checkedAt: string };
 };
 
 export const PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY = "glassco.ppcUntargetedOpportunitiesCache.v1";
+export const PPC_OPPORTUNITY_HISTORY_CACHE_KEY = "glassco.ppcOpportunityHistoryCache.v1";
 export const untargetedOpportunityCacheKey = (country: string, asin: string, weekStart: string) => `${country.trim().toUpperCase()}:${asin.trim().toUpperCase()}:${weekStart}`;
 export type UntargetedOpportunityCache = Record<string, UntargetedSalesOpportunities>;
 
@@ -78,9 +87,40 @@ export function parseUntargetedSalesOpportunities(value: unknown): UntargetedSal
     if (!term || !type || sales == null || orders == null || !Number.isInteger(orders) || spend == null || impressions == null || !Number.isInteger(impressions) || clicks == null || !Number.isInteger(clicks) || (candidate.acos != null && acos == null)) return null;
     if ((candidate.sourceCampaignId != null && !sourceCampaignId) || (candidate.sourceAdGroupId != null && !sourceAdGroupId) || (candidate.sourceKeyword != null && !sourceKeyword) || (candidate.sourceMatchType != null && !sourceMatchType)) return null;
     if (type === "Product ASIN" && !/^[A-Z0-9]{10}$/.test(term)) return null;
-    opportunities.push({ term, type, sourceCampaignId, sourceAdGroupId, sourceKeyword, sourceMatchType, sales, orders, spend, impressions, clicks, acos });
+    if (candidate.lastSeen != null && !isoDate(text(candidate.lastSeen))) return null;
+    if (candidate.weeksAppeared != null && (finiteNonNegative(candidate.weeksAppeared) == null || !Number.isInteger(candidate.weeksAppeared) || Number(candidate.weeksAppeared) > 12)) return null;
+    if (candidate.targetingState != null && !["untargeted", "targeted", "unverified"].includes(String(candidate.targetingState))) return null;
+    opportunities.push({ term, type, sourceCampaignId, sourceAdGroupId, sourceKeyword, sourceMatchType, sales, orders, spend, impressions, clicks, acos,
+      ...(candidate.lastSeen == null ? {} : { lastSeen: text(candidate.lastSeen) }),
+      ...(candidate.weeksAppeared == null ? {} : { weeksAppeared: Number(candidate.weeksAppeared) }),
+      ...(candidate.targetingState == null ? {} : { targetingState: candidate.targetingState as TargetingState }),
+    });
   }
   if (!value.warnings.every(warning => typeof warning === "string")) return null;
+  let performanceRows: UntargetedSalesOpportunity[] | undefined;
+  if (value.performanceRows != null) {
+    const parsed = parseUntargetedSalesOpportunities({ ...value, opportunities: value.performanceRows, performanceRows: undefined, targetingCoverage: undefined, history: undefined });
+    if (!parsed) return null;
+    performanceRows = parsed.opportunities;
+  }
+  let targetingCoverage: UntargetedSalesOpportunities["targetingCoverage"];
+  if (value.targetingCoverage != null) {
+    if (!Array.isArray(value.targetingCoverage)) return null;
+    targetingCoverage = [];
+    for (const row of value.targetingCoverage) {
+      if (!isRecord(row) || !text(row.term) || !["Search term", "Product ASIN"].includes(String(row.type)) || !["untargeted", "targeted", "unverified"].includes(String(row.state))) return null;
+      targetingCoverage.push({ term: text(row.term), type: row.type as UntargetedOpportunityType, state: row.state as TargetingState });
+    }
+  }
+  if (value.complete != null && typeof value.complete !== "boolean") return null;
+  let history: UntargetedSalesOpportunities["history"];
+  if (value.history != null) {
+    if (!isRecord(value.history)) return null;
+    const { weekStarts, loadedWeeks, failedWeeks, checkedAt } = value.history;
+    if (![weekStarts, loadedWeeks, failedWeeks].every(list => Array.isArray(list) && list.length <= 12 && list.every(date => typeof date === "string" && isoDate(date))) || typeof checkedAt !== "string" || (checkedAt && !Number.isFinite(Date.parse(checkedAt)))) return null;
+    history = { weekStarts: weekStarts as string[], loadedWeeks: loadedWeeks as string[], failedWeeks: failedWeeks as string[], checkedAt };
+    if (new Set(history.weekStarts).size !== history.weekStarts.length || [...history.loadedWeeks, ...history.failedWeeks].some(date => !history?.weekStarts.includes(date))) return null;
+  }
   return {
     asin,
     country,
@@ -91,6 +131,10 @@ export function parseUntargetedSalesOpportunities(value: unknown): UntargetedSal
     freshness: { searchDataAsOf: text(value.freshness.searchDataAsOf), coverageDataAsOf: text(value.freshness.coverageDataAsOf) },
     opportunities: opportunities.toSorted((first, second) => second.sales - first.sales || second.orders - first.orders || first.term.localeCompare(second.term)),
     warnings: value.warnings.map(warning => String(warning).trim()).filter(Boolean),
+    ...(performanceRows ? { performanceRows } : {}),
+    ...(targetingCoverage ? { targetingCoverage } : {}),
+    ...(value.complete == null ? {} : { complete: value.complete as boolean }),
+    ...(history ? { history } : {}),
   };
 }
 

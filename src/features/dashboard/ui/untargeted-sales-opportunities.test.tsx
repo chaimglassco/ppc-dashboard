@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { addDaysIso } from "../domain/ppc-dashboard-state";
 import { UntargetedSalesOpportunities } from "./untargeted-sales-opportunities";
 
 function payload() {
@@ -15,26 +16,38 @@ function payload() {
   };
 }
 
+async function historyResponse(input: RequestInfo | URL) {
+  const query = new URL(String(input), "http://localhost").searchParams;
+  const date = query.get("weekStart")!;
+  const range = query.get("weeks") === "12";
+  const data = payload();
+  const opportunities = range || date === data.period.startDate ? data.opportunities : [];
+  return { ok: true, status: 200, json: async () => ({ opportunities: {
+    ...data, opportunities, complete: true, performanceRows: opportunities,
+    period: { startDate: range ? addDaysIso(date, -77) : date, endDate: addDaysIso(date, 6) },
+    ...(range ? { targetingCoverage: opportunities.map(row => ({ term: row.term, type: row.type, state: "untargeted" })), freshness: { searchDataAsOf: "2026-09-09", coverageDataAsOf: "2026-10-01T00:00:00Z" } } : {}),
+  } }) };
+}
+
 describe("UntargetedSalesOpportunities", () => {
   afterEach(() => { cleanup(); window.localStorage.clear(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
   it("loads with shared Refresh Data, shows converting matches, and filters without another request", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(window.navigator, "clipboard", { configurable: true, value: { writeText } });
-    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ opportunities: payload() }) }));
+    const fetchMock = vi.fn(historyResponse);
     const onPpcClicksLoaded = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    const view = render(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={0} onPpcClicksLoaded={onPpcClicksLoaded} />);
+    render(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={0} onPpcClicksLoaded={onPpcClicksLoaded} />);
     const region = screen.getByRole("region", { name: "Untargeted Sales Opportunities" });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalled();
     expect(within(region).queryByRole("button", { name: "Load Opportunities" })).not.toBeInTheDocument();
-    expect(within(region).getByText(/loads with Refresh Data/i)).toBeVisible();
-    view.rerender(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={1} onPpcClicksLoaded={onPpcClicksLoaded} />);
+    expect(within(region).getByLabelText("Reporting week")).toHaveValue("all");
     const table = await within(region).findByRole("table", { name: "Untargeted sales opportunities" });
     await waitFor(() => expect(onPpcClicksLoaded).toHaveBeenCalledWith({ asin: "B012345678", country: "US", weekStart: "2026-09-02", ppcClicks: 55 }));
-    expect(within(table).getAllByRole("columnheader").map(header => header.querySelector("button")?.textContent ?? header.textContent)).toEqual(["", "Search Term", "Impressions", "Clicks", "Spend", "Sales", "Orders", "ACOS", "Status"]);
+    expect(within(table).getAllByRole("columnheader").map(header => header.querySelector("button")?.textContent ?? header.textContent)).toEqual(["", "Search Term", "Impressions", "Clicks", "Spend", "Sales", "Orders", "ACOS", "Last seen", "Weeks appeared", "Status"]);
     expect(within(table).getByRole("columnheader", { name: /Sales/ })).toHaveAttribute("aria-sort", "descending");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(13);
     expect(within(table).getAllByRole("row")).toHaveLength(11);
     expect(within(table).getAllByText("Not targeted")).toHaveLength(10);
     expect(within(table).getByLabelText("Total Impressions")).toHaveTextContent("10,945");
@@ -48,7 +61,7 @@ describe("UntargetedSalesOpportunities", () => {
     const sourceLink = within(table).getByRole("link", { name: "Open Scale Insights Search terms for search term 1" });
     expect(sourceLink).toHaveAttribute(
       "href",
-      "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-09-02&to=2026-09-08&asinList=B012345678",
+      "https://portal.scaleinsights.com/Ads/SearchTerms/Index?from=2026-06-17&to=2026-09-08&asinList=B012345678",
     );
     expect(within(table).queryByRole("link", { name: "Create SKC campaign in Scale Insights for search term 1" })).not.toBeInTheDocument();
     expect(within(region).getByRole("button", { name: "Create Bulk Campaigns" })).toBeDisabled();
@@ -97,24 +110,71 @@ describe("UntargetedSalesOpportunities", () => {
     expect(within(table).getByLabelText("Total ACOS")).toHaveTextContent("10%");
     expect(within(table).getByRole("link", { name: "B0ABCDEF12" })).toHaveAttribute("href", "https://www.amazon.com/dp/B0ABCDEF12");
     expect(within(table).queryByRole("link", { name: /Create .* campaign in Scale Insights for B0ABCDEF12/ })).not.toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(13);
     expect(within(region).queryByRole("button", { name: "Fetch Again" })).not.toBeInTheDocument();
   });
 
   it("restores the latest validated result and refreshes it only on a new shared request", async () => {
-    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ opportunities: payload() }) }));
+    const fetchMock = vi.fn(historyResponse);
     vi.stubGlobal("fetch", fetchMock);
     const view = render(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
-    view.rerender(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={1} />);
     await screen.findByRole("table", { name: "Untargeted sales opportunities" });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(13);
     view.unmount();
     render(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
     await screen.findByRole("table", { name: "Untargeted sales opportunities" });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(13);
     cleanup();
     const refreshed = render(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
     refreshed.rerender(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={2} />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(26));
+  });
+
+  it("loads at most two requests, keeps older-only terms, clears selections on week changes, and retries missing weeks", async () => {
+    let active = 0;
+    let maximumActive = 0;
+    let failWeek = true;
+    const oldRow = { ...payload().opportunities[0], term: "Older only", sales: 40, spend: 8 };
+    const unknownRow = { ...oldRow, term: "Needs review" };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      active++; maximumActive = Math.max(maximumActive, active);
+      await new Promise(resolve => setTimeout(resolve, 2));
+      active--;
+      const query = new URL(String(input), "http://localhost").searchParams;
+      const date = query.get("weekStart")!;
+      if (date === "2026-08-19" && failWeek) return { ok: false, status: 502, json: async () => ({ error: "Temporary provider failure" }) };
+      const result = await historyResponse(input);
+      const value = await result.json();
+      if (query.get("weeks") === "12") {
+        value.opportunities.performanceRows.push(oldRow, unknownRow);
+        const extended = value.opportunities as typeof value.opportunities & { targetingCoverage: { term: string; type: string; state: string }[] };
+        extended.targetingCoverage.push({ term: oldRow.term, type: "Search term", state: "untargeted" }, { term: unknownRow.term, type: "Search term", state: "unverified" });
+        value.opportunities.complete = false;
+      } else if (date === "2026-08-26") {
+        value.opportunities.opportunities = [oldRow, unknownRow];
+        value.opportunities.performanceRows = [oldRow, unknownRow];
+      }
+      return { ok: true, status: 200, json: async () => value };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
+    const table = await screen.findByRole("table", { name: "Untargeted sales opportunities" });
+    expect(maximumActive).toBe(2);
+    expect(screen.getByText(/11 of 12 weeks loaded/, { selector: "small" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Show all 13" }));
+    expect(within(table).getByText("Older only")).toBeVisible();
+    expect(within(table).getByRole("checkbox", { name: "Select search term Needs review" })).toBeDisabled();
+    expect(within(table).getByText(/Targeting unverified — review required/)).toBeVisible();
+    fireEvent.click(within(table).getByRole("checkbox", { name: "Select search term Older only" }));
+    expect(screen.getByRole("link", { name: "Create bulk campaigns for 1 selected search term" })).toHaveAttribute("href", expect.stringContaining("keyword=Older+only"));
+    fireEvent.change(screen.getByLabelText("Reporting week"), { target: { value: "2026-09-02" } });
+    expect(screen.getByRole("status", { name: "0 search terms selected" })).toBeVisible();
+    expect(within(table).queryByText("Older only")).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(13);
+    fireEvent.change(screen.getByLabelText("Reporting week"), { target: { value: "all" } });
+    failWeek = false;
+    fireEvent.click(screen.getByRole("button", { name: "Retry missing weeks / targeting" }));
+    await waitFor(() => expect(screen.getByText(/12 of 12 weeks loaded/)).toBeVisible());
+    expect(fetchMock).toHaveBeenCalledTimes(15);
   });
 });
