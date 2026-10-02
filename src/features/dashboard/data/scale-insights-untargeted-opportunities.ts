@@ -13,7 +13,7 @@ export type UntargetedOpportunityParams = {
   verifyCoverage?: boolean;
 };
 
-export type OpportunityProviderErrorCode = "opportunity_capability_missing" | "opportunity_rows_unreadable" | "source_rows_unreadable";
+export type OpportunityProviderErrorCode = "opportunity_capability_missing" | "opportunity_rows_unreadable" | "source_rows_unreadable" | "opportunity_rate_limited" | "opportunity_provider_error";
 
 export class ScaleInsightsOpportunityProviderError extends Error {
   constructor(readonly providerCode: OpportunityProviderErrorCode, message: string) {
@@ -291,6 +291,7 @@ async function loadPages(tool: Tool, params: UntargetedOpportunityParams, callTo
   const results: unknown[] = [];
   for (let page = 1; page <= MAX_PAGES; page += 1) {
     const result = await callTool(tool.name, buildOpportunityToolArgs(tool, params, page));
+    assertOpportunityProviderResult(result);
     results.push(result);
     const hasNextPage = paginationHasNext(result);
     if (hasNextPage === false) break;
@@ -301,6 +302,23 @@ async function loadPages(tool: Tool, params: UntargetedOpportunityParams, callTo
     if (!hasPage || count == null || count <= page * pageSize) break;
   }
   return results;
+}
+
+function assertOpportunityProviderResult(result: unknown) {
+  const records = contentRecords(result);
+  const root = isRecord(result) ? result : {};
+  const candidates = [root, isRecord(root.structuredContent) ? root.structuredContent : {}, ...records.filter(isRecord)];
+  const quota = candidates.flatMap(candidate => {
+    const warning = isRecord(candidate.mcpUsageWarning) ? candidate.mcpUsageWarning : {};
+    return Array.isArray(warning.windows) ? warning.windows.filter(isRecord) : [];
+  }).find(window => window.remaining === 0);
+  const hasReport = candidates.some(candidate => isRecord(candidate.oppMeta) || isRecord(candidate.Meta));
+  if (quota && (root.isError === true || !hasReport)) {
+    const reset = typeof quota.resetsAtUtc === "string" ? new Date(quota.resetsAtUtc) : null;
+    const resetText = reset && Number.isFinite(reset.getTime()) ? ` Try again after ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" }).format(reset)} Manila time.` : " Try again after the provider quota resets.";
+    throw new ScaleInsightsOpportunityProviderError("opportunity_rate_limited", `Scale Insights has reached its session request limit.${resetText} Saved history has been kept.`);
+  }
+  if (root.isError === true || candidates.some(candidate => candidate.error != null)) throw new ScaleInsightsOpportunityProviderError("opportunity_provider_error", "Scale Insights rejected the opportunity request. Saved history has been kept; try refreshing later.");
 }
 
 function uniqueMetrics(results: unknown[], asin: string) {
@@ -399,7 +417,7 @@ export async function loadUntargetedSalesOpportunities(
   reportDiagnostic?.("opportunity_search_result", { providerResultCount: totalCount(searchResults[0]), parsedRowCount: metrics.size, convertingRowCount: convertingMetrics.size });
   if (!metrics.size) {
     reportDiagnostic?.("opportunity_rows_unreadable", { resultCount: totalCount(searchResults[0]), tool: searchTool.name });
-    if ((totalCount(searchResults[0]) ?? 0) > 0) throw new ScaleInsightsOpportunityProviderError("opportunity_rows_unreadable", "Scale Insights returned a PPC search-term format this version cannot read.");
+    if (totalCount(searchResults[0]) !== 0) throw new ScaleInsightsOpportunityProviderError("opportunity_rows_unreadable", "Scale Insights returned a PPC search-term response this version cannot read. This is not a confirmed empty report.");
   }
   const sourceResults = convertingMetrics.size
     ? await loadPages(sourceTool, params, callTool)
@@ -473,9 +491,13 @@ export async function loadUntargetedSalesOpportunities(
         args[queryKey] = batch.map(row => row.term);
         try {
           const result = await callTool(tool.name, args);
+          assertOpportunityProviderResult(result);
           const states = parseExactTargetCoverage(result, params, batch.map(row => row.term));
           batch.forEach(row => { row.state = states.get(opportunityTermKey(row.type, row.term)) ?? "unverified"; });
-        } catch { warnings.push("Some exact-target checks failed. Those candidates remain targeting unverified."); }
+        } catch (error) {
+          if (error instanceof ScaleInsightsOpportunityProviderError && error.providerCode === "opportunity_rate_limited") throw error;
+          warnings.push("Some exact-target checks failed. Those candidates remain targeting unverified.");
+        }
       }
     }
     if (targetingCoverage.some(row => row.state === "unverified")) warnings.push("Scale Insights could not confirm current targeting for every candidate. Unverified rows cannot be selected for bulk campaigns.");

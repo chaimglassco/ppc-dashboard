@@ -12,6 +12,19 @@ const definitions = [
 ] as Tool[];
 
 describe("Scale Insights untargeted sales opportunity adapter", () => {
+  it("reports the actual quota response instead of caching an empty history", async () => {
+    const callTool = vi.fn().mockResolvedValue({ isError: true, content: [
+      { type: "text", text: "MCP usage limit reached." },
+      { type: "text", text: JSON.stringify({ mcpUsageWarning: { windows: [{ window: "session", remaining: 0, resetsAtUtc: "2026-10-02T09:54:21.3208064Z" }] } }) },
+    ] });
+    await expect(loadUntargetedSalesOpportunities({ ...params, includeHistory: true }, definitions, callTool)).rejects.toMatchObject({ providerCode: "opportunity_rate_limited", message: expect.stringContaining("5:54 PM Manila time") });
+    expect(callTool).toHaveBeenCalledTimes(1);
+  });
+  it("rejects provider errors and unknown empty formats but accepts a confirmed zero", async () => {
+    await expect(loadUntargetedSalesOpportunities(params, definitions, vi.fn().mockResolvedValue({ isError: true, content: [{ type: "text", text: "Provider error" }] }))).rejects.toMatchObject({ providerCode: "opportunity_provider_error" });
+    await expect(loadUntargetedSalesOpportunities(params, definitions, vi.fn().mockResolvedValue({ structuredContent: {} }))).rejects.toMatchObject({ providerCode: "opportunity_rows_unreadable" });
+    await expect(loadUntargetedSalesOpportunities({ ...params, includeHistory: true }, definitions, vi.fn().mockResolvedValue({ structuredContent: { opps: [], oppMeta: { total_count: 0, has_next_page: false } } }))).resolves.toMatchObject({ performanceRows: [], complete: true, ppcClicks: 0 });
+  });
   it("parses live explicit exact coverage and rejects wrong scope or truncated coverage", () => {
     const liveParams = { ...params, asin: "B0DCTX18KK", startDate: "2026-07-08", endDate: "2026-09-29" };
     const result = { content: [{ type: "text", text: JSON.stringify(exactLive) }] };

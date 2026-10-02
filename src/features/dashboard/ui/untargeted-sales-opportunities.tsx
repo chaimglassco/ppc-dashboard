@@ -149,13 +149,15 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
     let authorizationUrl: string | undefined;
     let requestId: string | undefined;
     let completed = 0;
+    let rateLimited = false;
+    let failureMessage = "";
     const persist = () => {
       try {
         dashboardStorage().setItem(PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY, JSON.stringify({ version: 1, entries: cacheRef.current }));
       } catch { /* Validated data remains in memory. */ }
     };
     const load = async (date: string, range: boolean) => {
-      if (controller.signal.aborted || authorizationUrl) return;
+      if (controller.signal.aborted || authorizationUrl || rateLimited) return;
       const key = untargetedOpportunityCacheKey(country, asin, date);
       const saved = cacheRef.current?.[key];
       if (!range && !force && saved?.performanceRows && saved.complete) { reports.push(saved); completed++; return; }
@@ -169,7 +171,11 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
           if (url.protocol === "https:" && (url.hostname === "vercel.com" || url.hostname.endsWith(".vercel.com"))) authorizationUrl = url.toString();
           throw new Error("Connect Scale Insights to load opportunity history.");
         }
-        if (!response.ok) { requestId = typeof value.requestId === "string" ? value.requestId : undefined; throw new Error(typeof value.error === "string" ? value.error : "Could not load this reporting period."); }
+        if (!response.ok) {
+          requestId = typeof value.requestId === "string" ? value.requestId : undefined;
+          if (response.status === 429) rateLimited = true;
+          throw new Error(typeof value.error === "string" ? value.error : "Could not load this reporting period.");
+        }
         const result = parseUntargetedSalesOpportunities(value.opportunities);
         const expectedStart = range ? addDaysIso(date, -77) : date;
         if (!result || result.asin !== asin.toUpperCase() || result.country !== country.toUpperCase() || result.period.startDate !== expectedStart || result.period.endDate > addDaysIso(date, 6) || (!range && !result.performanceRows)) throw new Error("Scale Insights returned invalid opportunity history.");
@@ -177,6 +183,7 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
         else { reports.push(result); cacheRef.current = withUntargetedOpportunityCacheEntry(cacheRef.current ?? {}, result, 156); persist(); completed++; }
       } catch (error) {
         if (controller.signal.aborted) return;
+        failureMessage = error instanceof Error ? error.message : "Could not load opportunity history.";
         // Stale values may be shown, but are never counted as a successfully refreshed week.
         if (range) coverage = undefined;
         setLoadState(current => current.key === reportKey ? { ...current, message: error instanceof Error ? error.message : "Could not load opportunity history." } : current);
@@ -185,14 +192,21 @@ export function UntargetedSalesOpportunities({ asin, country = "US", weekStart, 
     };
     const jobs = [{ date: weekStart, range: true }, ...starts.map(date => ({ date, range: false }))];
     let next = 0;
-    const worker = async () => { while (next < jobs.length && !controller.signal.aborted && !authorizationUrl) { const job = jobs[next++]; await load(job.date, job.range); } };
+    const worker = async () => { while (next < jobs.length && !controller.signal.aborted && !authorizationUrl && !rateLimited) { const job = jobs[next++]; await load(job.date, job.range); } };
     void Promise.all([worker(), worker()]).then(() => {
       if (controller.signal.aborted) return;
-      const combined = combineOpportunityWeeks(asin, country, weekStart, reports, coverage);
+      const combined = rateLimited && cached ? {
+        ...cached, complete: false,
+        opportunities: cached.opportunities.map(row => ({ ...row, targetingState: "unverified" as const })),
+        targetingCoverage: cached.targetingCoverage?.map(row => ({ ...row, state: "unverified" as const })),
+        warnings: [...new Set([...cached.warnings, failureMessage, "Showing saved history. Current targeting could not be refreshed; bulk selection is disabled."])],
+      } : combineOpportunityWeeks(asin, country, weekStart, reports, coverage);
       if (authorizationUrl) { setLoadState({ key: reportKey, status: "authorization", message: "Connect Scale Insights to retrieve opportunity history.", authorizationUrl, report: combined, requestId }); return; }
-      historyCacheRef.current = Object.fromEntries([...Object.entries(historyCacheRef.current ?? {}).filter(([key]) => key !== reportKey), [reportKey, combined]].slice(-12));
-      try { dashboardStorage().setItem(PPC_OPPORTUNITY_HISTORY_CACHE_KEY, JSON.stringify({ version: 1, entries: historyCacheRef.current })); } catch { /* Keep the report in memory. */ }
-      setLoadState({ key: reportKey, status: reports.length ? "ready" : "error", message: reports.length ? "" : "No reporting weeks could be loaded.", report: combined, requestId });
+      if (!rateLimited && reports.length) {
+        historyCacheRef.current = Object.fromEntries([...Object.entries(historyCacheRef.current ?? {}).filter(([key]) => key !== reportKey), [reportKey, combined]].slice(-12));
+        try { dashboardStorage().setItem(PPC_OPPORTUNITY_HISTORY_CACHE_KEY, JSON.stringify({ version: 1, entries: historyCacheRef.current })); } catch { /* Keep the report in memory. */ }
+      }
+      setLoadState({ key: reportKey, status: !rateLimited && reports.length ? "ready" : "error", message: rateLimited || !reports.length ? failureMessage || "No reporting weeks could be loaded." : "", report: combined, requestId });
     });
     return () => controller.abort();
   }, [asin, country, refreshVersion, reportKey, retryVersion, weekStart]);

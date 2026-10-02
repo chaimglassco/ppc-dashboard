@@ -18,6 +18,12 @@ import { GET, parseUntargetedOpportunityQuery } from "./route";
 const requestUrl = "http://localhost/ppc/api/dashboard/untargeted-opportunities?asin=b012345678&country=us&weekStart=2026-09-02";
 
 describe("untargeted sales opportunities API", () => {
+  it("returns 429 for exhausted provider quota without a success report", async () => {
+    vi.mocked(getScaleInsightsUntargetedSalesOpportunities).mockRejectedValue(new ScaleInsightsOpportunityProviderError("opportunity_rate_limited", "Session quota exhausted. Try again after reset."));
+    const response = await GET(new Request(requestUrl));
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({ code: "opportunity_rate_limited", error: expect.stringContaining("quota exhausted") });
+  });
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-07T01:30:00Z"));

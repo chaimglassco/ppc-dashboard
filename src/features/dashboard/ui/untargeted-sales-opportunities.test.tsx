@@ -30,6 +30,24 @@ async function historyResponse(input: RequestInfo | URL) {
 }
 
 describe("UntargetedSalesOpportunities", () => {
+  it("stops the history queue on quota errors, preserves saved totals and disables stale targeting", async () => {
+    let limited = false;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => limited
+      ? { ok: false, status: 429, json: async () => ({ code: "opportunity_rate_limited", error: "Scale Insights has reached its session request limit. Try again after 5:54 PM Manila time." }) }
+      : historyResponse(input));
+    vi.stubGlobal("fetch", fetchMock);
+    const view = render(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={0} />);
+    await screen.findByRole("table", { name: "Untargeted sales opportunities" });
+    const saved = window.localStorage.getItem("glassco.ppcOpportunityHistoryCache.v1");
+    expect(fetchMock).toHaveBeenCalledTimes(13);
+    limited = true;
+    view.rerender(<UntargetedSalesOpportunities asin="B012345678" weekStart="2026-09-02" refreshVersion={1} />);
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("5:54 PM Manila time"));
+    expect(fetchMock).toHaveBeenCalledTimes(15);
+    expect(screen.getByLabelText("Total Sales")).toHaveTextContent("$660.00");
+    expect(screen.getByRole("checkbox", { name: "Select search term search term 1" })).toBeDisabled();
+    expect(window.localStorage.getItem("glassco.ppcOpportunityHistoryCache.v1")).toBe(saved);
+  });
   afterEach(() => { cleanup(); window.localStorage.clear(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
   it("loads with shared Refresh Data, shows converting matches, and filters without another request", async () => {

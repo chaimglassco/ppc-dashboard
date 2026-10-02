@@ -85,7 +85,7 @@ export async function GET(request: Request) {
       }, { status: 409, headers: NO_STORE_HEADERS });
     }
     if (error instanceof ScaleInsightsConfigurationError) return responseError("Scale Insights is not configured for opportunity reporting.", 503);
-    if (error instanceof ScaleInsightsOpportunityProviderError) return responseError(error.message, 502, { code: error.providerCode, requestId });
+    if (error instanceof ScaleInsightsOpportunityProviderError) return responseError(error.message, error.providerCode === "opportunity_rate_limited" ? 429 : 502, { code: error.providerCode, requestId });
     return responseError("Scale Insights opportunity data is temporarily unavailable.", 502, { requestId });
   }
 }
