@@ -64,6 +64,8 @@
 }
 
 .actionsMenu {
+  display: flex;
+  gap: 4px;
   position: relative;
   flex: none;
 }
@@ -82,7 +84,8 @@
 }
 
 .actionsTrigger:hover,
-.actionsTrigger[aria-expanded="true"] {
+.actionsTrigger[aria-expanded="true"],
+.actionsTrigger[aria-pressed="true"] {
   border-color: #e4e4e7;
   background: #f4f4f5;
   color: #000;
