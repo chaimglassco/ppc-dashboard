@@ -235,7 +235,7 @@ export function ProductPortfolioPanel({ products, tags, loading, error, selected
           onDrop={event => { if (editMode && draggedId) { event.preventDefault(); moveProduct(draggedId, product.id); setDraggedId(""); setDropTargetId(""); } }}>
           <button type="button" className={styles.productSelect} aria-pressed={selected} onClick={() => onSelectProduct(product.id)}>
             <span className={styles.productImage}>{product.imageDataUrl ? <Image src={product.imageDataUrl} alt={`${product.name} product`} width={44} height={44} unoptimized /> : <Package aria-hidden="true" />}</span>
-            <span className={styles.productCopy}><span className={styles.productTitle}><i aria-hidden="true" /><strong role="heading" aria-level={2}>{product.name}</strong></span>{tag ? <em><Tag aria-hidden="true" />{tag.name}</em> : null}</span>
+            <span className={styles.productCopy}>{tag ? <em><Tag aria-hidden="true" />{tag.name}</em> : null}<span className={styles.productTitle}><i aria-hidden="true" /><strong role="heading" aria-level={2}>{product.name}</strong></span></span>
           </button>
           <div className={styles.productIdentifiers}>
             <span>ASIN: {product.asin ? <><a href={`https://www.amazon.com/dp/${encodeURIComponent(product.asin)}`} target="_blank" rel="noopener noreferrer" aria-label={`Open ${selected ? "selected product" : product.name} ASIN ${product.asin} on Amazon`}>{product.asin}</a><CopyIdentifierButton key={product.asin} value={product.asin} kind="ASIN" /></> : "N/A"}</span>

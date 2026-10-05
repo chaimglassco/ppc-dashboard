@@ -292,7 +292,7 @@
 .productCopy {
   min-width: 0;
   display: grid;
-  gap: 5px;
+  gap: 3px;
 }
 
 .productTitle {
@@ -334,15 +334,15 @@
   max-width: 100%;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   overflow: hidden;
   border: 1px solid #e4e4e7;
-  border-radius: 4px;
+  border-radius: 3px;
   background: #f4f4f5;
-  padding: 2px 6px;
+  padding: 1px 4px;
   color: #52525b;
   font-family: var(--font-workspace-mono), Consolas, monospace;
-  font-size: 10px;
+  font-size: 8px;
   font-style: normal;
   font-weight: 500;
   line-height: 1.1;
@@ -351,8 +351,8 @@
 }
 
 .productCopy em svg {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   flex: none;
   color: #71717a;
 }
