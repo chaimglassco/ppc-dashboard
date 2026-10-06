@@ -346,3 +346,13 @@
   .headerBudget .budgetMiniMetric:nth-child(2) { grid-row: 2; }
   .headerBudget .budgetMiniMetric:nth-child(3) { grid-row: 3; }
 }
+.headerBudget .budgetAmounts .moneyInput input,
+.headerBudget .budgetAmounts .moneyInput i,
+.headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput input,
+.headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput i { font-size: 24px; font-weight: 500; }
+@media (max-width: 639px) {
+  .headerBudget .budgetAmounts .moneyInput input,
+  .headerBudget .budgetAmounts .moneyInput i,
+  .headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput input,
+  .headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput i { font-size: 20px; }
+}
