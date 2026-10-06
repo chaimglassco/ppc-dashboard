@@ -512,8 +512,6 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
   const activeWeekEnd = addDaysIso(activeWeekStart, 6);
   const elapsedBudgetDays = initialToday < activeWeekStart ? 0 : initialToday > activeWeekEnd ? 7
     : Math.min(7, Math.max(1, Math.round((Date.parse(`${initialToday}T00:00:00Z`) - Date.parse(`${activeWeekStart}T00:00:00Z`)) / 86_400_000) + 1));
-  const elapsedBudgetPercent = Math.round((elapsedBudgetDays / 7) * 1000) / 10;
-  const burnRateDelta = Math.round(budgetUsage - elapsedBudgetPercent);
   const dailySpendAverage = elapsedBudgetDays && report ? report.spend / elapsedBudgetDays : 0;
 
   useEffect(() => {
@@ -793,7 +791,6 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
                 <div className={ws.budgetStripHeading}><i /><h3 id="budget-heading">Budget Pacing</h3></div>
                 <div className={ws.budgetAmounts}><label><span className={ws.moneyInput}><i>$</i><input aria-label="Actual spend" aria-readonly={importedMetricsLocked || undefined} readOnly={importedMetricsLocked} inputMode="numeric" style={{ width: `${Math.max(1, roundedMetricValue(report.spend).length)}ch` }} value={roundedMetricValue(report.spend)} placeholder="0" onChange={event => patchReport({ spend: numericValue(event.target.value) })} /></span></label><span>/</span><label><span className={ws.moneyInput}><i>$</i><input aria-label="Weekly limit" inputMode="decimal" style={{ width: `${Math.max(1, roundedMetricValue(report.weeklyBudget).length)}ch` }} value={report.weeklyBudget ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(report.weeklyBudget) : ""} placeholder="0" onFocus={() => { budgetEditStartRef.current = { key: selectedKey, value: report.weeklyBudget }; }} onChange={event => { const weeklyBudget = numericValue(event.target.value); patchReport({ weeklyBudget, dailyBudget: dailyLimitFromWeekly(weeklyBudget) }); }} onBlur={event => finishBudgetEdit(event.currentTarget.value)} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span><small>cap</small></label><strong>{budgetUsage}%</strong></div>
                 <div className={ws.budgetMiniMetric}><small>{isOverspent ? "Overspent" : "Remaining"}</small><strong>{preciseCurrency(Math.abs(budgetBalance))}</strong></div>
-                <div className={ws.budgetMiniMetric}><small>Burn Rate</small><strong>{burnRateDelta > 0 ? "+" : ""}{burnRateDelta}% vs exp</strong></div>
                 <div className={ws.budgetMiniMetric}><small>Daily Avg</small><strong>{preciseCurrency(dailySpendAverage)} / day</strong></div>
                 <span className={`${ws.budgetStatusChip} ${isOverspent ? ws.budgetStatusDanger : budgetUsage >= 80 ? ws.budgetStatusWarning : ""}`}><i />{isOverspent ? "Over Budget" : budgetUsage >= 80 ? "Watch" : "Optimal"}</span>
               </div>
