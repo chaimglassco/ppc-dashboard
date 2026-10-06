@@ -294,3 +294,16 @@
 .headerBudget .budgetMiniMetric { grid-row: 3; padding: 0; border: 0; }
 .headerBudget .budgetStatusChip { grid-column: 3; grid-row: 1; justify-self: end; }
 @media (max-width: 639px) { .headerBudget { flex: auto; width: 100%; } }
+.weekMetricGroup { margin-top: 18px; }
+.weekMetricGroupHeading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.weekMetricGroupHeading h4 { margin: 0; font: 700 10px/1.5 var(--font-workspace-sans), Arial, sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+.weekMetricGroupHeading > span { font: 9px/1.5 var(--mono); color: var(--muted); }
+.weekMetricGrid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.weekMetricTile { display: flex; flex-direction: column; align-items: center; min-height: 165px; padding: 14px 10px 10px; border: 1px solid var(--border); border-radius: 7px; background: #fafafa; text-align: center; }
+.weekMetricLabel { color: #3f3f46; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
+.weekMetricChange { margin-top: 7px; padding: 3px 6px; border: 1px solid #e4e4e7; border-radius: 4px; background: #fff; font: 500 9px/1.3 var(--mono); color: #71717a; }
+.weekMetricValue { margin: 15px 0 5px; font: 600 25px/1.2 var(--mono); }
+.weekMetricContext { margin-bottom: 12px; font: 8px/1.5 var(--mono); color: #71717a; }
+.weekMetricComparison { justify-content: center; width: 100%; margin-top: auto; padding-top: 8px; border-top: 1px solid #e4e4e7; }
+.weekMetricTile[data-tone="positive"], .weekMetricTile[data-tone="negative"] { border-bottom-color: var(--border); }
+@media (max-width: 479px) { .weekMetricGrid { grid-template-columns: repeat(2, minmax(0,1fr)); }.weekMetricValue { font-size: 20px; } }
