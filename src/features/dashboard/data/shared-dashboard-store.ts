@@ -1,6 +1,7 @@
 import { BlobPreconditionFailedError, get, head, put } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
-import { parseDashboardDocument, type DashboardDocument, type DashboardStoreKey } from "../domain/shared-dashboard";
+import { mergeDashboardValues, parseDashboardDocument, type DashboardDocument, type DashboardStoreKey } from "../domain/shared-dashboard";
+import { PPC_DASHBOARD_STORAGE_KEY, parsePpcDashboardStore } from "../domain/ppc-dashboard-state";
 
 const pathFor = (key: DashboardStoreKey) => `glassco/ppc-team/v1/${key}.json`;
 export class DashboardConflict extends Error {
@@ -30,6 +31,11 @@ export async function saveDashboardDocument(document: DashboardDocument, expecte
   // Another session may have already written the exact desired value.
   if (current.document?.value === document.value) return current;
   if (current.etag !== expectedEtag) throw new DashboardConflict("Someone else updated this dataset while it was saving.", "stale_etag");
+  if (document.key === PPC_DASHBOARD_STORAGE_KEY && current.document
+    && Object.values(parsePpcDashboardStore(current.document.value).reports).some(report => report.deletedGoalIds?.length)
+    && mergeDashboardValues(document.key, current.document.value, document.value, current.document.value) !== document.value) {
+    throw new DashboardConflict("This save would restore deleted goals. Refreshing deletion records before retrying.", "stale_etag");
+  }
   if (current.document) {
     await put(`glassco/ppc-team-history/v1/${document.key}/${randomUUID()}.json`, JSON.stringify(current.document), {
       access: "private", addRandomSuffix: false, allowOverwrite: false, contentType: "application/json",

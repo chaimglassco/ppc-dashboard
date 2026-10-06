@@ -137,7 +137,19 @@ export function mergeDashboardValues(key: DashboardStoreKey, baseRaw: string | n
   const base = JSON.parse(validateDashboardValue(key, baseRaw ?? emptyDashboardValue(key))) as JsonValue;
   const local = JSON.parse(validateDashboardValue(key, localRaw)) as JsonValue;
   const remote = JSON.parse(validateDashboardValue(key, remoteRaw ?? emptyDashboardValue(key))) as JsonValue;
-  return validateDashboardValue(key, JSON.stringify(mergeJson(base, local, remote)));
+  const merged = mergeJson(base, local, remote);
+  // Apply permanent deletions even when mergeJson takes an unchanged-value shortcut.
+  if (key === PPC_DASHBOARD_STORAGE_KEY && record(merged) && record(merged.reports)) {
+    for (const source of [base, local, remote]) {
+      if (!record(source) || !record(source.reports)) continue;
+      for (const [reportKey, sourceReport] of Object.entries(source.reports)) {
+        const target = merged.reports[reportKey];
+        if (!record(sourceReport) || !record(target) || !Array.isArray(sourceReport.deletedGoalIds)) continue;
+        target.deletedGoalIds = [...new Set([...(Array.isArray(target.deletedGoalIds) ? target.deletedGoalIds : []), ...sourceReport.deletedGoalIds])];
+      }
+    }
+  }
+  return validateDashboardValue(key, JSON.stringify(merged));
 }
 
 // Use the existing v1 parsers, but reject dropped records instead of silently migrating partial data.

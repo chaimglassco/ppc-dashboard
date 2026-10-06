@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { BlobPreconditionFailedError, get, head, put } from "@vercel/blob";
-import { PPC_DASHBOARD_STORAGE_KEY } from "../domain/ppc-dashboard-state";
+import { createWeeklyPpcReport, PPC_DASHBOARD_STORAGE_KEY, reportKey } from "../domain/ppc-dashboard-state";
 import type { DashboardDocument } from "../domain/shared-dashboard";
 import { DashboardConflict, readDashboardDocument, saveDashboardDocument } from "./shared-dashboard-store";
 
@@ -13,6 +13,17 @@ const current: DashboardDocument = {
 };
 
 describe("shared dashboard Blob saves", () => {
+  it("rejects a stale goal resurrection even when the writer has the current ETag", async () => {
+    const report = createWeeklyPpcReport("product-1", "2026-09-02");
+    const reportId = reportKey(report.productId, report.weekStart);
+    const goal = { id: "deleted-goal", title: "PPC Sales", target: "", actual: "", status: "On Track" };
+    const deleted = { ...current, value: JSON.stringify({ version: 1, reports: { [reportId]: { ...report, deletedGoalIds: [goal.id] } } }) };
+    const stream = new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new TextEncoder().encode(JSON.stringify(deleted))); controller.close(); } });
+    vi.mocked(get).mockResolvedValue({ statusCode: 200, stream } as Awaited<ReturnType<typeof get>>);
+    const stale = { ...current, operationId: "stale-save", value: JSON.stringify({ version: 1, reports: { [reportId]: { ...report, goals: [goal] } } }) };
+    await expect(saveDashboardDocument(stale, "etag-1")).rejects.toMatchObject({ reason: "stale_etag" });
+    expect(put).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", "test-token");
     const stream = new ReadableStream<Uint8Array>({ start(controller) {

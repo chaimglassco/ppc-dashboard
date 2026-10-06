@@ -632,7 +632,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
       dashboardStorage().setItem(PPC_DASHBOARD_STORAGE_KEY, JSON.stringify({
         version: 1, reports: { ...storedReports, [selectedKey]: savedReport },
       }));
-      setReports(current => ({ ...current, [selectedKey]: savedReport }));
+      setReports(parsePpcDashboardStore(dashboardStorage().getItem(PPC_DASHBOARD_STORAGE_KEY)).reports);
       setSaveNotice("");
     } catch {
       setReports(current => ({ ...current, [selectedKey]: savedReport }));

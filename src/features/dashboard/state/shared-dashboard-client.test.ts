@@ -13,6 +13,22 @@ const outboxEntries = () => Array.from({ length: window.localStorage.length }, (
   .filter(candidate => candidate.startsWith(PPC_SHARED_REPORT_OUTBOX_KEY));
 
 describe("SharedDashboardStorage", () => {
+  it("keeps deleted goals removed during stale local writes and later team sync", () => {
+    vi.useFakeTimers();
+    const first = createWeeklyPpcReport("product-1", "2026-09-02");
+    const firstKey = reportKey(first.productId, first.weekStart);
+    const goal = { id: "old-sales", title: "PPC Sales", target: "", actual: "", status: "On Track" };
+    const deleted = reportsValue({ [firstKey]: { ...first, goals: [], deletedGoalIds: [goal.id] } });
+    const stale = reportsValue({ [firstKey]: { ...first, goals: [goal], notes: "Keep this note" } });
+    const storage = new SharedDashboardStorage(new Map([[key, response(deleted, "etag-1")]]), vi.fn());
+    storage.setItem(key, stale);
+    expect(JSON.parse(storage.getItem(key)!).reports[firstKey]).toMatchObject({ goals: [], deletedGoalIds: [goal.id], notes: "Keep this note" });
+    window.localStorage.clear();
+    const synced = new SharedDashboardStorage(new Map([[key, response(deleted, "etag-1")]]), vi.fn());
+    expect(synced.sync(new Map([[key, response(stale, "etag-2", "stale-operation", "2026-09-23T01:01:00.000Z")]]))).toBe(true);
+    expect(JSON.parse(synced.getItem(key)!).reports[firstKey].goals).toEqual([]);
+    expect(synced.hasPending()).toBe(true);
+  });
   beforeEach(() => { window.localStorage.clear(); window.sessionStorage.clear(); });
   afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window.localStorage.clear(); window.sessionStorage.clear(); });
 

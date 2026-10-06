@@ -60,7 +60,10 @@ export class SharedDashboardStorage implements DashboardStorage {
   getItem(key: string) { return isDashboardStoreKey(key) ? this.values.get(key) ?? null : null; }
   setItem(key: string, raw: string) {
     if (!isDashboardStoreKey(key)) throw new Error("Unknown dashboard dataset.");
-    const value = validateDashboardValue(key, raw);
+    const currentValue = this.values.get(key) ?? null;
+    const value = key === PPC_DASHBOARD_STORAGE_KEY
+      ? mergeDashboardValues(key, currentValue, raw, currentValue)
+      : validateDashboardValue(key, raw);
     if (this.values.get(key) === value) return;
     // Viewers may retrieve fresh metrics in memory, but cannot persist changes for the team.
     if (!this.responses.get(key)?.canEdit) {
@@ -213,8 +216,12 @@ export class SharedDashboardStorage implements DashboardStorage {
       const currentSavedAt = current?.document ? Date.parse(current.document.savedAt) : 0;
       const nextSavedAt = result.document ? Date.parse(result.document.savedAt) : 0;
       if (currentSavedAt > nextSavedAt) continue;
+      const protectedValue = key === PPC_DASHBOARD_STORAGE_KEY && result.document
+        ? mergeDashboardValues(key, this.values.get(key) ?? null, result.document.value, this.values.get(key) ?? null)
+        : null;
       this.responses.set(key, result);
       if (result.document) this.values.set(key, result.document.value); else this.values.delete(key);
+      if (protectedValue && protectedValue !== result.document?.value) this.setItem(key, protectedValue);
       changed.push(key);
     }
     if (changed.length) this.onRemoteChange(changed);
