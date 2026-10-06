@@ -332,3 +332,17 @@
 .headerBudget .budgetStripMain { grid-template-columns: repeat(2,max-content); }
 .headerBudget .budgetAmounts { grid-row: 1; }
 .headerBudget .budgetMiniMetric { grid-row: 2; }
+.headerBudget .budgetStripMain { gap: 6px 18px; }
+.headerBudget .budgetAmounts { grid-column: 1; grid-row: 1 / 3; align-self: center; font-size: 18px; }
+.headerBudget .budgetAmounts .moneyInput input, .headerBudget .budgetAmounts .moneyInput i { font-size: 24px; font-weight: 800; }
+.headerBudget .budgetMiniMetric { grid-column: 2; }
+.headerBudget .budgetMiniMetric:nth-child(2) { grid-row: 1; }
+.headerBudget .budgetMiniMetric:nth-child(3) { grid-row: 2; }
+@media (max-width: 639px) {
+  .headerBudget .budgetStripMain { column-gap: 12px; }
+  .headerBudget .budgetAmounts { grid-row: 1; }
+  .headerBudget .budgetAmounts .moneyInput input, .headerBudget .budgetAmounts .moneyInput i { font-size: 20px; }
+  .headerBudget .budgetMiniMetric { grid-column: 1; }
+  .headerBudget .budgetMiniMetric:nth-child(2) { grid-row: 2; }
+  .headerBudget .budgetMiniMetric:nth-child(3) { grid-row: 3; }
+}
