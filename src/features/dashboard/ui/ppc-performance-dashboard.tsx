@@ -788,8 +788,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
       {!selectedProduct || !report ? <div className={ws.workspaceEmpty}><BarChart3 aria-hidden="true" /><h2>Select a product</h2><p>Choose a Pipeline product to start its weekly PPC documentation.</p></div> : <>
         <header className={ws.workspaceHeader}>
             <div className={ws.headerProductIdentity}>
-              <span className={ws.workspaceProductImage}>{selectedProduct.imageDataUrl ? <Image src={selectedProduct.imageDataUrl} alt={`${selectedProduct.name} product image`} width={48} height={48} unoptimized /> : <Package aria-hidden="true" />}</span>
-              <strong>{selectedProduct.name}</strong>
+              <span className={ws.workspaceProductImage}>{selectedProduct.imageDataUrl ? <Image src={selectedProduct.imageDataUrl} alt={`${selectedProduct.name} product image`} width={80} height={80} unoptimized /> : <Package aria-hidden="true" />}</span>
             </div>
             <section className={`${ws.card} ${ws.budgetCard} ${ws.budgetStrip} ${ws.headerBudget}`} aria-label="Budget Utilization">
               <div className={ws.budgetStripMain}>
