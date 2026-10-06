@@ -349,10 +349,10 @@
 .headerBudget .budgetAmounts .moneyInput input,
 .headerBudget .budgetAmounts .moneyInput i,
 .headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput input,
-.headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput i { font-size: 24px; font-weight: 500; }
+.headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput i { font-size: 18px; font-weight: 500; }
 @media (max-width: 639px) {
   .headerBudget .budgetAmounts .moneyInput input,
   .headerBudget .budgetAmounts .moneyInput i,
   .headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput input,
-  .headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput i { font-size: 20px; }
+  .headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput i { font-size: 18px; }
 }
