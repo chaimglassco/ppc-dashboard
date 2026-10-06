@@ -324,7 +324,7 @@
 @media (max-width: 639px) { .workspaceHeader { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }.headerBudget { width: auto; }.saveArea { grid-column: 1 / -1; justify-self: end; width: 140px; } }
 .workspaceHeader { grid-template-columns: 80px max-content minmax(0,1fr) 140px; gap: 12px; }
 .headerProductIdentity .workspaceProductImage { width: 80px; height: 80px; }
-.asinNavigation { grid-template-columns: repeat(3,max-content); justify-content: start; gap: 10px; }
+.asinNavigation { grid-template-columns: repeat(3,max-content); justify-content: end; gap: 10px; }
 .asinNavigationColumn + .asinNavigationColumn { padding-left: 10px; }
 @media (max-width: 1279px) { .workspaceHeader { grid-template-columns: 80px max-content 140px; } }
 @media (max-width: 639px) { .workspaceHeader { grid-template-columns: 80px minmax(0,1fr); } }
