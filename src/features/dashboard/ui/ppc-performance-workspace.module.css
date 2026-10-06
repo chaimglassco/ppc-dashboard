@@ -328,3 +328,7 @@
 .asinNavigationColumn + .asinNavigationColumn { padding-left: 10px; }
 @media (max-width: 1279px) { .workspaceHeader { grid-template-columns: 80px max-content 140px; } }
 @media (max-width: 639px) { .workspaceHeader { grid-template-columns: 80px minmax(0,1fr); } }
+
+.headerBudget .budgetStripMain { grid-template-columns: repeat(2,max-content); }
+.headerBudget .budgetAmounts { grid-row: 1; }
+.headerBudget .budgetMiniMetric { grid-row: 2; }
