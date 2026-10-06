@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bold, CalendarDays, Check, CheckCircle2, Clock3,
   FileText, Flag, GitCompareArrows, Italic, LayoutDashboard, Underline, List, ListOrdered, Package, Plus, RefreshCw, Trash2, X,
@@ -786,6 +787,10 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
     <main className={ws.workspace}>
       {!selectedProduct || !report ? <div className={ws.workspaceEmpty}><BarChart3 aria-hidden="true" /><h2>Select a product</h2><p>Choose a Pipeline product to start its weekly PPC documentation.</p></div> : <>
         <header className={ws.workspaceHeader}>
+            <div className={ws.headerProductIdentity}>
+              <span className={ws.workspaceProductImage}>{selectedProduct.imageDataUrl ? <Image src={selectedProduct.imageDataUrl} alt={`${selectedProduct.name} product image`} width={48} height={48} unoptimized /> : <Package aria-hidden="true" />}</span>
+              <strong>{selectedProduct.name}</strong>
+            </div>
             <section className={`${ws.card} ${ws.budgetCard} ${ws.budgetStrip} ${ws.headerBudget}`} aria-label="Budget Utilization">
               <div className={ws.budgetStripMain}>
                 <div className={ws.budgetStripHeading}><i /><h3 id="budget-heading">Budget Pacing</h3></div>

@@ -307,3 +307,8 @@
 .weekMetricComparison { justify-content: center; width: 100%; margin-top: auto; padding-top: 8px; border-top: 1px solid #e4e4e7; }
 .weekMetricTile[data-tone="positive"], .weekMetricTile[data-tone="negative"] { border-bottom-color: var(--border); }
 @media (max-width: 479px) { .weekMetricGrid { grid-template-columns: repeat(2, minmax(0,1fr)); }.weekMetricValue { font-size: 20px; } }
+.headerProductIdentity { display: flex; flex: 0 1 160px; min-width: 0; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.headerProductIdentity .workspaceProductImage { display: grid; place-items: center; width: 48px; height: 48px; }
+.headerProductIdentity strong { max-width: 160px; color: #18181b; font: 600 11px/1.3 var(--font-workspace-sans), Arial, sans-serif; overflow-wrap: anywhere; }
+.headerBudget { flex: 0 1 230px; }
+@media (max-width: 639px) { .headerProductIdentity { flex: auto; width: 100%; }.headerBudget { flex: auto; width: 100%; } }
