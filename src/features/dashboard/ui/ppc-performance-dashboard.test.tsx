@@ -97,10 +97,10 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(table).getAllByRole("row", { name: /section$/ }).map(row => row.textContent)).toEqual([
       "TOTAL", "SALES", "ORDERS", "EFFICIENCY", "TRAFFIC",
     ]);
-    expect(within(table).getByRole("row", { name: /Spend/ })).toHaveTextContent("$81.75");
-    expect(within(table).getByRole("row", { name: /CPC/ })).toHaveTextContent("$1.70");
+    expect(within(table).getByRole("row", { name: /Spend/ })).toHaveTextContent("$82");
+    expect(within(table).getByRole("row", { name: /CPC/ })).toHaveTextContent("$2");
     expect(within(table).queryByRole("row", { name: /Organic Units|PPC Units/ })).not.toBeInTheDocument();
-    expect(within(table).getByRole("row", { name: /Total Sales/ })).toHaveTextContent("$1,317.35");
+    expect(within(table).getByRole("row", { name: /Total Sales/ })).toHaveTextContent("$1,317");
     expect(within(table).getByRole("row", { name: /Total Orders/ })).toHaveTextContent("59");
     expect(within(table).getByRole("row", { name: /Total Units/ })).toHaveTextContent("59");
     expect(JSON.parse(localStorage.getItem(PPC_PERFORMANCE_CACHE_KEY)!).entries["US:B012345678:2026-08-26"].metrics.ppcImpressions).toBe(1200);
@@ -260,8 +260,8 @@ describe("PpcPerformanceDashboard", () => {
     expect(await screen.findByText("Scale Insights synced through 2026-09-01.")).toBeVisible();
     const table = screen.getByRole("table", { name: "Six-week Scale Insights performance" });
     expect(within(table).getByRole("columnheader", { name: /Aug 26, 2026 to Sep 01, 2026, selected week/ })).toBeVisible();
-    expect(within(table).getByRole("row", { name: /Spend/ })).toHaveTextContent("$81.75");
-    expect(within(table).getByRole("row", { name: /CPC/ })).toHaveTextContent("$1.70");
+    expect(within(table).getByRole("row", { name: /Spend/ })).toHaveTextContent("$82");
+    expect(within(table).getByRole("row", { name: /CPC/ })).toHaveTextContent("$2");
     expect(within(table).queryByRole("textbox", { name: "Spend" })).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveValue("82");
     expect(screen.getByRole("textbox", { name: "Actual spend" })).toHaveAttribute("readonly");

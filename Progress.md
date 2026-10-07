@@ -558,3 +558,5 @@ October 7, 2026: Reduced both workspace spend and cap amounts to 18px while pres
 October 7, 2026: Removed the Target ACOS badge/editor beside Weekly PPC Performance. Existing stored targets remain unchanged.
 
 October 7, 2026: Snapshot cards display whole-number currency, percentages, comparison changes, and shares for current and previous weeks. Calculations and stored metrics retain full precision.
+
+October 7, 2026: Weekly performance table displays whole-number currency and percentages. Stored data and calculations retain full precision.

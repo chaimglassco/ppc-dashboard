@@ -82,12 +82,12 @@ function formatMetric(value: number | undefined, kind: WeeklyTableMetricDefiniti
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(value);
   }
   if (kind === "percentage") {
-    return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value)}%`;
+    return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value)}%`;
   }
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(value));
 }
