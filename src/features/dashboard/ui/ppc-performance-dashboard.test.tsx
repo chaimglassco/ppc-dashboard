@@ -373,7 +373,7 @@ describe("PpcPerformanceDashboard", () => {
     expect(within(table).getAllByRole("rowheader").map(row => row.textContent)).toEqual([
       "Total Sales", "Total Orders", "Total Units", "Spend", "PPC Sales", "Organic Sales", "PPC Orders", "Organic Orders", "ACOS", "TACOS", "Impressions", "Clicks", "CPC",
     ]);
-    expect(within(performanceCard).getByRole("textbox", { name: "Target ACOS" })).toBeVisible();
+    expect(within(performanceCard).queryByRole("textbox", { name: "Target ACOS" })).not.toBeInTheDocument();
     const goalsCard = screen.getByRole("region", { name: "Weekly Goals" });
     const budgetCard = screen.getByRole("region", { name: "Budget Utilization" });
     const actionCard = screen.getByRole("region", { name: "Action Items" });
@@ -402,8 +402,6 @@ describe("PpcPerformanceDashboard", () => {
     fireEvent.change(within(budgetCard).getByRole("textbox", { name: "Weekly limit" }), { target: { value: "50" } });
     fireEvent.change(within(budgetCard).getByRole("textbox", { name: "Actual spend" }), { target: { value: "75" } });
     expect(within(budgetCard).queryByText("Over Budget")).not.toBeInTheDocument();
-    fireEvent.change(within(performanceCard).getByRole("textbox", { name: "Target ACOS" }), { target: { value: "25" } });
-    expect(within(performanceCard).getByRole("textbox", { name: "Target ACOS" })).toHaveValue("25");
     const summary = screen.getByRole("region", { name: "Current Week Summary" });
     expect(within(summary).getByRole("button", { name: "Add summary topic" })).toBeVisible();
     expect(actionCard).toBeVisible();
