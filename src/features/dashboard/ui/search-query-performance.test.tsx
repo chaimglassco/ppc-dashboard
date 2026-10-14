@@ -15,5 +15,5 @@ it("renders ASIN funnel metrics, refreshes, and clears data when ASIN changes", 
   await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
   view.rerender(<SearchQueryPerformance asin="B0DCTX18KK" country="US" weekStart="2026-09-23" refreshVersion={0} />);
   expect(screen.queryByText("lead came")).not.toBeInTheDocument();
-  expect(await screen.findByText("No SQP queries are available for this ASIN and week yet.")).toBeVisible();
+  expect(await screen.findByText("SQP data is not available for this week yet.")).toBeVisible();
 });

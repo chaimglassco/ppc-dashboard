@@ -415,3 +415,5 @@ October 7, 2026: Snapshot cards display whole-number currency, percentages, comp
 October 7, 2026: Weekly performance table displays whole-number currency and percentages. Stored data and calculations retain full precision.
 
 October 14, 2026: Added authenticated ASIN SQP below untargeted opportunities, using the latest complete Amazon Sunday–Saturday week ending within the selected period. ASIN impressions/clicks/cart adds/purchases and purchases-per-click CVR; bounded pagination, scope validation, delayed/empty/incomplete states and shared Refresh Data. No marketplace totals substituted.
+
+October 14, 2026: Shortened SQP copy to ASIN, reporting dates, and a concise unavailable/partial note. Retrieval and metric definitions are unchanged.

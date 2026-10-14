@@ -26,11 +26,11 @@ export function SearchQueryPerformance({ asin, country, weekStart, refreshVersio
   const count = (value: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
   return <section className={ws.card} aria-label="Search Query Performance">
     <div className={ws.cardTitle}><h3>Search Query Performance · SQP</h3><button type="button" onClick={() => setRetry(value => value + 1)}>Retry / Refresh</button></div>
-    <p>ASIN {asin} · {country}. Amazon’s reported search queries; purchases are shown as orders. Conversion rate = ASIN purchases ÷ ASIN clicks.</p>
+    <p>ASIN {asin} · {country}</p>
     {error ? <p role="alert">{error} {state.authorizationUrl ? <a href={state.authorizationUrl}>Connect Scale Insights</a> : null}</p> : !report ? <p role="status">Loading SQP…</p> : <>
-      <p>{report.startDate} – {report.endDate} · Amazon Sunday–Saturday week. SQP is delayed.{report.dataThrough ? ` Provider data through ${report.dataThrough}.` : ""}</p>
-      {!report.complete ? <p role="alert">Incomplete provider pagination. These rows are partial; no complete totals are claimed.</p> : null}
-      {!report.rows.length ? <p>No SQP queries are available for this ASIN and week yet.</p> : <div style={{ overflowX: "auto" }}><table aria-label="ASIN SQP metrics" className={ws.weeklyTable}><thead><tr>{["Search query", "Impressions", "Clicks", "Cart adds", "Orders (purchases)", "Conversion rate"].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{report.rows.map(row => <tr key={row.query}><th scope="row">{row.query}</th><td>{count(row.impressions)}</td><td>{count(row.clicks)}</td><td>{count(row.cartAdds)}</td><td>{count(row.orders)}</td><td>{row.conversionRate == null ? "—" : `${count(row.conversionRate)}%`}</td></tr>)}</tbody></table></div>}
+      <p>{report.startDate} – {report.endDate}{report.dataThrough ? ` · Updated through ${report.dataThrough}` : ""}</p>
+      {!report.complete ? <p role="alert">Partial SQP data. Retry to load all queries.</p> : null}
+      {!report.rows.length ? <p>SQP data is not available for this week yet.</p> : <div style={{ overflowX: "auto" }}><table aria-label="ASIN SQP metrics" className={ws.weeklyTable}><thead><tr>{["Search query", "Impressions", "Clicks", "Cart adds", "Orders (purchases)", "Conversion rate"].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{report.rows.map(row => <tr key={row.query}><th scope="row">{row.query}</th><td>{count(row.impressions)}</td><td>{count(row.clicks)}</td><td>{count(row.cartAdds)}</td><td>{count(row.orders)}</td><td>{row.conversionRate == null ? "—" : `${count(row.conversionRate)}%`}</td></tr>)}</tbody></table></div>}
     </>}
   </section>;
 }
