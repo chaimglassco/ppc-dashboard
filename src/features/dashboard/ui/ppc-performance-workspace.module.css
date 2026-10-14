@@ -356,3 +356,10 @@
   .headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput input,
   .headerBudget .budgetAmounts label:nth-of-type(2) .moneyInput i { font-size: 18px; }
 }
+.weekMetricGrid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.weekMetricPair { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; align-items: stretch; }
+.weekMetricPair .weekMetricTile { min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.weekMetricPair .weekMetricTile + .weekMetricTile { padding-left: 10px; border-left: 1px solid var(--border); }
+.weekMetricPair .weekMetricValue { font-size: 22px; }
+@media (max-width: 767px) { .weekMetricGrid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 479px) { .weekMetricPair { gap: 5px; }.weekMetricPair .weekMetricTile + .weekMetricTile { padding-left: 5px; }.weekMetricPair .weekMetricValue { font-size: 18px; } }

@@ -144,7 +144,7 @@ function WeekMetricCards({ current, previous }: { current?: WeeklyTableColumn; p
   };
   return <section className={ws.weekMetricOverview} aria-label="Selected week metric cards">
     <div className={ws.weekMetricCaption}><strong>{current ? formatWeekRange(current.weekStart) : "Selected week"}</strong><span>vs previous week{current?.dataState === "Partial" ? " · Selected week is partial; previous week covers its full period" : ""}</span></div>
-    {[{ title: "Sales & Spend Metrics", keys: ["spend", "ppcSales", "organicSales", "totalSales"] }, { title: "Order Volume & Efficiency", keys: ["ppcOrders", "organicOrders", "totalOrders", "acos", "tacos"] }].map(group => <div key={group.title} className={ws.weekMetricGroup}><div className={ws.weekMetricGroupHeading}><h4>{group.title}</h4><span>{group.title.startsWith("Sales") ? `Total Revenue: ${format(current?.report?.totalSales, "currency")}` : `Total Orders: ${format(current?.report?.totalOrders, "number")}`}</span></div><div className={ws.weekMetricGrid}>{group.keys.map(metricKey => WEEK_METRIC_CARDS.find(card => card.key === metricKey)!).map(({ key, label, kind }) => {
+    {[{ title: "Sales & Spend Metrics", keys: ["spend", "ppcSales", "organicSales", "totalSales"] }, { title: "Order Volume & Efficiency", keys: ["ppcOrders", "organicOrders", "totalOrders", "acos", "tacos"] }].map(group => <div key={group.title} className={ws.weekMetricGroup}><div className={ws.weekMetricGroupHeading}><h4>{group.title}</h4><span>{group.title.startsWith("Sales") ? `Total Revenue: ${format(current?.report?.totalSales, "currency")}` : `Total Orders: ${format(current?.report?.totalOrders, "number")}`}</span></div><div className={ws.weekMetricGrid}>{group.keys.filter(metricKey => metricKey !== "tacos").map(metricKey => { const cards = (metricKey === "acos" ? ["acos", "tacos"] : [metricKey]).map(cardKey => WEEK_METRIC_CARDS.find(card => card.key === cardKey)!).map(({ key, label, kind }) => {
       const value = current?.report?.[key];
       const prior = previous?.report?.[key];
       const available = value != null && prior != null && Number.isFinite(value) && Number.isFinite(prior);
@@ -155,7 +155,7 @@ function WeekMetricCards({ current, previous }: { current?: WeeklyTableColumn; p
         <span className={ws.weekMetricLabel}>{label}</span><b className={ws.weekMetricChange} title={kind === "percentage" ? "Percentage-point change from previous week" : "Change from previous week"}>{delta != null && delta !== 0 ? delta > 0 ? "↑ " : "↓ " : ""}{change}</b><strong className={ws.weekMetricValue}>{format(value, kind)}</strong>
         <small className={ws.weekMetricContext}>{kind === "currency" && key !== "totalSales" && value != null && current?.report?.totalSales ? `${(value / current.report.totalSales * 100).toFixed(0)}% of total sales` : (key === "ppcOrders" || key === "organicOrders") && value != null && current?.report?.totalOrders ? `${(value / current.report.totalOrders * 100).toFixed(0)}% of orders` : "Week-over-week snapshot"}</small><div className={ws.weekMetricComparison}><span title="Previous week">Prev {format(prior, kind)}</span></div>
       </article>;
-    })}</div></div>)}
+    }); return metricKey === "acos" ? <div key="efficiency" className={`${ws.weekMetricTile} ${ws.weekMetricPair}`} aria-label="ACOS and TACOS weekly comparison">{cards}</div> : cards[0]; })}</div></div>)}
   </section>;
 }
 
