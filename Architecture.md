@@ -378,3 +378,5 @@ October 7, 2026: Removed the Target ACOS badge/editor beside Weekly PPC Performa
 October 7, 2026: Snapshot cards display whole-number currency, percentages, comparison changes, and shares for current and previous weeks. Calculations and stored metrics retain full precision.
 
 October 7, 2026: Weekly performance table displays whole-number currency and percentages. Stored data and calculations retain full precision.
+
+October 14, 2026: Added authenticated ASIN SQP below untargeted opportunities, using the latest complete Amazon Sunday–Saturday week ending within the selected period. ASIN impressions/clicks/cart adds/purchases and purchases-per-click CVR; bounded pagination, scope validation, delayed/empty/incomplete states and shared Refresh Data. No marketplace totals substituted.

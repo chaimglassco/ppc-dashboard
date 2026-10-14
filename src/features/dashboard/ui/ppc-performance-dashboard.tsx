@@ -1,4 +1,5 @@
 "use client";
+import { SearchQueryPerformance } from "./search-query-performance";
 
 import Image from "next/image";
 import {
@@ -833,6 +834,7 @@ export function PpcPerformanceDashboard({ initialToday, remoteSync, sharedSaveSt
 
           <CampaignWeeklyComparison key={`campaign-${remoteSync?.keys.includes(PPC_CAMPAIGN_CSV_CACHE_KEY) ? remoteSync.version : 0}`} asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={performanceRefresh} />
           <UntargetedSalesOpportunities key={`opportunity-${remoteSync?.keys.some(key => key === PPC_UNTARGETED_OPPORTUNITIES_CACHE_KEY || key === PPC_OPPORTUNITY_HISTORY_CACHE_KEY) ? remoteSync.version : 0}`} asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={opportunityRefresh.key === snapshotKey ? opportunityRefresh.version : 0} onPpcClicksLoaded={receiveOpportunityPpcClicks} />
+          <SearchQueryPerformance asin={selectedAsin} country="US" weekStart={activeWeekStart} refreshVersion={opportunityRefresh.key === snapshotKey ? opportunityRefresh.version : 0} />
 
         </div></div>
       </>}
