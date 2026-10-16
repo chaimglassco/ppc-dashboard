@@ -613,3 +613,10 @@ Validation: 84 test files passed (487 tests passed, 6 skipped), including campai
 Replaced the generic Campaign Type table with the requested comparison dashboard and shared campaign evidence drilldowns. Recognizes short and full Amazon type names, preserves absent/zero distinctions, and opens the exact selected campaign in the Campaigns workbench.
 
 Validation: 85 test files passed in the full 86-file run (493 tests passed, 6 skipped); one unchanged document-editor test exceeded its explicit 10-second timeout and passed on an isolated rerun with unchanged assertions. All Campaign Type tests passed, including scope reconciliation, missing values, canonical names, type selection, sorting/pagination, and two-report import to full-campaign navigation. Lint, TypeScript and production build passed. Desktop/mobile browser checks verified type contribution metrics, ASIN search, expanded evidence and campaign navigation with no console errors. Filled data was checked locally with synthetic reports; production verification uses the authenticated dashboard.
+
+
+### Placement dashboard — 2026-10-16
+
+Replaced the generic Placement table with the supplied dashboard backed by placement report evidence. Added optional placement performance-availability and bid-adjustment metadata so blank bulk settings do not become zero performance. Preserved two uploads, fourteen navigation modules, legacy audit compatibility and existing campaign navigation.
+
+Validation: full regression run passed all 88 test files (504 passed, 6 skipped). The final zero-click waste-rule guard passed the 11 focused Placement tests. Final lint, TypeScript and production build passed. Desktop/mobile browser checks verified metrics, ASIN expansion, full-campaign navigation and unavailable ASIN/match intersections with no console errors. Filled data was tested locally with synthetic placement records; production verification uses the authenticated dashboard.

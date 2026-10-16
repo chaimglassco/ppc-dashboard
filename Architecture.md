@@ -418,3 +418,8 @@ Campaigns uses a dedicated client workbench and pure campaign aggregation keyed 
 ### Campaign Type comparison — 2026-10-16
 
 Campaign Type now aggregates the campaign workbench evidence by canonical SP/SB/SD classification, keeping campaign identity and entity-level selection intact. A pure analysis module calculates weighted rates, contribution shares and review findings; the client view supplies filters, type selection, column visibility and paginated campaign evidence. Full analysis navigation opens the selected campaign in Campaigns.
+
+
+### Placement dashboard — 2026-10-16
+
+Placement now has a dedicated client dashboard and pure placement evidence boundary. Performance is selected per campaign identity and canonical placement, without adding repeated hierarchy levels or non-placement campaign totals. Explicit ASIN and match cross-sections are calculated independently. The shared Campaigns workbench opens from contributing campaign and ledger actions.

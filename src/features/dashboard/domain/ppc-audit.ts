@@ -1,6 +1,6 @@
 export const AUDIT_MODULES = ["Performance Summary", "Wasted Ad Spend", "Opportunities", "Advertised ASIN", "Campaigns", "Campaign Type", "Placement", "Keyword Target", "Product Target", "Search Terms", "Match Type", "Brand Terms", "Duplicated Targets", "Bidding Strategy"] as const;
 export type AuditModule = typeof AUDIT_MODULES[number];
-export type AuditAd = { entity: string; type: string; campaign: string; campaignId: string; adGroup: string; asin: string; sku: string; target: string; query: string; match: string; placement: string; strategy: string; state: string; dailyBudget?: number; campaignState?: string; bid: number; spend: number; sales: number; orders: number; clicks: number; impressions: number };
+export type AuditAd = { entity: string; type: string; campaign: string; campaignId: string; adGroup: string; asin: string; sku: string; target: string; query: string; match: string; placement: string; strategy: string; state: string; dailyBudget?: number; campaignState?: string; placementMetricsAvailable?: boolean; placementBidAdjustment?: number; bid: number; spend: number; sales: number; orders: number; clicks: number; impressions: number };
 export type AuditBusiness = { asin: string; sales: number; orders: number; units: number; sessions: number };
 export type AuditData = { version: 1; name: string; start: string; end: string; currency: string; importedAt: string; files: string[]; ads: AuditAd[]; business: AuditBusiness[] };
 export type AuditSheet = { name: string; rows: string[][] };
@@ -52,6 +52,11 @@ export function parseAuditAds(sheets: AuditSheet[]): AuditAd[] {
       if (reportedBudget.trim()) ad.dailyBudget = number(reportedBudget, `${sheet.name}, row ${i + 1}, daily budget`);
       const reportedCampaignState = entity === "campaign" ? ad.state : get("Campaign State (Informational only)", "Campaign State");
       if (reportedCampaignState) ad.campaignState = reportedCampaignState;
+      if (ad.placement) {
+        ad.placementMetricsAvailable = [get("Spend"), get("Sales", "7 Day Total Sales", "14 Day Total Sales", "14 Day Total Sales (attributed)"), get("Orders", "7 Day Total Orders", "14 Day Total Orders", "14 Day Total Orders (attributed)"), get("Clicks"), get("Impressions")].every(value => value !== "" && value !== "—" && value !== "-");
+        const adjustment = get("Percentage", "Placement Percentage", "Placement Bid Adjustment", "Bid Adjustment");
+        if (adjustment) ad.placementBidAdjustment = number(adjustment.replace(/^\+/, ""), `${sheet.name}, row ${i + 1}, placement bid adjustment`);
+      }
       const identity = JSON.stringify([ad.type, ad.entity, ad.campaignId, ad.adGroup, ad.asin, ad.sku, ad.target, ad.query, ad.match, ad.placement]);
       if (identities.has(identity)) throw new Error(`Duplicate ${ad.entity} record in ${campaign}. Upload one period export without overlapping sheets.`);
       identities.add(identity); result.push(ad);
@@ -115,7 +120,7 @@ export function parseSavedAudit(text: string | null): AuditData | null {
     if (!text || text.length > 15000000) return null;
     const value = JSON.parse(text) as AuditData;
     if (value.version !== 1 || typeof value.name !== "string" || value.name.length > 150 || !/^\d{4}-\d{2}-\d{2}$/.test(value.start) || !/^\d{4}-\d{2}-\d{2}$/.test(value.end) || value.start > value.end || !["USD", "GBP", "EUR", "CAD", "AUD", "JPY"].includes(value.currency) || typeof value.importedAt !== "string" || !Array.isArray(value.files) || value.files.length !== 2 || !value.files.every(s => typeof s === "string") || !Array.isArray(value.ads) || value.ads.length > 100000 || !Array.isArray(value.business) || value.business.length > 100000) return null;
-    if (!value.ads.every(row => row && ["entity", "type", "campaign", "campaignId", "adGroup", "asin", "sku", "target", "query", "match", "placement", "strategy", "state"].every(k => typeof row[k as keyof AuditAd] === "string") && ["bid", "spend", "sales", "orders", "clicks", "impressions"].every(k => typeof row[k as keyof AuditAd] === "number" && Number.isFinite(row[k as keyof AuditAd]) && Number(row[k as keyof AuditAd]) >= 0) && (row.dailyBudget === undefined || typeof row.dailyBudget === "number" && Number.isFinite(row.dailyBudget) && row.dailyBudget >= 0) && (row.campaignState === undefined || typeof row.campaignState === "string"))) return null;
+    if (!value.ads.every(row => row && ["entity", "type", "campaign", "campaignId", "adGroup", "asin", "sku", "target", "query", "match", "placement", "strategy", "state"].every(k => typeof row[k as keyof AuditAd] === "string") && ["bid", "spend", "sales", "orders", "clicks", "impressions"].every(k => typeof row[k as keyof AuditAd] === "number" && Number.isFinite(row[k as keyof AuditAd]) && Number(row[k as keyof AuditAd]) >= 0) && (row.dailyBudget === undefined || typeof row.dailyBudget === "number" && Number.isFinite(row.dailyBudget) && row.dailyBudget >= 0) && (row.campaignState === undefined || typeof row.campaignState === "string") && (row.placementMetricsAvailable === undefined || typeof row.placementMetricsAvailable === "boolean") && (row.placementBidAdjustment === undefined || typeof row.placementBidAdjustment === "number" && Number.isFinite(row.placementBidAdjustment) && row.placementBidAdjustment >= 0))) return null;
     if (!value.business.every(row => row && /^[A-Z0-9]{10}$/.test(row.asin) && [row.sales, row.orders, row.units, row.sessions].every(n => typeof n === "number" && Number.isFinite(n) && n >= 0))) return null;
     return value;
   } catch { return null; }

@@ -598,3 +598,8 @@ AuditAd optionally accepts dailyBudget (finite nonnegative report-currency numbe
 ### Campaign Type comparison — 2026-10-16
 
 Campaign Type reads the existing version-1 AuditAd records and optional explicit daily budget/campaign state. SP/Sponsored Products, SB/Sponsored Brands and SD/Sponsored Display classify together without replacing their campaign identity keys. Metrics sum selected campaign evidence; rates use combined numerators/denominators, shares use available metrics in the filtered scope, and zero denominators return unavailable. Missing scoped performance is disclosed; configured flagged spend is not described as exclusively zero-sales spend. No added persisted fields or provider integration.
+
+
+### Placement dashboard — 2026-10-16
+
+Audit v1 adds optional placementMetricsAvailable (boolean) and placementBidAdjustment (finite nonnegative number). Placement availability requires explicit Spend, Sales, Orders, Clicks and Impressions values on the row, including genuine zeros; blank metadata-only rows are unavailable. Legacy nonzero placement records remain readable; legacy all-zero records without an availability flag remain unknown. Bid percentages come only from explicit placement percentage/adjustment columns. Canonical placement labels retain unknown slots. Ambiguous rollups are excluded, missing groups are disclosed, weighted rates use selected evidence, zero denominators return unavailable, and placement settings never imply performance or ASIN/match attribution.

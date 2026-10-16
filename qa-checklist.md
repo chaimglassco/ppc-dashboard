@@ -631,3 +631,8 @@ Verify Campaigns empty state, parent/child/placement deduplication, distinct IDs
 ### Campaign Type comparison — 2026-10-16
 
 Verify type totals reconcile to Campaigns without adding parent/child/placement performance. Check weighted CTR/CPC/CVR/ACOS, zero denominators, missing/absent types, full and abbreviated type names, ASIN isolation, type-card selection vs scope filters, matrix column toggles, CSV precision, refresh of saved waste rules, pagination and full-campaign navigation. Check desktop/mobile layout and console errors; retain exactly two report upload controls.
+
+
+### Placement dashboard — 2026-10-16
+
+Check placement aliases, campaign identity isolation, parent/child repeated totals, missing placement metrics, genuine reported zeros, ambiguous duplicate rollups, explicit bid-adjustment metadata and saved-input validation. Confirm no campaign-to-ASIN allocation or inferred match cross-join. Verify filters, column settings, CSV precision, ledger sorting/pagination, ASIN expansion, campaign navigation, partial-data disclosure, mobile/desktop layout and console errors.

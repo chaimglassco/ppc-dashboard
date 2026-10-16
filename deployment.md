@@ -453,3 +453,8 @@ Campaign workbench uses the existing Next.js Git/Vercel workflow without depende
 ### Campaign Type comparison — 2026-10-16
 
 Campaign Type is included in the existing dashboard deployment; no new dependencies, environment variables, API endpoints, report upload controls, or persistence schema changes. Refresh recalculates uploaded report metrics and reloads same-audit waste rules. Browser-local reports populate the view; sample figures in the supplied layout are not deployed.
+
+
+### Placement dashboard — 2026-10-16
+
+Placement uses the existing Git/Vercel dashboard deployment and the same PPC Report and Business Report controls. No dependencies, APIs, hosted resources or environment variables were added. Reupload an older report to recognize explicit placement availability and bid-adjustment fields. Missing placement performance remains unavailable; a bulk file containing only placement settings cannot populate performance metrics.

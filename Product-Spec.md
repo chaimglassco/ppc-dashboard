@@ -407,3 +407,8 @@ Campaigns follows the supplied UI with filters, portfolio metrics, type/strategy
 ### Campaign Type comparison — 2026-10-16
 
 Campaign Type provides the supplied comparison layout: portfolio metrics, three type cards, spend/sales contribution bars and order shares, an efficiency matrix, calculated findings, and expandable campaigns by selected type. ASIN/type/campaign/match/placement/state/search filters apply to the reporting scope. Type card selection changes the lower drilldown, not the comparison denominator. Metrics display whole numbers; CSV retains raw precision. Missing report performance stays unavailable. Findings are review prompts, not profit, funnel, or automated bid claims.
+
+
+### Placement dashboard — 2026-10-16
+
+Placement follows the supplied layout: filters, portfolio summary, placement cards, contribution bars, efficiency comparison, expandable ASIN breakdowns, contributing campaigns, reported match-placement matrix, findings and a sorted/paginated ledger. Column settings and raw-precision CSV export work. Metrics display whole numbers. Review actions open evidence, with no automatic bid, exclusion or campaign changes. ASIN and match intersections are unavailable unless explicitly supplied. Flagged spend is calculated once at the selected placement grain using saved waste rules and can differ from target-level waste.
