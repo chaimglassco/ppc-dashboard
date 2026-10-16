@@ -611,3 +611,8 @@ Verify Performance Summary after two-report import and local reload. Check whole
 ### Wasted Ad Spend and Opportunities — 2026-10-16
 
 Check Waste empty state, filters/reset, overlapping rules counted once, query-vs-target hierarchy and campaign fallback, sample thresholds and zero denominators, rule drawer apply/cancel/Escape/focus, campaign expansion and ASIN details, source/match breakdown sums, table sorting/pagination/columns/CSV, review status reload and isolation between imports. Verify Opportunities navigation order, normalized converting queries, exact exclusion per ASIN using full upload, and missing-query note. Verify two upload buttons and existing Performance Summary.
+
+
+### Opportunities dashboard — 2026-10-16
+
+Verify Opportunities before upload (dashes), report import/reload, query-target hierarchy deduplication, placement totals kept separate, full-upload exact coverage exclusion per ASIN, broad/phrase eligibility, zero spend/zero denominators, min-order/ACOS/CVR rules, filters/reset, ASIN expansion, evidence drilldown, manual workflow save/reload and import isolation. Check placement fields only when supplied, budget limitation note, no automated campaign action, table sort/columns/pagination/export and responsive layout.

@@ -433,3 +433,8 @@ Performance Summary redesign uses the existing application build and Git/Vercel 
 ### Wasted Ad Spend and Opportunities — 2026-10-16
 
 The Waste/Opportunities release uses the existing Next.js/Vercel pipeline with no new dependencies, services, environment variables, or server routes. Device review state uses a separate localStorage key; the uploaded audit v1 data is unchanged.
+
+
+### Opportunities dashboard — 2026-10-16
+
+The Opportunities UI release uses the existing Next.js Git/Vercel deployment. No dependencies, environment variables, APIs, or hosted resources are added. Uploaded report schema v1 is unchanged; new device-only opportunity review state is independent of waste-review state.

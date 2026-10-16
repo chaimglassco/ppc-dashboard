@@ -387,3 +387,8 @@ The dashboard layout remains visible before upload; unavailable values display d
 ### Wasted Ad Spend and Opportunities — 2026-10-16
 
 Wasted Ad Spend follows the supplied reference: rule drawer, issue/review counters, source filters, total flagged-spend overview, ASIN/source/match breakdowns, priority findings, expandable ASIN summary, detailed evidence, column visibility, sorting, pagination, and CSV export. Opportunities is the third Audit module, immediately below Wasted Ad Spend (14 modules total), showing converting queries without a matching exact target in the upload. Current targeting must be verified separately. Exactly two report upload controls remain.
+
+
+### Opportunities dashboard — 2026-10-16
+
+Opportunities follows the supplied reference with diagnostic rule controls, scope totals, top ranked findings, ASIN/source/type breakdowns, match cards, placement performance, expandable ASIN summaries, forensic detail table, filters, sorting, column visibility, pagination and CSV export. Workflow marks New/Reviewed/Action Planned/Action Taken are device notes, not campaign actions. Budget utilization stays explicitly unavailable until reports supply daily budgets and active-day coverage. No hardcoded sample performance or automatic bid changes.

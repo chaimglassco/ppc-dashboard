@@ -398,3 +398,8 @@ Performance Summary is an isolated client component using the existing validated
 ### Wasted Ad Spend and Opportunities — 2026-10-16
 
 Wasted Ad Spend uses a dedicated client view and pure waste classification module. It chooses query/target rows per campaign and falls back to one campaign entity level only when no targets exist. Independent review storage is validated and bound to the imported audit timestamp. Opportunities checks full-upload exact coverage before applying view filters.
+
+
+### Opportunities dashboard — 2026-10-16
+
+Opportunities has a dedicated client dashboard and pure diagnostic module. Canonical evidence selects query, target, or campaign rows per campaign; placement performance is a separate dimension. Exact-target exclusion uses the complete uploaded report before UI filtering. Opportunity workflow state is validated and isolated by imported audit timestamp in a separate localStorage record.

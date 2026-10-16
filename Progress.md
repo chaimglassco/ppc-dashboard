@@ -585,3 +585,10 @@ The empty-state dashboard is also available before report import, with placehold
 Implemented Wasted Ad Spend from the supplied UI and added Opportunities immediately below it. Uses actual uploaded report rows and placeholders before upload, rather than reference sample data. Review statuses and rule thresholds are local device notes; they do not change Amazon campaigns.
 
 Validation: full suite completed with 458 passing tests and 6 skips; the one corrected locator failure and two timeout failures passed in a separate 10-test run. Lint passed. Desktop/mobile synthetic-report browser checks verified rule recalculation and status persistence with no console warnings or errors.
+
+
+### Opportunities dashboard — 2026-10-16
+
+Replaced the basic Opportunities list with the supplied analytical UI, using actual report evidence, hierarchy-safe metrics, exact-coverage safeguards, adjustable rules and persistent review workflow. Existing two-report upload and other Audit modules are preserved.
+
+Validation: serial full suite passed (80 files; 469 tests passed, 6 skipped) with unchanged assertions and a 20-second timeout after host-contention timeouts in the first run. Lint, TypeScript and production build passed. Synthetic-data browser verification confirmed hierarchy-safe totals, separate placement metrics, rule recalculation, saved workflow status after reload, CSV raw precision, responsive layout and no console warnings/errors.
