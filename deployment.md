@@ -428,3 +428,8 @@ October 15, 2026: Audit header has exactly two upload options: PPC Report and Bu
 ### Audit Performance Summary layout — 2026-10-16
 
 Performance Summary redesign uses the existing application build and Git/Vercel deployment. No environment variables, hosted services, or database changes are required. Uploaded audit data stays on the device.
+
+
+### Wasted Ad Spend and Opportunities — 2026-10-16
+
+The Waste/Opportunities release uses the existing Next.js/Vercel pipeline with no new dependencies, services, environment variables, or server routes. Device review state uses a separate localStorage key; the uploaded audit v1 data is unchanged.

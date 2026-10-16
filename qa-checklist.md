@@ -606,3 +606,8 @@ October 15, 2026: Audit header has exactly two upload options: PPC Report and Bu
 ### Audit Performance Summary layout — 2026-10-16
 
 Verify Performance Summary after two-report import and local reload. Check whole-number metrics, matched ASIN organic differences, zero denominator dashes, ASIN multi-selection and reset, SKU search, campaign/match PPC-only scope, table search/sort/column toggles/pagination/CSV, and navigation to Wasted Ad Spend.
+
+
+### Wasted Ad Spend and Opportunities — 2026-10-16
+
+Check Waste empty state, filters/reset, overlapping rules counted once, query-vs-target hierarchy and campaign fallback, sample thresholds and zero denominators, rule drawer apply/cancel/Escape/focus, campaign expansion and ASIN details, source/match breakdown sums, table sorting/pagination/columns/CSV, review status reload and isolation between imports. Verify Opportunities navigation order, normalized converting queries, exact exclusion per ASIN using full upload, and missing-query note. Verify two upload buttons and existing Performance Summary.

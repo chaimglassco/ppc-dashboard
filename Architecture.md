@@ -393,3 +393,8 @@ October 15, 2026: Audit header has exactly two upload options: PPC Report and Bu
 ### Audit Performance Summary layout — 2026-10-16
 
 Performance Summary is an isolated client component using the existing validated local audit. ASIN/product filters scope both sources; campaign and match filters scope PPC. Entity-level deduplication remains unchanged.
+
+
+### Wasted Ad Spend and Opportunities — 2026-10-16
+
+Wasted Ad Spend uses a dedicated client view and pure waste classification module. It chooses query/target rows per campaign and falls back to one campaign entity level only when no targets exist. Independent review storage is validated and bound to the imported audit timestamp. Opportunities checks full-upload exact coverage before applying view filters.

@@ -3,9 +3,10 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { PpcAuditWorkspace } from "./ppc-audit-workspace";
 vi.mock("../data/ppc-audit-files", () => ({ readAuditFile: vi.fn(async (file: File) => file.name.includes("business") ? [{ name: "Business", rows: [["(Child) ASIN", "Ordered Product Sales", "Total Order Items"], ["B012345678", "500", "12"]] }] : [{ name: "Sponsored Products", rows: [["Product", "Entity", "Campaign Name", "Ad Group Name", "ASIN", "Keyword Text", "Match Type", "Spend", "Sales", "Orders", "Clicks", "Impressions"], ["SP", "Campaign", "Test Campaign", "", "", "", "", "20", "100", "4", "10", "1000"], ["SP", "Product Ad", "Test Campaign", "Main", "B012345678", "", "", "20", "100", "4", "10", "1000"], ["SP", "Keyword", "Test Campaign", "Main", "B012345678", "lead came", "Exact", "20", "100", "4", "10", "1000"]] }]) }));
 beforeEach(() => localStorage.clear());
-it("opens all thirteen modules and imports, saves, and reloads a real calculated audit", async () => {
+it("opens all fourteen modules and imports, saves, and reloads a real calculated audit", async () => {
   const view = render(<PpcAuditWorkspace todayIso="2026-10-15" catalog={[]} />);
-  expect(within(screen.getByRole("navigation", { name: "Audit modules" })).getAllByRole("button")).toHaveLength(13);
+  expect(within(screen.getByRole("navigation", { name: "Audit modules" })).getAllByRole("button")).toHaveLength(14);
+  expect(within(screen.getByRole("navigation", { name: "Audit modules" })).getAllByRole("button").map(button => button.textContent).slice(0, 4)).toEqual(["Performance Summary", "Wasted Ad Spend", "Opportunities", "Advertised ASIN"]);
   expect(screen.queryByRole("button", { name: "New Audit" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Upload Reports" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "PPC Report" })).toBeVisible();

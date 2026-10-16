@@ -382,3 +382,8 @@ October 15, 2026: Audit header has exactly two upload options: PPC Report and Bu
 
 Audit Performance Summary follows the supplied grouped dashboard: business revenue/orders, advertising investment, efficiency, traffic, no-order spend banner, and ASIN table. Searchable ASIN multi-selection, product search, table search, column visibility, sorting, pagination and CSV export are available. Header retains exactly PPC Report and Business Report.
 The dashboard layout remains visible before upload; unavailable values display dashes and a short note directs users to the two report buttons.
+
+
+### Wasted Ad Spend and Opportunities — 2026-10-16
+
+Wasted Ad Spend follows the supplied reference: rule drawer, issue/review counters, source filters, total flagged-spend overview, ASIN/source/match breakdowns, priority findings, expandable ASIN summary, detailed evidence, column visibility, sorting, pagination, and CSV export. Opportunities is the third Audit module, immediately below Wasted Ad Spend (14 modules total), showing converting queries without a matching exact target in the upload. Current targeting must be verified separately. Exactly two report upload controls remain.

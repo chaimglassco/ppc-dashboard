@@ -1,4 +1,4 @@
-export const AUDIT_MODULES = ["Performance Summary", "Wasted Ad Spend", "Advertised ASIN", "Campaigns", "Campaign Type", "Placement", "Keyword Target", "Product Target", "Search Terms", "Match Type", "Brand Terms", "Duplicated Targets", "Bidding Strategy"] as const;
+export const AUDIT_MODULES = ["Performance Summary", "Wasted Ad Spend", "Opportunities", "Advertised ASIN", "Campaigns", "Campaign Type", "Placement", "Keyword Target", "Product Target", "Search Terms", "Match Type", "Brand Terms", "Duplicated Targets", "Bidding Strategy"] as const;
 export type AuditModule = typeof AUDIT_MODULES[number];
 export type AuditAd = { entity: string; type: string; campaign: string; campaignId: string; adGroup: string; asin: string; sku: string; target: string; query: string; match: string; placement: string; strategy: string; state: string; bid: number; spend: number; sales: number; orders: number; clicks: number; impressions: number };
 export type AuditBusiness = { asin: string; sales: number; orders: number; units: number; sessions: number };

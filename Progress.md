@@ -578,3 +578,10 @@ Implemented the supplied Performance Summary dashboard layout with calculated re
 
 Validation: 449 tests passed in the full run; the three timeout failures passed in a separate 25-test rerun. Final Audit interaction checks passed (5 tests). Desktop and mobile synthetic-data browser checks found no console warnings/errors. Authenticated production Audit was accessible; real-report verification requires the user's two report files.
 The empty-state dashboard is also available before report import, with placeholders rather than sample data.
+
+
+### Wasted Ad Spend and Opportunities — 2026-10-16
+
+Implemented Wasted Ad Spend from the supplied UI and added Opportunities immediately below it. Uses actual uploaded report rows and placeholders before upload, rather than reference sample data. Review statuses and rule thresholds are local device notes; they do not change Amazon campaigns.
+
+Validation: full suite completed with 458 passing tests and 6 skips; the one corrected locator failure and two timeout failures passed in a separate 10-test run. Lint passed. Desktop/mobile synthetic-report browser checks verified rule recalculation and status persistence with no console warnings or errors.
