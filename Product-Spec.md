@@ -392,3 +392,8 @@ Wasted Ad Spend follows the supplied reference: rule drawer, issue/review counte
 ### Opportunities dashboard — 2026-10-16
 
 Opportunities follows the supplied reference with diagnostic rule controls, scope totals, top ranked findings, ASIN/source/type breakdowns, match cards, placement performance, expandable ASIN summaries, forensic detail table, filters, sorting, column visibility, pagination and CSV export. Workflow marks New/Reviewed/Action Planned/Action Taken are device notes, not campaign actions. Budget utilization stays explicitly unavailable until reports supply daily budgets and active-day coverage. No hardcoded sample performance or automatic bid changes.
+
+
+### Advertised ASIN dashboard — 2026-10-16
+
+Advertised ASIN follows the supplied reference: portfolio totals, search and ASIN/campaign/type/match/placement/status filters, sortable 23-column product table, column visibility, pagination, CSV export, and inline details with sales/order mix, campaign performance, target/query evidence, match performance, placements and calculated takeaways. Refresh recalculates current imported data and reloads saved waste rules; it does not fetch provider reports. ACOS and TACOS review thresholds are 20% and 12%. Best-performing sort ranks lowest known ACOS. Report uploads remain exactly PPC Report and Business Report.

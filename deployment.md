@@ -438,3 +438,8 @@ The Waste/Opportunities release uses the existing Next.js/Vercel pipeline with n
 ### Opportunities dashboard — 2026-10-16
 
 The Opportunities UI release uses the existing Next.js Git/Vercel deployment. No dependencies, environment variables, APIs, or hosted resources are added. Uploaded report schema v1 is unchanged; new device-only opportunity review state is independent of waste-review state.
+
+
+### Advertised ASIN dashboard — 2026-10-16
+
+Advertised ASIN is delivered through the existing Next.js/Git/Vercel pipeline. No dependency, environment, API, database or storage-schema changes. Existing per-device report and waste-review records remain compatible.

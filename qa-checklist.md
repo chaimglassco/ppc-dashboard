@@ -616,3 +616,8 @@ Check Waste empty state, filters/reset, overlapping rules counted once, query-vs
 ### Opportunities dashboard — 2026-10-16
 
 Verify Opportunities before upload (dashes), report import/reload, query-target hierarchy deduplication, placement totals kept separate, full-upload exact coverage exclusion per ASIN, broad/phrase eligibility, zero spend/zero denominators, min-order/ACOS/CVR rules, filters/reset, ASIN expansion, evidence drilldown, manual workflow save/reload and import isolation. Check placement fields only when supplied, budget limitation note, no automated campaign action, table sort/columns/pagination/export and responsive layout.
+
+
+### Advertised ASIN dashboard — 2026-10-16
+
+Check Advertised ASIN placeholders before import, product/campaign/query hierarchy deduplication, multiple ASINs in one campaign, unmapped query retention without allocating its metrics, business joins, genuine zero metrics, incompatible scope dashes, sales/order mix bars, filters/reset/search, all sort choices, column visibility, portfolio reconciliation, main/target pagination, expanded campaign/target/match/placement evidence, saved waste-rule refresh and CSV raw precision. Verify desktop/mobile rendering, other Audit tabs, two upload controls, and authenticated deployed navigation.

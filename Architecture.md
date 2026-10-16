@@ -403,3 +403,8 @@ Wasted Ad Spend uses a dedicated client view and pure waste classification modul
 ### Opportunities dashboard — 2026-10-16
 
 Opportunities has a dedicated client dashboard and pure diagnostic module. Canonical evidence selects query, target, or campaign rows per campaign; placement performance is a separate dimension. Exact-target exclusion uses the complete uploaded report before UI filtering. Opportunity workflow state is validated and isolated by imported audit timestamp in a separate localStorage record.
+
+
+### Advertised ASIN dashboard — 2026-10-16
+
+Advertised ASIN uses a dedicated client view and pure ASIN reconciliation module. Product-ad performance is preferred per campaign; if absent, use query/target evidence or one fallback entity level. Parent campaign totals and placement dimensions are not added to product totals. Matching and placement filters explicitly select their evidence dimensions. Reads the existing validated waste-rule record without changing report persistence.

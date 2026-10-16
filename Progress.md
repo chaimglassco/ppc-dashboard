@@ -592,3 +592,10 @@ Validation: full suite completed with 458 passing tests and 6 skips; the one cor
 Replaced the basic Opportunities list with the supplied analytical UI, using actual report evidence, hierarchy-safe metrics, exact-coverage safeguards, adjustable rules and persistent review workflow. Existing two-report upload and other Audit modules are preserved.
 
 Validation: serial full suite passed (80 files; 469 tests passed, 6 skipped) with unchanged assertions and a 20-second timeout after host-contention timeouts in the first run. Lint, TypeScript and production build passed. Synthetic-data browser verification confirmed hierarchy-safe totals, separate placement metrics, rule recalculation, saved workflow status after reload, CSV raw precision, responsive layout and no console warnings/errors.
+
+
+### Advertised ASIN dashboard — 2026-10-16
+
+Replaced the generic Advertised ASIN list with the supplied portfolio-and-drilldown layout, backed by imported report metrics. No sample figures, inferred product allocations, automatic campaign actions, or remote refresh claims.
+
+Validation: full suite completed with 477 passing tests and 6 skips; the placement/negative-target test observed source loaded before its mid-run adjustment and passed with all 6 domain tests in a fresh rerun. The final UI/domain checks passed (9 tests). Lint and TypeScript passed. Desktop/mobile browser checks reconciled product totals and expanded campaign/mix evidence, verified incompatible match-scope dashes, and found no console errors.
