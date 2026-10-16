@@ -568,3 +568,8 @@ October 14, 2026: Combined ACOS and TACOS in one snapshot card, retaining separa
 October 15, 2026: Added Audit beside Compare using the supplied two-panel reference, with 13 modules, real CSV/XLSX imports (ExcelJS 4.4), explicit date/currency confirmation, hierarchy-safe totals, child-ASIN business joins, configurable risk rules, filters, duplicate expansion, CSV export and validated local-only audit persistence. Reports are processed in-browser; no files are sent to Scale Insights. Missing source data remains unavailable. Rule score is the percentage of target/query rows below configured no-order-spend and ACOS rules, not a provider score. Existing dashboard storage is unchanged.
 
 October 15, 2026: Audit header has exactly two upload options: PPC Report and Business Report. Selecting both opens period/currency confirmation; one shared import populates every Audit module. Removed duplicate upload entry points and New Audit action.
+
+
+### Audit Performance Summary layout — 2026-10-16
+
+Performance Summary reads existing AuditData v1 without modifying persistence. Organic sales/orders are total business values minus attributed PPC values only in compatible unfiltered campaign/match scope and when nonnegative. Zero denominators and missing ASIN matches display dashes. No-order spend includes all positive target/query spend with zero orders, using one target/query level per campaign; CSV preserves numeric precision while UI rounds to whole numbers.

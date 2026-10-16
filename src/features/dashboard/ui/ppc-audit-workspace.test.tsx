@@ -19,8 +19,8 @@ it("opens all thirteen modules and imports, saves, and reloads a real calculated
   expect(within(dialog).getByRole("button", { name: "Run Audit" })).toBeDisabled();
   fireEvent.click(within(dialog).getByRole("checkbox"));
   fireEvent.submit(dialog.querySelector("form")!);
-  const table = await screen.findByRole("table", { name: "ASIN Performance Overview" });
-  expect(within(table).getByText("$500")).toBeVisible();
+  await waitFor(() => expect(within(screen.getByRole("table", { name: "ASIN Performance Overview" })).getByText("$500")).toBeVisible());
+  const table = screen.getByRole("table", { name: "ASIN Performance Overview" });
   expect(within(table).getByText("4%")).toBeVisible();
   expect(screen.getByText(/Saved on this device/)).toBeVisible();
   const cached = JSON.parse(localStorage.getItem("glassco.ppcUploadedAudit.v1")!);
