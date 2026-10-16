@@ -28,6 +28,12 @@ it("opens all fourteen modules and imports, saves, and reloads a real calculated
   expect(cached.ads).toHaveLength(3);
   fireEvent.click(within(screen.getByRole("navigation", { name: "Audit modules" })).getByRole("button", { name: "Search Terms" }));
   expect(screen.getByText("No matching rows")).toBeVisible();
+  fireEvent.click(within(screen.getByRole("navigation", { name: "Audit modules" })).getByRole("button", { name: "Campaign Type" }));
+  expect(within(screen.getByRole("table", { name: "Campaign Type Efficiency Breakdown" })).getAllByText("$100")).toHaveLength(2);
+  fireEvent.click(screen.getByRole("button", { name: "Expand type campaign Test Campaign SP Test Campaign" }));
+  fireEvent.click(screen.getByRole("button", { name: "View Full Campaign Analysis →" }));
+  expect(screen.getByRole("heading", { name: "Campaigns" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Key Target & Search Term Signals" })).toBeVisible();
   view.unmount();
   render(<PpcAuditWorkspace todayIso="2026-10-15" catalog={[]} />);
   await waitFor(() => expect(screen.getByRole("table", { name: "ASIN Performance Overview" })).toBeVisible());

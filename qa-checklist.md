@@ -626,3 +626,8 @@ Check Advertised ASIN placeholders before import, product/campaign/query hierarc
 ### Campaign workbench — 2026-10-16
 
 Verify Campaigns empty state, parent/child/placement deduplication, distinct IDs and advertising types with identical names, shared-campaign ASIN isolation, Unmapped filter excluding administrative parent rows, campaign state from metadata rather than enabled targets, missing/conflicting/zero daily budgets, legacy cache compatibility, state/strategy/match/placement/search filters, reset, sorting, columns/pagination/export, inline ad-group/target/match/placement tables, budget limitation note and calendar-day average label. Check whole-number UI, zero denominators, other Audit modules and authenticated deployed tab.
+
+
+### Campaign Type comparison — 2026-10-16
+
+Verify type totals reconcile to Campaigns without adding parent/child/placement performance. Check weighted CTR/CPC/CVR/ACOS, zero denominators, missing/absent types, full and abbreviated type names, ASIN isolation, type-card selection vs scope filters, matrix column toggles, CSV precision, refresh of saved waste rules, pagination and full-campaign navigation. Check desktop/mobile layout and console errors; retain exactly two report upload controls.

@@ -448,3 +448,8 @@ Advertised ASIN is delivered through the existing Next.js/Git/Vercel pipeline. N
 ### Campaign workbench — 2026-10-16
 
 Campaign workbench uses the existing Next.js Git/Vercel workflow without dependencies, environment variables, APIs or hosted resources. Uploaded audit v1 remains compatible. Existing saved imports may require reupload to populate newly recognized optional budget/state metadata; missing values stay unavailable. Refresh recalculates current imported reports and reloads saved waste rules only.
+
+
+### Campaign Type comparison — 2026-10-16
+
+Campaign Type is included in the existing dashboard deployment; no new dependencies, environment variables, API endpoints, report upload controls, or persistence schema changes. Refresh recalculates uploaded report metrics and reloads same-audit waste rules. Browser-local reports populate the view; sample figures in the supplied layout are not deployed.

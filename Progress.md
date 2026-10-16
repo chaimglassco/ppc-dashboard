@@ -606,3 +606,10 @@ Validation: full suite completed with 477 passing tests and 6 skips; the placeme
 Replaced the generic Campaigns list with the supplied campaign workbench, real uploaded metrics, hierarchy-safe totals, product-level filtering, metadata-aware state/strategy summaries and expandable evidence. Added optional explicit daily-budget and campaign-state import metadata without changing audit schema version.
 
 Validation: 84 test files passed (487 tests passed, 6 skipped), including campaign grouping/import compatibility and interactive controls. Lint, TypeScript, and production build passed. Desktop/mobile browser checks verified expanded evidence, state filtering and ASIN search with no console errors. Filled campaign data was checked with local synthetic reports; production verification uses the authenticated dashboard.
+
+
+### Campaign Type comparison — 2026-10-16
+
+Replaced the generic Campaign Type table with the requested comparison dashboard and shared campaign evidence drilldowns. Recognizes short and full Amazon type names, preserves absent/zero distinctions, and opens the exact selected campaign in the Campaigns workbench.
+
+Validation: 85 test files passed in the full 86-file run (493 tests passed, 6 skipped); one unchanged document-editor test exceeded its explicit 10-second timeout and passed on an isolated rerun with unchanged assertions. All Campaign Type tests passed, including scope reconciliation, missing values, canonical names, type selection, sorting/pagination, and two-report import to full-campaign navigation. Lint, TypeScript and production build passed. Desktop/mobile browser checks verified type contribution metrics, ASIN search, expanded evidence and campaign navigation with no console errors. Filled data was checked locally with synthetic reports; production verification uses the authenticated dashboard.

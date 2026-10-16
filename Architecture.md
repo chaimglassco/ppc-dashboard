@@ -413,3 +413,8 @@ Advertised ASIN uses a dedicated client view and pure ASIN reconciliation module
 ### Campaign workbench — 2026-10-16
 
 Campaigns uses a dedicated client workbench and pure campaign aggregation keyed by advertising type plus campaign ID. Uses one non-placement performance level per campaign, with ASIN/match/placement scopes selecting appropriate lower-level evidence. Campaign state is read from campaign metadata, never inferred from target enablement. Optional daily-budget and campaign-state fields preserve compatibility with uploaded audit v1 records.
+
+
+### Campaign Type comparison — 2026-10-16
+
+Campaign Type now aggregates the campaign workbench evidence by canonical SP/SB/SD classification, keeping campaign identity and entity-level selection intact. A pure analysis module calculates weighted rates, contribution shares and review findings; the client view supplies filters, type selection, column visibility and paginated campaign evidence. Full analysis navigation opens the selected campaign in Campaigns.

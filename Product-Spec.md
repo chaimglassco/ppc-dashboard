@@ -402,3 +402,8 @@ Advertised ASIN follows the supplied reference: portfolio totals, search and ASI
 ### Campaign workbench — 2026-10-16
 
 Campaigns follows the supplied UI with filters, portfolio metrics, type/strategy comparisons, sortable campaign table, column controls, pagination, CSV export and inline campaign findings, ad groups, placements, match types and target/query signals. Explicit daily budget values are shown when supplied. Budget utilization and capped/budget-limited claims remain unavailable without daily budget history and active-day coverage. Calendar-day average spend is labeled as such. Growth signals are efficiency reviews, not promises of profitable scaling or automated actions. Exactly two upload options remain.
+
+
+### Campaign Type comparison — 2026-10-16
+
+Campaign Type provides the supplied comparison layout: portfolio metrics, three type cards, spend/sales contribution bars and order shares, an efficiency matrix, calculated findings, and expandable campaigns by selected type. ASIN/type/campaign/match/placement/state/search filters apply to the reporting scope. Type card selection changes the lower drilldown, not the comparison denominator. Metrics display whole numbers; CSV retains raw precision. Missing report performance stays unavailable. Findings are review prompts, not profit, funnel, or automated bid claims.
