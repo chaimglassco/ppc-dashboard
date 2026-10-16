@@ -443,3 +443,8 @@ The Opportunities UI release uses the existing Next.js Git/Vercel deployment. No
 ### Advertised ASIN dashboard — 2026-10-16
 
 Advertised ASIN is delivered through the existing Next.js/Git/Vercel pipeline. No dependency, environment, API, database or storage-schema changes. Existing per-device report and waste-review records remain compatible.
+
+
+### Campaign workbench — 2026-10-16
+
+Campaign workbench uses the existing Next.js Git/Vercel workflow without dependencies, environment variables, APIs or hosted resources. Uploaded audit v1 remains compatible. Existing saved imports may require reupload to populate newly recognized optional budget/state metadata; missing values stay unavailable. Refresh recalculates current imported reports and reloads saved waste rules only.

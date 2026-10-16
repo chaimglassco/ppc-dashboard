@@ -621,3 +621,8 @@ Verify Opportunities before upload (dashes), report import/reload, query-target 
 ### Advertised ASIN dashboard — 2026-10-16
 
 Check Advertised ASIN placeholders before import, product/campaign/query hierarchy deduplication, multiple ASINs in one campaign, unmapped query retention without allocating its metrics, business joins, genuine zero metrics, incompatible scope dashes, sales/order mix bars, filters/reset/search, all sort choices, column visibility, portfolio reconciliation, main/target pagination, expanded campaign/target/match/placement evidence, saved waste-rule refresh and CSV raw precision. Verify desktop/mobile rendering, other Audit tabs, two upload controls, and authenticated deployed navigation.
+
+
+### Campaign workbench — 2026-10-16
+
+Verify Campaigns empty state, parent/child/placement deduplication, distinct IDs and advertising types with identical names, shared-campaign ASIN isolation, Unmapped filter excluding administrative parent rows, campaign state from metadata rather than enabled targets, missing/conflicting/zero daily budgets, legacy cache compatibility, state/strategy/match/placement/search filters, reset, sorting, columns/pagination/export, inline ad-group/target/match/placement tables, budget limitation note and calendar-day average label. Check whole-number UI, zero denominators, other Audit modules and authenticated deployed tab.

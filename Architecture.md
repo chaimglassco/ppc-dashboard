@@ -408,3 +408,8 @@ Opportunities has a dedicated client dashboard and pure diagnostic module. Canon
 ### Advertised ASIN dashboard — 2026-10-16
 
 Advertised ASIN uses a dedicated client view and pure ASIN reconciliation module. Product-ad performance is preferred per campaign; if absent, use query/target evidence or one fallback entity level. Parent campaign totals and placement dimensions are not added to product totals. Matching and placement filters explicitly select their evidence dimensions. Reads the existing validated waste-rule record without changing report persistence.
+
+
+### Campaign workbench — 2026-10-16
+
+Campaigns uses a dedicated client workbench and pure campaign aggregation keyed by advertising type plus campaign ID. Uses one non-placement performance level per campaign, with ASIN/match/placement scopes selecting appropriate lower-level evidence. Campaign state is read from campaign metadata, never inferred from target enablement. Optional daily-budget and campaign-state fields preserve compatibility with uploaded audit v1 records.

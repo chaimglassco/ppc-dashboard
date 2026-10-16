@@ -599,3 +599,10 @@ Validation: serial full suite passed (80 files; 469 tests passed, 6 skipped) wit
 Replaced the generic Advertised ASIN list with the supplied portfolio-and-drilldown layout, backed by imported report metrics. No sample figures, inferred product allocations, automatic campaign actions, or remote refresh claims.
 
 Validation: full suite completed with 477 passing tests and 6 skips; the placement/negative-target test observed source loaded before its mid-run adjustment and passed with all 6 domain tests in a fresh rerun. The final UI/domain checks passed (9 tests). Lint and TypeScript passed. Desktop/mobile browser checks reconciled product totals and expanded campaign/mix evidence, verified incompatible match-scope dashes, and found no console errors.
+
+
+### Campaign workbench — 2026-10-16
+
+Replaced the generic Campaigns list with the supplied campaign workbench, real uploaded metrics, hierarchy-safe totals, product-level filtering, metadata-aware state/strategy summaries and expandable evidence. Added optional explicit daily-budget and campaign-state import metadata without changing audit schema version.
+
+Validation: 84 test files passed (487 tests passed, 6 skipped), including campaign grouping/import compatibility and interactive controls. Lint, TypeScript, and production build passed. Desktop/mobile browser checks verified expanded evidence, state filtering and ASIN search with no console errors. Filled campaign data was checked with local synthetic reports; production verification uses the authenticated dashboard.

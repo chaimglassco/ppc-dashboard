@@ -397,3 +397,8 @@ Opportunities follows the supplied reference with diagnostic rule controls, scop
 ### Advertised ASIN dashboard — 2026-10-16
 
 Advertised ASIN follows the supplied reference: portfolio totals, search and ASIN/campaign/type/match/placement/status filters, sortable 23-column product table, column visibility, pagination, CSV export, and inline details with sales/order mix, campaign performance, target/query evidence, match performance, placements and calculated takeaways. Refresh recalculates current imported data and reloads saved waste rules; it does not fetch provider reports. ACOS and TACOS review thresholds are 20% and 12%. Best-performing sort ranks lowest known ACOS. Report uploads remain exactly PPC Report and Business Report.
+
+
+### Campaign workbench — 2026-10-16
+
+Campaigns follows the supplied UI with filters, portfolio metrics, type/strategy comparisons, sortable campaign table, column controls, pagination, CSV export and inline campaign findings, ad groups, placements, match types and target/query signals. Explicit daily budget values are shown when supplied. Budget utilization and capped/budget-limited claims remain unavailable without daily budget history and active-day coverage. Calendar-day average spend is labeled as such. Growth signals are efficiency reviews, not promises of profitable scaling or automated actions. Exactly two upload options remain.
