@@ -423,3 +423,8 @@ Campaign Type now aggregates the campaign workbench evidence by canonical SP/SB/
 ### Placement dashboard — 2026-10-16
 
 Placement now has a dedicated client dashboard and pure placement evidence boundary. Performance is selected per campaign identity and canonical placement, without adding repeated hierarchy levels or non-placement campaign totals. Explicit ASIN and match cross-sections are calculated independently. The shared Campaigns workbench opens from contributing campaign and ledger actions.
+
+
+### Keyword Target dashboard — 2026-10-20
+
+Keyword Target uses a dedicated client dashboard and a pure keyword analysis boundary. Identity includes advertising type, campaign, ad group, keyword ID/text, match and product scope. Indexed ID/text candidate lookups admit only unique contextual query/placement links. Parent keyword totals and linked query/placement dimensions are kept separate. Queries with enough explicit keyword context can supply labeled query-level fallback metrics.

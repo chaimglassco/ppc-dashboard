@@ -34,6 +34,12 @@ it("opens all fourteen modules and imports, saves, and reloads a real calculated
   fireEvent.click(screen.getByRole("button", { name: "View Full Campaign Analysis →" }));
   expect(screen.getByRole("heading", { name: "Campaigns" })).toBeVisible();
   expect(screen.getByRole("heading", { name: "Key Target & Search Term Signals" })).toBeVisible();
+  fireEvent.click(within(screen.getByRole("navigation", { name: "Audit modules" })).getByRole("button", { name: "Keyword Target" }));
+  expect(within(screen.getByRole("table", { name: "Keyword Target Performance" })).getByText("lead came")).toBeVisible();
+  expect(within(screen.getByRole("region", { name: "Keyword portfolio metrics" })).getByText("$20")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Expand keyword lead came Test Campaign Main B012345678 Exact" }));
+  expect(screen.getByText("Uniquely linked search-term data was not supplied.")).toBeVisible();
+  expect(screen.getByText("Keyword-level placement data was not supplied.")).toBeVisible();
   view.unmount();
   render(<PpcAuditWorkspace todayIso="2026-10-15" catalog={[]} />);
   await waitFor(() => expect(screen.getByRole("table", { name: "ASIN Performance Overview" })).toBeVisible());

@@ -458,3 +458,8 @@ Campaign Type is included in the existing dashboard deployment; no new dependenc
 ### Placement dashboard — 2026-10-16
 
 Placement uses the existing Git/Vercel dashboard deployment and the same PPC Report and Business Report controls. No dependencies, APIs, hosted resources or environment variables were added. Reupload an older report to recognize explicit placement availability and bid-adjustment fields. Missing placement performance remains unavailable; a bulk file containing only placement settings cannot populate performance metrics.
+
+
+### Keyword Target dashboard — 2026-10-20
+
+Keyword Target uses the existing dashboard Git/Vercel pipeline without dependencies, environment variables, hosted resources or APIs. The same PPC Report and Business Report uploads populate all fourteen Audit modules. Older imports remain readable; reupload to populate newly recognized keyword/ad-group IDs and availability flags. Refresh recalculates the uploaded audit and reloads saved waste rules. Query/placement drilldowns require unique report-level keyword context.

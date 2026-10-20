@@ -412,3 +412,8 @@ Campaign Type provides the supplied comparison layout: portfolio metrics, three 
 ### Placement dashboard — 2026-10-16
 
 Placement follows the supplied layout: filters, portfolio summary, placement cards, contribution bars, efficiency comparison, expandable ASIN breakdowns, contributing campaigns, reported match-placement matrix, findings and a sorted/paginated ledger. Column settings and raw-precision CSV export work. Metrics display whole numbers. Review actions open evidence, with no automatic bid, exclusion or campaign changes. ASIN and match intersections are unavailable unless explicitly supplied. Flagged spend is calculated once at the selected placement grain using saved waste rules and can differ from target-level waste.
+
+
+### Keyword Target dashboard — 2026-10-20
+
+Keyword Target follows the supplied layout: filters, portfolio metrics, Exact/Phrase/Broad diagnostics, overlapping audit signals, sorted/paginated keyword rows, column settings, CSV export and expandable keyword context, search terms, placements and review findings. Keyword, campaign, ad-group and ASIN identities remain separate. High CPC compares with 150% of scoped weighted average before status filtering; waste/low-CVR rules reuse validated same-audit saved settings. Review notes do not claim product margin, bid headroom or automatic bid changes. Exact-coverage reviews use the full uploaded target set and require confirmation against current targeting. Whole-number UI metrics preserve raw CSV precision.

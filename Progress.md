@@ -620,3 +620,10 @@ Validation: 85 test files passed in the full 86-file run (493 tests passed, 6 sk
 Replaced the generic Placement table with the supplied dashboard backed by placement report evidence. Added optional placement performance-availability and bid-adjustment metadata so blank bulk settings do not become zero performance. Preserved two uploads, fourteen navigation modules, legacy audit compatibility and existing campaign navigation.
 
 Validation: full regression run passed all 88 test files (504 passed, 6 skipped). The final zero-click waste-rule guard passed the 11 focused Placement tests. Final lint, TypeScript and production build passed. Desktop/mobile browser checks verified metrics, ASIN expansion, full-campaign navigation and unavailable ASIN/match intersections with no console errors. Filled data was tested locally with synthetic placement records; production verification uses the authenticated dashboard.
+
+
+### Keyword Target dashboard — 2026-10-20
+
+Replaced the generic Keyword Target list with the supplied report-backed dashboard. Added optional keyword/ad-group IDs and explicit target metric/bid availability to distinguish blank metadata from reported zero. Added contextual join checks, query fallback labeling, weighted portfolio diagnostics and keyword-level drilldowns without campaign placement allocation.
+
+Validation: all 90 test files passed (517 tests passed, 6 skipped). Final lint, TypeScript and production build passed. Tests cover import compatibility, identity isolation, missing/ambiguous joins, weighted rates, exact coverage, zero values, filters, sorting/pagination and two-report import-to-keyword navigation. The local browser parsed synthetic CSV reports through the real file reader and parser, verified keyword/query/placement totals and placement filtering, and passed desktop/mobile checks with no console errors. Production UI verification uses the authenticated dashboard; populated report data was verified locally.
